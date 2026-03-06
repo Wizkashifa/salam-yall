@@ -31,6 +31,8 @@ const NAME_MATCHES: [string, string][] = [
   ["madinah quran", "Madinah Quran & Youth Center"],
   ["mqyc", "Madinah Quran & Youth Center"],
   ["zakat foundation", "Zakat Foundation"],
+  ["islamic relief usa", "Islamic Relief USA"],
+  ["islamic relief", "Islamic Relief USA"],
   ["raleigh convention", "Raleigh Convention Center"],
   ["dorton arena", "NC State Fairgrounds"],
   ["islamic center of clayton", "Islamic Center of Clayton"],
@@ -75,13 +77,55 @@ const CALENDAR_LEVEL_NAMES = new Set([
   "triangle muslim events",
 ]);
 
+const HOSTED_BY_PATTERNS = [
+  /(?:hosted|presented|organized|brought to you|put on|arranged) by\s+([^.;!?\n]+)/i,
+  /(?:an? )?(?:iftar|fundraiser|dinner|banquet)\s+(?:by|from)\s+([^.;!?\n]+)/i,
+];
+
 const ORG_PATTERNS = [
   /islamic (?:center|association|society|institute) of \w[\w\s]*/i,
+  /islamic relief[\w\s]*/i,
   /masjid [\w\s-]+/i,
   /(?:[\w\s-]+) (?:masjid|mosque)/i,
   /(?:[\w\s-]+) islamic (?:center|association|society|institute)/i,
   /muslim (?:community|american|student|youth) [\w\s]+/i,
+  /zakat foundation[\w\s]*/i,
+  /helping hand[s]?[\w\s]*/i,
 ];
+
+function titleCase(name: string): string {
+  const lowerWords = new Set(["of", "the", "and", "in", "at", "by", "for", "to", "a", "an", "on", "or"]);
+  return name.split(" ").map((w, i) =>
+    i === 0 || !lowerWords.has(w.toLowerCase())
+      ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+      : w.toLowerCase()
+  ).join(" ");
+}
+
+const GENERIC_PHRASES = new Set([
+  "a brother", "a sister", "a member", "a volunteer", "a friend",
+  "our community", "the community", "a community member",
+  "a brother from our community", "a sister from our community",
+  "hearts dedicated", "gathering of hearts",
+]);
+
+function extractHostFromDescription(text: string): string {
+  for (const pattern of HOSTED_BY_PATTERNS) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      let name = match[1].trim();
+      name = name.replace(/\s+(at|on|in|the|this|will|has|have|was|is|are|and will)\s.*$/i, "").trim();
+      name = name.replace(/[*_~`]/g, "").trim();
+      if (name.length < 3 || name.length > 80) continue;
+      const nameLower = name.toLowerCase();
+      if (GENERIC_PHRASES.has(nameLower)) continue;
+      if (/^(a|an|the|some|our|my)\s/i.test(name) && !/^(a[ln]-|al |an-)/i.test(name)) continue;
+      if (!/[A-Z]/.test(name) && !name.includes("islamic") && !name.includes("masjid")) continue;
+      return titleCase(name);
+    }
+  }
+  return "";
+}
 
 function extractOrgFromText(text: string): string {
   for (const pattern of ORG_PATTERNS) {
@@ -90,9 +134,7 @@ function extractOrgFromText(text: string): string {
       let name = match[0].trim();
       name = name.replace(/\s+(is|are|at|on|in|the|a|an|for|to|of the|will|has|have|was|with)\s*$/i, "").trim();
       if (name.length >= 8 && name.length <= 80) {
-        return name.split(" ").map(w =>
-          w.length <= 2 ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
-        ).join(" ");
+        return titleCase(name);
       }
     }
   }
@@ -114,6 +156,17 @@ function resolveOrganizer(event: any): string {
   const description = (event.description || "").toLowerCase();
   const title = (event.summary || "").toLowerCase();
   const combined = location + " " + title + " " + description;
+
+  const hostedBy = extractHostFromDescription(event.description || "");
+  if (hostedBy) {
+    const hostedLower = hostedBy.toLowerCase();
+    for (const [pattern, org] of NAME_MATCHES) {
+      if (hostedLower.includes(pattern) || pattern.includes(hostedLower)) {
+        return org;
+      }
+    }
+    return hostedBy;
+  }
 
   for (const [pattern, org] of NAME_MATCHES) {
     if (combined.includes(pattern)) {
