@@ -110,6 +110,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const imgMatch = desc.match(/src="([^"]+)"/);
         const imageUrl = imgMatch ? imgMatch[1] : "";
         const cleanDesc = desc.replace(/<img[^>]*>/gi, "").replace(/<br\s*\/?>/gi, "\n").replace(/<a[^>]*>View Full Image<\/a>/gi, "");
+
+        const allLinks = desc.match(/https?:\/\/[^\s)"<>]+/g) || [];
+        const registrationUrl = allLinks.find((url: string) =>
+          !url.includes("drive.google.com/thumbnail") &&
+          (url.includes("forms.gle") ||
+           url.includes("docs.google.com/forms") ||
+           url.includes("event-details") ||
+           url.includes("registration") ||
+           url.includes("register") ||
+           url.includes("signup") ||
+           url.includes("sign-up") ||
+           url.includes("tinyurl.com") ||
+           url.includes("givingtools.com") ||
+           url.includes("rsvp") ||
+           url.includes("eventbrite") ||
+           url.includes("bit.ly"))
+        ) || allLinks.find((url: string) =>
+          !url.includes("drive.google.com/thumbnail")
+        ) || "";
+
         return {
           id: event.id,
           title: event.summary || "Untitled Event",
@@ -120,6 +140,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isAllDay: !event.start?.dateTime,
           organizer: resolveOrganizer(event),
           imageUrl,
+          registrationUrl,
         };
       });
 

@@ -9,6 +9,9 @@ import {
   RefreshControl,
   Pressable,
   Image,
+  Modal,
+  Dimensions,
+  Linking,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -26,9 +29,10 @@ interface CalendarEvent {
   isAllDay: boolean;
   organizer: string;
   imageUrl: string;
+  registrationUrl: string;
 }
 
-function formatEventDate(dateStr: string, isAllDay: boolean): { day: string; month: string; weekday: string; time: string } {
+function formatEventDate(dateStr: string, isAllDay: boolean): { day: string; month: string; weekday: string; time: string; fullDate: string } {
   const date = new Date(dateStr);
   const day = date.getDate().toString();
   const month = date.toLocaleDateString("en-US", { month: "short" });
@@ -36,7 +40,8 @@ function formatEventDate(dateStr: string, isAllDay: boolean): { day: string; mon
   const time = isAllDay
     ? "All Day"
     : date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
-  return { day, month, weekday, time };
+  const fullDate = date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  return { day, month, weekday, time, fullDate };
 }
 
 function getEventColor(index: number): string {
@@ -66,12 +71,102 @@ function groupEventsByDate(events: CalendarEvent[]): { dateLabel: string; events
   return Object.entries(groups).map(([dateLabel, events]) => ({ dateLabel, events }));
 }
 
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+
+function EventDetailModal({ event, visible, onClose }: { event: CalendarEvent | null; visible: boolean; onClose: () => void }) {
+  const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+
+  if (!event) return null;
+
+  const dateInfo = formatEventDate(event.start, event.isAllDay);
+  const endInfo = event.end ? formatEventDate(event.end, event.isAllDay) : null;
+  const timeRange = endInfo && !event.isAllDay
+    ? `${dateInfo.time} – ${endInfo.time}`
+    : dateInfo.time;
+
+  const cleanDescription = event.description
+    .replace(/<[^>]*>/g, "")
+    .replace(/https?:\/\/[^\s]+/g, "")
+    .trim();
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+        <View style={[styles.modalHeader, { paddingTop: Platform.OS === "web" ? 16 : insets.top + 8 }]}>
+          <Pressable onPress={onClose} hitSlop={12} style={({ pressed }) => [styles.modalCloseBtn, { backgroundColor: colors.surface, opacity: pressed ? 0.7 : 1 }]}>
+            <Ionicons name="close" size={22} color={colors.text} />
+          </Pressable>
+        </View>
+
+        <ScrollView style={styles.modalScroll} contentContainerStyle={{ paddingBottom: insets.bottom + 24 }} bounces={false}>
+          {event.imageUrl ? (
+            <Image source={{ uri: event.imageUrl }} style={styles.modalImage} resizeMode="contain" />
+          ) : null}
+
+          <View style={styles.modalBody}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>{event.title}</Text>
+
+            {event.organizer ? (
+              <View style={styles.modalOrganizerRow}>
+                <MaterialCommunityIcons
+                  name={isMasjid(event.organizer) ? "mosque" : "office-building-outline"}
+                  size={16}
+                  color={colors.gold}
+                />
+                <Text style={[styles.modalOrganizerText, { color: colors.gold }]}>{event.organizer}</Text>
+              </View>
+            ) : null}
+
+            <View style={[styles.modalInfoCard, { backgroundColor: colors.surface }]}>
+              <View style={styles.modalInfoRow}>
+                <Ionicons name="calendar-outline" size={18} color={colors.green} />
+                <Text style={[styles.modalInfoText, { color: colors.text }]}>{dateInfo.fullDate}</Text>
+              </View>
+              <View style={styles.modalInfoRow}>
+                <Ionicons name="time-outline" size={18} color={colors.green} />
+                <Text style={[styles.modalInfoText, { color: colors.text }]}>{timeRange}</Text>
+              </View>
+              {event.location ? (
+                <View style={styles.modalInfoRow}>
+                  <Ionicons name="location-outline" size={18} color={colors.green} />
+                  <Text style={[styles.modalInfoText, { color: colors.text }]}>{event.location}</Text>
+                </View>
+              ) : null}
+            </View>
+
+            {event.registrationUrl ? (
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  Linking.openURL(event.registrationUrl);
+                }}
+                style={({ pressed }) => [styles.registerButton, { backgroundColor: colors.green, opacity: pressed ? 0.85 : 1 }]}
+              >
+                <Ionicons name="open-outline" size={18} color="#fff" />
+                <Text style={styles.registerButtonText}>Register / RSVP</Text>
+              </Pressable>
+            ) : null}
+
+            {cleanDescription ? (
+              <View style={styles.modalDescriptionSection}>
+                <Text style={[styles.modalSectionLabel, { color: colors.textSecondary }]}>Details</Text>
+                <Text style={[styles.modalDescription, { color: colors.text }]}>{cleanDescription}</Text>
+              </View>
+            ) : null}
+          </View>
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+}
+
 export default function EventsScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 
   const { data: events, isLoading, error } = useQuery<CalendarEvent[]>({
     queryKey: ["/api/events"],
@@ -85,131 +180,133 @@ export default function EventsScreen() {
     setRefreshing(false);
   }, [queryClient]);
 
-  const toggleExpand = useCallback((id: string) => {
-    setExpandedId((prev) => (prev === id ? null : id));
-  }, []);
-
   const grouped = events ? groupEventsByDate(events) : [];
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={{
-        paddingTop: Platform.OS === "web" ? 67 + insets.top : insets.top + 16,
-        paddingBottom: Platform.OS === "web" ? 34 : 100,
-      }}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />
-      }
-    >
-      <View style={styles.headerSection}>
-        <Text style={[styles.title, { color: colors.text }]}>Community Events</Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Programs and events in the local area
-        </Text>
-      </View>
-
-      {isLoading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.gold} />
-        </View>
-      ) : error ? (
-        <View style={styles.centerContainer}>
-          <Ionicons name="cloud-offline-outline" size={40} color={colors.textSecondary} />
-          <Text style={[styles.errorText, { color: colors.text }]}>Unable to load events</Text>
-          <Pressable
-            style={({ pressed }) => [styles.retryButton, { backgroundColor: colors.gold, opacity: pressed ? 0.8 : 1 }]}
-            onPress={onRefresh}
-          >
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </Pressable>
-        </View>
-      ) : grouped.length === 0 ? (
-        <View style={styles.centerContainer}>
-          <MaterialCommunityIcons name="calendar-blank-outline" size={40} color={colors.textSecondary} />
-          <Text style={[styles.emptyText, { color: colors.text }]}>No upcoming events</Text>
-          <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-            Pull down to refresh
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <ScrollView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        contentContainerStyle={{
+          paddingTop: Platform.OS === "web" ? 67 + insets.top : insets.top + 16,
+          paddingBottom: Platform.OS === "web" ? 34 : 100,
+        }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />
+        }
+      >
+        <View style={styles.headerSection}>
+          <Text style={[styles.title, { color: colors.text }]}>Community Events</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+            Programs and events in the local area
           </Text>
         </View>
-      ) : (
-        grouped.map((group) => (
-          <View key={group.dateLabel} style={styles.dateGroup}>
-            <Text style={[styles.dateGroupLabel, { color: colors.textSecondary }]}>{group.dateLabel}</Text>
-            {group.events.map((event, idx) => {
-              const dateInfo = formatEventDate(event.start, event.isAllDay);
-              const color = getEventColor(idx);
-              const isExpanded = expandedId === event.id;
 
-              return (
-                <Pressable
-                  key={event.id}
-                  onPress={() => toggleExpand(event.id)}
-                  style={({ pressed }) => [
-                    styles.eventCard,
-                    { backgroundColor: colors.surface, opacity: pressed ? 0.95 : 1 },
-                  ]}
-                >
-                  {event.imageUrl ? (
-                    <Image
-                      source={{ uri: event.imageUrl }}
-                      style={styles.eventImage}
-                      resizeMode="cover"
-                    />
-                  ) : null}
-                  <View style={styles.eventBody}>
-                    <View style={styles.eventTopRow}>
-                      <View style={[styles.dateBadge, { backgroundColor: color }]}>
-                        <Text style={styles.dateBadgeDay}>{dateInfo.day}</Text>
-                        <Text style={styles.dateBadgeMonth}>{dateInfo.month}</Text>
+        {isLoading ? (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color={colors.gold} />
+          </View>
+        ) : error ? (
+          <View style={styles.centerContainer}>
+            <Ionicons name="cloud-offline-outline" size={40} color={colors.textSecondary} />
+            <Text style={[styles.errorText, { color: colors.text }]}>Unable to load events</Text>
+            <Pressable
+              style={({ pressed }) => [styles.retryButton, { backgroundColor: colors.gold, opacity: pressed ? 0.8 : 1 }]}
+              onPress={onRefresh}
+            >
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </Pressable>
+          </View>
+        ) : grouped.length === 0 ? (
+          <View style={styles.centerContainer}>
+            <MaterialCommunityIcons name="calendar-blank-outline" size={40} color={colors.textSecondary} />
+            <Text style={[styles.emptyText, { color: colors.text }]}>No upcoming events</Text>
+            <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
+              Pull down to refresh
+            </Text>
+          </View>
+        ) : (
+          grouped.map((group) => (
+            <View key={group.dateLabel} style={styles.dateGroup}>
+              <Text style={[styles.dateGroupLabel, { color: colors.textSecondary }]}>{group.dateLabel}</Text>
+              {group.events.map((event, idx) => {
+                const dateInfo = formatEventDate(event.start, event.isAllDay);
+                const color = getEventColor(idx);
+
+                return (
+                  <Pressable
+                    key={event.id}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setSelectedEvent(event);
+                    }}
+                    style={({ pressed }) => [
+                      styles.eventCard,
+                      { backgroundColor: colors.surface, opacity: pressed ? 0.95 : 1 },
+                    ]}
+                  >
+                    {event.imageUrl ? (
+                      <Image
+                        source={{ uri: event.imageUrl }}
+                        style={styles.eventImage}
+                        resizeMode="cover"
+                      />
+                    ) : null}
+                    <View style={styles.eventBody}>
+                      <View style={styles.eventTopRow}>
+                        <View style={[styles.dateBadge, { backgroundColor: color }]}>
+                          <Text style={styles.dateBadgeDay}>{dateInfo.day}</Text>
+                          <Text style={styles.dateBadgeMonth}>{dateInfo.month}</Text>
+                        </View>
+                        <View style={styles.eventContent}>
+                          <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={2}>
+                            {event.title}
+                          </Text>
+                          {event.organizer ? (
+                            <View style={styles.organizerRow}>
+                              <MaterialCommunityIcons
+                                name={isMasjid(event.organizer) ? "mosque" : "office-building-outline"}
+                                size={13}
+                                color={colors.gold}
+                              />
+                              <Text style={[styles.organizerText, { color: colors.gold }]} numberOfLines={1}>
+                                {event.organizer}
+                              </Text>
+                            </View>
+                          ) : null}
+                        </View>
+                        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
                       </View>
-                      <View style={styles.eventContent}>
-                        <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={isExpanded ? undefined : 2}>
-                          {event.title}
-                        </Text>
-                        {event.organizer ? (
-                          <View style={styles.organizerRow}>
-                            <MaterialCommunityIcons
-                              name={isMasjid(event.organizer) ? "mosque" : "office-building-outline"}
-                              size={13}
-                              color={colors.gold}
-                            />
-                            <Text style={[styles.organizerText, { color: colors.gold }]} numberOfLines={1}>
-                              {event.organizer}
+                      <View style={styles.eventMetaRow}>
+                        <View style={styles.eventMeta}>
+                          <Ionicons name="time-outline" size={13} color={colors.textSecondary} />
+                          <Text style={[styles.eventMetaText, { color: colors.textSecondary }]}>
+                            {dateInfo.time}
+                          </Text>
+                        </View>
+                        {event.location ? (
+                          <View style={[styles.eventMeta, { flex: 1 }]}>
+                            <Ionicons name="location-outline" size={13} color={colors.textSecondary} />
+                            <Text style={[styles.eventMetaText, { color: colors.textSecondary }]} numberOfLines={1}>
+                              {event.location}
                             </Text>
                           </View>
                         ) : null}
                       </View>
                     </View>
-                    <View style={styles.eventMetaRow}>
-                      <View style={styles.eventMeta}>
-                        <Ionicons name="time-outline" size={13} color={colors.textSecondary} />
-                        <Text style={[styles.eventMetaText, { color: colors.textSecondary }]}>
-                          {dateInfo.time}
-                        </Text>
-                      </View>
-                      {event.location ? (
-                        <View style={[styles.eventMeta, { flex: 1 }]}>
-                          <Ionicons name="location-outline" size={13} color={colors.textSecondary} />
-                          <Text style={[styles.eventMetaText, { color: colors.textSecondary }]} numberOfLines={isExpanded ? undefined : 1}>
-                            {event.location}
-                          </Text>
-                        </View>
-                      ) : null}
-                    </View>
-                    {isExpanded && event.description ? (
-                      <Text style={[styles.eventDescription, { color: colors.textSecondary }]}>
-                        {event.description.replace(/<[^>]*>/g, "").trim()}
-                      </Text>
-                    ) : null}
-                  </View>
-                </Pressable>
-              );
-            })}
-          </View>
-        ))
-      )}
-    </ScrollView>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ))
+        )}
+      </ScrollView>
+
+      <EventDetailModal
+        event={selectedEvent}
+        visible={!!selectedEvent}
+        onClose={() => setSelectedEvent(null)}
+      />
+    </View>
   );
 }
 
@@ -288,6 +385,7 @@ const styles = StyleSheet.create({
   eventTopRow: {
     flexDirection: "row",
     gap: 12,
+    alignItems: "center",
   },
   dateBadge: {
     width: 44,
@@ -343,10 +441,94 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     flexShrink: 1,
   },
-  eventDescription: {
-    fontSize: 13,
+
+  modalContainer: {
+    flex: 1,
+  },
+  modalHeader: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    zIndex: 10,
+  },
+  modalCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalScroll: {
+    flex: 1,
+  },
+  modalImage: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_WIDTH,
+    backgroundColor: "#000",
+  },
+  modalBody: {
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontFamily: "Inter_700Bold",
+    lineHeight: 28,
+  },
+  modalOrganizerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 8,
+  },
+  modalOrganizerText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+  },
+  modalInfoCard: {
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+    marginTop: 20,
+  },
+  modalInfoRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+  modalInfoText: {
+    fontSize: 14,
     fontFamily: "Inter_400Regular",
-    lineHeight: 18,
-    marginTop: 10,
+    flex: 1,
+    lineHeight: 20,
+  },
+  registerButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginTop: 16,
+  },
+  registerButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
+  },
+  modalDescriptionSection: {
+    marginTop: 20,
+  },
+  modalSectionLabel: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    textTransform: "uppercase" as const,
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  modalDescription: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 22,
   },
 });
