@@ -4,35 +4,59 @@ import { getUncachableGoogleCalendarClient } from "./google-calendar";
 
 const CALENDAR_ID = "5c6138b3c670e90f28b9ec65a6650268569a070eff5ae0ae919129f763d216af@group.calendar.google.com";
 
-const ADDRESS_TO_ORG: Record<string, string> = {
-  "808 atwater": "Islamic Association of Raleigh (Atwater)",
-  "3104 page rd": "Islamic Association of Raleigh (Page Rd)",
-  "page road": "Islamic Association of Raleigh (Page Rd)",
-  "107 quail fields": "Islamic Center of Morrisville",
-  "1155 w chatham": "Islamic Center of Cary",
-  "130 martin luther king": "Masjid King Khalid",
-  "shaw university": "Masjid King Khalid",
-  "2104 woods edge": "As-Salaam Islamic Center",
-  "1411 buck jones": "North Raleigh Masjid",
-  "1501 buck jones": "Al-Noor Islamic Center",
-  "733 center st": "Apex Masjid",
-  "1717 legion rd": "Chapel Hill Islamic Society",
-  "1920 chapel hill rd": "Ar-Razzaq Islamic Center",
-  "3034 fayetteville": "Jamaat Ibad Ar-Rahman",
-  "5122 revere": "Parkwood Masjid (JIAR)",
-  "1420 buck jones": "Rumman Room",
-  "rumman room": "Rumman Room",
-  "1251 nw maynard": "Lighthouse Project",
-  "lighthouse project": "Lighthouse Project",
-  "2220 jones franklin": "Muslim American Society (MAS Raleigh)",
-  "mas raleigh": "Muslim American Society (MAS Raleigh)",
-  "3801 rock quarry": "Raleigh Islamic Institute",
-  "1825 n new hope": "Madinah Quran & Youth Center",
-  "madinah quran": "Madinah Quran & Youth Center",
-  "200 e davie": "Raleigh Convention Center",
-  "dorton arena": "NC State Fairgrounds",
-  "raleigh convention": "Raleigh Convention Center",
-};
+const NAME_MATCHES: [string, string][] = [
+  ["islamic association of raleigh", "Islamic Association of Raleigh"],
+  ["iar", "Islamic Association of Raleigh"],
+  ["islamic center of morrisville", "Islamic Center of Morrisville"],
+  ["icm", "Islamic Center of Morrisville"],
+  ["islamic center of cary", "Islamic Center of Cary"],
+  ["masjid king khalid", "Masjid King Khalid"],
+  ["shaw university mosque", "Masjid King Khalid"],
+  ["as-salaam islamic", "As-Salaam Islamic Center"],
+  ["north raleigh masjid", "North Raleigh Masjid"],
+  ["al-noor islamic", "Al-Noor Islamic Center"],
+  ["apex masjid", "Apex Masjid"],
+  ["apex mosque", "Apex Masjid"],
+  ["chapel hill islamic", "Chapel Hill Islamic Society"],
+  ["ar-razzaq", "Ar-Razzaq Islamic Center"],
+  ["jamaat ibad", "Jamaat Ibad Ar-Rahman"],
+  ["jiar", "Jamaat Ibad Ar-Rahman"],
+  ["parkwood masjid", "Parkwood Masjid (JIAR)"],
+  ["rumman room", "Rumman Room"],
+  ["light house project", "Lighthouse Project"],
+  ["lighthouse project", "Lighthouse Project"],
+  ["muslim american society", "Muslim American Society (MAS Raleigh)"],
+  ["mas raleigh", "Muslim American Society (MAS Raleigh)"],
+  ["raleigh islamic institute", "Raleigh Islamic Institute"],
+  ["madinah quran", "Madinah Quran & Youth Center"],
+  ["mqyc", "Madinah Quran & Youth Center"],
+  ["zakat foundation", "Zakat Foundation"],
+  ["raleigh convention", "Raleigh Convention Center"],
+  ["dorton arena", "NC State Fairgrounds"],
+];
+
+const STREET_MATCHES: [string, string][] = [
+  ["atwater", "Islamic Association of Raleigh (Atwater)"],
+  ["page rd", "Islamic Association of Raleigh (Page Rd)"],
+  ["quail fields", "Islamic Center of Morrisville"],
+  ["w chatham st", "Islamic Center of Cary"],
+  ["martin luther king", "Masjid King Khalid"],
+  ["woods edge", "As-Salaam Islamic Center"],
+  ["deah way", "North Raleigh Masjid"],
+  ["buck jones", "North Raleigh Masjid"],
+  ["center st, apex", "Apex Masjid"],
+  ["center street, apex", "Apex Masjid"],
+  ["legion rd", "Chapel Hill Islamic Society"],
+  ["chapel hill rd", "Ar-Razzaq Islamic Center"],
+  ["fayetteville st", "Jamaat Ibad Ar-Rahman"],
+  ["revere rd", "Parkwood Masjid (JIAR)"],
+  ["nw maynard", "Lighthouse Project"],
+  ["kildaire farm", "Lighthouse Project"],
+  ["jones franklin", "Muslim American Society (MAS Raleigh)"],
+  ["rock quarry", "Raleigh Islamic Institute"],
+  ["new hope rd", "Madinah Quran & Youth Center"],
+  ["ridge rd, raleigh", "Madinah Quran & Youth Center"],
+];
 
 const CALENDAR_LEVEL_NAMES = new Set([
   "triangle muslim events",
@@ -41,20 +65,18 @@ const CALENDAR_LEVEL_NAMES = new Set([
 function resolveOrganizer(event: any): string {
   const location = (event.location || "").toLowerCase();
   const description = (event.description || "").toLowerCase();
-  const combined = location + " " + description;
+  const title = (event.summary || "").toLowerCase();
+  const combined = location + " " + title + " " + description;
 
-  for (const [keyword, org] of Object.entries(ADDRESS_TO_ORG)) {
-    if (combined.includes(keyword)) {
+  for (const [pattern, org] of NAME_MATCHES) {
+    if (combined.includes(pattern)) {
       return org;
     }
   }
 
-  if (event.summary) {
-    const title = event.summary.toLowerCase();
-    for (const [keyword, org] of Object.entries(ADDRESS_TO_ORG)) {
-      if (title.includes(keyword)) {
-        return org;
-      }
+  for (const [street, org] of STREET_MATCHES) {
+    if (combined.includes(street)) {
+      return org;
     }
   }
 
