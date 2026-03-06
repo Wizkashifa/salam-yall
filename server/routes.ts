@@ -6,9 +6,9 @@ const CALENDAR_ID = "5c6138b3c670e90f28b9ec65a6650268569a070eff5ae0ae919129f763d
 
 const NAME_MATCHES: [string, string][] = [
   ["islamic association of raleigh", "Islamic Association of Raleigh"],
-  ["iar", "Islamic Association of Raleigh"],
+  ["iar masjid", "Islamic Association of Raleigh"],
   ["islamic center of morrisville", "Islamic Center of Morrisville"],
-  ["icm", "Islamic Center of Morrisville"],
+  ["icm,", "Islamic Center of Morrisville"],
   ["islamic center of cary", "Islamic Center of Cary"],
   ["masjid king khalid", "Masjid King Khalid"],
   ["shaw university mosque", "Masjid King Khalid"],
@@ -33,6 +33,15 @@ const NAME_MATCHES: [string, string][] = [
   ["zakat foundation", "Zakat Foundation"],
   ["raleigh convention", "Raleigh Convention Center"],
   ["dorton arena", "NC State Fairgrounds"],
+  ["islamic center of clayton", "Islamic Center of Clayton"],
+  ["triangle islamic center", "Triangle Islamic Center"],
+  ["mckimmon center", "McKimmon Center"],
+  ["islamic society of durham", "Islamic Society of Durham"],
+  ["islamic center of durham", "Islamic Center of Durham"],
+  ["community mosque of durham", "Community Mosque of Durham"],
+  ["iqra academy", "Iqra Academy"],
+  ["al-iman school", "Al-Iman School"],
+  ["deen academy", "Deen Academy"],
 ];
 
 const STREET_MATCHES: [string, string][] = [
@@ -56,11 +65,49 @@ const STREET_MATCHES: [string, string][] = [
   ["rock quarry", "Raleigh Islamic Institute"],
   ["new hope rd", "Madinah Quran & Youth Center"],
   ["ridge rd, raleigh", "Madinah Quran & Youth Center"],
+  ["ridge rd., raleigh", "Madinah Quran & Youth Center"],
+  ["barber mill", "Islamic Center of Clayton"],
+  ["method road", "Triangle Islamic Center"],
+  ["method rd", "Triangle Islamic Center"],
 ];
 
 const CALENDAR_LEVEL_NAMES = new Set([
   "triangle muslim events",
 ]);
+
+const ORG_PATTERNS = [
+  /islamic (?:center|association|society|institute) of \w[\w\s]*/i,
+  /masjid [\w\s-]+/i,
+  /(?:[\w\s-]+) (?:masjid|mosque)/i,
+  /(?:[\w\s-]+) islamic (?:center|association|society|institute)/i,
+  /muslim (?:community|american|student|youth) [\w\s]+/i,
+];
+
+function extractOrgFromText(text: string): string {
+  for (const pattern of ORG_PATTERNS) {
+    const match = text.match(pattern);
+    if (match) {
+      let name = match[0].trim();
+      name = name.replace(/\s+(is|are|at|on|in|the|a|an|for|to|of the|will|has|have|was|with)\s*$/i, "").trim();
+      if (name.length >= 8 && name.length <= 80) {
+        return name.split(" ").map(w =>
+          w.length <= 2 ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+        ).join(" ");
+      }
+    }
+  }
+  return "";
+}
+
+function extractVenueFromLocation(location: string): string {
+  if (!location) return "";
+  const parts = location.split(",");
+  if (parts.length < 2) return "";
+  const firstPart = parts[0].trim();
+  if (/^\d/.test(firstPart)) return "";
+  if (firstPart.length < 4 || firstPart.length > 60) return "";
+  return firstPart;
+}
 
 function resolveOrganizer(event: any): string {
   const location = (event.location || "").toLowerCase();
@@ -80,6 +127,15 @@ function resolveOrganizer(event: any): string {
     }
   }
 
+  const descOrg = extractOrgFromText(event.description || "");
+  if (descOrg) return descOrg;
+
+  const titleOrg = extractOrgFromText(event.summary || "");
+  if (titleOrg) return titleOrg;
+
+  const venueName = extractVenueFromLocation(event.location || "");
+  if (venueName) return venueName;
+
   const orgName = event.organizer?.displayName || event.creator?.displayName || "";
   if (orgName && !CALENDAR_LEVEL_NAMES.has(orgName.toLowerCase())) {
     return orgName;
@@ -88,62 +144,123 @@ function resolveOrganizer(event: any): string {
   return "";
 }
 
+interface CachedEvent {
+  id: string;
+  title: string;
+  description: string;
+  location: string;
+  start: string;
+  end: string;
+  isAllDay: boolean;
+  organizer: string;
+  imageUrl: string;
+  registrationUrl: string;
+}
+
+let cachedEvents: CachedEvent[] = [];
+let lastFetchTime = 0;
+const CACHE_TTL = 15 * 60 * 1000;
+const DAILY_REFRESH_INTERVAL = 60 * 60 * 1000;
+
+function processEvent(event: any): CachedEvent {
+  const desc = event.description || "";
+  const imgMatch = desc.match(/src="([^"]+)"/);
+  const imageUrl = imgMatch ? imgMatch[1] : "";
+  const cleanDesc = desc
+    .replace(/<img[^>]*>/gi, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<a[^>]*>View Full Image<\/a>/gi, "");
+
+  const allLinks = desc.match(/https?:\/\/[^\s)"<>]+/g) || [];
+  const registrationUrl = allLinks.find((url: string) =>
+    !url.includes("drive.google.com/thumbnail") &&
+    (url.includes("forms.gle") ||
+     url.includes("docs.google.com/forms") ||
+     url.includes("event-details") ||
+     url.includes("registration") ||
+     url.includes("register") ||
+     url.includes("signup") ||
+     url.includes("sign-up") ||
+     url.includes("tinyurl.com") ||
+     url.includes("givingtools.com") ||
+     url.includes("rsvp") ||
+     url.includes("eventbrite") ||
+     url.includes("bit.ly"))
+  ) || allLinks.find((url: string) =>
+    !url.includes("drive.google.com/thumbnail")
+  ) || "";
+
+  return {
+    id: event.id,
+    title: event.summary || "Untitled Event",
+    description: cleanDesc,
+    location: event.location || "",
+    start: event.start?.dateTime || event.start?.date || "",
+    end: event.end?.dateTime || event.end?.date || "",
+    isAllDay: !event.start?.dateTime,
+    organizer: resolveOrganizer(event),
+    imageUrl,
+    registrationUrl,
+  };
+}
+
+async function fetchAndCacheEvents(): Promise<CachedEvent[]> {
+  try {
+    const calendar = await getUncachableGoogleCalendarClient();
+    const now = new Date();
+    const threeMonthsLater = new Date();
+    threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
+
+    const response = await calendar.events.list({
+      calendarId: CALENDAR_ID,
+      timeMin: now.toISOString(),
+      timeMax: threeMonthsLater.toISOString(),
+      singleEvents: true,
+      orderBy: "startTime",
+      maxResults: 100,
+    });
+
+    const events = (response.data.items || []).map(processEvent);
+    cachedEvents = events;
+    lastFetchTime = Date.now();
+
+    const matched = events.filter(e => e.organizer).length;
+    console.log(`[Calendar Sync] Fetched ${events.length} events (${matched} with organizer) at ${new Date().toISOString()}`);
+
+    return events;
+  } catch (error: any) {
+    console.error(`[Calendar Sync] Error: ${error.message}`);
+    if (cachedEvents.length > 0) {
+      console.log(`[Calendar Sync] Returning ${cachedEvents.length} cached events`);
+      return cachedEvents;
+    }
+    throw error;
+  }
+}
+
+function startDailyRefresh() {
+  fetchAndCacheEvents().catch(err =>
+    console.error("[Calendar Sync] Initial fetch failed:", err.message)
+  );
+
+  setInterval(() => {
+    console.log("[Calendar Sync] Running scheduled refresh...");
+    fetchAndCacheEvents().catch(err =>
+      console.error("[Calendar Sync] Scheduled refresh failed:", err.message)
+    );
+  }, DAILY_REFRESH_INTERVAL);
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  startDailyRefresh();
+
   app.get("/api/events", async (_req, res) => {
     try {
-      const calendar = await getUncachableGoogleCalendarClient();
-      const now = new Date();
-      const threeMonthsLater = new Date();
-      threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
-
-      const response = await calendar.events.list({
-        calendarId: CALENDAR_ID,
-        timeMin: now.toISOString(),
-        timeMax: threeMonthsLater.toISOString(),
-        singleEvents: true,
-        orderBy: "startTime",
-        maxResults: 100,
-      });
-
-      const events = (response.data.items || []).map((event: any) => {
-        const desc = event.description || "";
-        const imgMatch = desc.match(/src="([^"]+)"/);
-        const imageUrl = imgMatch ? imgMatch[1] : "";
-        const cleanDesc = desc.replace(/<img[^>]*>/gi, "").replace(/<br\s*\/?>/gi, "\n").replace(/<a[^>]*>View Full Image<\/a>/gi, "");
-
-        const allLinks = desc.match(/https?:\/\/[^\s)"<>]+/g) || [];
-        const registrationUrl = allLinks.find((url: string) =>
-          !url.includes("drive.google.com/thumbnail") &&
-          (url.includes("forms.gle") ||
-           url.includes("docs.google.com/forms") ||
-           url.includes("event-details") ||
-           url.includes("registration") ||
-           url.includes("register") ||
-           url.includes("signup") ||
-           url.includes("sign-up") ||
-           url.includes("tinyurl.com") ||
-           url.includes("givingtools.com") ||
-           url.includes("rsvp") ||
-           url.includes("eventbrite") ||
-           url.includes("bit.ly"))
-        ) || allLinks.find((url: string) =>
-          !url.includes("drive.google.com/thumbnail")
-        ) || "";
-
-        return {
-          id: event.id,
-          title: event.summary || "Untitled Event",
-          description: cleanDesc,
-          location: event.location || "",
-          start: event.start?.dateTime || event.start?.date || "",
-          end: event.end?.dateTime || event.end?.date || "",
-          isAllDay: !event.start?.dateTime,
-          organizer: resolveOrganizer(event),
-          imageUrl,
-          registrationUrl,
-        };
-      });
-
+      const now = Date.now();
+      if (cachedEvents.length > 0 && (now - lastFetchTime) < CACHE_TTL) {
+        return res.json(cachedEvents);
+      }
+      const events = await fetchAndCacheEvents();
       res.json(events);
     } catch (error: any) {
       console.error("Error fetching calendar events:", error.message);
