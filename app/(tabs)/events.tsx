@@ -13,10 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import Colors from "@/constants/colors";
-import { getApiUrl } from "@/lib/query-client";
-
-const C = Colors.light;
+import { useTheme } from "@/lib/theme-context";
 
 interface CalendarEvent {
   id: string;
@@ -26,6 +23,7 @@ interface CalendarEvent {
   start: string;
   end: string;
   isAllDay: boolean;
+  organizer: string;
 }
 
 function formatEventDate(dateStr: string, isAllDay: boolean): { day: string; month: string; weekday: string; time: string } {
@@ -40,25 +38,24 @@ function formatEventDate(dateStr: string, isAllDay: boolean): { day: string; mon
 }
 
 function getEventColor(index: number): string {
-  const palette = ["#0D7C5F", "#C8A951", "#2563EB", "#DC2626", "#7C3AED", "#0891B2"];
+  const palette = ["#1B6B4A", "#D4A843", "#2563EB", "#DC2626", "#7C3AED", "#0891B2"];
   return palette[index % palette.length];
 }
 
 function groupEventsByDate(events: CalendarEvent[]): { dateLabel: string; events: CalendarEvent[] }[] {
   const groups: Record<string, CalendarEvent[]> = {};
-
   for (const event of events) {
     const date = new Date(event.start);
     const key = date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
     if (!groups[key]) groups[key] = [];
     groups[key].push(event);
   }
-
   return Object.entries(groups).map(([dateLabel, events]) => ({ dateLabel, events }));
 }
 
 export default function EventsScreen() {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -83,32 +80,32 @@ export default function EventsScreen() {
 
   return (
     <ScrollView
-      style={[styles.container, { backgroundColor: C.background }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={{
         paddingTop: Platform.OS === "web" ? 67 + insets.top : insets.top + 16,
         paddingBottom: Platform.OS === "web" ? 34 : 100,
       }}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.emerald} />
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />
       }
     >
       <View style={styles.headerSection}>
-        <Text style={[styles.title, { color: C.text }]}>Community Events</Text>
-        <Text style={[styles.subtitle, { color: C.textSecondary }]}>
+        <Text style={[styles.title, { color: colors.text }]}>Community Events</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           Programs and events in the local area
         </Text>
       </View>
 
       {isLoading ? (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={C.emerald} />
+          <ActivityIndicator size="large" color={colors.gold} />
         </View>
       ) : error ? (
         <View style={styles.centerContainer}>
-          <Ionicons name="cloud-offline-outline" size={40} color={C.textSecondary} />
-          <Text style={[styles.errorText, { color: C.text }]}>Unable to load events</Text>
+          <Ionicons name="cloud-offline-outline" size={40} color={colors.textSecondary} />
+          <Text style={[styles.errorText, { color: colors.text }]}>Unable to load events</Text>
           <Pressable
-            style={({ pressed }) => [styles.retryButton, { opacity: pressed ? 0.8 : 1 }]}
+            style={({ pressed }) => [styles.retryButton, { backgroundColor: colors.gold, opacity: pressed ? 0.8 : 1 }]}
             onPress={onRefresh}
           >
             <Text style={styles.retryButtonText}>Retry</Text>
@@ -116,16 +113,16 @@ export default function EventsScreen() {
         </View>
       ) : grouped.length === 0 ? (
         <View style={styles.centerContainer}>
-          <MaterialCommunityIcons name="calendar-blank-outline" size={40} color={C.textSecondary} />
-          <Text style={[styles.emptyText, { color: C.text }]}>No upcoming events</Text>
-          <Text style={[styles.emptySubtext, { color: C.textSecondary }]}>
+          <MaterialCommunityIcons name="calendar-blank-outline" size={40} color={colors.textSecondary} />
+          <Text style={[styles.emptyText, { color: colors.text }]}>No upcoming events</Text>
+          <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
             Pull down to refresh
           </Text>
         </View>
       ) : (
         grouped.map((group) => (
           <View key={group.dateLabel} style={styles.dateGroup}>
-            <Text style={[styles.dateGroupLabel, { color: C.textSecondary }]}>{group.dateLabel}</Text>
+            <Text style={[styles.dateGroupLabel, { color: colors.textSecondary }]}>{group.dateLabel}</Text>
             {group.events.map((event, idx) => {
               const dateInfo = formatEventDate(event.start, event.isAllDay);
               const color = getEventColor(idx);
@@ -137,34 +134,46 @@ export default function EventsScreen() {
                   onPress={() => toggleExpand(event.id)}
                   style={({ pressed }) => [
                     styles.eventCard,
-                    { backgroundColor: C.surface, opacity: pressed ? 0.95 : 1 },
+                    { backgroundColor: colors.surface, opacity: pressed ? 0.95 : 1 },
                   ]}
                 >
                   <View style={[styles.eventAccent, { backgroundColor: color }]} />
                   <View style={styles.eventDateColumn}>
-                    <Text style={[styles.eventDay, { color: C.text }]}>{dateInfo.day}</Text>
-                    <Text style={[styles.eventMonth, { color: C.textSecondary }]}>{dateInfo.month}</Text>
+                    <Text style={[styles.eventDay, { color: colors.text }]}>{dateInfo.day}</Text>
+                    <Text style={[styles.eventMonth, { color: colors.textSecondary }]}>{dateInfo.month}</Text>
                   </View>
                   <View style={styles.eventContent}>
-                    <Text style={[styles.eventTitle, { color: C.text }]} numberOfLines={isExpanded ? undefined : 2}>
+                    <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={isExpanded ? undefined : 2}>
                       {event.title}
                     </Text>
+
+                    {event.organizer ? (
+                      <View style={styles.organizerRow}>
+                        <View style={[styles.organizerBadge, { backgroundColor: colors.accentMuted }]}>
+                          <MaterialCommunityIcons name="account-group-outline" size={12} color={colors.gold} />
+                        </View>
+                        <Text style={[styles.organizerText, { color: colors.gold }]} numberOfLines={1}>
+                          {event.organizer}
+                        </Text>
+                      </View>
+                    ) : null}
+
                     <View style={styles.eventMeta}>
-                      <Ionicons name="time-outline" size={13} color={C.textSecondary} />
-                      <Text style={[styles.eventMetaText, { color: C.textSecondary }]}>
+                      <Ionicons name="time-outline" size={13} color={colors.textSecondary} />
+                      <Text style={[styles.eventMetaText, { color: colors.textSecondary }]}>
                         {dateInfo.time}
                       </Text>
                     </View>
                     {event.location ? (
                       <View style={styles.eventMeta}>
-                        <Ionicons name="location-outline" size={13} color={C.textSecondary} />
-                        <Text style={[styles.eventMetaText, { color: C.textSecondary }]} numberOfLines={isExpanded ? undefined : 1}>
+                        <Ionicons name="location-outline" size={13} color={colors.textSecondary} />
+                        <Text style={[styles.eventMetaText, { color: colors.textSecondary }]} numberOfLines={isExpanded ? undefined : 1}>
                           {event.location}
                         </Text>
                       </View>
                     ) : null}
                     {isExpanded && event.description ? (
-                      <Text style={[styles.eventDescription, { color: C.textSecondary }]}>
+                      <Text style={[styles.eventDescription, { color: colors.textSecondary }]}>
                         {event.description.replace(/<[^>]*>/g, "")}
                       </Text>
                     ) : null}
@@ -207,7 +216,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   retryButton: {
-    backgroundColor: "#0D7C5F",
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
@@ -245,11 +253,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     overflow: "hidden",
     marginBottom: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
   },
   eventAccent: {
     width: 4,
@@ -278,6 +281,24 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: "Inter_600SemiBold",
     lineHeight: 20,
+  },
+  organizerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 6,
+  },
+  organizerBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  organizerText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    flex: 1,
   },
   eventMeta: {
     flexDirection: "row",

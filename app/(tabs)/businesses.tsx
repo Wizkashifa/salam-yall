@@ -14,9 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import Colors from "@/constants/colors";
-
-const C = Colors.light;
+import { useTheme } from "@/lib/theme-context";
 
 interface Business {
   id: string;
@@ -28,23 +26,24 @@ interface Business {
   website: string;
 }
 
-const CATEGORY_ICONS: Record<string, { icon: string; set: "ionicons" | "mci"; color: string }> = {
-  Restaurant: { icon: "restaurant-outline", set: "ionicons", color: "#DC2626" },
-  Grocery: { icon: "cart-outline", set: "ionicons", color: "#0891B2" },
-  Finance: { icon: "cash-outline", set: "ionicons", color: "#059669" },
-  Retail: { icon: "bag-handle-outline", set: "ionicons", color: "#7C3AED" },
-  Automotive: { icon: "car-outline", set: "ionicons", color: "#EA580C" },
-  "Real Estate": { icon: "home-outline", set: "ionicons", color: "#2563EB" },
+const CATEGORY_ICONS: Record<string, { icon: string; color: string }> = {
+  Restaurant: { icon: "restaurant-outline", color: "#DC2626" },
+  Grocery: { icon: "cart-outline", color: "#0891B2" },
+  Finance: { icon: "cash-outline", color: "#059669" },
+  Retail: { icon: "bag-handle-outline", color: "#7C3AED" },
+  Automotive: { icon: "car-outline", color: "#EA580C" },
+  "Real Estate": { icon: "home-outline", color: "#2563EB" },
 };
 
 function getCategoryInfo(category: string) {
-  return CATEGORY_ICONS[category] || { icon: "business-outline", set: "ionicons" as const, color: "#6B7280" };
+  return CATEGORY_ICONS[category] || { icon: "business-outline", color: "#6B7280" };
 }
 
 const CATEGORIES = ["All", "Restaurant", "Grocery", "Finance", "Retail", "Automotive", "Real Estate"];
 
 export default function BusinessesScreen() {
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
   const queryClient = useQueryClient();
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [refreshing, setRefreshing] = useState(false);
@@ -89,66 +88,66 @@ export default function BusinessesScreen() {
       const catInfo = getCategoryInfo(item.category);
 
       return (
-        <View style={[styles.businessCard, { backgroundColor: C.surface }]}>
+        <View style={[styles.businessCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={styles.cardHeader}>
-            <View style={[styles.categoryBadge, { backgroundColor: catInfo.color + "15" }]}>
+            <View style={[styles.categoryBadge, { backgroundColor: colors.categoryBadgeBg(catInfo.color) }]}>
               <Ionicons name={catInfo.icon as any} size={16} color={catInfo.color} />
             </View>
             <View style={styles.cardHeaderText}>
-              <Text style={[styles.businessName, { color: C.text }]}>{item.name}</Text>
+              <Text style={[styles.businessName, { color: colors.text }]}>{item.name}</Text>
               <Text style={[styles.categoryLabel, { color: catInfo.color }]}>{item.category}</Text>
             </View>
           </View>
 
-          <Text style={[styles.businessDesc, { color: C.textSecondary }]} numberOfLines={2}>
+          <Text style={[styles.businessDesc, { color: colors.textSecondary }]} numberOfLines={2}>
             {item.description}
           </Text>
 
           <View style={styles.addressRow}>
-            <Ionicons name="location-outline" size={14} color={C.textSecondary} />
-            <Text style={[styles.addressText, { color: C.textSecondary }]} numberOfLines={1}>
+            <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
+            <Text style={[styles.addressText, { color: colors.textSecondary }]} numberOfLines={1}>
               {item.address}
             </Text>
           </View>
 
-          <View style={styles.actionRow}>
+          <View style={[styles.actionRow, { borderTopColor: colors.divider }]}>
             <Pressable
-              style={({ pressed }) => [styles.actionButton, { opacity: pressed ? 0.7 : 1 }]}
+              style={({ pressed }) => [styles.actionButton, { backgroundColor: colors.actionButtonBg, opacity: pressed ? 0.7 : 1 }]}
               onPress={() => handleCall(item.phone)}
             >
-              <Ionicons name="call-outline" size={18} color={C.emerald} />
+              <Ionicons name="call-outline" size={18} color={colors.emerald} />
             </Pressable>
             <Pressable
-              style={({ pressed }) => [styles.actionButton, { opacity: pressed ? 0.7 : 1 }]}
+              style={({ pressed }) => [styles.actionButton, { backgroundColor: colors.actionButtonBg, opacity: pressed ? 0.7 : 1 }]}
               onPress={() => handleDirections(item.address)}
             >
-              <Ionicons name="navigate-outline" size={18} color={C.emerald} />
+              <Ionicons name="navigate-outline" size={18} color={colors.emerald} />
             </Pressable>
             {item.website ? (
               <Pressable
-                style={({ pressed }) => [styles.actionButton, { opacity: pressed ? 0.7 : 1 }]}
+                style={({ pressed }) => [styles.actionButton, { backgroundColor: colors.actionButtonBg, opacity: pressed ? 0.7 : 1 }]}
                 onPress={() => handleWebsite(item.website)}
               >
-                <Ionicons name="globe-outline" size={18} color={C.emerald} />
+                <Ionicons name="globe-outline" size={18} color={colors.emerald} />
               </Pressable>
             ) : null}
           </View>
         </View>
       );
     },
-    [handleCall, handleDirections, handleWebsite]
+    [colors, handleCall, handleDirections, handleWebsite]
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: C.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View
         style={[
           styles.headerSection,
           { paddingTop: Platform.OS === "web" ? 67 + insets.top : insets.top + 16 },
         ]}
       >
-        <Text style={[styles.title, { color: C.text }]}>Muslim Businesses</Text>
-        <Text style={[styles.subtitle, { color: C.textSecondary }]}>
+        <Text style={[styles.title, { color: colors.text }]}>Muslim Businesses</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           Support local Muslim-owned businesses
         </Text>
 
@@ -164,7 +163,9 @@ export default function BusinessesScreen() {
               <Pressable
                 style={[
                   styles.filterChip,
-                  isActive ? { backgroundColor: C.emerald } : { backgroundColor: C.surface },
+                  isActive
+                    ? { backgroundColor: colors.gold }
+                    : { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
                 ]}
                 onPress={() => {
                   setSelectedCategory(item);
@@ -174,7 +175,7 @@ export default function BusinessesScreen() {
                 <Text
                   style={[
                     styles.filterChipText,
-                    { color: isActive ? "#fff" : C.textSecondary },
+                    { color: isActive ? "#fff" : colors.textSecondary },
                   ]}
                 >
                   {item}
@@ -187,7 +188,7 @@ export default function BusinessesScreen() {
 
       {isLoading ? (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={C.emerald} />
+          <ActivityIndicator size="large" color={colors.gold} />
         </View>
       ) : (
         <FlatList
@@ -198,13 +199,13 @@ export default function BusinessesScreen() {
           showsVerticalScrollIndicator={false}
           scrollEnabled={filtered.length > 0}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.emerald} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />
           }
           ListEmptyComponent={
             <View style={styles.centerContainer}>
-              <MaterialCommunityIcons name="store-off-outline" size={40} color={C.textSecondary} />
-              <Text style={[styles.emptyText, { color: C.text }]}>No businesses found</Text>
-              <Text style={[styles.emptySubtext, { color: C.textSecondary }]}>
+              <MaterialCommunityIcons name="store-off-outline" size={40} color={colors.textSecondary} />
+              <Text style={[styles.emptyText, { color: colors.text }]}>No businesses found</Text>
+              <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
                 Try selecting a different category
               </Text>
             </View>
@@ -259,11 +260,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 16,
     marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
+    borderWidth: 1,
   },
   cardHeader: {
     flexDirection: "row",
@@ -311,14 +308,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 12,
     borderTopWidth: 1,
-    borderTopColor: "#F3F4F6",
     paddingTop: 12,
   },
   actionButton: {
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: "#E8F0EC",
     justifyContent: "center",
     alignItems: "center",
   },

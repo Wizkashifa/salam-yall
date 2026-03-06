@@ -14,7 +14,7 @@ import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
-import Colors from "@/constants/colors";
+import { useTheme } from "@/lib/theme-context";
 import {
   getPrayerTimes,
   getNextPrayer,
@@ -25,10 +25,9 @@ import {
   type PrayerTimeEntry,
 } from "@/lib/prayer-utils";
 
-const C = Colors.light;
-
 export default function PrayerScreen() {
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
   const [prayers, setPrayers] = useState<PrayerTimeEntry[]>([]);
   const [nextPrayer, setNextPrayer] = useState<PrayerTimeEntry | null>(null);
   const [countdown, setCountdown] = useState({ hours: 0, minutes: 0, seconds: 0 });
@@ -38,12 +37,51 @@ export default function PrayerScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const loadDefaultPrayers = useCallback((lat = 35.7796, lon = -78.6382) => {
+    const now = new Date();
+    const todayPrayers = getPrayerTimes(lat, lon, now);
+    setPrayers(todayPrayers);
+    setHijriDate(toHijriDate(now));
+
+    const next = getNextPrayer(todayPrayers, now);
+    if (next) {
+      setNextPrayer(next);
+      setCountdown(getCountdown(next.time, now));
+    } else {
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowPrayers = getPrayerTimes(lat, lon, tomorrow);
+      setNextPrayer(tomorrowPrayers[0]);
+      setCountdown(getCountdown(tomorrowPrayers[0].time, now));
+    }
+  }, []);
+
   const loadPrayerData = useCallback(async () => {
     try {
+      if (Platform.OS === "web") {
+        let lat = 35.7796;
+        let lon = -78.6382;
+        try {
+          const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+          });
+          lat = pos.coords.latitude;
+          lon = pos.coords.longitude;
+          setLocationPermission(true);
+          const nearest = findNearestMasjid(lat, lon);
+          setNearestMasjid({ name: nearest.masjid.name, distanceMiles: nearest.distanceMiles });
+        } catch {
+          setLocationPermission(false);
+        }
+        loadDefaultPrayers(lat, lon);
+        setLoading(false);
+        return;
+      }
+
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
         setLocationPermission(false);
-        setPrayers(getPrayerTimes(35.7796, -78.6382, new Date()));
+        loadDefaultPrayers();
         setLoading(false);
         return;
       }
@@ -54,32 +92,17 @@ export default function PrayerScreen() {
       });
       const { latitude, longitude } = location.coords;
 
-      const now = new Date();
-      const todayPrayers = getPrayerTimes(latitude, longitude, now);
-      setPrayers(todayPrayers);
-      setHijriDate(toHijriDate(now));
-
-      const next = getNextPrayer(todayPrayers, now);
-      if (next) {
-        setNextPrayer(next);
-        setCountdown(getCountdown(next.time, now));
-      } else {
-        const tomorrow = new Date(now);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowPrayers = getPrayerTimes(latitude, longitude, tomorrow);
-        setNextPrayer(tomorrowPrayers[0]);
-        setCountdown(getCountdown(tomorrowPrayers[0].time, now));
-      }
+      loadDefaultPrayers(latitude, longitude);
 
       const nearest = findNearestMasjid(latitude, longitude);
       setNearestMasjid({ name: nearest.masjid.name, distanceMiles: nearest.distanceMiles });
     } catch (err) {
       console.error("Error loading prayer data:", err);
-      setPrayers(getPrayerTimes(35.7796, -78.6382, new Date()));
+      loadDefaultPrayers();
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadDefaultPrayers]);
 
   useEffect(() => {
     loadPrayerData();
@@ -116,8 +139,8 @@ export default function PrayerScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.loadingContainer, { paddingTop: Platform.OS === "web" ? 67 + insets.top : insets.top }]}>
-        <ActivityIndicator size="large" color={C.emerald} />
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background, paddingTop: Platform.OS === "web" ? 67 + insets.top : insets.top }]}>
+        <ActivityIndicator size="large" color={colors.gold} />
       </View>
     );
   }
@@ -126,28 +149,29 @@ export default function PrayerScreen() {
 
   return (
     <ScrollView
-      style={[styles.container, { backgroundColor: C.background }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={{
         paddingTop: Platform.OS === "web" ? 67 + insets.top : insets.top + 16,
         paddingBottom: Platform.OS === "web" ? 34 : 100,
       }}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.emerald} />
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />
       }
     >
       <View style={styles.headerSection}>
-        <Text style={[styles.greeting, { color: C.textSecondary }]}>{gregorianDate}</Text>
+        <Text style={[styles.greeting, { color: colors.textSecondary }]}>{gregorianDate}</Text>
         {hijriDate ? (
-          <Text style={[styles.hijriDate, { color: C.emerald }]}>{hijriDate}</Text>
+          <Text style={[styles.hijriDate, { color: colors.gold }]}>{hijriDate}</Text>
         ) : null}
       </View>
 
       <LinearGradient
-        colors={["#0D7C5F", "#0D4D3A"]}
+        colors={[colors.gradientStart, colors.gradientEnd]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.countdownCard}
       >
+        <View style={styles.countdownGoldAccent} />
         {nextPrayer ? (
           <>
             <Text style={styles.countdownLabel}>Next Prayer</Text>
@@ -176,39 +200,39 @@ export default function PrayerScreen() {
       </LinearGradient>
 
       {nearestMasjid ? (
-        <View style={[styles.masjidCard, { backgroundColor: C.surface }]}>
-          <View style={styles.masjidIconContainer}>
-            <MaterialCommunityIcons name="mosque" size={22} color={C.emerald} />
+        <View style={[styles.masjidCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[styles.masjidIconContainer, { backgroundColor: colors.prayerIconBg }]}>
+            <MaterialCommunityIcons name="mosque" size={22} color={colors.emerald} />
           </View>
           <View style={styles.masjidInfo}>
-            <Text style={[styles.masjidLabel, { color: C.textSecondary }]}>Nearest Masjid</Text>
-            <Text style={[styles.masjidName, { color: C.text }]} numberOfLines={1}>
+            <Text style={[styles.masjidLabel, { color: colors.textSecondary }]}>Nearest Masjid</Text>
+            <Text style={[styles.masjidName, { color: colors.text }]} numberOfLines={1}>
               {nearestMasjid.name}
             </Text>
           </View>
           <View style={styles.masjidDistance}>
-            <Text style={[styles.distanceValue, { color: C.emerald }]}>
+            <Text style={[styles.distanceValue, { color: colors.gold }]}>
               {nearestMasjid.distanceMiles.toFixed(1)}
             </Text>
-            <Text style={[styles.distanceUnit, { color: C.textSecondary }]}>mi</Text>
+            <Text style={[styles.distanceUnit, { color: colors.textSecondary }]}>mi</Text>
           </View>
         </View>
       ) : null}
 
       {locationPermission === false ? (
         <Pressable
-          style={[styles.permissionBanner, { backgroundColor: "#FEF3C7" }]}
+          style={[styles.permissionBanner, { backgroundColor: colors.bannerBg }]}
           onPress={loadPrayerData}
         >
-          <Ionicons name="location-outline" size={18} color="#92400E" />
-          <Text style={{ color: "#92400E", fontSize: 13, flex: 1, marginLeft: 8, fontFamily: "Inter_500Medium" }}>
+          <Ionicons name="location-outline" size={18} color={colors.bannerText} />
+          <Text style={{ color: colors.bannerText, fontSize: 13, flex: 1, marginLeft: 8, fontFamily: "Inter_500Medium" }}>
             Enable location for accurate prayer times and masjid distance
           </Text>
         </Pressable>
       ) : null}
 
       <View style={styles.prayerListSection}>
-        <Text style={[styles.sectionTitle, { color: C.text }]}>Prayer Times</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Prayer Times</Text>
         {prayers.map((prayer) => {
           const isNext = nextPrayer?.name === prayer.name;
           const isPast = prayer.time < now && !isNext;
@@ -218,22 +242,22 @@ export default function PrayerScreen() {
               key={prayer.name}
               style={[
                 styles.prayerRow,
-                { backgroundColor: C.surface },
-                isNext && styles.prayerRowActive,
+                { backgroundColor: colors.surface },
+                isNext && { borderWidth: 1.5, borderColor: colors.gold },
               ]}
             >
-              <View style={[styles.prayerIconBg, isNext ? { backgroundColor: C.emerald } : { backgroundColor: C.lightSage }]}>
+              <View style={[styles.prayerIconBg, isNext ? { backgroundColor: colors.prayerActiveBg } : { backgroundColor: colors.prayerIconBg }]}>
                 <MaterialCommunityIcons
                   name={prayer.icon as any}
                   size={18}
-                  color={isNext ? "#fff" : C.emerald}
+                  color={isNext ? colors.prayerActiveText : colors.emerald}
                 />
               </View>
               <Text
                 style={[
                   styles.prayerName,
-                  { color: isPast ? C.textSecondary : C.text },
-                  isNext && { color: C.emerald, fontFamily: "Inter_700Bold" },
+                  { color: isPast ? colors.textSecondary : colors.text },
+                  isNext && { color: colors.gold, fontFamily: "Inter_700Bold" },
                 ]}
               >
                 {prayer.label}
@@ -241,8 +265,8 @@ export default function PrayerScreen() {
               <Text
                 style={[
                   styles.prayerTime,
-                  { color: isPast ? C.textSecondary : C.text },
-                  isNext && { color: C.emerald, fontFamily: "Inter_700Bold" },
+                  { color: isPast ? colors.textSecondary : colors.text },
+                  isNext && { color: colors.gold, fontFamily: "Inter_700Bold" },
                 ]}
               >
                 {formatTime(prayer.time)}
@@ -283,6 +307,15 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: "center",
     marginBottom: 16,
+    overflow: "hidden",
+  },
+  countdownGoldAccent: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: "#D4A843",
   },
   countdownLabel: {
     color: "rgba(255,255,255,0.7)",
@@ -292,7 +325,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   countdownPrayerName: {
-    color: "#fff",
+    color: "#D4A843",
     fontSize: 28,
     fontFamily: "Inter_700Bold",
     marginTop: 4,
@@ -337,17 +370,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    borderWidth: 1,
   },
   masjidIconContainer: {
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: "#E8F0EC",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -400,15 +428,6 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 12,
     marginBottom: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  prayerRowActive: {
-    borderWidth: 1.5,
-    borderColor: "#0D7C5F",
   },
   prayerIconBg: {
     width: 34,

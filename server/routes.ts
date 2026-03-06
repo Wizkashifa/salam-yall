@@ -4,6 +4,54 @@ import { getUncachableGoogleCalendarClient } from "./google-calendar";
 
 const CALENDAR_ID = "5c6138b3c670e90f28b9ec65a6650268569a070eff5ae0ae919129f763d216af@group.calendar.google.com";
 
+const ADDRESS_TO_ORG: Record<string, string> = {
+  "808 atwater": "Islamic Association of Raleigh (IAR)",
+  "2635 avent ferry": "Islamic Center of Raleigh",
+  "514 e martin": "Masjid Al-Iman",
+  "304 alexander": "Islamic Society of Durham",
+  "5501 sunnybrook": "As-Salaam Islamic Center",
+  "921 s east": "Masjid Ar-Razzaq",
+  "2523 noble": "Al Furqaan Islamic Center",
+  "1009 w chapel hill": "Muslim American Society",
+  "1315 w main": "Islamic Center of Durham",
+  "200 e davie": "Raleigh Convention Center",
+  "dorton arena": "NC State Fairgrounds",
+  "1025 blue ridge": "Al-Iman School",
+  "raleigh convention": "Raleigh Convention Center",
+  "cary towne center": "Cary Community",
+};
+
+function resolveOrganizer(event: any): string {
+  if (event.organizer?.displayName && event.organizer.displayName !== event.summary) {
+    return event.organizer.displayName;
+  }
+
+  if (event.creator?.displayName) {
+    return event.creator.displayName;
+  }
+
+  const location = (event.location || "").toLowerCase();
+  const description = (event.description || "").toLowerCase();
+  const combined = location + " " + description;
+
+  for (const [keyword, org] of Object.entries(ADDRESS_TO_ORG)) {
+    if (combined.includes(keyword)) {
+      return org;
+    }
+  }
+
+  if (event.summary) {
+    const title = event.summary.toLowerCase();
+    for (const [keyword, org] of Object.entries(ADDRESS_TO_ORG)) {
+      if (title.includes(keyword)) {
+        return org;
+      }
+    }
+  }
+
+  return "";
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/events", async (_req, res) => {
     try {
@@ -29,6 +77,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         start: event.start?.dateTime || event.start?.date || "",
         end: event.end?.dateTime || event.end?.date || "",
         isAllDay: !event.start?.dateTime,
+        organizer: resolveOrganizer(event),
       }));
 
       res.json(events);

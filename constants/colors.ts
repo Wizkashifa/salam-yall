@@ -1,28 +1,62 @@
-const emerald = "#0D7C5F";
-const deepTeal = "#0D4D3A";
-const gold = "#C8A951";
-const warmWhite = "#FAF8F5";
-const lightSage = "#E8F0EC";
+const emerald = "#1B6B4A";
+const deepGreen = "#0F3D2B";
+const richGold = "#D4A843";
+const darkGold = "#B8922E";
+const lightGold = "#F0DDA0";
 
 export default {
   light: {
     text: "#1A1A1A",
     textSecondary: "#6B7280",
-    background: warmWhite,
+    background: "#FAF8F5",
     surface: "#FFFFFF",
+    surfaceSecondary: "#F3F1EE",
     tint: emerald,
-    accent: gold,
+    accent: richGold,
+    accentMuted: lightGold,
     tabIconDefault: "#9CA3AF",
     tabIconSelected: emerald,
     border: "#E5E7EB",
     card: "#FFFFFF",
-    cardShadow: "rgba(0,0,0,0.06)",
-    prayerActive: emerald,
-    prayerInactive: "#E8F0EC",
-    deepTeal,
     emerald,
-    gold,
-    lightSage,
-    warmWhite,
+    deepGreen,
+    gold: richGold,
+    gradientStart: emerald,
+    gradientEnd: deepGreen,
+    prayerActiveBg: emerald,
+    prayerActiveText: "#FFFFFF",
+    prayerIconBg: "#E8F0EC",
+    categoryBadgeBg: (hex: string) => hex + "15",
+    bannerBg: "#FEF3C7",
+    bannerText: "#92400E",
+    actionButtonBg: "#E8F0EC",
+    divider: "#F3F4F6",
+  },
+  dark: {
+    text: "#F5F5F5",
+    textSecondary: "#9CA3AF",
+    background: "#0C0C0C",
+    surface: "#1A1A1A",
+    surfaceSecondary: "#242424",
+    tint: richGold,
+    accent: richGold,
+    accentMuted: "#3D3323",
+    tabIconDefault: "#6B7280",
+    tabIconSelected: richGold,
+    border: "#2A2A2A",
+    card: "#1A1A1A",
+    emerald,
+    deepGreen,
+    gold: richGold,
+    gradientStart: "#1C4A35",
+    gradientEnd: "#0F2A1C",
+    prayerActiveBg: richGold,
+    prayerActiveText: "#0C0C0C",
+    prayerIconBg: "#1C2E24",
+    categoryBadgeBg: (hex: string) => hex + "25",
+    bannerBg: "#3D3323",
+    bannerText: "#D4A843",
+    actionButtonBg: "#1C2E24",
+    divider: "#2A2A2A",
   },
 };
