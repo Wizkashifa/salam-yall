@@ -42,6 +42,17 @@ function getEventColor(index: number): string {
   return palette[index % palette.length];
 }
 
+const MASJID_KEYWORDS = [
+  "masjid", "mosque", "islamic association", "islamic center", "islamic society",
+  "as-salaam", "al-noor", "ar-razzaq", "king khalid", "jamaat ibad",
+  "chapel hill islamic", "parkwood", "apex masjid",
+];
+
+function isMasjid(organizer: string): boolean {
+  const lower = organizer.toLowerCase();
+  return MASJID_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
 function groupEventsByDate(events: CalendarEvent[]): { dateLabel: string; events: CalendarEvent[] }[] {
   const groups: Record<string, CalendarEvent[]> = {};
   for (const event of events) {
@@ -149,9 +160,11 @@ export default function EventsScreen() {
 
                     {event.organizer ? (
                       <View style={styles.organizerRow}>
-                        <View style={[styles.organizerBadge, { backgroundColor: colors.accentMuted }]}>
-                          <MaterialCommunityIcons name="account-group-outline" size={12} color={colors.gold} />
-                        </View>
+                        <MaterialCommunityIcons
+                          name={isMasjid(event.organizer) ? "mosque" : "office-building-outline"}
+                          size={13}
+                          color={colors.gold}
+                        />
                         <Text style={[styles.organizerText, { color: colors.gold }]} numberOfLines={1}>
                           {event.organizer}
                         </Text>
@@ -285,15 +298,8 @@ const styles = StyleSheet.create({
   organizerRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    marginTop: 6,
-  },
-  organizerBadge: {
-    width: 20,
-    height: 20,
-    borderRadius: 5,
-    justifyContent: "center",
-    alignItems: "center",
+    gap: 5,
+    marginTop: 5,
   },
   organizerText: {
     fontSize: 12,
