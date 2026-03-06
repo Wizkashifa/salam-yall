@@ -120,16 +120,16 @@ function EventDetailModal({ event, visible, onClose }: { event: CalendarEvent | 
 
             <View style={[styles.modalInfoCard, { backgroundColor: colors.surface }]}>
               <View style={styles.modalInfoRow}>
-                <Ionicons name="calendar-outline" size={18} color={colors.green} />
+                <Ionicons name="calendar-outline" size={18} color={colors.emerald} />
                 <Text style={[styles.modalInfoText, { color: colors.text }]}>{dateInfo.fullDate}</Text>
               </View>
               <View style={styles.modalInfoRow}>
-                <Ionicons name="time-outline" size={18} color={colors.green} />
+                <Ionicons name="time-outline" size={18} color={colors.emerald} />
                 <Text style={[styles.modalInfoText, { color: colors.text }]}>{timeRange}</Text>
               </View>
               {event.location ? (
                 <View style={styles.modalInfoRow}>
-                  <Ionicons name="location-outline" size={18} color={colors.green} />
+                  <Ionicons name="location-outline" size={18} color={colors.emerald} />
                   <Text style={[styles.modalInfoText, { color: colors.text }]}>{event.location}</Text>
                 </View>
               ) : null}
@@ -141,7 +141,7 @@ function EventDetailModal({ event, visible, onClose }: { event: CalendarEvent | 
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                   Linking.openURL(event.registrationUrl);
                 }}
-                style={({ pressed }) => [styles.registerButton, { backgroundColor: colors.green, opacity: pressed ? 0.85 : 1 }]}
+                style={({ pressed }) => [styles.registerButton, { backgroundColor: colors.emerald, opacity: pressed ? 0.85 : 1 }]}
               >
                 <Ionicons name="open-outline" size={18} color="#fff" />
                 <Text style={styles.registerButtonText}>Register / RSVP</Text>
