@@ -215,14 +215,71 @@ let lastFetchTime = 0;
 const CACHE_TTL = 15 * 60 * 1000;
 const DAILY_REFRESH_INTERVAL = 60 * 60 * 1000;
 
+function cleanDescription(rawDesc: string): string {
+  let text = rawDesc;
+
+  text = text.replace(/<img[^>]*>/gi, "");
+  text = text.replace(/<a[^>]*>View Full Image<\/a>/gi, "");
+  text = text.replace(/<a\s[^>]*>(.*?)<\/a>/gi, "$1");
+  text = text.replace(/<br\s*\/?>/gi, "\n");
+  text = text.replace(/<\/?(?:p|div|span|b|i|u|strong|em|h[1-6]|ul|ol|li|blockquote)[^>]*>/gi, "\n");
+  text = text.replace(/<[^>]*>/g, "");
+  text = text.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ").replace(/&#39;/g, "'").replace(/&quot;/g, '"');
+
+  text = text.replace(/https?:\/\/[^\s)"<>]+/g, "");
+
+  text = text.replace(/\*([^*\n]+)\*/g, "$1");
+  text = text.replace(/_([^_\n]+)_/g, "$1");
+  text = text.replace(/```(?:plaintext)?/g, "");
+  text = text.replace(/\[Text from image\]\s*:?\s*/gi, "");
+
+  text = text.replace(/^I'm sorry,?\s*but I cannot access external links\.?[^\n]*/gm, "");
+  text = text.replace(/(?:if you provide the text|I would be happy to)[^\n]*/gi, "");
+
+  const sections = text.split(/\n\s*---\s*\n/);
+  if (sections.length >= 2) {
+    const candidates = sections.map(s => {
+      let clean = s.trim();
+      clean = clean.replace(/^📝\s*(?:AI\s*)?Summary\s*:?\s*/i, "");
+      clean = clean.replace(/https?:\/\/\S+/g, "").trim();
+      return clean;
+    }).filter(s => s.length > 20);
+
+    if (candidates.length > 0) {
+      let best = candidates[0];
+      for (const c of candidates) {
+        if (c.length > best.length) best = c;
+      }
+      text = best;
+    }
+  } else {
+    text = text.replace(/^📝\s*(?:AI\s*)?Summary\s*:?\s*/im, "");
+  }
+
+  const lines = text.split("\n").filter(line => {
+    const trimmed = line.trim();
+    if (!trimmed) return true;
+    if (/^https?:\/\//.test(trimmed)) return false;
+    if (trimmed === "---") return false;
+    if (/^RSVP\s*(?:Here)?$/i.test(trimmed)) return false;
+    if (/^(?:Register|Sign up|Click)\s*(?:here|now|today|below)?$/i.test(trimmed)) return false;
+    return true;
+  });
+  text = lines.join("\n");
+
+  text = text.replace(/\n{3,}/g, "\n\n").trim();
+
+  text = text.replace(/^📝\s*(?:AI\s*)?Summary\s*:?\s*/im, "").trim();
+
+  if (text.length < 10) return "";
+
+  return text;
+}
+
 function processEvent(event: any): CachedEvent {
   const desc = event.description || "";
   const imgMatch = desc.match(/src="([^"]+)"/);
   const imageUrl = imgMatch ? imgMatch[1] : "";
-  const cleanDesc = desc
-    .replace(/<img[^>]*>/gi, "")
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<a[^>]*>View Full Image<\/a>/gi, "");
 
   const allLinks = desc.match(/https?:\/\/[^\s)"<>]+/g) || [];
   const registrationUrl = allLinks.find((url: string) =>
@@ -246,7 +303,7 @@ function processEvent(event: any): CachedEvent {
   return {
     id: event.id,
     title: event.summary || "Untitled Event",
-    description: cleanDesc,
+    description: cleanDescription(desc),
     location: event.location || "",
     start: event.start?.dateTime || event.start?.date || "",
     end: event.end?.dateTime || event.end?.date || "",

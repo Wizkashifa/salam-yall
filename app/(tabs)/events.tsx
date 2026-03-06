@@ -85,10 +85,7 @@ function EventDetailModal({ event, visible, onClose }: { event: CalendarEvent | 
     ? `${dateInfo.time} – ${endInfo.time}`
     : dateInfo.time;
 
-  const cleanDescription = event.description
-    .replace(/<[^>]*>/g, "")
-    .replace(/https?:\/\/[^\s]+/g, "")
-    .trim();
+  const cleanDescription = event.description.trim();
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
