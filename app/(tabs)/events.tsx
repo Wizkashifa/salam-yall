@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Pressable,
+  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -24,6 +25,7 @@ interface CalendarEvent {
   end: string;
   isAllDay: boolean;
   organizer: string;
+  imageUrl: string;
 }
 
 function formatEventDate(dateStr: string, isAllDay: boolean): { day: string; month: string; weekday: string; time: string } {
@@ -148,46 +150,56 @@ export default function EventsScreen() {
                     { backgroundColor: colors.surface, opacity: pressed ? 0.95 : 1 },
                   ]}
                 >
-                  <View style={[styles.eventAccent, { backgroundColor: color }]} />
-                  <View style={styles.eventDateColumn}>
-                    <Text style={[styles.eventDay, { color: colors.text }]}>{dateInfo.day}</Text>
-                    <Text style={[styles.eventMonth, { color: colors.textSecondary }]}>{dateInfo.month}</Text>
-                  </View>
-                  <View style={styles.eventContent}>
-                    <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={isExpanded ? undefined : 2}>
-                      {event.title}
-                    </Text>
-
-                    {event.organizer ? (
-                      <View style={styles.organizerRow}>
-                        <MaterialCommunityIcons
-                          name={isMasjid(event.organizer) ? "mosque" : "office-building-outline"}
-                          size={13}
-                          color={colors.gold}
-                        />
-                        <Text style={[styles.organizerText, { color: colors.gold }]} numberOfLines={1}>
-                          {event.organizer}
-                        </Text>
+                  {event.imageUrl ? (
+                    <Image
+                      source={{ uri: event.imageUrl }}
+                      style={styles.eventImage}
+                      resizeMode="cover"
+                    />
+                  ) : null}
+                  <View style={styles.eventBody}>
+                    <View style={styles.eventTopRow}>
+                      <View style={[styles.dateBadge, { backgroundColor: color }]}>
+                        <Text style={styles.dateBadgeDay}>{dateInfo.day}</Text>
+                        <Text style={styles.dateBadgeMonth}>{dateInfo.month}</Text>
                       </View>
-                    ) : null}
-
-                    <View style={styles.eventMeta}>
-                      <Ionicons name="time-outline" size={13} color={colors.textSecondary} />
-                      <Text style={[styles.eventMetaText, { color: colors.textSecondary }]}>
-                        {dateInfo.time}
-                      </Text>
+                      <View style={styles.eventContent}>
+                        <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={isExpanded ? undefined : 2}>
+                          {event.title}
+                        </Text>
+                        {event.organizer ? (
+                          <View style={styles.organizerRow}>
+                            <MaterialCommunityIcons
+                              name={isMasjid(event.organizer) ? "mosque" : "office-building-outline"}
+                              size={13}
+                              color={colors.gold}
+                            />
+                            <Text style={[styles.organizerText, { color: colors.gold }]} numberOfLines={1}>
+                              {event.organizer}
+                            </Text>
+                          </View>
+                        ) : null}
+                      </View>
                     </View>
-                    {event.location ? (
+                    <View style={styles.eventMetaRow}>
                       <View style={styles.eventMeta}>
-                        <Ionicons name="location-outline" size={13} color={colors.textSecondary} />
-                        <Text style={[styles.eventMetaText, { color: colors.textSecondary }]} numberOfLines={isExpanded ? undefined : 1}>
-                          {event.location}
+                        <Ionicons name="time-outline" size={13} color={colors.textSecondary} />
+                        <Text style={[styles.eventMetaText, { color: colors.textSecondary }]}>
+                          {dateInfo.time}
                         </Text>
                       </View>
-                    ) : null}
+                      {event.location ? (
+                        <View style={[styles.eventMeta, { flex: 1 }]}>
+                          <Ionicons name="location-outline" size={13} color={colors.textSecondary} />
+                          <Text style={[styles.eventMetaText, { color: colors.textSecondary }]} numberOfLines={isExpanded ? undefined : 1}>
+                            {event.location}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
                     {isExpanded && event.description ? (
                       <Text style={[styles.eventDescription, { color: colors.textSecondary }]}>
-                        {event.description.replace(/<[^>]*>/g, "")}
+                        {event.description.replace(/<[^>]*>/g, "").trim()}
                       </Text>
                     ) : null}
                   </View>
@@ -263,32 +275,42 @@ const styles = StyleSheet.create({
   eventCard: {
     marginHorizontal: 20,
     borderRadius: 14,
-    flexDirection: "row",
     overflow: "hidden",
-    marginBottom: 10,
+    marginBottom: 12,
   },
-  eventAccent: {
-    width: 4,
+  eventImage: {
+    width: "100%",
+    height: 160,
   },
-  eventDateColumn: {
-    width: 48,
+  eventBody: {
+    padding: 14,
+  },
+  eventTopRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  dateBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 14,
   },
-  eventDay: {
-    fontSize: 22,
+  dateBadgeDay: {
+    fontSize: 18,
     fontFamily: "Inter_700Bold",
+    color: "#fff",
+    lineHeight: 20,
   },
-  eventMonth: {
-    fontSize: 11,
+  dateBadgeMonth: {
+    fontSize: 10,
     fontFamily: "Inter_600SemiBold",
     textTransform: "uppercase" as const,
+    color: "rgba(255,255,255,0.85)",
+    lineHeight: 12,
   },
   eventContent: {
     flex: 1,
-    paddingVertical: 14,
-    paddingRight: 16,
   },
   eventTitle: {
     fontSize: 15,
@@ -299,27 +321,32 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    marginTop: 5,
+    marginTop: 4,
   },
   organizerText: {
     fontSize: 12,
     fontFamily: "Inter_600SemiBold",
     flex: 1,
   },
+  eventMetaRow: {
+    flexDirection: "row",
+    gap: 16,
+    marginTop: 10,
+  },
   eventMeta: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    marginTop: 4,
   },
   eventMetaText: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
+    flexShrink: 1,
   },
   eventDescription: {
     fontSize: 13,
     fontFamily: "Inter_400Regular",
     lineHeight: 18,
-    marginTop: 8,
+    marginTop: 10,
   },
 });

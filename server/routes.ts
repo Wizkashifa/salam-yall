@@ -105,16 +105,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         maxResults: 100,
       });
 
-      const events = (response.data.items || []).map((event: any) => ({
-        id: event.id,
-        title: event.summary || "Untitled Event",
-        description: event.description || "",
-        location: event.location || "",
-        start: event.start?.dateTime || event.start?.date || "",
-        end: event.end?.dateTime || event.end?.date || "",
-        isAllDay: !event.start?.dateTime,
-        organizer: resolveOrganizer(event),
-      }));
+      const events = (response.data.items || []).map((event: any) => {
+        const desc = event.description || "";
+        const imgMatch = desc.match(/src="([^"]+)"/);
+        const imageUrl = imgMatch ? imgMatch[1] : "";
+        const cleanDesc = desc.replace(/<img[^>]*>/gi, "").replace(/<br\s*\/?>/gi, "\n").replace(/<a[^>]*>View Full Image<\/a>/gi, "");
+        return {
+          id: event.id,
+          title: event.summary || "Untitled Event",
+          description: cleanDesc,
+          location: event.location || "",
+          start: event.start?.dateTime || event.start?.date || "",
+          end: event.end?.dateTime || event.end?.date || "",
+          isAllDay: !event.start?.dateTime,
+          organizer: resolveOrganizer(event),
+          imageUrl,
+        };
+      });
 
       res.json(events);
     } catch (error: any) {
