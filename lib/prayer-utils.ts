@@ -75,12 +75,19 @@ export interface Masjid {
 }
 
 export const NEARBY_MASJIDS: Masjid[] = [
-  { name: "Islamic Association of Raleigh", latitude: 35.8329, longitude: -78.6419, address: "808 Atwater St, Raleigh, NC" },
-  { name: "Islamic Center of Raleigh", latitude: 35.7920, longitude: -78.6805, address: "2635 Avent Ferry Rd, Raleigh, NC" },
-  { name: "Masjid Al-Iman", latitude: 35.7777, longitude: -78.6239, address: "514 E Martin St, Raleigh, NC" },
-  { name: "Islamic Society of Durham", latitude: 35.9737, longitude: -78.9049, address: "304 Alexander Ave, Durham, NC" },
-  { name: "As-Salaam Islamic Center", latitude: 35.8601, longitude: -78.8837, address: "5501 Sunnybrook Rd, Raleigh, NC" },
-  { name: "Masjid Ar-Razzaq", latitude: 35.7531, longitude: -78.6289, address: "921 S East St, Raleigh, NC" },
+  { name: "Islamic Association of Raleigh (Atwater)", latitude: 35.7953, longitude: -78.6711, address: "808 Atwater St, Raleigh, NC 27607" },
+  { name: "Islamic Association of Raleigh (Page Rd)", latitude: 35.8329, longitude: -78.8274, address: "3104 Page Rd, Morrisville, NC 27560" },
+  { name: "Islamic Center of Morrisville", latitude: 35.8316, longitude: -78.8345, address: "107 Quail Fields Ct, Morrisville, NC 27560" },
+  { name: "Islamic Center of Cary", latitude: 35.7773, longitude: -78.7978, address: "1155 W Chatham St, Cary, NC 27511" },
+  { name: "Masjid King Khalid", latitude: 35.7756, longitude: -78.6375, address: "130 Martin Luther King Jr Blvd, Raleigh, NC 27601" },
+  { name: "As-Salaam Islamic Center", latitude: 35.7985, longitude: -78.6766, address: "2104 Woods Edge Rd, Raleigh, NC 27607" },
+  { name: "North Raleigh Masjid", latitude: 35.7682, longitude: -78.7149, address: "1411 Buck Jones Rd, Raleigh, NC 27606" },
+  { name: "Al-Noor Islamic Center", latitude: 35.7676, longitude: -78.7165, address: "1501 Buck Jones Rd, Raleigh, NC 27606" },
+  { name: "Apex Masjid", latitude: 35.7327, longitude: -78.8502, address: "733 Center St, Apex, NC 27502" },
+  { name: "Chapel Hill Islamic Society", latitude: 35.8841, longitude: -79.0328, address: "1717 Legion Rd, Chapel Hill, NC 27517" },
+  { name: "Ar-Razzaq Islamic Center", latitude: 35.9728, longitude: -78.9327, address: "1920 Chapel Hill Rd, Durham, NC 27707" },
+  { name: "Jamaat Ibad Ar-Rahman", latitude: 35.9615, longitude: -78.8872, address: "3034 Fayetteville St, Durham, NC 27707" },
+  { name: "Parkwood Masjid (JIAR)", latitude: 35.9194, longitude: -78.9227, address: "5122 Revere Rd, Durham, NC 27713" },
 ];
 
 export function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
