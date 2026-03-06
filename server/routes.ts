@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "node:http";
+import pg from "pg";
 import { getUncachableGoogleCalendarClient } from "./google-calendar";
 
 const CALENDAR_ID = "5c6138b3c670e90f28b9ec65a6650268569a070eff5ae0ae919129f763d216af@group.calendar.google.com";
@@ -361,8 +362,58 @@ function startDailyRefresh() {
   }, DAILY_REFRESH_INTERVAL);
 }
 
+function getDbPool() {
+  return new pg.Pool({
+    connectionString: process.env.DATABASE_URL,
+  });
+}
+
+async function ensureBusinessesTable(pool: pg.Pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS businesses (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      category VARCHAR(100) NOT NULL,
+      description TEXT DEFAULT '',
+      address VARCHAR(500) NOT NULL,
+      phone VARCHAR(50) DEFAULT '',
+      website VARCHAR(500) DEFAULT '',
+      submitted_by_email VARCHAR(255) NOT NULL,
+      status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_businesses_status ON businesses(status);`);
+
+  const { rows } = await pool.query("SELECT COUNT(*) as count FROM businesses");
+  if (parseInt(rows[0].count) === 0) {
+    const seed = [
+      { name: "Neomonde Mediterranean", category: "Restaurant", description: "Authentic Mediterranean bakery and restaurant with fresh pita and shawarma.", address: "9610 Forum Dr, Raleigh, NC 27615", phone: "(919) 861-4860", website: "https://neomonde.com" },
+      { name: "Bosphorus Turkish Cuisine", category: "Restaurant", description: "Family-owned Turkish restaurant offering traditional kebabs and mezes.", address: "907 W Main St, Durham, NC 27701", phone: "(919) 682-0007", website: "" },
+      { name: "Al-Amir Halal Meat & Grocery", category: "Grocery", description: "Full-service halal grocery with fresh meats, spices, and imported goods.", address: "1205 E Chatham St, Cary, NC 27511", phone: "(919) 467-2220", website: "" },
+      { name: "Jasmin & Olivz Mediterranean Bistro", category: "Restaurant", description: "Fast-casual Mediterranean cuisine with bowls, wraps, and platters.", address: "8111 Tryon Woods Dr, Cary, NC 27518", phone: "(919) 439-0099", website: "https://jasminandolivz.com" },
+      { name: "Noor Islamic Finance", category: "Finance", description: "Sharia-compliant financial advisory and home financing services.", address: "3700 National Dr, Raleigh, NC 27612", phone: "(919) 555-0123", website: "" },
+      { name: "Kabob & Curry", category: "Restaurant", description: "Pakistani and Indian cuisine with halal meats and traditional recipes.", address: "4512 Falls of Neuse Rd, Raleigh, NC 27609", phone: "(919) 790-9992", website: "" },
+      { name: "Salam Boutique", category: "Retail", description: "Modest fashion boutique with hijabs, abayas, and Islamic gifts.", address: "2020 Walnut St, Cary, NC 27518", phone: "(919) 555-0456", website: "" },
+      { name: "Tariqa Auto Services", category: "Automotive", description: "Muslim-owned auto repair and maintenance shop, fair pricing guaranteed.", address: "1400 Buck Jones Rd, Raleigh, NC 27606", phone: "(919) 555-0789", website: "" },
+      { name: "Baraka Realty", category: "Real Estate", description: "Muslim-friendly real estate services for homes near masjids and Islamic schools.", address: "5000 Falls of Neuse Rd, Raleigh, NC 27609", phone: "(919) 555-0321", website: "" },
+      { name: "Mediterranean Deli", category: "Restaurant", description: "Bakery and deli with halal options, fresh bread, and imported Mediterranean goods.", address: "410 W Franklin St, Chapel Hill, NC 27516", phone: "(919) 967-2666", website: "https://mediterraneandeli.com" },
+    ];
+    for (const b of seed) {
+      await pool.query(
+        `INSERT INTO businesses (name, category, description, address, phone, website, submitted_by_email, status) VALUES ($1, $2, $3, $4, $5, $6, 'admin@ummahconnect.app', 'approved')`,
+        [b.name, b.category, b.description, b.address, b.phone, b.website]
+      );
+    }
+    console.log(`[DB] Seeded ${seed.length} businesses`);
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   startDailyRefresh();
+
+  const pool = getDbPool();
+  await ensureBusinessesTable(pool).catch(err => console.error("[DB] Init error:", err.message));
 
   app.get("/api/events", async (_req, res) => {
     try {
@@ -378,103 +429,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/businesses", (_req, res) => {
-    res.json(businesses);
+  app.get("/api/businesses", async (_req, res) => {
+    try {
+      const result = await pool.query(
+        "SELECT id, name, category, description, address, phone, website FROM businesses WHERE status = 'approved' ORDER BY name"
+      );
+      res.json(result.rows);
+    } catch (error: any) {
+      console.error("Error fetching businesses:", error.message);
+      res.status(500).json({ error: "Failed to fetch businesses" });
+    }
+  });
+
+  app.post("/api/businesses/submit", async (req, res) => {
+    try {
+      const { name, category, description, address, phone, website, email } = req.body;
+
+      if (!name || !category || !address || !email) {
+        return res.status(400).json({ error: "Name, category, address, and email are required" });
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ error: "Please provide a valid email address" });
+      }
+
+      const validCategories = ["Restaurant", "Grocery", "Finance", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Technology"];
+      if (!validCategories.includes(category)) {
+        return res.status(400).json({ error: "Invalid category" });
+      }
+
+      const result = await pool.query(
+        `INSERT INTO businesses (name, category, description, address, phone, website, submitted_by_email, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
+         RETURNING id`,
+        [name, category, description || "", address, phone || "", website || "", email]
+      );
+
+      res.status(201).json({
+        message: "Business submitted successfully! It will be reviewed before appearing in the directory.",
+        id: result.rows[0].id,
+      });
+    } catch (error: any) {
+      console.error("Error submitting business:", error.message);
+      res.status(500).json({ error: "Failed to submit business" });
+    }
   });
 
   const httpServer = createServer(app);
   return httpServer;
 }
-
-const businesses = [
-  {
-    id: "1",
-    name: "Neomonde Mediterranean",
-    category: "Restaurant",
-    description: "Authentic Mediterranean bakery and restaurant with fresh pita and shawarma.",
-    address: "9610 Forum Dr, Raleigh, NC 27615",
-    phone: "(919) 861-4860",
-    website: "https://neomonde.com",
-  },
-  {
-    id: "2",
-    name: "Bosphorus Turkish Cuisine",
-    category: "Restaurant",
-    description: "Family-owned Turkish restaurant offering traditional kebabs and mezes.",
-    address: "907 W Main St, Durham, NC 27701",
-    phone: "(919) 682-0007",
-    website: "",
-  },
-  {
-    id: "3",
-    name: "Al-Amir Halal Meat & Grocery",
-    category: "Grocery",
-    description: "Full-service halal grocery with fresh meats, spices, and imported goods.",
-    address: "1205 E Chatham St, Cary, NC 27511",
-    phone: "(919) 467-2220",
-    website: "",
-  },
-  {
-    id: "4",
-    name: "Jasmin & Olivz Mediterranean Bistro",
-    category: "Restaurant",
-    description: "Fast-casual Mediterranean cuisine with bowls, wraps, and platters.",
-    address: "8111 Tryon Woods Dr, Cary, NC 27518",
-    phone: "(919) 439-0099",
-    website: "https://jasminandolivz.com",
-  },
-  {
-    id: "5",
-    name: "Noor Islamic Finance",
-    category: "Finance",
-    description: "Sharia-compliant financial advisory and home financing services.",
-    address: "3700 National Dr, Raleigh, NC 27612",
-    phone: "(919) 555-0123",
-    website: "",
-  },
-  {
-    id: "6",
-    name: "Kabob & Curry",
-    category: "Restaurant",
-    description: "Pakistani and Indian cuisine with halal meats and traditional recipes.",
-    address: "4512 Falls of Neuse Rd, Raleigh, NC 27609",
-    phone: "(919) 790-9992",
-    website: "",
-  },
-  {
-    id: "7",
-    name: "Salam Boutique",
-    category: "Retail",
-    description: "Modest fashion boutique with hijabs, abayas, and Islamic gifts.",
-    address: "2020 Walnut St, Cary, NC 27518",
-    phone: "(919) 555-0456",
-    website: "",
-  },
-  {
-    id: "8",
-    name: "Tariqa Auto Services",
-    category: "Automotive",
-    description: "Muslim-owned auto repair and maintenance shop, fair pricing guaranteed.",
-    address: "1400 Buck Jones Rd, Raleigh, NC 27606",
-    phone: "(919) 555-0789",
-    website: "",
-  },
-  {
-    id: "9",
-    name: "Baraka Realty",
-    category: "Real Estate",
-    description: "Muslim-friendly real estate services for homes near masjids and Islamic schools.",
-    address: "5000 Falls of Neuse Rd, Raleigh, NC 27609",
-    phone: "(919) 555-0321",
-    website: "",
-  },
-  {
-    id: "10",
-    name: "Mediterranean Deli",
-    category: "Restaurant",
-    description: "Bakery and deli with halal options, fresh bread, and imported Mediterranean goods.",
-    address: "410 W Franklin St, Chapel Hill, NC 27516",
-    phone: "(919) 967-2666",
-    website: "https://mediterraneandeli.com",
-  },
-];

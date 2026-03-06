@@ -120,3 +120,31 @@ export function findNearestMasjid(latitude: number, longitude: number): { masjid
 
   return { masjid: nearest, distanceMiles: kmToMiles(minDist) };
 }
+
+const KAABA_LAT = 21.4225;
+const KAABA_LON = 39.8262;
+
+export function calculateQiblaBearing(latitude: number, longitude: number): number {
+  const lat1 = (latitude * Math.PI) / 180;
+  const lon1 = (longitude * Math.PI) / 180;
+  const lat2 = (KAABA_LAT * Math.PI) / 180;
+  const lon2 = (KAABA_LON * Math.PI) / 180;
+  const dLon = lon2 - lon1;
+
+  const y = Math.sin(dLon) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+  let bearing = (Math.atan2(y, x) * 180) / Math.PI;
+  return (bearing + 360) % 360;
+}
+
+const MOSQUE_PROXIMITY_THRESHOLD_KM = 0.1;
+
+export function checkNearMosque(latitude: number, longitude: number): Masjid | null {
+  for (const m of NEARBY_MASJIDS) {
+    const dist = getDistanceKm(latitude, longitude, m.latitude, m.longitude);
+    if (dist <= MOSQUE_PROXIMITY_THRESHOLD_KM) {
+      return m;
+    }
+  }
+  return null;
+}
