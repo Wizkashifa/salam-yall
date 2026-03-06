@@ -34,15 +34,11 @@ const ADDRESS_TO_ORG: Record<string, string> = {
   "raleigh convention": "Raleigh Convention Center",
 };
 
+const CALENDAR_LEVEL_NAMES = new Set([
+  "triangle muslim events",
+]);
+
 function resolveOrganizer(event: any): string {
-  if (event.organizer?.displayName && event.organizer.displayName !== event.summary) {
-    return event.organizer.displayName;
-  }
-
-  if (event.creator?.displayName) {
-    return event.creator.displayName;
-  }
-
   const location = (event.location || "").toLowerCase();
   const description = (event.description || "").toLowerCase();
   const combined = location + " " + description;
@@ -60,6 +56,11 @@ function resolveOrganizer(event: any): string {
         return org;
       }
     }
+  }
+
+  const orgName = event.organizer?.displayName || event.creator?.displayName || "";
+  if (orgName && !CALENDAR_LEVEL_NAMES.has(orgName.toLowerCase())) {
+    return orgName;
   }
 
   return "";
