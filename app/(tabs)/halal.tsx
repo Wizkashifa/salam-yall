@@ -18,6 +18,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Location from "expo-location";
 import { useTheme } from "@/lib/theme-context";
+import { TickerBanner } from "@/components/TickerBanner";
 
 interface HalalRestaurant {
   id: number;
@@ -393,12 +394,13 @@ export default function HalalScreen() {
         { backgroundColor: colors.background },
       ]}
     >
+      <TickerBanner />
       <View
         style={[
           styles.headerBar,
           {
             backgroundColor: colors.emerald,
-            paddingTop: (Platform.OS === "web" ? webTopPadding : insets.top) + 8,
+            paddingTop: (Platform.OS === "web" ? webTopPadding : 0) + 8,
           },
         ]}
       >

@@ -23,6 +23,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "@/lib/theme-context";
+import { TickerBanner } from "@/components/TickerBanner";
 import { apiRequest, getApiUrl } from "@/lib/query-client";
 
 interface Business {
@@ -569,6 +570,7 @@ export default function BusinessesScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <TickerBanner />
       <LinearGradient
         colors={[colors.gradientStart, colors.gradientEnd]}
         style={{ paddingHorizontal: 20, paddingVertical: 14 }}

@@ -18,6 +18,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/lib/theme-context";
+import { TickerBanner } from "@/components/TickerBanner";
 import { useSettings } from "@/lib/settings-context";
 import { registerPushToken } from "@/lib/push-utils";
 import {
@@ -400,6 +401,7 @@ export default function PrayerScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <TickerBanner />
       <LinearGradient
         colors={isDark ? ["#0A2E1E", "#143D2E"] : ["#14523A", "#1B6B4A"]}
         style={[styles.headerBar, { paddingTop: Platform.OS === "web" ? 12 : 8 }]}

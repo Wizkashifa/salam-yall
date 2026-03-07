@@ -17,6 +17,7 @@ import * as Notifications from "expo-notifications";
 import { useQuery } from "@tanstack/react-query";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "@/lib/theme-context";
+import { TickerBanner } from "@/components/TickerBanner";
 import { useSettings } from "@/lib/settings-context";
 import {
   NEARBY_MASJIDS,
@@ -399,6 +400,7 @@ export default function SettingsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <TickerBanner />
       <LinearGradient
         colors={[colors.gradientStart, colors.gradientEnd]}
         style={{ paddingHorizontal: 20, paddingVertical: 14 }}

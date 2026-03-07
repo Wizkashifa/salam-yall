@@ -19,6 +19,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "@/lib/theme-context";
+import { TickerBanner } from "@/components/TickerBanner";
 
 interface CalendarEvent {
   id: string;
@@ -201,6 +202,7 @@ export default function EventsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <TickerBanner />
       <LinearGradient
         colors={[colors.gradientStart, colors.gradientEnd]}
         style={{ paddingHorizontal: 20, paddingVertical: 14 }}
