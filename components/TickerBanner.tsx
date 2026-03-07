@@ -59,7 +59,7 @@ export function TickerBanner() {
   return (
     <View style={[styles.tickerContainer, { backgroundColor: bgColor, borderTopColor: colors.borderLight }]}>
       <View style={styles.tickerIconWrap}>
-        <Ionicons name={hasUrgent ? "alert-circle" : "megaphone"} size={14} color={iconColor} />
+        <Ionicons name={hasUrgent ? "alert-circle" : "megaphone"} size={12} color={iconColor} />
       </View>
       {needsScroll ? (
         <View
@@ -90,26 +90,26 @@ const styles = StyleSheet.create({
   tickerContainer: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
     overflow: "hidden",
   },
   tickerIconWrap: {
-    marginRight: 10,
+    marginRight: 8,
   },
   tickerScrollArea: {
     flex: 1,
     overflow: "hidden",
-    height: 18,
+    height: 16,
   },
   tickerTextRow: {
     flexDirection: "row",
     position: "absolute",
   },
   tickerText: {
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
-    lineHeight: 18,
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    lineHeight: 16,
   },
 });
