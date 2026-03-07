@@ -945,14 +945,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
-  async function enrichHalalWithPlaces(restaurantId: number) {
+  async function enrichHalalWithPlaces(restaurantId: number, forcePhoto = false) {
     try {
       const apiKey = process.env.GOOGLE_PLACES_API_KEY;
       if (!apiKey) return;
       const res = await pool.query("SELECT * FROM halal_restaurants WHERE id = $1", [restaurantId]);
       if (res.rows.length === 0) return;
       const restaurant = res.rows[0];
-      if (restaurant.place_id) return;
+      if (restaurant.place_id && !forcePhoto) return;
+      if (forcePhoto && restaurant.photo_reference) return;
+
+      if (forcePhoto && restaurant.place_id && restaurant.place_id !== 'none') {
+        const detailResp = await fetch(
+          `https://places.googleapis.com/v1/places/${restaurant.place_id}`,
+          {
+            headers: { "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": "photos" },
+          }
+        );
+        const detailData = await detailResp.json();
+        const photoRef = detailData.photos?.[0]?.name || null;
+        if (photoRef) {
+          await pool.query(`UPDATE halal_restaurants SET photo_reference = $1 WHERE id = $2`, [photoRef, restaurantId]);
+          console.log(`[Halal Enrich] Photo added for #${restaurantId} "${restaurant.name}"`);
+        }
+        return;
+      }
 
       const searchResp = await fetch(
         `https://places.googleapis.com/v1/places:searchText`,
@@ -987,20 +1004,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await pool.query(
         "SELECT id, name FROM halal_restaurants WHERE place_id IS NULL LIMIT 50"
       );
-      if (result.rows.length === 0) {
-        console.log("[Halal Enrich] All halal restaurants already enriched");
-        return;
+      if (result.rows.length > 0) {
+        console.log(`[Halal Enrich] Found ${result.rows.length} restaurants to enrich`);
+        for (const r of result.rows) {
+          await enrichHalalWithPlaces(r.id);
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
       }
-      console.log(`[Halal Enrich] Found ${result.rows.length} restaurants to enrich`);
-      for (const r of result.rows) {
-        await enrichHalalWithPlaces(r.id);
-        await new Promise(resolve => setTimeout(resolve, 500));
+
+      const missingPhotos = await pool.query(
+        "SELECT id, name FROM halal_restaurants WHERE place_id IS NOT NULL AND place_id != 'none' AND (photo_reference IS NULL OR photo_reference = '') LIMIT 100"
+      );
+      if (missingPhotos.rows.length > 0) {
+        console.log(`[Halal Enrich] Fetching photos for ${missingPhotos.rows.length} restaurants`);
+        for (const r of missingPhotos.rows) {
+          await enrichHalalWithPlaces(r.id, true);
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
       }
-      console.log("[Halal Enrich] Enrichment complete");
+
+      if (result.rows.length === 0 && missingPhotos.rows.length === 0) {
+        console.log("[Halal Enrich] All halal restaurants fully enriched");
+      } else {
+        console.log("[Halal Enrich] Enrichment complete");
+      }
     } catch (err: any) {
       console.error("[Halal Enrich] Error:", err.message);
     }
   }
+
+  app.post("/api/admin/enrich-halal", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    dailyHalalEnrichment().catch(() => {});
+    res.json({ message: "Halal enrichment started" });
+  });
 
   setTimeout(() => dailyBusinessEnrichment(), 15000);
   setTimeout(() => dailyHalalEnrichment(), 30000);
