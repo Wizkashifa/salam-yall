@@ -475,7 +475,7 @@ export default function PrayerScreen() {
 
       <ScrollView
         style={styles.scrollableContent}
-        contentContainerStyle={{ paddingBottom: Platform.OS === "web" ? 34 : 40 }}
+        contentContainerStyle={{ paddingBottom: Platform.OS === "web" ? 34 : 80 }}
         showsVerticalScrollIndicator={false}
         bounces={false}
         overScrollMode="never"
