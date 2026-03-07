@@ -113,7 +113,7 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 
 ## Prayer Screen Features
 
-- **Iqama Times**: Scraped from IAR API (`raleighmasjid.org/API/prayer/month/`), cached 24h; ICM/Cary use same schedule, JIAR uses +5min offset for Fajr/Maghrib; displayed in gold under each adhan time in prayer pills, sourced from preferred or nearest masjid
+- **Iqama Times**: IAR sourced from `raleighmasjid.org/API/prayer/month/` (monthly JSON); ICMNC sourced from `icmnc.org/wp-json/dpt/v1/prayertime?filter=today` (daily WP plugin); both cached 24h; displayed in gold under each adhan pill; defaults to IAR, switches to ICMNC if preferred masjid includes "morrisville" or "icm"
 - **Interactive Prayer Pills**: Tap to cycle prayer status (not done → gold/completed → green/at masjid); persists to AsyncStorage via prayer-tracker
 - **Prayer Tracker Calendar**: Monthly calendar view in Settings showing colored dots per prayer per day; tap day for detail
 - **Daily Quran/Hadith**: Rotating card with curated verses and hadith, changes daily based on day-of-year; on Fridays replaced by Jumu'ah prayer schedule card with khutbah times for local masjids

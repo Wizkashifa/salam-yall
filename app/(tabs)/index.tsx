@@ -341,15 +341,14 @@ export default function PrayerScreen() {
   const activeIqama = useMemo(() => {
     if (!iqamaData || iqamaData.length === 0) return null;
     if (preferredMasjid) {
-      const match = iqamaData.find(s => s.masjid === preferredMasjid);
-      if (match) return match;
+      const pref = preferredMasjid.toLowerCase();
+      if (pref.includes("morrisville") || pref.includes("icm")) {
+        const icmnc = iqamaData.find(s => s.masjid === "ICMNC");
+        if (icmnc) return icmnc;
+      }
     }
-    if (nearestMasjid) {
-      const match = iqamaData.find(s => s.masjid === nearestMasjid.name);
-      if (match) return match;
-    }
-    return iqamaData[0];
-  }, [iqamaData, preferredMasjid, nearestMasjid]);
+    return iqamaData.find(s => s.masjid === "IAR") || iqamaData[0];
+  }, [iqamaData, preferredMasjid]);
 
   const tonightEvents = useMemo(() => {
     if (!calendarEvents) return [];
@@ -802,7 +801,7 @@ export default function PrayerScreen() {
           </View>
           {activeIqama ? (
             <Text style={[styles.iqamaSource, { color: colors.textTertiary }]}>
-              Iqama · {activeIqama.masjid.replace(/\s*\(.*\)/, "")}
+              Iqama times from {activeIqama.masjid === "IAR" ? "Islamic Assoc. of Raleigh" : activeIqama.masjid === "ICMNC" ? "Islamic Center of Morrisville" : activeIqama.masjid}
             </Text>
           ) : null}
         </View>
