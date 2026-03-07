@@ -389,16 +389,8 @@ export default function PrayerScreen() {
   const countdownMins = countdown.hours * 60 + countdown.minutes;
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={{
-        paddingTop: Platform.OS === "web" ? 67 : insets.top,
-        paddingBottom: Platform.OS === "web" ? 34 : 20,
-        flexGrow: 1,
-      }}
-      showsVerticalScrollIndicator={false}
-      bounces={false}
-      overScrollMode="never"
+    <View
+      style={[styles.container, { backgroundColor: colors.background, paddingTop: Platform.OS === "web" ? 67 : insets.top }]}
     >
       <View style={styles.headerSection}>
         <View style={styles.headerTopRow}>
@@ -481,6 +473,13 @@ export default function PrayerScreen() {
         </LinearGradient>
       </View>
 
+      <ScrollView
+        style={styles.scrollableContent}
+        contentContainerStyle={{ paddingBottom: Platform.OS === "web" ? 34 : 20 }}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+        overScrollMode="never"
+      >
       <View style={styles.cardsSection}>
         <Pressable
           style={({ pressed }) => [
@@ -687,7 +686,8 @@ export default function PrayerScreen() {
           })}
         </View>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -698,6 +698,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   container: {
+    flex: 1,
+  },
+  scrollableContent: {
     flex: 1,
   },
   headerSection: {
