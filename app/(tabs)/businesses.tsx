@@ -572,61 +572,59 @@ export default function BusinessesScreen() {
       <TickerBanner />
       <LinearGradient
         colors={[colors.gradientStart, colors.gradientEnd]}
-        style={{ paddingHorizontal: 20, paddingVertical: 14 }}
+        style={{ paddingHorizontal: 20, paddingVertical: 14, flexDirection: "row", alignItems: "center" }}
       >
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>Muslim Businesses</Text>
-            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
-              Support local Muslim-owned businesses
-            </Text>
-          </View>
-          <Pressable
-            style={({ pressed }) => [styles.addButton, { backgroundColor: "rgba(255,255,255,0.2)", opacity: pressed ? 0.8 : 1 }]}
-            onPress={() => {
-              setShowSubmitModal(true);
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            }}
-            testID="add-business-button"
-          >
-            <Ionicons name="add" size={22} color="#fff" />
-          </Pressable>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>Muslim Businesses</Text>
+          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
+            Support local Muslim-owned businesses
+          </Text>
         </View>
-
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={CATEGORIES}
-          keyExtractor={(item) => item}
-          contentContainerStyle={styles.filterRow}
-          renderItem={({ item }) => {
-            const isActive = item === selectedCategory;
-            return (
-              <Pressable
-                style={[
-                  styles.filterChip,
-                  isActive
-                    ? { backgroundColor: colors.gold }
-                    : { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-                ]}
-                onPress={() => {
-                  setSelectedCategory(item);
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    { color: isActive ? "#fff" : colors.textSecondary },
-                  ]}
-                >
-                  {item}
-                </Text>
-              </Pressable>
-            );
+        <Pressable
+          style={({ pressed }) => [styles.addButton, { backgroundColor: "rgba(255,255,255,0.2)", opacity: pressed ? 0.8 : 1 }]}
+          onPress={() => {
+            setShowSubmitModal(true);
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           }}
-        />
+          testID="add-business-button"
+        >
+          <Ionicons name="add" size={22} color="#fff" />
+        </Pressable>
       </LinearGradient>
+
+      <FlatList
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        data={CATEGORIES}
+        keyExtractor={(item) => item}
+        contentContainerStyle={[styles.filterRow, { paddingHorizontal: 16, paddingVertical: 10, backgroundColor: colors.background }]}
+        renderItem={({ item }) => {
+          const isActive = item === selectedCategory;
+          return (
+            <Pressable
+              style={[
+                styles.filterChip,
+                isActive
+                  ? { backgroundColor: colors.gold }
+                  : { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+              ]}
+              onPress={() => {
+                setSelectedCategory(item);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+            >
+              <Text
+                style={[
+                  styles.filterChipText,
+                  { color: isActive ? "#fff" : colors.textSecondary },
+                ]}
+              >
+                {item}
+              </Text>
+            </Pressable>
+          );
+        }}
+      />
 
       {isLoading ? (
         <View style={styles.centerContainer}>

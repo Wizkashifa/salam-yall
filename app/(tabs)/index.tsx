@@ -9,7 +9,11 @@ import {
   ActivityIndicator,
   Linking,
   Alert,
+  Modal,
+  Image,
+  Dimensions,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
@@ -36,6 +40,129 @@ import {
   type PrayerTimeEntry,
   type Masjid,
 } from "@/lib/prayer-utils";
+
+interface CalendarEvent {
+  id: string;
+  title: string;
+  description: string;
+  location: string;
+  start: string;
+  end: string;
+  isAllDay: boolean;
+  organizer: string;
+  imageUrl: string;
+  registrationUrl: string;
+}
+
+const MASJID_KEYWORDS = [
+  "masjid", "mosque", "islamic association", "islamic center", "islamic society",
+  "as-salaam", "al-noor", "ar-razzaq", "king khalid", "jamaat ibad",
+  "chapel hill islamic", "parkwood", "apex masjid",
+];
+
+function isMasjidOrganizer(organizer: string): boolean {
+  const lower = organizer.toLowerCase();
+  return MASJID_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+
+function HomeEventDetailModal({ event, visible, onClose }: { event: CalendarEvent | null; visible: boolean; onClose: () => void }) {
+  const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
+
+  if (!event) return null;
+
+  const date = new Date(event.start);
+  const fullDate = date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  const time = event.isAllDay
+    ? "All Day"
+    : date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  const endTime = event.end && !event.isAllDay
+    ? new Date(event.end).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
+    : null;
+  const timeRange = endTime ? `${time} – ${endTime}` : time;
+  const cleanDescription = (event.description ?? "").trim();
+
+  const openMaps = () => {
+    if (event.location) {
+      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`);
+    }
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <View style={{ position: "absolute", top: Platform.OS === "web" ? 67 : insets.top + 12, right: 16, zIndex: 10 }}>
+          <Pressable onPress={onClose} hitSlop={8} style={{ width: 32, height: 32, borderRadius: 16, justifyContent: "center", alignItems: "center", backgroundColor: isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.85)" }}>
+            <Ionicons name="close" size={20} color={isDark ? "#fff" : "#374151"} />
+          </Pressable>
+        </View>
+        <ScrollView bounces={false} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
+          {event.imageUrl ? (
+            <Image source={{ uri: event.imageUrl }} style={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH * 0.75 }} resizeMode="cover" />
+          ) : (
+            <View style={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH * 0.5, justifyContent: "center", alignItems: "center", backgroundColor: isDark ? "#1A2E22" : "#EDF5F0" }}>
+              <Ionicons name="calendar" size={48} color={colors.emerald} />
+            </View>
+          )}
+          <View style={{ padding: 20 }}>
+            {event.organizer ? (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, backgroundColor: colors.gold + "20", marginBottom: 12 }}>
+                <MaterialCommunityIcons name={isMasjidOrganizer(event.organizer) ? "mosque" : "office-building-outline"} size={12} color={colors.gold} />
+                <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.gold }}>{event.organizer}</Text>
+              </View>
+            ) : null}
+            <Text style={{ fontSize: 22, fontFamily: "Inter_700Bold", color: colors.text, marginBottom: 16 }}>{event.title}</Text>
+            <View style={{ borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.divider, paddingTop: 14, gap: 12 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                <Ionicons name="calendar-outline" size={18} color={colors.emerald} />
+                <Text style={{ fontSize: 15, fontFamily: "Inter_400Regular", color: colors.text }}>{fullDate}</Text>
+              </View>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                <Ionicons name="time-outline" size={18} color={colors.emerald} />
+                <Text style={{ fontSize: 15, fontFamily: "Inter_400Regular", color: colors.text }}>{timeRange}</Text>
+              </View>
+              {event.location ? (
+                <Pressable style={{ flexDirection: "row", alignItems: "center", gap: 12 }} onPress={openMaps}>
+                  <Ionicons name="location-outline" size={18} color={colors.emerald} />
+                  <Text style={{ fontSize: 15, fontFamily: "Inter_400Regular", color: colors.text, flex: 1 }}>{event.location}</Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                </Pressable>
+              ) : null}
+            </View>
+            {cleanDescription ? (
+              <View style={{ borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.divider, marginTop: 16, paddingTop: 14 }}>
+                <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.textSecondary, marginBottom: 8 }}>Details</Text>
+                <Text style={{ fontSize: 15, fontFamily: "Inter_400Regular", color: colors.text, lineHeight: 22 }}>{cleanDescription}</Text>
+              </View>
+            ) : null}
+            <View style={{ flexDirection: "row", gap: 12, marginTop: 20 }}>
+              {event.registrationUrl ? (
+                <Pressable
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); Linking.openURL(event.registrationUrl); }}
+                  style={({ pressed }) => ({ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14, borderRadius: 12, backgroundColor: colors.emerald, opacity: pressed ? 0.85 : 1 })}
+                >
+                  <Ionicons name="open-outline" size={18} color="#fff" />
+                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#fff" }}>Register / RSVP</Text>
+                </Pressable>
+              ) : null}
+              {event.location ? (
+                <Pressable
+                  onPress={openMaps}
+                  style={({ pressed }) => ({ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14, borderRadius: 12, backgroundColor: colors.gold, opacity: pressed ? 0.85 : 1 })}
+                >
+                  <Ionicons name="navigate" size={18} color="#fff" />
+                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#fff" }}>Directions</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+}
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -127,6 +254,7 @@ export default function PrayerScreen() {
   const [nearMosque, setNearMosque] = useState<Masjid | null>(null);
   const [silenceAlertDismissed, setSilenceAlertDismissed] = useState(false);
   const [masjidsExpanded, setMasjidsExpanded] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
   const { data: calendarEvents } = useQuery<any[]>({
@@ -567,12 +695,21 @@ export default function PrayerScreen() {
                 iconName = "fitness";
                 iconBg = isDark ? "#1A2E22" : "#EDF5F0";
               }
+              const onPress = () => {
+                const fullEvent = calendarEvents?.find((e: any) => e.id === ev.id);
+                if (fullEvent) {
+                  setSelectedEvent(fullEvent as CalendarEvent);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+              };
               return (
-                <View
+                <Pressable
                   key={ev.id}
-                  style={[
+                  onPress={onPress}
+                  style={({ pressed }) => [
                     styles.eventRow,
                     idx < tonightEvents.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight },
+                    pressed && { opacity: 0.7 },
                   ]}
                 >
                   <View style={[styles.eventIcon, { backgroundColor: iconBg }]}>
@@ -589,7 +726,8 @@ export default function PrayerScreen() {
                   <Text style={[styles.eventTime, { color: colors.gold }]}>
                     {ev.time.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
                   </Text>
-                </View>
+                  <Ionicons name="chevron-forward" size={14} color={colors.textTertiary} style={{ marginLeft: 4 }} />
+                </Pressable>
               );
             })}
           </View>
@@ -646,6 +784,11 @@ export default function PrayerScreen() {
         ) : null}
 
       </ScrollView>
+      <HomeEventDetailModal
+        event={selectedEvent}
+        visible={!!selectedEvent}
+        onClose={() => setSelectedEvent(null)}
+      />
     </View>
   );
 }

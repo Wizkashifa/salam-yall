@@ -13,7 +13,7 @@ function NativeTabLayout() {
     <NativeTabs>
       <NativeTabs.Trigger name="halal">
         <Icon sf={{ default: "fork.knife", selected: "fork.knife" }} />
-        <Label>Dines</Label>
+        <Label>HalalEats</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="events">
         <Icon sf={{ default: "calendar", selected: "calendar" }} />
@@ -79,7 +79,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="halal"
         options={{
-          title: "Dines",
+          title: "HalalEats",
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons name={focused ? "restaurant" : "restaurant-outline"} size={size - 2} color={color} />
           ),
