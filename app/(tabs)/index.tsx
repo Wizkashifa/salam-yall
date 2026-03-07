@@ -135,29 +135,32 @@ export default function PrayerScreen() {
 
     const allNearby = getAllMasjidsByDistance(userCoords.lat, userCoords.lon).slice(0, 8);
 
-    const tonightFiltered = calendarEvents.filter((ev: any) => {
-      const start = new Date(ev.start);
-      const end = ev.end ? new Date(ev.end) : start;
-      return !ev.isAllDay && ((start >= now && start <= endOfTonight) || (start <= now && end >= now));
-    });
-
-    const results: { id: string; title: string; masjidName: string; time: Date }[] = [];
-    for (const ev of tonightFiltered) {
-      for (const item of allNearby) {
-        const matched = matchEventsToMasjid(item.masjid, [ev]);
-        if (matched.length > 0) {
-          results.push({
-            id: ev.id,
-            title: ev.title,
-            masjidName: item.masjid.name.replace(/\s*\(.*\)/, ""),
-            time: new Date(ev.start),
-          });
-          break;
+    return calendarEvents
+      .filter((ev: any) => {
+        const start = new Date(ev.start);
+        const end = ev.end ? new Date(ev.end) : start;
+        return !ev.isAllDay && ((start >= now && start <= endOfTonight) || (start <= now && end >= now));
+      })
+      .slice(0, 4)
+      .map((ev: any) => {
+        let venue = "";
+        for (const item of allNearby) {
+          const matched = matchEventsToMasjid(item.masjid, [ev]);
+          if (matched.length > 0) {
+            venue = item.masjid.name.replace(/\s*\(.*\)/, "");
+            break;
+          }
         }
-      }
-      if (results.length >= 4) break;
-    }
-    return results;
+        if (!venue) {
+          venue = ev.organizer || (ev.location || "").split(",")[0] || "";
+        }
+        return {
+          id: ev.id,
+          title: ev.title,
+          masjidName: venue,
+          time: new Date(ev.start),
+        };
+      });
   }, [calendarEvents, userCoords]);
 
   const loadDefaultPrayers = useCallback((lat = 35.7796, lon = -78.6382) => {
