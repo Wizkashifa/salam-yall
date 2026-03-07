@@ -522,7 +522,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 20,
-    paddingBottom: Platform.OS === "web" ? 34 : 100,
+    paddingBottom: Platform.OS === "web" ? 34 : 20,
   },
   centerContainer: {
     alignItems: "center",

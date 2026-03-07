@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   StyleSheet,
   Text,
@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   Linking,
   Alert,
-  Animated,
   LayoutAnimation,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -98,85 +97,6 @@ function QiblaCompass({ qiblaBearing, colors, isDark }: { qiblaBearing: number; 
         <Text style={[styles.compassTitle, { color: colors.text }]}>Qibla</Text>
         <Text style={[styles.compassBearing, { color: colors.textSecondary }]}>{Math.round(qiblaBearing)}°</Text>
       </View>
-    </View>
-  );
-}
-
-interface TickerMessage {
-  id: number;
-  message: string;
-  type: string;
-  created_at: string;
-  expires_at: string | null;
-}
-
-function TickerBanner({ colors, isDark }: { colors: any; isDark: boolean }) {
-  const { data: messages } = useQuery<TickerMessage[]>({
-    queryKey: ["/api/ticker"],
-    refetchInterval: 30 * 1000,
-    staleTime: 0,
-  });
-
-  const scrollAnim = useRef(new Animated.Value(0)).current;
-  const [containerWidth, setContainerWidth] = useState(0);
-
-  const activeMessages = messages?.filter(m => m.type !== "urgent") || [];
-  const urgentMessages = messages?.filter(m => m.type === "urgent") || [];
-  const allMessages = [...urgentMessages, ...activeMessages];
-  const messageSignature = allMessages.map(m => m.id).join(",");
-
-  const needsScroll = allMessages.length > 1 || (allMessages.length === 1 && allMessages[0].message.length > 30);
-
-  useEffect(() => {
-    if (!needsScroll || !allMessages.length || !containerWidth) return;
-    const textWidth = allMessages.reduce((sum, m) => sum + m.message.length * 8 + 60, 0);
-    const totalWidth = Math.max(textWidth, containerWidth * 1.5);
-
-    scrollAnim.setValue(containerWidth);
-    const animation = Animated.loop(
-      Animated.timing(scrollAnim, {
-        toValue: -totalWidth,
-        duration: totalWidth * 25,
-        useNativeDriver: USE_NATIVE_DRIVER,
-      })
-    );
-    animation.start();
-    return () => animation.stop();
-  }, [messageSignature, containerWidth, needsScroll]);
-
-  if (!allMessages.length) return null;
-
-  const hasUrgent = urgentMessages.length > 0;
-  const bgColor = hasUrgent ? colors.tickerUrgentBg : colors.tickerBg;
-  const textColor = hasUrgent ? colors.tickerUrgentText : colors.tickerText;
-  const iconColor = hasUrgent ? colors.tickerUrgentText : colors.gold;
-
-  return (
-    <View style={[styles.tickerContainer, { backgroundColor: bgColor, borderBottomColor: colors.borderLight }]}>
-      <View style={styles.tickerIconWrap}>
-        <Ionicons name={hasUrgent ? "alert-circle" : "megaphone"} size={14} color={iconColor} />
-      </View>
-      {needsScroll ? (
-        <View
-          style={styles.tickerScrollArea}
-          onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
-        >
-          <Animated.View style={[styles.tickerTextRow, { transform: [{ translateX: scrollAnim }] }]}>
-            {allMessages.map((msg, i) => (
-              <Text key={msg.id} style={[styles.tickerText, { color: textColor }]}>
-                {msg.message}
-                {i < allMessages.length - 1 ? "     ✦     " : ""}
-              </Text>
-            ))}
-          </Animated.View>
-        </View>
-      ) : (
-        <View style={styles.tickerScrollArea}>
-          <Text style={[styles.tickerText, { color: textColor }]} numberOfLines={1}>
-            {allMessages[0].message}
-          </Text>
-        </View>
-      )}
     </View>
   );
 }
@@ -459,10 +379,7 @@ export default function PrayerScreen() {
   if (loading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background, paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
-        <TickerBanner colors={colors} isDark={isDark} />
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-          <ActivityIndicator size="large" color={colors.gold} />
-        </View>
+        <ActivityIndicator size="large" color={colors.gold} />
       </View>
     );
   }
@@ -472,10 +389,8 @@ export default function PrayerScreen() {
 
   return (
     <View
-      style={[styles.container, { backgroundColor: colors.background, paddingTop: Platform.OS === "web" ? 67 : insets.top, paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 60 }]}
+      style={[styles.container, { backgroundColor: colors.background, paddingTop: Platform.OS === "web" ? 67 : insets.top, paddingBottom: Platform.OS === "web" ? 34 : 20 }]}
     >
-      <TickerBanner colors={colors} isDark={isDark} />
-
       <View style={styles.headerSection}>
         <View style={styles.headerTopRow}>
           <Pressable
@@ -770,34 +685,11 @@ export default function PrayerScreen() {
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   container: {
     flex: 1,
-  },
-  tickerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    overflow: "hidden",
-  },
-  tickerIconWrap: {
-    marginRight: 10,
-  },
-  tickerScrollArea: {
-    flex: 1,
-    overflow: "hidden",
-    height: 18,
-  },
-  tickerTextRow: {
-    flexDirection: "row",
-    position: "absolute",
-  },
-  tickerText: {
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
-    lineHeight: 18,
   },
   headerSection: {
     paddingHorizontal: 20,

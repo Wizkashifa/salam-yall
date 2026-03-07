@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Platform, StyleSheet, View } from "react-native";
 import React from "react";
 import { useTheme } from "@/lib/theme-context";
+import { TickerBanner } from "@/components/TickerBanner";
 
 function NativeTabLayout() {
   return (
@@ -42,10 +43,8 @@ function ClassicTabLayout() {
         tabBarActiveTintColor: colors.tint,
         tabBarInactiveTintColor: colors.tabIconDefault,
         tabBarStyle: {
-          position: "absolute",
           backgroundColor: isIOS ? "transparent" : colors.background,
-          borderTopWidth: StyleSheet.hairlineWidth,
-          borderTopColor: colors.borderLight,
+          borderTopWidth: 0,
           elevation: 0,
           ...(isWeb ? { height: 84 } : {}),
         },
@@ -69,6 +68,24 @@ function ClassicTabLayout() {
           fontSize: 11,
         },
       }}
+      tabBar={(props) => (
+        <View style={{ backgroundColor: isIOS ? "transparent" : colors.background }}>
+          <TickerBanner />
+          <View>
+            {isIOS ? (
+              <BlurView
+                intensity={100}
+                tint={isDark ? "dark" : "light"}
+                style={StyleSheet.absoluteFill}
+              />
+            ) : null}
+            {React.createElement(
+              require("@react-navigation/bottom-tabs").BottomTabBar,
+              props
+            )}
+          </View>
+        </View>
+      )}
     >
       <Tabs.Screen
         name="index"

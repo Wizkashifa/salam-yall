@@ -191,7 +191,7 @@ export default function EventsScreen() {
       <ScrollView
         style={[styles.container, { backgroundColor: colors.background }]}
         contentContainerStyle={{
-          paddingBottom: Platform.OS === "web" ? 34 : 100,
+          paddingBottom: Platform.OS === "web" ? 34 : 20,
         }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />
