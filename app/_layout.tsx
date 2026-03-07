@@ -20,10 +20,15 @@ import { AppDrawer } from "@/components/AppDrawer";
 import { queryClient } from "@/lib/query-client";
 import { ThemeProvider } from "@/lib/theme-context";
 import { SettingsProvider } from "@/lib/settings-context";
+import { registerPushToken } from "@/lib/push-utils";
 
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
+  useEffect(() => {
+    registerPushToken();
+  }, []);
+
   return (
     <>
       <Stack screenOptions={{ headerBackTitle: "Back" }}>

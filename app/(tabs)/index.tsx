@@ -21,6 +21,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/lib/theme-context";
 import { useSettings } from "@/lib/settings-context";
+import { registerPushToken } from "@/lib/push-utils";
 import {
   getPrayerTimes,
   getNextPrayer,
@@ -390,6 +391,7 @@ export default function PrayerScreen() {
         }
         setNotificationsEnabled(true);
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        registerPushToken();
         if (prayers.length > 0) {
           await schedulePrayerNotifications(prayers, userCoords.lat, userCoords.lon);
         }

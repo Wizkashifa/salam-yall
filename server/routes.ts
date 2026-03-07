@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "node:http";
 import pg from "pg";
+import * as fs from "fs";
+import * as path from "path";
 import { getUncachableGoogleCalendarClient } from "./google-calendar";
 
 const CALENDAR_ID = "5c6138b3c670e90f28b9ec65a6650268569a070eff5ae0ae919129f763d216af@group.calendar.google.com";
@@ -381,6 +383,16 @@ async function ensureTickerTable(pool: pg.Pool) {
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_ticker_active ON ticker_messages(active);`);
 }
 
+async function ensurePushTokensTable(pool: pg.Pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS push_tokens (
+      id SERIAL PRIMARY KEY,
+      token VARCHAR(500) UNIQUE NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+}
+
 async function ensureBusinessesTable(pool: pg.Pool) {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS businesses (
@@ -427,6 +439,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const pool = getDbPool();
   await ensureTickerTable(pool).catch(err => console.error("[DB] Ticker table init error:", err.message));
+  await ensurePushTokensTable(pool).catch(err => console.error("[DB] Push tokens table init error:", err.message));
   await ensureBusinessesTable(pool).catch(err => console.error("[DB] Init error:", err.message));
 
   app.get("/api/events", async (_req, res) => {
@@ -471,8 +484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/ticker", async (req, res) => {
     try {
-      const authHeader = req.headers.authorization;
-      if (!ADMIN_KEY || authHeader !== `Bearer ${ADMIN_KEY}`) {
+      if (!isAdminAuthorized(req)) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       const { message, type, expires_at } = req.body;
@@ -498,8 +510,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/ticker/:id", async (req, res) => {
     try {
-      const authHeader = req.headers.authorization;
-      if (!ADMIN_KEY || authHeader !== `Bearer ${ADMIN_KEY}`) {
+      if (!isAdminAuthorized(req)) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       const id = parseInt(req.params.id);
@@ -558,6 +569,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error submitting business:", error.message);
       res.status(500).json({ error: "Failed to submit business" });
+    }
+  });
+
+  const adminHtml = fs.readFileSync(
+    path.resolve(process.cwd(), "server", "templates", "admin.html"),
+    "utf-8"
+  );
+
+  app.get("/admin", (_req, res) => {
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.send(adminHtml);
+  });
+
+  const crypto = await import("crypto");
+  const adminSessions = new Set<string>();
+
+  app.post("/api/admin/login", (req, res) => {
+    const { password } = req.body;
+    if (!password || password !== ADMIN_KEY) {
+      return res.status(401).json({ error: "Invalid password" });
+    }
+    const sessionToken = crypto.randomBytes(32).toString("hex");
+    adminSessions.add(sessionToken);
+    res.json({ token: sessionToken });
+  });
+
+  function isAdminAuthorized(req: any): boolean {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return false;
+    const token = authHeader.replace("Bearer ", "");
+    return adminSessions.has(token) || token === ADMIN_KEY;
+  }
+
+  app.post("/api/push-token", async (req, res) => {
+    try {
+      const { token } = req.body;
+      if (!token || typeof token !== "string") {
+        return res.status(400).json({ error: "Token is required" });
+      }
+      const isExpoToken = /^Expo(nent)?PushToken\[.+\]$/.test(token);
+      if (!isExpoToken) {
+        return res.status(400).json({ error: "Invalid push token format" });
+      }
+      await pool.query(
+        `INSERT INTO push_tokens (token) VALUES ($1) ON CONFLICT (token) DO NOTHING`,
+        [token]
+      );
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error saving push token:", error.message);
+      res.status(500).json({ error: "Failed to save token" });
+    }
+  });
+
+  app.post("/api/admin/push", async (req, res) => {
+    try {
+      if (!isAdminAuthorized(req)) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const { title, body } = req.body;
+      if (!title || !body) {
+        return res.status(400).json({ error: "Title and body are required" });
+      }
+      const result = await pool.query("SELECT token FROM push_tokens");
+      const tokens = result.rows.map((r: any) => r.token);
+      if (!tokens.length) {
+        return res.json({ sent: 0, message: "No devices registered for push notifications" });
+      }
+
+      let sent = 0;
+      const expiredTokens: string[] = [];
+      const chunks: string[][] = [];
+      for (let i = 0; i < tokens.length; i += 100) {
+        chunks.push(tokens.slice(i, i + 100));
+      }
+
+      for (const chunk of chunks) {
+        try {
+          const messages = chunk.map((token: string) => ({
+            to: token,
+            sound: "default",
+            title,
+            body,
+          }));
+          const response = await fetch("https://exp.host/--/api/v2/push/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(messages),
+          });
+          const data = await response.json() as any;
+          const tickets = data.data || [];
+          for (let i = 0; i < tickets.length; i++) {
+            if (tickets[i].status === "ok") {
+              sent++;
+            } else if (tickets[i].details?.error === "DeviceNotRegistered") {
+              expiredTokens.push(chunk[i]);
+            }
+          }
+        } catch (err: any) {
+          console.error("Push send error:", err.message);
+        }
+      }
+
+      if (expiredTokens.length > 0) {
+        await pool.query(
+          "DELETE FROM push_tokens WHERE token = ANY($1)",
+          [expiredTokens]
+        );
+      }
+
+      res.json({ sent, total: tokens.length });
+    } catch (error: any) {
+      console.error("Error sending push:", error.message);
+      res.status(500).json({ error: "Failed to send notifications" });
     }
   });
 
