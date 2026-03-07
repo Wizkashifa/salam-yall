@@ -89,8 +89,8 @@ function QiblaCompass({ qiblaBearing, colors, isDark }: { qiblaBearing: number; 
     <View style={[styles.compassContainer, { backgroundColor: isDark ? "#1A2E22" : "#EDF5F0", borderColor: colors.borderLight }]}>
       <View style={[styles.compassRing, { borderColor: colors.gold }]}>
         <View style={[styles.compassArrowWrap, { transform: [{ rotate: arrowRotation }] }]}>
-          <View style={[styles.compassArrow, { backgroundColor: colors.emerald }]} />
           <View style={[styles.compassArrowHead, { borderBottomColor: colors.emerald }]} />
+          <View style={[styles.compassArrow, { backgroundColor: colors.emerald }]} />
         </View>
         <View style={[styles.compassDot, { backgroundColor: colors.gold }]} />
       </View>
@@ -838,12 +838,13 @@ const styles = StyleSheet.create({
   compassArrowWrap: {
     position: "absolute",
     width: 10,
-    height: 24,
+    height: 30,
     alignItems: "center",
+    justifyContent: "center",
   },
   compassArrow: {
     width: 2,
-    height: 9,
+    height: 12,
     borderRadius: 1,
   },
   compassArrowHead: {
@@ -851,11 +852,10 @@ const styles = StyleSheet.create({
     height: 0,
     borderLeftWidth: 4,
     borderRightWidth: 4,
-    borderBottomWidth: 7,
+    borderBottomWidth: 6,
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
     marginTop: -1,
-    transform: [{ rotate: "180deg" }],
   },
   compassDot: {
     width: 5,
