@@ -3,6 +3,7 @@ import {
   StyleSheet,
   Text,
   View,
+  ScrollView,
   Platform,
   Pressable,
   ActivityIndicator,
@@ -388,8 +389,16 @@ export default function PrayerScreen() {
   const countdownMins = countdown.hours * 60 + countdown.minutes;
 
   return (
-    <View
-      style={[styles.container, { backgroundColor: colors.background, paddingTop: Platform.OS === "web" ? 67 : insets.top, paddingBottom: Platform.OS === "web" ? 34 : 20 }]}
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      contentContainerStyle={{
+        paddingTop: Platform.OS === "web" ? 67 : insets.top,
+        paddingBottom: Platform.OS === "web" ? 34 : 20,
+        flexGrow: 1,
+      }}
+      showsVerticalScrollIndicator={false}
+      bounces={false}
+      overScrollMode="never"
     >
       <View style={styles.headerSection}>
         <View style={styles.headerTopRow}>
@@ -678,7 +687,7 @@ export default function PrayerScreen() {
           })}
         </View>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
