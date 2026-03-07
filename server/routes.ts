@@ -673,6 +673,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return adminSessions.has(token) || token === ADMIN_KEY;
   }
 
+  app.get("/api/admin/verify", (req, res) => {
+    if (!isAdminAuthorized(req)) {
+      return res.status(401).json({ valid: false });
+    }
+    res.json({ valid: true });
+  });
+
   app.post("/api/push-token", async (req, res) => {
     try {
       const { token } = req.body;

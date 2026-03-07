@@ -292,6 +292,7 @@
         const res = await fetch('/api/admin/businesses?status=' + currentBizFilter, {
           headers: { 'Authorization': 'Bearer ' + adminToken },
         });
+        if (res.status === 401) { handleUnauthorized(); return; }
         const businesses = await res.json();
         if (!businesses.length) {
           list.innerHTML = '<div class="empty-state">No ' + currentBizFilter + ' businesses</div>';
@@ -374,13 +375,29 @@
       if (e.key === 'Enter') doLogin();
     });
 
+    function handleUnauthorized() {
+      adminToken = '';
+      sessionStorage.removeItem('adminToken');
+      document.getElementById('loginWrap').style.display = 'flex';
+      document.getElementById('appWrap').style.display = 'none';
+      showToast('Session expired — please sign in again', true);
+    }
+
     const savedToken = sessionStorage.getItem('adminToken');
     if (savedToken) {
       adminToken = savedToken;
-      document.getElementById('loginWrap').style.display = 'none';
-      document.getElementById('appWrap').style.display = 'block';
-      loadTickers();
-      loadBusinesses('pending');
+      fetch('/api/admin/verify', { headers: { 'Authorization': 'Bearer ' + adminToken } })
+        .then(r => {
+          if (r.ok) {
+            document.getElementById('loginWrap').style.display = 'none';
+            document.getElementById('appWrap').style.display = 'block';
+            loadTickers();
+            loadBusinesses('pending');
+          } else {
+            handleUnauthorized();
+          }
+        })
+        .catch(() => { handleUnauthorized(); });
     }
 
     setInterval(loadTickers, 30000);
