@@ -12,13 +12,17 @@ import {
   RefreshControl,
   ScrollView,
   Image,
+  Modal,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Location from "expo-location";
+import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
+import { getApiUrl } from "@/lib/query-client";
 
 interface HalalRestaurant {
   id: number;
@@ -41,10 +45,13 @@ interface HalalRestaurant {
       open: { day: string; time: number[] };
       close: { day: string; time: number[] };
     }>;
+    weekdayDescriptions?: string[];
   } | null;
   rating: number | null;
   user_ratings_total: number | null;
   website: string | null;
+  photo_reference: string | null;
+  place_id: string | null;
   _distance?: number;
 }
 
@@ -131,32 +138,180 @@ function formatDistance(miles: number): string {
   return `${Math.round(miles)} mi`;
 }
 
-const FOOD_PHOTOS: Record<string, string> = {
-  INDIAN_PAKISTANI: "https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=400&h=300&fit=crop",
-  MEDITERRANEAN: "https://images.unsplash.com/photo-1544025162-d76694265947?w=400&h=300&fit=crop",
-  MIDDLE_EASTERN: "https://images.unsplash.com/photo-1547424850-28ac9e2aece5?w=400&h=300&fit=crop",
-  TURKISH: "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=400&h=300&fit=crop",
-  AMERICAN: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=300&fit=crop",
-  ITALIAN: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=300&fit=crop",
-  MEXICAN: "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=400&h=300&fit=crop",
-  EAST_ASIAN: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&h=300&fit=crop",
-  CHINESE: "https://images.unsplash.com/photo-1552611052-33e04de1b100?w=400&h=300&fit=crop",
-  JAPANESE: "https://images.unsplash.com/photo-1553621042-f6e147245754?w=400&h=300&fit=crop",
-  CENTRAL_ASIAN: "https://images.unsplash.com/photo-1603360946369-dc9bb6258143?w=400&h=300&fit=crop",
-  SENEGALESE: "https://images.unsplash.com/photo-1604329760661-e71dc83f8f26?w=400&h=300&fit=crop",
-  GREEK: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=300&fit=crop",
-  SOUTH_INDIAN: "https://images.unsplash.com/photo-1630383249896-424e482df921?w=400&h=300&fit=crop",
-  NEPALI: "https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=400&h=300&fit=crop",
-  DEFAULT: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=300&fit=crop",
-};
+function renderStars(rating: number): string {
+  const full = Math.floor(rating);
+  const half = rating - full >= 0.5 ? 1 : 0;
+  return "★".repeat(full) + (half ? "½" : "") + "☆".repeat(5 - full - half);
+}
 
-function getFoodPhoto(cuisineTypes: string[] | null): string {
-  if (cuisineTypes && cuisineTypes.length > 0) {
-    for (const c of cuisineTypes) {
-      if (FOOD_PHOTOS[c]) return FOOD_PHOTOS[c];
+function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }: {
+  restaurant: HalalRestaurant | null; visible: boolean; onClose: () => void; colors: any; isDark: boolean;
+}) {
+  const insets = useSafeAreaInsets();
+  if (!restaurant) return null;
+
+  const badge = getHalalBadge(restaurant.is_halal);
+  const openStatus = isCurrentlyOpen(restaurant.opening_hours);
+  const cuisines = restaurant.cuisine_types ? restaurant.cuisine_types.map(formatCuisine).join(" · ") : "";
+  const hasPhoto = !!restaurant.photo_reference;
+  const photoUrl = hasPhoto ? `${getApiUrl()}/api/halal-restaurants/${restaurant.id}/photo` : null;
+  const rating = restaurant.rating != null ? Number(restaurant.rating) : null;
+  const hours = restaurant.opening_hours?.weekdayDescriptions;
+
+  const openMaps = () => {
+    if (restaurant.lat && restaurant.lng) {
+      const url = Platform.select({
+        ios: `maps:0,0?q=${encodeURIComponent(restaurant.name)}@${restaurant.lat},${restaurant.lng}`,
+        android: `geo:0,0?q=${restaurant.lat},${restaurant.lng}(${encodeURIComponent(restaurant.name)})`,
+        default: `https://www.google.com/maps/search/?api=1&query=${restaurant.lat},${restaurant.lng}`,
+      });
+      if (url) Linking.openURL(url);
+    } else if (restaurant.formatted_address) {
+      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurant.formatted_address)}`);
     }
-  }
-  return FOOD_PHOTOS.DEFAULT;
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+      <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+        <View style={[styles.detailHeader, { borderBottomColor: colors.divider, paddingTop: Platform.OS === "web" ? 67 : insets.top + 12 }]}>
+          <View style={{ flex: 1 }} />
+          <Pressable onPress={onClose} hitSlop={8} style={[styles.closeButton, { backgroundColor: colors.surface }]}>
+            <Ionicons name="close" size={20} color={colors.textSecondary} />
+          </Pressable>
+        </View>
+
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false} bounces={false}>
+          {photoUrl ? (
+            <Image source={{ uri: photoUrl }} style={styles.detailPhoto} resizeMode="cover" />
+          ) : (
+            <View style={[styles.detailPhotoPlaceholder, { backgroundColor: isDark ? "#1A2E22" : "#EDF5F0" }]}>
+              <Ionicons name="restaurant" size={48} color={colors.emerald} />
+            </View>
+          )}
+
+          <View style={styles.detailContent}>
+            <View style={{ flexDirection: "row", gap: 8, marginBottom: 8 }}>
+              <View style={[styles.halalPill, { backgroundColor: badge.bg }]}>
+                <Text style={[styles.halalPillText, { color: badge.color }]}>{badge.label}</Text>
+              </View>
+              {openStatus !== null && (
+                <View style={[styles.halalPill, { backgroundColor: openStatus ? "#DCFCE7" : "#FEE2E2" }]}>
+                  <View style={[styles.openDot, { backgroundColor: openStatus ? "#22C55E" : "#EF4444" }]} />
+                  <Text style={[styles.halalPillText, { color: openStatus ? "#166534" : "#991B1B" }]}>
+                    {openStatus ? "Open" : "Closed"}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <Text style={[styles.detailName, { color: colors.text }]}>{restaurant.name}</Text>
+
+            {cuisines ? (
+              <Text style={[styles.detailCuisine, { color: colors.textSecondary }]}>{cuisines}</Text>
+            ) : null}
+
+            {rating != null && !isNaN(rating) && rating > 0 ? (
+              <View style={styles.detailRatingRow}>
+                <Text style={[styles.detailRatingScore, { color: colors.gold }]}>{rating.toFixed(1)}</Text>
+                <Text style={styles.detailStars}>{renderStars(rating)}</Text>
+                {restaurant.user_ratings_total ? (
+                  <Text style={[styles.detailRatingCount, { color: colors.textTertiary }]}>
+                    ({restaurant.user_ratings_total.toLocaleString()} reviews)
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
+
+            {restaurant.halal_comment ? (
+              <Text style={[styles.detailDesc, { color: colors.textSecondary }]}>{restaurant.halal_comment}</Text>
+            ) : null}
+
+            <View style={[styles.detailSection, { borderTopColor: colors.divider }]}>
+              {restaurant.formatted_address ? (
+                <Pressable style={styles.detailInfoRow} onPress={openMaps}>
+                  <Ionicons name="location-outline" size={18} color={colors.emerald} />
+                  <Text style={[styles.detailInfoText, { color: colors.text }]}>{restaurant.formatted_address}</Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                </Pressable>
+              ) : null}
+
+              {restaurant.formatted_phone ? (
+                <Pressable style={styles.detailInfoRow} onPress={() => Linking.openURL(`tel:${restaurant.formatted_phone}`)}>
+                  <Ionicons name="call-outline" size={18} color={colors.emerald} />
+                  <Text style={[styles.detailInfoText, { color: colors.text }]}>{restaurant.formatted_phone}</Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                </Pressable>
+              ) : null}
+
+              {restaurant.website ? (
+                <Pressable style={styles.detailInfoRow} onPress={() => Linking.openURL(restaurant.website!)}>
+                  <Ionicons name="globe-outline" size={18} color={colors.emerald} />
+                  <Text style={[styles.detailInfoText, { color: colors.text }]} numberOfLines={1}>
+                    {restaurant.website.replace(/^https?:\/\//, "")}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                </Pressable>
+              ) : null}
+            </View>
+
+            {hours && hours.length > 0 ? (
+              <View style={[styles.hoursSection, { borderTopColor: colors.divider }]}>
+                <View style={styles.hoursSectionHeader}>
+                  <Ionicons name="time-outline" size={18} color={colors.gold} />
+                  <Text style={[styles.hoursSectionTitle, { color: colors.text }]}>Hours</Text>
+                </View>
+                {hours.map((h: string, i: number) => {
+                  const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
+                  const isToday = h.toLowerCase().startsWith(today.toLowerCase());
+                  return (
+                    <Text
+                      key={i}
+                      style={[
+                        styles.hoursText,
+                        { color: isToday ? colors.text : colors.textSecondary },
+                        isToday && { fontFamily: "Inter_600SemiBold" },
+                      ]}
+                    >
+                      {h}
+                    </Text>
+                  );
+                })}
+              </View>
+            ) : null}
+
+            <View style={styles.detailActions}>
+              {restaurant.formatted_phone ? (
+                <Pressable
+                  style={({ pressed }) => [styles.detailActionBtn, { backgroundColor: colors.emerald, opacity: pressed ? 0.8 : 1 }]}
+                  onPress={() => Linking.openURL(`tel:${restaurant.formatted_phone}`)}
+                >
+                  <Ionicons name="call" size={18} color="#fff" />
+                  <Text style={styles.detailActionText}>Call</Text>
+                </Pressable>
+              ) : null}
+              <Pressable
+                style={({ pressed }) => [styles.detailActionBtn, { backgroundColor: colors.gold, opacity: pressed ? 0.8 : 1 }]}
+                onPress={openMaps}
+              >
+                <Ionicons name="navigate" size={18} color="#fff" />
+                <Text style={styles.detailActionText}>Directions</Text>
+              </Pressable>
+              {restaurant.website ? (
+                <Pressable
+                  style={({ pressed }) => [styles.detailActionBtn, { backgroundColor: isDark ? "#4B5563" : "#374151", opacity: pressed ? 0.8 : 1 }]}
+                  onPress={() => Linking.openURL(restaurant.website!)}
+                >
+                  <Ionicons name="globe" size={18} color="#fff" />
+                  <Text style={styles.detailActionText}>Website</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    </Modal>
+  );
 }
 
 export default function HalalScreen() {
@@ -170,6 +325,7 @@ export default function HalalScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showCuisineDropdown, setShowCuisineDropdown] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [selectedRestaurant, setSelectedRestaurant] = useState<HalalRestaurant | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -237,21 +393,6 @@ export default function HalalScreen() {
     setRefreshing(false);
   }, [queryClient]);
 
-  const openMaps = useCallback((restaurant: HalalRestaurant) => {
-    if (restaurant.lat && restaurant.lng) {
-      const url = Platform.select({
-        ios: `maps:0,0?q=${encodeURIComponent(restaurant.name)}@${restaurant.lat},${restaurant.lng}`,
-        android: `geo:0,0?q=${restaurant.lat},${restaurant.lng}(${encodeURIComponent(restaurant.name)})`,
-        default: `https://www.google.com/maps/search/?api=1&query=${restaurant.lat},${restaurant.lng}`,
-      });
-      Linking.openURL(url);
-    } else if (restaurant.formatted_address) {
-      Linking.openURL(
-        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurant.formatted_address)}`
-      );
-    }
-  }, []);
-
   const renderRestaurant = useCallback(
     ({ item }: { item: HalalRestaurant }) => {
       const badge = getHalalBadge(item.is_halal);
@@ -259,89 +400,61 @@ export default function HalalScreen() {
       const cuisines = item.cuisine_types
         ? item.cuisine_types.map(formatCuisine).join(" · ")
         : "";
-      const photoUrl = getFoodPhoto(item.cuisine_types);
+      const hasPhoto = !!item.photo_reference;
+      const photoUrl = hasPhoto ? `${getApiUrl()}/api/halal-restaurants/${item.id}/photo` : null;
 
       return (
         <Pressable
           style={({ pressed }) => [
             styles.card,
-            {
-              backgroundColor: colors.surface,
-              opacity: pressed ? 0.95 : 1,
-            },
+            { backgroundColor: colors.surface, opacity: pressed ? 0.95 : 1 },
           ]}
-          onPress={() => openMaps(item)}
+          onPress={() => { setSelectedRestaurant(item); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
           testID={`restaurant-${item.id}`}
         >
-          <View style={styles.photoContainer}>
-            <Image
-              source={{ uri: photoUrl }}
-              style={styles.foodPhoto}
-              resizeMode="cover"
-            />
-            <View style={[styles.halalBadgeOverlay, { backgroundColor: isDark ? badge.bg + "E0" : badge.bg }]}>
-              <Text style={[styles.halalBadgeText, { color: badge.color }]}>
-                {badge.label}
-              </Text>
-            </View>
-            {openStatus !== null && (
-              <View
-                style={[
-                  styles.openBadgeOverlay,
-                  {
-                    backgroundColor: openStatus ? "#DCFCE7E0" : "#FEE2E2E0",
-                  },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.openDot,
-                    { backgroundColor: openStatus ? "#22C55E" : "#EF4444" },
-                  ]}
-                />
-                <Text
-                  style={[
-                    styles.openBadgeText,
-                    { color: openStatus ? "#166534" : "#991B1B" },
-                  ]}
-                >
-                  {openStatus ? "Open" : "Closed"}
-                </Text>
+          <View style={styles.cardRow}>
+            {photoUrl ? (
+              <Image source={{ uri: photoUrl }} style={styles.cardThumb} resizeMode="cover" />
+            ) : (
+              <View style={[styles.cardThumbPlaceholder, { backgroundColor: isDark ? "#1A2E22" : "#EDF5F0" }]}>
+                <Ionicons name="restaurant" size={22} color={colors.emerald} />
               </View>
             )}
-          </View>
+            <View style={styles.cardBody}>
+              <Text style={[styles.restaurantName, { color: colors.text }]} numberOfLines={1}>
+                {item.name}
+              </Text>
 
-          <View style={styles.cardBody}>
-            <Text
-              style={[styles.restaurantName, { color: colors.text }]}
-              numberOfLines={1}
-            >
-              {item.name}
-            </Text>
+              <View style={styles.metaRow}>
+                {cuisines ? (
+                  <Text style={[styles.cuisineText, { color: colors.textSecondary }]} numberOfLines={1}>
+                    {cuisines}
+                  </Text>
+                ) : null}
+              </View>
 
-            <View style={styles.metaRow}>
-              {cuisines ? (
-                <Text
-                  style={[styles.cuisineText, { color: colors.textSecondary }]}
-                  numberOfLines={1}
-                >
-                  {cuisines}
-                </Text>
-              ) : null}
-              {item._distance !== undefined && cuisines ? (
-                <Text style={[styles.metaSeparator, { color: colors.textTertiary }]}>·</Text>
-              ) : null}
-              {item._distance !== undefined ? (
-                <Text style={[styles.distanceText, { color: colors.textSecondary }]}>
-                  {formatDistance(item._distance)}
-                </Text>
-              ) : null}
-            </View>
+              <View style={styles.badgeRow}>
+                <View style={[styles.smallBadge, { backgroundColor: isDark ? badge.bg + "90" : badge.bg }]}>
+                  <Text style={[styles.smallBadgeText, { color: badge.color }]}>{badge.label}</Text>
+                </View>
+                {openStatus !== null && (
+                  <View style={[styles.smallBadge, { backgroundColor: openStatus ? "#DCFCE7" : "#FEE2E2" }]}>
+                    <View style={[styles.openDot, { backgroundColor: openStatus ? "#22C55E" : "#EF4444" }]} />
+                    <Text style={[styles.smallBadgeText, { color: openStatus ? "#166534" : "#991B1B" }]}>
+                      {openStatus ? "Open" : "Closed"}
+                    </Text>
+                  </View>
+                )}
+                {item._distance !== undefined ? (
+                  <Text style={[styles.distanceText, { color: colors.textTertiary }]}>
+                    {formatDistance(item._distance)}
+                  </Text>
+                ) : null}
+              </View>
 
-            <View style={styles.ratingRow}>
-              {item.rating && item.rating > 0 ? (
-                <>
-                  <Ionicons name="star" size={14} color="#F59E0B" />
+              {item.rating && Number(item.rating) > 0 ? (
+                <View style={styles.ratingRow}>
+                  <Ionicons name="star" size={12} color="#F59E0B" />
                   <Text style={[styles.ratingScore, { color: colors.text }]}>
                     {Number(item.rating).toFixed(1)}
                   </Text>
@@ -350,59 +463,25 @@ export default function HalalScreen() {
                       ({item.user_ratings_total.toLocaleString()})
                     </Text>
                   ) : null}
-                </>
+                </View>
               ) : null}
-
-              <View style={{ flex: 1 }} />
-
-              {item.formatted_phone ? (
-                <Pressable
-                  style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1, padding: 4 }]}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    Linking.openURL(`tel:${item.formatted_phone}`);
-                  }}
-                >
-                  <Ionicons name="call-outline" size={18} color={colors.emerald} />
-                </Pressable>
-              ) : null}
-              <Pressable
-                style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1, padding: 4 }]}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  openMaps(item);
-                }}
-              >
-                <Ionicons name="navigate-outline" size={18} color={colors.emerald} />
-              </Pressable>
             </View>
           </View>
         </Pressable>
       );
     },
-    [colors, isDark, openMaps]
+    [colors, isDark]
   );
 
   const selectedCuisineLabel = CUISINE_FILTERS.find((c) => c.key === cuisineFilter)?.label || "All Cuisines";
-
-  const webTopPadding = Platform.OS === "web" ? 67 : 0;
+  const isWeb = Platform.OS === "web";
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: colors.background },
-      ]}
-    >
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <TickerBanner />
-      <View
-        style={[
-          styles.headerBar,
-          {
-            backgroundColor: colors.emerald,
-            paddingTop: (Platform.OS === "web" ? webTopPadding : 0) + 8,
-          },
-        ]}
+      <LinearGradient
+        colors={[colors.gradientStart, colors.gradientEnd]}
+        style={[styles.headerBar, { paddingTop: isWeb ? 8 : 0 }]}
       >
         <Text style={styles.headerTitle}>Halal Eats</Text>
         <Pressable
@@ -411,7 +490,7 @@ export default function HalalScreen() {
         >
           <Ionicons name={showSearch ? "close" : "search"} size={22} color="#FFFFFF" />
         </Pressable>
-      </View>
+      </LinearGradient>
 
       {showSearch && (
         <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -442,10 +521,8 @@ export default function HalalScreen() {
               style={[
                 styles.filterChip,
                 {
-                  backgroundColor:
-                    halalFilter === f.key ? colors.emerald : colors.surface,
-                  borderColor:
-                    halalFilter === f.key ? colors.emerald : colors.border,
+                  backgroundColor: halalFilter === f.key ? colors.emerald : colors.surface,
+                  borderColor: halalFilter === f.key ? colors.emerald : colors.border,
                 },
               ]}
               onPress={() => setHalalFilter(f.key)}
@@ -453,9 +530,7 @@ export default function HalalScreen() {
               <Text
                 style={[
                   styles.filterChipText,
-                  {
-                    color: halalFilter === f.key ? "#fff" : colors.textSecondary,
-                  },
+                  { color: halalFilter === f.key ? "#FFFFFF" : colors.textSecondary },
                 ]}
               >
                 {f.label}
@@ -468,10 +543,8 @@ export default function HalalScreen() {
               styles.filterChip,
               styles.cuisineChip,
               {
-                backgroundColor:
-                  cuisineFilter !== "ALL" ? colors.gold + "20" : colors.surface,
-                borderColor:
-                  cuisineFilter !== "ALL" ? colors.gold : colors.border,
+                backgroundColor: cuisineFilter !== "ALL" ? colors.gold + "20" : colors.surface,
+                borderColor: cuisineFilter !== "ALL" ? colors.gold : colors.border,
               },
             ]}
             onPress={() => setShowCuisineDropdown(!showCuisineDropdown)}
@@ -479,9 +552,7 @@ export default function HalalScreen() {
             <Text
               style={[
                 styles.filterChipText,
-                {
-                  color: cuisineFilter !== "ALL" ? colors.gold : colors.textSecondary,
-                },
+                { color: cuisineFilter !== "ALL" ? colors.gold : colors.textSecondary },
               ]}
               numberOfLines={1}
             >
@@ -522,10 +593,8 @@ export default function HalalScreen() {
                   style={[
                     styles.dropdownText,
                     {
-                      color:
-                        cuisineFilter === c.key ? colors.emerald : colors.text,
-                      fontFamily:
-                        cuisineFilter === c.key ? "Inter_600SemiBold" : "Inter_400Regular",
+                      color: cuisineFilter === c.key ? colors.emerald : colors.text,
+                      fontFamily: cuisineFilter === c.key ? "Inter_600SemiBold" : "Inter_400Regular",
                     },
                   ]}
                 >
@@ -551,7 +620,7 @@ export default function HalalScreen() {
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={[
             styles.listContent,
-            { paddingBottom: Platform.OS === "web" ? 34 : 20 },
+            { paddingBottom: isWeb ? 34 : 20 },
           ]}
           showsVerticalScrollIndicator={false}
           scrollEnabled={filtered.length > 0}
@@ -590,6 +659,14 @@ export default function HalalScreen() {
           testID="halal-list"
         />
       )}
+
+      <RestaurantDetailModal
+        restaurant={selectedRestaurant}
+        visible={!!selectedRestaurant}
+        onClose={() => setSelectedRestaurant(null)}
+        colors={colors}
+        isDark={isDark}
+      />
     </View>
   );
 }
@@ -604,6 +681,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingBottom: 14,
+    paddingTop: 14,
   },
   headerTitle: {
     fontSize: 22,
@@ -672,105 +750,102 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   card: {
-    borderRadius: 16,
-    marginBottom: 16,
+    borderRadius: 12,
+    marginBottom: 10,
     overflow: "hidden",
     ...Platform.select({
       ios: {
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 4,
       },
-      android: {
-        elevation: 3,
-      },
+      android: { elevation: 2 },
       default: {
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 4,
       },
     }),
   },
-  photoContainer: {
-    width: "100%",
-    height: 180,
-    position: "relative",
-  },
-  foodPhoto: {
-    width: "100%",
-    height: "100%",
-  },
-  halalBadgeOverlay: {
-    position: "absolute",
-    top: 12,
-    left: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  halalBadgeText: {
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
-  },
-  openBadgeOverlay: {
-    position: "absolute",
-    top: 12,
-    right: 12,
+  cardRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
   },
-  openDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+  cardThumb: {
+    width: 80,
+    height: 80,
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
   },
-  openBadgeText: {
-    fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
+  cardThumbPlaceholder: {
+    width: 80,
+    height: 80,
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
   },
   cardBody: {
-    padding: 14,
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
   restaurantName: {
-    fontSize: 17,
+    fontSize: 15,
     fontFamily: "Inter_600SemiBold",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   metaRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   cuisineText: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: "Inter_400Regular",
     flexShrink: 1,
   },
-  metaSeparator: {
-    fontSize: 13,
-    marginHorizontal: 6,
+  badgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 4,
+  },
+  smallBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  smallBadgeText: {
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
+  },
+  openDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
   },
   distanceText: {
-    fontSize: 13,
+    fontSize: 11,
     fontFamily: "Inter_500Medium",
+    marginLeft: 2,
   },
   ratingRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 3,
   },
   ratingScore: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: "Inter_600SemiBold",
   },
   ratingCount: {
-    fontSize: 12,
+    fontSize: 10,
     fontFamily: "Inter_400Regular",
     marginLeft: 2,
   },
@@ -807,6 +882,138 @@ const styles = StyleSheet.create({
   },
   creditLink: {
     fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+  },
+  modalContainer: {
+    flex: 1,
+  },
+  detailHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  detailPhoto: {
+    width: "100%",
+    height: 220,
+  },
+  detailPhotoPlaceholder: {
+    width: "100%",
+    height: 160,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  detailContent: {
+    padding: 20,
+  },
+  halalPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  halalPillText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+  },
+  detailName: {
+    fontSize: 22,
+    fontFamily: "Inter_700Bold",
+    marginBottom: 4,
+  },
+  detailCuisine: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    marginBottom: 8,
+  },
+  detailRatingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
+  detailRatingScore: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+  },
+  detailStars: {
+    fontSize: 14,
+    color: "#F59E0B",
+  },
+  detailRatingCount: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+  },
+  detailDesc: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  detailSection: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    marginTop: 12,
+    paddingTop: 12,
+  },
+  detailInfoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 10,
+  },
+  detailInfoText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+  },
+  hoursSection: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    marginTop: 12,
+    paddingTop: 12,
+  },
+  hoursSectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+  },
+  hoursSectionTitle: {
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
+  },
+  hoursText: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    paddingVertical: 3,
+  },
+  detailActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 20,
+  },
+  detailActionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  detailActionText: {
+    color: "#fff",
+    fontSize: 14,
     fontFamily: "Inter_600SemiBold",
   },
 });

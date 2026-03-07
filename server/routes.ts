@@ -558,6 +558,9 @@ async function ensureBusinessesTable(pool: pg.Pool) {
     console.log("[DB] Added Google Places columns to businesses table");
   }
 
+  await pool.query(`ALTER TABLE halal_restaurants ADD COLUMN IF NOT EXISTS photo_reference TEXT`);
+  await pool.query(`ALTER TABLE halal_restaurants ADD COLUMN IF NOT EXISTS place_id VARCHAR(255)`);
+
   const { rows } = await pool.query("SELECT COUNT(*) as count FROM businesses");
   if (parseInt(rows[0].count) === 0) {
     const seed = [
@@ -679,7 +682,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/halal-restaurants", async (req, res) => {
     try {
       const { cuisine, status, search } = req.query;
-      let query = "SELECT id, external_id, name, formatted_address, formatted_phone, url, lat, lng, is_halal, halal_comment, cuisine_types, emoji, evidence, considerations, opening_hours, rating, user_ratings_total, website FROM halal_restaurants";
+      let query = "SELECT id, external_id, name, formatted_address, formatted_phone, url, lat, lng, is_halal, halal_comment, cuisine_types, emoji, evidence, considerations, opening_hours, rating, user_ratings_total, website, photo_reference, place_id FROM halal_restaurants";
       const conditions: string[] = [];
       const params: any[] = [];
 
@@ -807,6 +810,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/halal-restaurants/:id/photo", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = await pool.query("SELECT photo_reference FROM halal_restaurants WHERE id = $1", [id]);
+      if (result.rows.length === 0 || !result.rows[0].photo_reference) {
+        return res.status(404).json({ error: "No photo available" });
+      }
+      const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+      if (!apiKey) return res.status(500).json({ error: "No API key" });
+
+      const photoUrl = `https://places.googleapis.com/v1/${result.rows[0].photo_reference}/media?maxWidthPx=800&key=${apiKey}`;
+      const photoResp = await fetch(photoUrl);
+      if (!photoResp.ok) return res.status(404).json({ error: "Photo not found" });
+
+      res.set("Content-Type", photoResp.headers.get("content-type") || "image/jpeg");
+      res.set("Cache-Control", "public, max-age=86400");
+      const buffer = Buffer.from(await photoResp.arrayBuffer());
+      res.send(buffer);
+    } catch (error: any) {
+      console.error("Error proxying halal photo:", error.message);
+      res.status(500).json({ error: "Failed to load photo" });
+    }
+  });
+
   app.post("/api/businesses/submit", async (req, res) => {
     try {
       const { name, category, description, address, phone, website, email } = req.body;
@@ -918,8 +945,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  async function enrichHalalWithPlaces(restaurantId: number) {
+    try {
+      const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+      if (!apiKey) return;
+      const res = await pool.query("SELECT * FROM halal_restaurants WHERE id = $1", [restaurantId]);
+      if (res.rows.length === 0) return;
+      const restaurant = res.rows[0];
+      if (restaurant.place_id) return;
+
+      const searchResp = await fetch(
+        `https://places.googleapis.com/v1/places:searchText`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": "places.id,places.rating,places.userRatingCount,places.photos,places.regularOpeningHours,places.location" },
+          body: JSON.stringify({ textQuery: `${restaurant.name} ${restaurant.formatted_address || ""}` }),
+        }
+      );
+      const searchData = await searchResp.json();
+      const place = searchData.places?.[0];
+      if (!place) {
+        await pool.query(`UPDATE halal_restaurants SET place_id = 'none' WHERE id = $1`, [restaurantId]);
+        return;
+      }
+      const photoRef = place.photos?.[0]?.name || null;
+      const hours = place.regularOpeningHours?.weekdayDescriptions || null;
+      const existingHours = restaurant.opening_hours || {};
+      const mergedHours = hours ? { ...existingHours, weekdayDescriptions: hours } : existingHours;
+      await pool.query(
+        `UPDATE halal_restaurants SET place_id = $1, rating = COALESCE($2, rating), user_ratings_total = COALESCE($3, user_ratings_total), photo_reference = $4, opening_hours = $5::jsonb, lat = COALESCE($6, lat), lng = COALESCE($7, lng) WHERE id = $8`,
+        [place.id, place.rating || null, place.userRatingCount || null, photoRef, JSON.stringify(mergedHours), place.location?.latitude || null, place.location?.longitude || null, restaurantId]
+      );
+      console.log(`[Halal Enrich] Enriched #${restaurantId} "${restaurant.name}" with Places data`);
+    } catch (err: any) {
+      console.error(`[Halal Enrich] Error enriching #${restaurantId}:`, err.message);
+    }
+  }
+
+  async function dailyHalalEnrichment() {
+    try {
+      const result = await pool.query(
+        "SELECT id, name FROM halal_restaurants WHERE place_id IS NULL LIMIT 50"
+      );
+      if (result.rows.length === 0) {
+        console.log("[Halal Enrich] All halal restaurants already enriched");
+        return;
+      }
+      console.log(`[Halal Enrich] Found ${result.rows.length} restaurants to enrich`);
+      for (const r of result.rows) {
+        await enrichHalalWithPlaces(r.id);
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      console.log("[Halal Enrich] Enrichment complete");
+    } catch (err: any) {
+      console.error("[Halal Enrich] Error:", err.message);
+    }
+  }
+
   setTimeout(() => dailyBusinessEnrichment(), 15000);
+  setTimeout(() => dailyHalalEnrichment(), 30000);
   setInterval(() => dailyBusinessEnrichment(), 24 * 60 * 60 * 1000);
+  setInterval(() => dailyHalalEnrichment(), 24 * 60 * 60 * 1000);
 
   app.patch("/api/admin/businesses/:id", async (req, res) => {
     try {

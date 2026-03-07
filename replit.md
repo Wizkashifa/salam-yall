@@ -4,7 +4,7 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 
 ## Architecture
 
-- **Frontend**: Expo Router with file-based routing, 4 tab layout
+- **Frontend**: Expo Router with file-based routing, 5 tab layout (Dines | Events | Home | Directory | Settings)
 - **Backend**: Express server on port 5000 serving APIs and landing page
 - **Database**: PostgreSQL via Replit's built-in database (businesses table)
 - **State**: React Query for server state, useState for local state, AsyncStorage for preferences
@@ -15,9 +15,16 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 ## Tab Structure
 
 1. **Prayer (index.tsx)**: Prayer times via `adhan` library, countdown timer, Hijri date, Qibla compass (uses expo-sensors Magnetometer on native), notification toggle for prayer alerts, mosque proximity silence reminder, hamburger menu button for drawer, "Where Should I Pray?" expandable dropdown (3 nearest masjids with estimated drive times + navigation), "Tonight Near You" expandable dropdown (tonight's events matched to nearby masjids from calendar API)
-2. **Halal Eats (halal.tsx)**: Native restaurant directory with 317 halal restaurants from HalalEatsNC data, search, halal status filters, cuisine dropdown, open/closed status, call buttons, maps navigation
+2. **Halal Eats (halal.tsx)**: Native restaurant directory with 317 halal restaurants from HalalEatsNC data, compact row cards (80×80 thumbnail + text), detail modal (pageSheet), search, halal/cuisine filters, open/closed status, Google Places photos via proxy, distance sorting with location
 3. **Events (events.tsx)**: Google Calendar integration displaying community events with flyer images, organizer names, and registration links. Tapping opens a full-screen modal with image, details, and Register/RSVP button
 4. **Directory (businesses.tsx)**: Muslim business directory with category filtering, Google Places integration (ratings, photos, hours), detail modal with Call/Directions/Website actions, business submission form with pending verification
+5. **Settings (settings.tsx)**: Calculation method picker, adhan notification toggle, appearance switcher (System/Light/Dark), masjid directory, feedback form, privacy/support links
+
+## Safe Area & TickerBanner
+
+- **TickerBanner** (`components/TickerBanner.tsx`) renders at the top of every screen and includes safe area top padding (67px web, `insets.top` native)
+- When no ticker messages exist, it renders a spacer `View` with the same height to keep headers properly positioned
+- Individual screens do NOT add their own top safe area padding — TickerBanner handles it
 
 ## Slide-In Drawer Menu
 
@@ -53,6 +60,7 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 - `PATCH /api/admin/businesses/:id` - Approve or reject a business (admin-only)
 - `DELETE /api/admin/businesses/:id` - Permanently delete a business (admin-only)
 - `GET /api/halal-restaurants?status=IS_HALAL&cuisine=INDIAN_PAKISTANI&search=text` - Halal restaurant directory with optional filters
+- `GET /api/halal-restaurants/:id/photo` - Proxies Google Places photo for a halal restaurant (keeps API key server-side)
 - `GET /api/businesses` - Returns approved businesses with Google Places data from PostgreSQL database
 - `GET /api/businesses/:id/places-details` - Fetches/caches Google Places details (rating, hours, location) for a business
 - `GET /api/businesses/:id/photo` - Proxies Google Places photo for a business (keeps API key server-side)
@@ -63,7 +71,7 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 
 - **ticker_messages** table: id (serial PK), message, type (info/urgent/event/reminder), active (boolean), created_at, expires_at
 - **push_tokens** table: id (serial PK), token (unique), created_at
-- **halal_restaurants** table: id (serial PK), external_id, name, formatted_address, formatted_phone, url, place_id, lat, lng, is_halal (IS_HALAL/PARTIALLY_HALAL/NOT_HALAL/UNKNOWN), halal_comment, cuisine_types (text[]), emoji, evidence (text[]), considerations (text[]), opening_hours (jsonb), date_checked (jsonb), created_at
+- **halal_restaurants** table: id (serial PK), external_id, name, formatted_address, formatted_phone, url, place_id, lat, lng, is_halal (IS_HALAL/PARTIALLY_HALAL/NOT_HALAL/UNKNOWN), halal_comment, cuisine_types (text[]), emoji, evidence (text[]), considerations (text[]), opening_hours (jsonb), date_checked (jsonb), created_at, photo_reference (text), rating, user_ratings_total
 - **businesses** table: id (serial PK), name, category, description, address, phone, website, submitted_by_email, status (pending/approved/rejected), created_at, place_id, rating, user_ratings_total, photo_reference, business_hours (jsonb), lat, lng
 
 ## Event Processing Pipeline
@@ -79,6 +87,7 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
   5. Venue name extraction from location field
 - **Scheduled refresh**: Events cached server-side, refreshed every hour, with 15-min TTL for API requests
 - **Business enrichment**: Approved businesses without Google Places data are auto-enriched on startup (15s delay) and daily (24h interval); also triggered immediately when a business is approved via admin dashboard
+- **Halal restaurant enrichment**: Halal restaurants without `place_id` are auto-enriched on startup (30s delay) and daily; merges weekdayDescriptions into existing opening_hours without overwriting periods data
 
 ## Ticker/Announcement System
 

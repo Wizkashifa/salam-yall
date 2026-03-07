@@ -51,7 +51,12 @@ export function TickerBanner() {
     return () => animation.stop();
   }, [messageSignature, containerWidth, needsScroll]);
 
-  if (!allMessages.length) return null;
+  const isWeb = Platform.OS === "web";
+  const topPad = isWeb ? 67 : insets.top;
+
+  if (!allMessages.length) {
+    return <View style={{ height: topPad, backgroundColor: colors.background }} />;
+  }
 
   const hasUrgent = urgentMessages.length > 0;
   const bgColor = hasUrgent ? colors.tickerUrgentBg : colors.tickerBg;
@@ -59,7 +64,7 @@ export function TickerBanner() {
   const iconColor = hasUrgent ? colors.tickerUrgentText : colors.gold;
 
   return (
-    <View style={[styles.tickerContainer, { backgroundColor: bgColor, borderBottomColor: colors.borderLight }]}>
+    <View style={[styles.tickerContainer, { backgroundColor: bgColor, borderBottomColor: colors.borderLight, paddingTop: topPad }]}>
       <View style={styles.tickerIconWrap}>
         <Ionicons name={hasUrgent ? "alert-circle" : "megaphone"} size={14} color={iconColor} />
       </View>
