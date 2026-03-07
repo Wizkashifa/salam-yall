@@ -230,7 +230,8 @@ const jumuahSchedules: JumuahInfo[] = [
   { masjid: "As-Salaam Islamic Center", khutbah: "1:15 PM", iqama: "1:45 PM" },
   { masjid: "Chapel Hill Islamic Society", khutbah: "1:00 PM", iqama: "1:30 PM" },
   { masjid: "Ar-Razzaq Islamic Center", khutbah: "1:15 PM", iqama: "1:45 PM" },
-  { masjid: "Jamaat Ibad Ar-Rahman", khutbah: "1:00 PM", iqama: "1:30 PM" },
+  { masjid: "JIAR (Fayetteville St)", khutbah: "1:00 PM", iqama: "1:30 PM" },
+  { masjid: "JIAR Parkwood (3 shifts)", khutbah: "12:10 PM", iqama: "1:10 / 2:10 PM" },
 ];
 
 export function isFriday(): boolean {

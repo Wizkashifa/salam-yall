@@ -5,6 +5,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { getUncachableGoogleCalendarClient } from "./google-calendar";
 import halalSeedData from "./halal-seed-data.json";
+import { getTodayIqamaTimes } from "./iqama-scraper";
 
 const CALENDAR_ID = "5c6138b3c670e90f28b9ec65a6650268569a070eff5ae0ae919129f763d216af@group.calendar.google.com";
 
@@ -1233,6 +1234,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error sending push:", error.message);
       res.status(500).json({ error: "Failed to send notifications" });
+    }
+  });
+
+  app.get("/api/iqama-times", async (_req, res) => {
+    try {
+      const schedules = await getTodayIqamaTimes();
+      res.json(schedules);
+    } catch (error: any) {
+      console.error("Error fetching iqama times:", error.message);
+      res.status(500).json({ error: "Failed to fetch iqama times" });
     }
   });
 

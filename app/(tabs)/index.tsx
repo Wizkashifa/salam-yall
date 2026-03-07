@@ -324,9 +324,32 @@ export default function PrayerScreen() {
     staleTime: 5 * 60 * 1000,
   });
 
+  interface IqamaSchedule {
+    masjid: string;
+    iqama: { fajr: string; dhuhr: string; asr: string; maghrib: string; isha: string };
+  }
+
+  const { data: iqamaData } = useQuery<IqamaSchedule[]>({
+    queryKey: ["/api/iqama-times"],
+    staleTime: 60 * 60 * 1000,
+  });
+
   const nearbyMasjids = useMemo(() => {
     return getAllMasjidsByDistance(userCoords.lat, userCoords.lon).slice(0, 5);
   }, [userCoords]);
+
+  const activeIqama = useMemo(() => {
+    if (!iqamaData || iqamaData.length === 0) return null;
+    if (preferredMasjid) {
+      const match = iqamaData.find(s => s.masjid === preferredMasjid);
+      if (match) return match;
+    }
+    if (nearestMasjid) {
+      const match = iqamaData.find(s => s.masjid === nearestMasjid.name);
+      if (match) return match;
+    }
+    return iqamaData[0];
+  }, [iqamaData, preferredMasjid, nearestMasjid]);
 
   const tonightEvents = useMemo(() => {
     if (!calendarEvents) return [];
@@ -740,6 +763,7 @@ export default function PrayerScreen() {
                   : isNext
                     ? (isDark ? colors.emerald + "25" : colors.emerald + "12")
                     : undefined;
+              const iqamaTime = activeIqama?.iqama?.[prayer.name as keyof typeof activeIqama.iqama];
               return (
                 <Pressable
                   key={prayer.name}
@@ -764,6 +788,11 @@ export default function PrayerScreen() {
                   ]}>
                     {formatTime(prayer.time)}
                   </Text>
+                  {iqamaTime ? (
+                    <Text style={[styles.prayerIqamaTime, { color: colors.gold }]}>
+                      {iqamaTime}
+                    </Text>
+                  ) : null}
                   {status > 0 ? (
                     <View style={[styles.prayerStatusDot, { backgroundColor: isGold ? colors.gold : colors.emerald }]} />
                   ) : null}
@@ -771,6 +800,11 @@ export default function PrayerScreen() {
               );
             })}
           </View>
+          {activeIqama ? (
+            <Text style={[styles.iqamaSource, { color: colors.textTertiary }]}>
+              Iqama · {activeIqama.masjid.replace(/\s*\(.*\)/, "")}
+            </Text>
+          ) : null}
         </View>
 
         <View style={styles.quickActionsRow}>
@@ -1162,6 +1196,17 @@ const styles = StyleSheet.create({
   quickActionLabel: {
     fontSize: 11,
     fontFamily: "Inter_500Medium",
+  },
+  prayerIqamaTime: {
+    fontSize: 9,
+    fontFamily: "Inter_500Medium",
+    marginTop: 2,
+  },
+  iqamaSource: {
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center" as const,
+    marginTop: 8,
   },
   prayerStatusDot: {
     width: 5,
