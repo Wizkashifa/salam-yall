@@ -3,11 +3,9 @@ import {
   StyleSheet,
   Text,
   View,
-  ScrollView,
   Platform,
   Pressable,
   ActivityIndicator,
-  RefreshControl,
   Linking,
   Alert,
   Animated,
@@ -107,7 +105,6 @@ export default function PrayerScreen() {
   const [nearestMasjid, setNearestMasjid] = useState<{ name: string; distanceMiles: number; masjid: Masjid } | null>(null);
   const [locationPermission, setLocationPermission] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [qiblaBearing, setQiblaBearing] = useState(58.5);
   const [userCoords, setUserCoords] = useState({ lat: 35.7796, lon: -78.6382 });
   const [nearMosque, setNearMosque] = useState<Masjid | null>(null);
@@ -298,14 +295,6 @@ export default function PrayerScreen() {
     setSilenceAlertDismissed(true);
   }, []);
 
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSilenceAlertDismissed(false);
-    await loadPrayerData();
-    setRefreshing(false);
-  }, [loadPrayerData]);
-
   const now = new Date();
   const gregorianDate = now.toLocaleDateString("en-US", {
     weekday: "long",
@@ -325,15 +314,12 @@ export default function PrayerScreen() {
   const padNum = (n: number) => n.toString().padStart(2, "0");
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={{
-        paddingTop: Platform.OS === "web" ? 67 + insets.top : insets.top + 16,
-        paddingBottom: Platform.OS === "web" ? 34 : 100,
-      }}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />
-      }
+    <View
+      style={[styles.container, {
+        backgroundColor: colors.background,
+        paddingTop: Platform.OS === "web" ? 67 : insets.top + 8,
+        paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 56,
+      }]}
     >
       <View style={styles.headerSection}>
         <View style={styles.headerTopRow}>
@@ -345,17 +331,29 @@ export default function PrayerScreen() {
           >
             <Ionicons name="menu" size={20} color={colors.text} />
           </Pressable>
-          <QiblaCompass qiblaBearing={qiblaBearing} colors={colors} isDark={isDark} />
-        </View>
-        <View style={styles.headerRow}>
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: 1, marginLeft: 12 }}>
             <Text style={[styles.greeting, { color: colors.textSecondary }]}>{gregorianDate}</Text>
             {hijriDate ? (
               <Text style={[styles.hijriDate, { color: colors.gold }]}>{hijriDate}</Text>
             ) : null}
           </View>
+          <QiblaCompass qiblaBearing={qiblaBearing} colors={colors} isDark={isDark} />
         </View>
       </View>
+
+      {nearMosque && !silenceAlertDismissed ? (
+        <View style={[styles.silenceAlert, { backgroundColor: isDark ? "#3D2323" : "#FEF2F2", borderColor: isDark ? "#5C3333" : "#FECACA" }]}>
+          <View style={styles.silenceAlertContent}>
+            <MaterialCommunityIcons name="volume-off" size={18} color={isDark ? "#F87171" : "#DC2626"} />
+            <Text style={[styles.silenceAlertTitle, { color: isDark ? "#F87171" : "#DC2626", flex: 1 }]}>
+              Near {nearMosque.name} — silence your phone
+            </Text>
+            <Pressable onPress={dismissSilenceAlert} hitSlop={8}>
+              <Ionicons name="close" size={18} color={isDark ? "#FCA5A5" : "#991B1B"} />
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
 
       <LinearGradient
         colors={[colors.gradientStart, colors.gradientEnd]}
@@ -366,7 +364,10 @@ export default function PrayerScreen() {
         <View style={styles.countdownGoldAccent} />
         {nextPrayer ? (
           <>
-            <Text style={styles.countdownLabel}>Next Prayer</Text>
+            <View style={styles.countdownTopRow}>
+              <Text style={styles.countdownLabel}>Next Prayer</Text>
+              <Text style={styles.countdownTime}>at {formatTime(nextPrayer.time)}</Text>
+            </View>
             <Text style={styles.countdownPrayerName}>{nextPrayer.label}</Text>
             <View style={styles.countdownTimerRow}>
               <View style={styles.countdownUnit}>
@@ -384,60 +385,27 @@ export default function PrayerScreen() {
                 <Text style={styles.countdownUnitLabel}>sec</Text>
               </View>
             </View>
-            <Text style={styles.countdownTime}>at {formatTime(nextPrayer.time)}</Text>
           </>
         ) : (
           <Text style={styles.countdownLabel}>All prayers completed for today</Text>
         )}
       </LinearGradient>
 
-      {nearMosque && !silenceAlertDismissed ? (
-        <View style={[styles.silenceAlert, { backgroundColor: isDark ? "#3D2323" : "#FEF2F2", borderColor: isDark ? "#5C3333" : "#FECACA" }]}>
-          <View style={styles.silenceAlertContent}>
-            <MaterialCommunityIcons name="volume-off" size={22} color={isDark ? "#F87171" : "#DC2626"} />
-            <View style={styles.silenceAlertText}>
-              <Text style={[styles.silenceAlertTitle, { color: isDark ? "#F87171" : "#DC2626" }]}>
-                You're near {nearMosque.name}
-              </Text>
-              <Text style={[styles.silenceAlertBody, { color: isDark ? "#FCA5A5" : "#991B1B" }]}>
-                Please silence your phone
-              </Text>
-            </View>
-            <Pressable onPress={dismissSilenceAlert} hitSlop={8}>
-              <Ionicons name="close" size={20} color={isDark ? "#FCA5A5" : "#991B1B"} />
-            </Pressable>
-          </View>
-        </View>
-      ) : null}
-
       {nearestMasjid ? (
-        <View style={[styles.masjidCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={[styles.masjidIconContainer, { backgroundColor: colors.prayerIconBg }]}>
-            <MaterialCommunityIcons name="mosque" size={22} color={colors.emerald} />
-          </View>
-          <View style={styles.masjidInfo}>
-            <Text style={[styles.masjidLabel, { color: colors.textSecondary }]}>Nearest Masjid</Text>
-            <Text style={[styles.masjidName, { color: colors.text }]} numberOfLines={1}>
-              {nearestMasjid.name}
-            </Text>
-          </View>
-          <View style={styles.masjidRight}>
-            <View style={styles.masjidDistance}>
-              <Text style={[styles.distanceValue, { color: colors.gold }]}>
-                {nearestMasjid.distanceMiles.toFixed(1)}
-              </Text>
-              <Text style={[styles.distanceUnit, { color: colors.textSecondary }]}>mi</Text>
-            </View>
-            <Pressable
-              style={({ pressed }) => [styles.directionsButton, { backgroundColor: colors.emerald, opacity: pressed ? 0.8 : 1 }]}
-              onPress={openMasjidDirections}
-              testID="directions-button"
-            >
-              <Ionicons name="navigate" size={14} color="#fff" />
-              <Text style={styles.directionsButtonText}>Directions</Text>
-            </Pressable>
-          </View>
-        </View>
+        <Pressable
+          style={[styles.masjidStrip, { backgroundColor: colors.surface }]}
+          onPress={openMasjidDirections}
+          testID="directions-button"
+        >
+          <MaterialCommunityIcons name="mosque" size={14} color={colors.emerald} />
+          <Text style={[styles.masjidStripText, { color: colors.textSecondary }]} numberOfLines={1}>
+            {nearestMasjid.name}
+          </Text>
+          <Text style={[styles.masjidStripDist, { color: colors.gold }]}>
+            {nearestMasjid.distanceMiles.toFixed(1)} mi
+          </Text>
+          <Ionicons name="navigate" size={12} color={colors.emerald} />
+        </Pressable>
       ) : null}
 
       {locationPermission === false ? (
@@ -445,9 +413,9 @@ export default function PrayerScreen() {
           style={[styles.permissionBanner, { backgroundColor: colors.bannerBg }]}
           onPress={loadPrayerData}
         >
-          <Ionicons name="location-outline" size={18} color={colors.bannerText} />
-          <Text style={{ color: colors.bannerText, fontSize: 13, flex: 1, marginLeft: 8, fontFamily: "Inter_500Medium" }}>
-            Enable location for accurate prayer times and masjid distance
+          <Ionicons name="location-outline" size={14} color={colors.bannerText} />
+          <Text style={{ color: colors.bannerText, fontSize: 12, flex: 1, marginLeft: 6, fontFamily: "Inter_500Medium" }}>
+            Enable location for accurate prayer times
           </Text>
         </Pressable>
       ) : null}
@@ -462,7 +430,7 @@ export default function PrayerScreen() {
           >
             <Ionicons
               name={notificationsEnabled ? "notifications" : "notifications-outline"}
-              size={16}
+              size={14}
               color={notificationsEnabled ? "#fff" : colors.textSecondary}
             />
           </Pressable>
@@ -483,7 +451,7 @@ export default function PrayerScreen() {
               <View style={[styles.prayerIconBg, isNext ? { backgroundColor: colors.prayerActiveBg } : { backgroundColor: colors.prayerIconBg }]}>
                 <MaterialCommunityIcons
                   name={prayer.icon as any}
-                  size={18}
+                  size={16}
                   color={isNext ? colors.prayerActiveText : colors.emerald}
                 />
               </View>
@@ -509,7 +477,7 @@ export default function PrayerScreen() {
           );
         })}
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
@@ -523,24 +491,25 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerSection: {
-    paddingHorizontal: 20,
-    marginBottom: 16,
+    paddingHorizontal: 16,
+    marginBottom: 8,
   },
   greeting: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: "Inter_500Medium",
   },
   hijriDate: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: "Inter_700Bold",
-    marginTop: 2,
+    marginTop: 1,
   },
   countdownCard: {
-    marginHorizontal: 20,
-    borderRadius: 20,
-    padding: 24,
+    marginHorizontal: 16,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 8,
     overflow: "hidden",
   },
   countdownGoldAccent: {
@@ -548,264 +517,215 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 3,
+    height: 2,
     backgroundColor: "#D4A843",
+  },
+  countdownTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
   },
   countdownLabel: {
     color: "rgba(255,255,255,0.7)",
-    fontSize: 13,
+    fontSize: 11,
     fontFamily: "Inter_500Medium",
     textTransform: "uppercase" as const,
     letterSpacing: 1,
   },
   countdownPrayerName: {
     color: "#D4A843",
-    fontSize: 28,
+    fontSize: 22,
     fontFamily: "Inter_700Bold",
-    marginTop: 4,
+    marginTop: 2,
   },
   countdownTimerRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 16,
+    marginTop: 8,
   },
   countdownUnit: {
     alignItems: "center",
-    minWidth: 52,
+    minWidth: 44,
   },
   countdownNumber: {
     color: "#fff",
-    fontSize: 40,
+    fontSize: 32,
     fontFamily: "Inter_700Bold",
   },
   countdownUnitLabel: {
     color: "rgba(255,255,255,0.6)",
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: "Inter_500Medium",
     marginTop: -2,
   },
   countdownSeparator: {
     color: "rgba(255,255,255,0.5)",
-    fontSize: 36,
+    fontSize: 28,
     fontFamily: "Inter_700Bold",
-    marginHorizontal: 4,
-    marginTop: -8,
+    marginHorizontal: 2,
+    marginTop: -6,
   },
   countdownTime: {
-    color: "rgba(255,255,255,0.8)",
-    fontSize: 14,
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 12,
     fontFamily: "Inter_500Medium",
-    marginTop: 12,
   },
   silenceAlert: {
-    marginHorizontal: 20,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 16,
+    marginHorizontal: 16,
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 8,
     borderWidth: 1,
   },
   silenceAlertContent: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-  },
-  silenceAlertText: {
-    flex: 1,
+    gap: 8,
   },
   silenceAlertTitle: {
-    fontSize: 14,
-    fontFamily: "Inter_700Bold",
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
   },
-  silenceAlertBody: {
+  masjidStrip: {
+    marginHorizontal: 16,
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 10,
+  },
+  masjidStripText: {
+    flex: 1,
     fontSize: 12,
     fontFamily: "Inter_500Medium",
-    marginTop: 1,
   },
-  masjidCard: {
-    marginHorizontal: 20,
-    borderRadius: 14,
-    padding: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-    borderWidth: 1,
-  },
-  masjidIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  masjidInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  masjidLabel: {
-    fontSize: 11,
-    fontFamily: "Inter_500Medium",
-    textTransform: "uppercase" as const,
-    letterSpacing: 0.5,
-  },
-  masjidName: {
-    fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
-    marginTop: 1,
-  },
-  masjidRight: {
-    alignItems: "flex-end",
-    gap: 6,
-  },
-  masjidDistance: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    gap: 2,
-  },
-  distanceValue: {
-    fontSize: 22,
+  masjidStripDist: {
+    fontSize: 12,
     fontFamily: "Inter_700Bold",
   },
-  distanceUnit: {
-    fontSize: 11,
-    fontFamily: "Inter_500Medium",
-  },
-  directionsButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  directionsButtonText: {
-    color: "#fff",
-    fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
-  },
   permissionBanner: {
-    marginHorizontal: 20,
+    marginHorizontal: 16,
     borderRadius: 10,
-    padding: 12,
+    padding: 10,
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 8,
   },
   headerTopRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
   },
   menuButton: {
-    width: 38,
-    height: 38,
+    width: 36,
+    height: 36,
     borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
   },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
   compassContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    borderRadius: 22,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+    gap: 6,
+    borderRadius: 20,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
   },
   compassRing: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     borderWidth: 1.5,
     justifyContent: "center",
     alignItems: "center",
   },
   compassArrowWrap: {
     position: "absolute",
-    width: 12,
-    height: 30,
+    width: 10,
+    height: 26,
     alignItems: "center",
   },
   compassArrow: {
     width: 2,
-    height: 12,
+    height: 10,
     borderRadius: 1,
   },
   compassArrowHead: {
     width: 0,
     height: 0,
-    borderLeftWidth: 5,
-    borderRightWidth: 5,
-    borderBottomWidth: 8,
+    borderLeftWidth: 4,
+    borderRightWidth: 4,
+    borderBottomWidth: 7,
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
     marginTop: -1,
     transform: [{ rotate: "180deg" }],
   },
   compassDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
     position: "absolute",
   },
   compassLabels: {
     alignItems: "center",
   },
   compassTitle: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: "Inter_700Bold",
   },
   compassBearing: {
-    fontSize: 10,
+    fontSize: 9,
     fontFamily: "Inter_500Medium",
   },
   prayerListSection: {
-    paddingHorizontal: 20,
+    flex: 1,
+    paddingHorizontal: 16,
   },
   prayerListHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 12,
+    marginBottom: 6,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: "Inter_700Bold",
   },
   notifToggle: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
   },
   prayerRow: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 14,
-    borderRadius: 12,
-    marginBottom: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    marginBottom: 5,
   },
   prayerIconBg: {
-    width: 34,
-    height: 34,
-    borderRadius: 8,
+    width: 30,
+    height: 30,
+    borderRadius: 7,
     justifyContent: "center",
     alignItems: "center",
   },
   prayerName: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: "Inter_600SemiBold",
-    marginLeft: 12,
+    marginLeft: 10,
   },
   prayerTime: {
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: "Inter_600SemiBold",
   },
 });
