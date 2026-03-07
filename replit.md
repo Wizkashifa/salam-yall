@@ -14,11 +14,11 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 
 ## Tab Structure
 
-1. **Home (index.tsx)**: "As-salamu alaykum" greeting header with time-based subtitle + Hijri date; redesigned prayer card with prominent countdown ring (mosque icon), hero next-prayer name/timer, horizontal prayer pills; quick actions row (Masjids/Qibla/Events/Halal); skeleton loading state; glass-effect cards; Qibla compass, notification toggle, mosque proximity silence reminder, expandable masjids section, "Tonight in the Community" events matched to nearby masjids
+1. **Home (index.tsx)**: "As-salamu alaykum" greeting header with time-based subtitle + Hijri date + preferred masjid; redesigned prayer card with countdown ring, hero countdown, interactive prayer pills (tap to track: not done → gold/completed → green/at masjid); quick actions row (Masjids/Qibla/Events/Halal); daily Quran/Hadith card; Ramadan mode (suhoor/iftar times + countdown when in Ramadan); skeleton loading; glass-effect cards; notification toggle, mosque proximity silence reminder, expandable masjids section, "Tonight in the Community" events
 2. **Halal Eats (halal.tsx)**: Native restaurant directory with 317 halal restaurants from HalalEatsNC data, compact row cards (80×80 thumbnail + text), detail modal (pageSheet), search, halal/cuisine filters, open/closed status, Google Places photos via proxy, distance sorting with location
 3. **Events (events.tsx)**: Google Calendar integration displaying community events with flyer images, organizer names, and registration links. Tapping opens a full-screen modal with image, details, and Register/RSVP button
 4. **Directory (businesses.tsx)**: Muslim business directory with category filtering, Google Places integration (ratings, photos, hours), detail modal with Call/Directions/Website actions, business submission form with pending verification
-5. **Settings (settings.tsx)**: Calculation method picker, adhan notification toggle, appearance switcher (System/Light/Dark), masjid directory, feedback form, privacy/support links
+5. **Settings (settings.tsx)**: Calculation method picker, adhan notification toggle, appearance switcher (System/Light/Dark), masjid directory with preferred masjid selection (star), prayer tracker calendar view (monthly dots), feedback form, privacy/support links
 
 ## Safe Area & TickerBanner
 
@@ -37,9 +37,11 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 
 ## Key Files
 
-- `lib/prayer-utils.ts` - Prayer time calculations, Hijri date, masjid data (with websites and matchTerms), Qibla bearing, mosque proximity check, calculation methods, event-masjid matching
+- `lib/prayer-utils.ts` - Prayer time calculations, Hijri date, masjid data (with websites and matchTerms), Qibla bearing, mosque proximity check, Ramadan detection, calculation methods, event-masjid matching
+- `lib/prayer-tracker.ts` - Prayer habit tracker data layer (AsyncStorage, cycle status 0→1→2→0, monthly logs)
+- `lib/daily-content.ts` - 40 curated Quran verses and hadith for daily rotation
 - `lib/theme-context.tsx` - Dark/light/system mode context provider with AsyncStorage persistence
-- `lib/settings-context.tsx` - Settings context: calcMethod, notifications toggle, drawer open/close state
+- `lib/settings-context.tsx` - Settings context: calcMethod, notifications toggle, preferredMasjid, drawer open/close state
 - `lib/query-client.ts` - React Query setup with API fetcher
 - `components/AppDrawer.tsx` - Animated slide-in drawer menu with settings, masjid directory, feedback form
 - `server/google-calendar.ts` - Google Calendar OAuth integration via Replit connector
@@ -111,13 +113,16 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 
 ## Prayer Screen Features
 
-- **Qibla Compass**: Calculates bearing to Kaaba using great-circle formula; rotates with device magnetometer on native, static on web
-- **Where Should I Pray?**: Expandable dropdown showing 3 nearest masjids with estimated drive times; each row opens native maps navigation. Uses `getAllMasjidsByDistance()` from prayer-utils
-- **Tonight Near You**: Expandable dropdown showing tonight's events (5pm–2am) matched to nearby masjids (top 8 by distance) via `matchEventsToMasjid()`. Only shows events confirmed to be at a recognized masjid
-- **Prayer Notifications**: Toggle to schedule local notifications at each prayer time via expo-notifications; preference stored in AsyncStorage via settings context
-- **Mosque Proximity Alert**: Checks distance to all known masjids; shows dismissable "silence your phone" banner when within 100m
-- **Calculation Method**: Configurable via drawer settings; supports all 12 adhan library methods; default is ISNA (North America)
-- **Fonts**: Inter (modern sans-serif) for body text, Playfair Display (serif) for section headers and prayer names — Islamic elegance pairing
+- **Interactive Prayer Pills**: Tap to cycle prayer status (not done → gold/completed → green/at masjid); persists to AsyncStorage via prayer-tracker
+- **Prayer Tracker Calendar**: Monthly calendar view in Settings showing colored dots per prayer per day; tap day for detail
+- **Daily Quran/Hadith**: Rotating card with curated verses and hadith, changes daily based on day-of-year
+- **Ramadan Mode**: Auto-detects Hijri month 9; shows suhoor end time (Fajr) and iftar time (Maghrib) with countdown
+- **Preferred Masjid**: Star a masjid in Settings → shown in home header subtitle; persists via AsyncStorage
+- **Qibla**: Quick action links to Google Qibla Finder
+- **Tonight Near You**: Shows tonight's events matched to nearby masjids
+- **Prayer Notifications**: Toggle for local notifications at each prayer time
+- **Mosque Proximity Alert**: Dismissable "silence your phone" banner when within 100m of a masjid
+- **Calculation Method**: Configurable; supports all 12 adhan library methods; default ISNA
 
 ## Integrations
 

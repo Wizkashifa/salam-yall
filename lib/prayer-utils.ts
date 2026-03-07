@@ -211,6 +211,18 @@ export function calculateQiblaBearing(latitude: number, longitude: number): numb
   return (bearing + 360) % 360;
 }
 
+export function isRamadan(): boolean {
+  try {
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura", { month: "numeric" });
+    const parts = formatter.formatToParts(now);
+    const monthPart = parts.find(p => p.type === "month");
+    return monthPart?.value === "9";
+  } catch {
+    return false;
+  }
+}
+
 const MOSQUE_PROXIMITY_THRESHOLD_KM = 0.1;
 
 export function checkNearMosque(latitude: number, longitude: number): Masjid | null {

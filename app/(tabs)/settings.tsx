@@ -1,4 +1,4 @@
-import { useCallback, useState, useMemo } from "react";
+import { useCallback, useState, useMemo, useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -26,6 +26,7 @@ import {
   type CalcMethodKey,
   type Masjid,
 } from "@/lib/prayer-utils";
+import { getMonthLogs, type DayLog, type PrayerName } from "@/lib/prayer-tracker";
 
 interface CalendarEvent {
   id: string;
@@ -40,17 +41,29 @@ interface CalendarEvent {
   registrationUrl: string;
 }
 
-type SettingsSection = "main" | "calcMethod" | "masjids" | "masjidDetail" | "feedback";
+type SettingsSection = "main" | "calcMethod" | "masjids" | "masjidDetail" | "feedback" | "prayerTracker";
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark, themeMode, setThemeMode } = useTheme();
-  const { calcMethod, setCalcMethod, notificationsEnabled, setNotificationsEnabled } = useSettings();
+  const { calcMethod, setCalcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid, setPreferredMasjid } = useSettings();
   const [section, setSection] = useState<SettingsSection>("main");
   const [selectedMasjid, setSelectedMasjid] = useState<Masjid | null>(null);
   const [feedbackType, setFeedbackType] = useState<"bug" | "feature">("feature");
   const [feedbackText, setFeedbackText] = useState("");
   const [feedbackEmail, setFeedbackEmail] = useState("");
+
+  const now = new Date();
+  const [trackerYear, setTrackerYear] = useState(now.getFullYear());
+  const [trackerMonth, setTrackerMonth] = useState(now.getMonth() + 1);
+  const [monthLogs, setMonthLogs] = useState<{ [dateKey: string]: DayLog }>({});
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (section === "prayerTracker") {
+      getMonthLogs(trackerYear, trackerMonth).then(setMonthLogs);
+    }
+  }, [section, trackerYear, trackerMonth]);
 
   const { data: events } = useQuery<CalendarEvent[]>({
     queryKey: ["/api/events"],
@@ -142,6 +155,20 @@ export default function SettingsScreen() {
         <View style={[styles.toggle, notificationsEnabled ? { backgroundColor: colors.emerald } : { backgroundColor: colors.border }]}>
           <View style={[styles.toggleKnob, notificationsEnabled ? { transform: [{ translateX: 16 }] } : {}]} />
         </View>
+      </Pressable>
+
+      <Pressable
+        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
+        onPress={() => { setSection("prayerTracker"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+      >
+        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
+          <Ionicons name="calendar" size={20} color={colors.emerald} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.menuLabel, { color: colors.text }]}>Prayer Tracker</Text>
+          <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>View your prayer history</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
       </Pressable>
 
       <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>APPEARANCE</Text>
@@ -261,22 +288,36 @@ export default function SettingsScreen() {
         <Text style={[styles.backLabel, { color: colors.text }]}>Masjid Directory</Text>
       </Pressable>
 
-      {NEARBY_MASJIDS.map((masjid, i) => (
-        <Pressable
-          key={i}
-          style={({ pressed }) => [styles.masjidRow, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
-          onPress={() => { setSelectedMasjid(masjid); setSection("masjidDetail"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-        >
-          <View style={[styles.masjidIcon, { backgroundColor: colors.prayerIconBg }]}>
-            <MaterialCommunityIcons name="mosque" size={16} color={colors.emerald} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.masjidName, { color: colors.text }]} numberOfLines={1}>{masjid.name}</Text>
-            <Text style={[styles.masjidAddr, { color: colors.textSecondary }]} numberOfLines={1}>{masjid.address}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
-        </Pressable>
-      ))}
+      {NEARBY_MASJIDS.map((masjid, i) => {
+        const isPreferred = preferredMasjid === masjid.name;
+        return (
+          <Pressable
+            key={i}
+            style={({ pressed }) => [styles.masjidRow, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
+            onPress={() => { setSelectedMasjid(masjid); setSection("masjidDetail"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+          >
+            <View style={[styles.masjidIcon, { backgroundColor: colors.prayerIconBg }]}>
+              <MaterialCommunityIcons name="mosque" size={16} color={colors.emerald} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.masjidName, { color: colors.text }]} numberOfLines={1}>{masjid.name}</Text>
+              <Text style={[styles.masjidAddr, { color: colors.textSecondary }]} numberOfLines={1}>{masjid.address}</Text>
+            </View>
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation();
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                setPreferredMasjid(isPreferred ? null : masjid.name);
+              }}
+              hitSlop={8}
+              style={{ padding: 4, marginRight: 4 }}
+            >
+              <Ionicons name={isPreferred ? "star" : "star-outline"} size={20} color={isPreferred ? colors.gold : colors.textSecondary} />
+            </Pressable>
+            <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+          </Pressable>
+        );
+      })}
     </>
   );
 
@@ -398,6 +439,129 @@ export default function SettingsScreen() {
     </>
   );
 
+  const PRAYER_NAMES: PrayerName[] = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
+  const PRAYER_LABELS: Record<PrayerName, string> = { fajr: "Fajr", dhuhr: "Dhuhr", asr: "Asr", maghrib: "Maghrib", isha: "Isha" };
+  const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const DAY_HEADERS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  const calendarDays = useMemo(() => {
+    const firstDay = new Date(trackerYear, trackerMonth - 1, 1).getDay();
+    const daysInMonth = new Date(trackerYear, trackerMonth, 0).getDate();
+    const cells: (number | null)[] = [];
+    for (let i = 0; i < firstDay; i++) cells.push(null);
+    for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+    return cells;
+  }, [trackerYear, trackerMonth]);
+
+  const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
+  const handlePrevMonth = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedDay(null);
+    if (trackerMonth === 1) { setTrackerMonth(12); setTrackerYear(y => y - 1); }
+    else setTrackerMonth(m => m - 1);
+  }, [trackerMonth]);
+
+  const handleNextMonth = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedDay(null);
+    if (trackerMonth === 12) { setTrackerMonth(1); setTrackerYear(y => y + 1); }
+    else setTrackerMonth(m => m + 1);
+  }, [trackerMonth]);
+
+  const renderPrayerTracker = () => {
+    const selectedLog = selectedDay ? monthLogs[selectedDay] : null;
+    return (
+      <>
+        <Pressable
+          style={styles.backRow}
+          onPress={() => { setSection("main"); setSelectedDay(null); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+        >
+          <Ionicons name="arrow-back" size={20} color={colors.text} />
+          <Text style={[styles.backLabel, { color: colors.text }]}>Prayer Tracker</Text>
+        </Pressable>
+
+        <View style={[styles.calMonthRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Pressable onPress={handlePrevMonth} hitSlop={12}>
+            <Ionicons name="chevron-back" size={22} color={colors.text} />
+          </Pressable>
+          <Text style={[styles.calMonthText, { color: colors.text }]}>
+            {MONTH_NAMES[trackerMonth - 1]} {trackerYear}
+          </Text>
+          <Pressable onPress={handleNextMonth} hitSlop={12}>
+            <Ionicons name="chevron-forward" size={22} color={colors.text} />
+          </Pressable>
+        </View>
+
+        <View style={[styles.calGrid, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {DAY_HEADERS.map(d => (
+            <View key={d} style={styles.calHeaderCell}>
+              <Text style={[styles.calHeaderText, { color: colors.textSecondary }]}>{d}</Text>
+            </View>
+          ))}
+          {calendarDays.map((day, idx) => {
+            if (day === null) return <View key={`e${idx}`} style={styles.calCell} />;
+            const dateKey = `${trackerYear}-${String(trackerMonth).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+            const log = monthLogs[dateKey];
+            const isToday = dateKey === todayKey;
+            const isSelected = dateKey === selectedDay;
+            return (
+              <Pressable
+                key={dateKey}
+                style={[
+                  styles.calCell,
+                  isToday && { backgroundColor: isDark ? "#1C2E24" : "#E8F0EC", borderRadius: 8 },
+                  isSelected && { backgroundColor: colors.emerald, borderRadius: 8 },
+                ]}
+                onPress={() => { setSelectedDay(isSelected ? null : dateKey); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+              >
+                <Text style={[styles.calDayText, { color: isSelected ? "#fff" : isToday ? colors.emerald : colors.text }]}>{day}</Text>
+                <View style={styles.calDots}>
+                  {log ? PRAYER_NAMES.map(p => {
+                    const s = log[p];
+                    if (s === 0) return <View key={p} style={[styles.calDot, { backgroundColor: "transparent" }]} />;
+                    return <View key={p} style={[styles.calDot, { backgroundColor: s === 1 ? colors.gold : colors.emerald }]} />;
+                  }) : <View style={{ height: 6 }} />}
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {selectedDay && (
+          <View style={[styles.dayDetail, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.dayDetailTitle, { color: colors.text }]}>
+              {new Date(trackerYear, trackerMonth - 1, parseInt(selectedDay.split("-")[2])).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+            </Text>
+            {PRAYER_NAMES.map(p => {
+              const status = selectedLog ? selectedLog[p] : 0;
+              const statusLabel = status === 0 ? "Not tracked" : status === 1 ? "Completed" : "At masjid";
+              const statusColor = status === 0 ? colors.textTertiary : status === 1 ? colors.gold : colors.emerald;
+              return (
+                <View key={p} style={styles.dayDetailRow}>
+                  <View style={[styles.dayDetailDot, { backgroundColor: status === 0 ? colors.border : statusColor }]} />
+                  <Text style={[styles.dayDetailPrayer, { color: colors.text }]}>{PRAYER_LABELS[p]}</Text>
+                  <Text style={[styles.dayDetailStatus, { color: statusColor }]}>{statusLabel}</Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
+
+        <View style={[styles.calLegend, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={styles.calLegendItem}>
+            <View style={[styles.calLegendDot, { backgroundColor: colors.gold }]} />
+            <Text style={[styles.calLegendText, { color: colors.textSecondary }]}>Completed</Text>
+          </View>
+          <View style={styles.calLegendItem}>
+            <View style={[styles.calLegendDot, { backgroundColor: colors.emerald }]} />
+            <Text style={[styles.calLegendText, { color: colors.textSecondary }]}>At masjid</Text>
+          </View>
+        </View>
+      </>
+    );
+  };
+
   const isWeb = Platform.OS === "web";
   const headerTopPad = isWeb ? 67 : insets.top;
 
@@ -424,6 +588,7 @@ export default function SettingsScreen() {
         {section === "masjids" && renderMasjids()}
         {section === "masjidDetail" && renderMasjidDetail()}
         {section === "feedback" && renderFeedback()}
+        {section === "prayerTracker" && renderPrayerTracker()}
       </ScrollView>
     </View>
   );
@@ -667,5 +832,112 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     marginTop: 30,
     marginBottom: 10,
+  },
+  calMonthRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  calMonthText: {
+    fontSize: 16,
+    fontFamily: "Inter_700Bold",
+  },
+  calGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 6,
+    marginBottom: 12,
+  },
+  calHeaderCell: {
+    width: "14.28%",
+    alignItems: "center",
+    paddingVertical: 6,
+  },
+  calHeaderText: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+  },
+  calCell: {
+    width: "14.28%",
+    alignItems: "center",
+    paddingVertical: 6,
+    minHeight: 48,
+    justifyContent: "center",
+  },
+  calDayText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+  },
+  calDots: {
+    flexDirection: "row",
+    gap: 2,
+    marginTop: 3,
+    height: 6,
+    alignItems: "center",
+  },
+  calDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+  },
+  dayDetail: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 12,
+  },
+  dayDetailTitle: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    marginBottom: 12,
+  },
+  dayDetailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+  dayDetailDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 10,
+  },
+  dayDetailPrayer: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+  },
+  dayDetailStatus: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+  },
+  calLegend: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  calLegendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  calLegendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  calLegendText: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
   },
 });

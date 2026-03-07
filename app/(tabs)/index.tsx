@@ -33,13 +33,15 @@ import {
   toHijriDate,
   findNearestMasjid,
   getAllMasjidsByDistance,
-  calculateQiblaBearing,
   checkNearMosque,
   matchEventsToMasjid,
+  isRamadan,
   NEARBY_MASJIDS,
   type PrayerTimeEntry,
   type Masjid,
 } from "@/lib/prayer-utils";
+import { cyclePrayerStatus, getPrayerLog, type DayLog, type PrayerName as TrackerPrayerName } from "@/lib/prayer-tracker";
+import { getDailyContent } from "@/lib/daily-content";
 
 interface CalendarEvent {
   id: string;
@@ -174,59 +176,6 @@ Notifications.setNotificationHandler({
   }),
 });
 
-function useCompassHeading() {
-  const [heading, setHeading] = useState(0);
-  const [available, setAvailable] = useState(false);
-
-  useEffect(() => {
-    if (Platform.OS === "web") return;
-
-    let subscription: any = null;
-
-    (async () => {
-      try {
-        const { Magnetometer } = await import("expo-sensors");
-        const isAvail = await Magnetometer.isAvailableAsync();
-        if (!isAvail) return;
-        setAvailable(true);
-
-        Magnetometer.setUpdateInterval(100);
-        subscription = Magnetometer.addListener((data) => {
-          let angle = Math.atan2(data.y, data.x) * (180 / Math.PI);
-          angle = (angle + 360) % 360;
-          setHeading(angle);
-        });
-      } catch {}
-    })();
-
-    return () => {
-      if (subscription) subscription.remove();
-    };
-  }, []);
-
-  return { heading, available };
-}
-
-function QiblaCompassSmall({ qiblaBearing, colors, isDark }: { qiblaBearing: number; colors: any; isDark: boolean }) {
-  const { heading, available } = useCompassHeading();
-  const rotation = available ? qiblaBearing - heading : qiblaBearing;
-  const arrowRotation = `${rotation}deg`;
-
-  return (
-    <Pressable
-      onPress={() => Linking.openURL("https://qiblafinder.withgoogle.com/intl/en/finder/ar")}
-      style={[styles.qiblaSmall, { backgroundColor: isDark ? "#1A2E22" : "#EDF5F0" }]}
-    >
-      <View style={[styles.qiblaRing, { borderColor: colors.gold }]}>
-        <View style={[styles.qiblaArrowWrap, { transform: [{ rotate: arrowRotation }] }]}>
-          <View style={[styles.qiblaArrowHead, { borderBottomColor: colors.emerald }]} />
-          <View style={[styles.qiblaArrowBody, { backgroundColor: colors.emerald }]} />
-        </View>
-      </View>
-      <Text style={[styles.qiblaLabel, { color: colors.textSecondary }]}>Qibla</Text>
-    </Pressable>
-  );
-}
 
 interface HalalRestaurant {
   id: number;
@@ -346,7 +295,7 @@ function CountdownRing({ colors, isDark }: {
 export default function PrayerScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { calcMethod, notificationsEnabled, setNotificationsEnabled } = useSettings();
+  const { calcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid } = useSettings();
   const router = useRouter();
   const [prayers, setPrayers] = useState<PrayerTimeEntry[]>([]);
   const [nextPrayer, setNextPrayer] = useState<PrayerTimeEntry | null>(null);
@@ -355,12 +304,13 @@ export default function PrayerScreen() {
   const [nearestMasjid, setNearestMasjid] = useState<{ name: string; distanceMiles: number; masjid: Masjid } | null>(null);
   const [locationPermission, setLocationPermission] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
-  const [qiblaBearing, setQiblaBearing] = useState(58.5);
   const [userCoords, setUserCoords] = useState({ lat: 35.7796, lon: -78.6382 });
   const [nearMosque, setNearMosque] = useState<Masjid | null>(null);
   const [silenceAlertDismissed, setSilenceAlertDismissed] = useState(false);
   const [masjidsExpanded, setMasjidsExpanded] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [todayLog, setTodayLog] = useState<DayLog>({ fajr: 0, dhuhr: 0, asr: 0, maghrib: 0, isha: 0 });
+  const [ramadanActive, setRamadanActive] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
   const { data: calendarEvents } = useQuery<any[]>({
@@ -428,7 +378,6 @@ export default function PrayerScreen() {
     const todayPrayers = getPrayerTimes(lat, lon, now, calcMethod);
     setPrayers(todayPrayers);
     setHijriDate(toHijriDate(now));
-    setQiblaBearing(calculateQiblaBearing(lat, lon));
     setUserCoords({ lat, lon });
 
     const nearMosqueCheck = checkNearMosque(lat, lon);
@@ -520,6 +469,20 @@ export default function PrayerScreen() {
   useEffect(() => {
     loadPrayerData();
   }, [loadPrayerData]);
+
+  useEffect(() => {
+    getPrayerLog(new Date()).then(setTodayLog);
+    setRamadanActive(isRamadan());
+  }, []);
+
+  const handlePrayerPillPress = useCallback(async (prayerName: string) => {
+    const trackerName = prayerName as TrackerPrayerName;
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const updated = await cyclePrayerStatus(new Date(), trackerName);
+    setTodayLog(updated);
+  }, []);
+
+  const dailyContent = useMemo(() => getDailyContent(), []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -656,6 +619,9 @@ export default function PrayerScreen() {
           <Text style={styles.headerSubtitle}>
             {greeting}{hijriDate ? ` · ${hijriDate}` : ""}
           </Text>
+          {preferredMasjid ? (
+            <Text style={styles.headerMasjid}>{preferredMasjid}</Text>
+          ) : null}
         </View>
         <Pressable
           onPress={toggleNotifications}
@@ -692,6 +658,55 @@ export default function PrayerScreen() {
           </View>
         ) : null}
 
+        {ramadanActive ? (
+          <View style={[styles.glassCard, styles.ramadanCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
+            <View style={styles.ramadanHeader}>
+              <MaterialCommunityIcons name="moon-waning-crescent" size={22} color={colors.gold} />
+              <Text style={[styles.ramadanTitle, { color: colors.gold }]}>Ramadan Mubarak</Text>
+            </View>
+            <View style={styles.ramadanTimesRow}>
+              <View style={styles.ramadanTimeBlock}>
+                <Text style={[styles.ramadanTimeLabel, { color: colors.textSecondary }]}>Suhoor Ends</Text>
+                <Text style={[styles.ramadanTimeValue, { color: colors.text }]}>
+                  {prayers.find(p => p.name === "fajr") ? formatTime(prayers.find(p => p.name === "fajr")!.time) : "--:--"}
+                </Text>
+              </View>
+              <View style={[styles.ramadanDivider, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)" }]} />
+              <View style={styles.ramadanTimeBlock}>
+                <Text style={[styles.ramadanTimeLabel, { color: colors.textSecondary }]}>Iftar</Text>
+                <Text style={[styles.ramadanTimeValue, { color: colors.text }]}>
+                  {prayers.find(p => p.name === "maghrib") ? formatTime(prayers.find(p => p.name === "maghrib")!.time) : "--:--"}
+                </Text>
+              </View>
+            </View>
+            {(() => {
+              const fajr = prayers.find(p => p.name === "fajr");
+              const maghrib = prayers.find(p => p.name === "maghrib");
+              if (!fajr || !maghrib) return null;
+              let targetLabel: string;
+              let targetTime: Date;
+              if (now < fajr.time) {
+                targetLabel = "Suhoor ends";
+                targetTime = fajr.time;
+              } else if (now < maghrib.time) {
+                targetLabel = "Iftar";
+                targetTime = maghrib.time;
+              } else {
+                targetLabel = "Suhoor ends";
+                const tomorrowFajr = new Date(fajr.time);
+                tomorrowFajr.setDate(tomorrowFajr.getDate() + 1);
+                targetTime = tomorrowFajr;
+              }
+              const cd = getCountdown(targetTime, now);
+              return (
+                <Text style={[styles.ramadanCountdown, { color: colors.gold }]}>
+                  {targetLabel} in {padNum(cd.hours)}:{padNum(cd.minutes)}:{padNum(cd.seconds)}
+                </Text>
+              );
+            })()}
+          </View>
+        ) : null}
+
         <View style={[styles.glassCard, styles.prayerCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
           <View style={styles.prayerHero}>
             <CountdownRing colors={colors} isDark={isDark} />
@@ -712,12 +727,25 @@ export default function PrayerScreen() {
             {prayers.filter(p => p.name !== "sunrise").map((prayer) => {
               const isNext = nextPrayer?.name === prayer.name;
               const isPast = prayer.time < now && !isNext;
+              const trackerKey = prayer.name as TrackerPrayerName;
+              const status = todayLog[trackerKey] ?? 0;
+              const isGold = status === 1;
+              const isGreen = status === 2;
+              const pillBg = isGold
+                ? (isDark ? colors.gold + "20" : colors.gold + "15")
+                : isGreen
+                  ? (isDark ? colors.emerald + "25" : colors.emerald + "12")
+                  : isNext
+                    ? (isDark ? colors.emerald + "25" : colors.emerald + "12")
+                    : undefined;
               return (
-                <View
+                <Pressable
                   key={prayer.name}
-                  style={[
+                  onPress={() => handlePrayerPillPress(prayer.name)}
+                  style={({ pressed }) => [
                     styles.prayerPill,
-                    isNext && { backgroundColor: isDark ? colors.emerald + "25" : colors.emerald + "12" },
+                    pillBg ? { backgroundColor: pillBg } : undefined,
+                    pressed && { opacity: 0.7 },
                   ]}
                 >
                   <Text style={[
@@ -734,11 +762,13 @@ export default function PrayerScreen() {
                   ]}>
                     {formatTime(prayer.time)}
                   </Text>
-                </View>
+                  {status > 0 ? (
+                    <View style={[styles.prayerStatusDot, { backgroundColor: isGold ? colors.gold : colors.emerald }]} />
+                  ) : null}
+                </Pressable>
               );
             })}
           </View>
-          <QiblaCompassSmall qiblaBearing={qiblaBearing} colors={colors} isDark={isDark} />
         </View>
 
         <View style={styles.quickActionsRow}>
@@ -777,6 +807,20 @@ export default function PrayerScreen() {
           </Pressable>
         ) : null}
 
+        <View style={[styles.glassCard, styles.dailyContentCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
+          <View style={styles.dailyContentHeader}>
+            <Ionicons name={dailyContent.type === "quran" ? "book" : "chatbox-ellipses"} size={16} color={colors.gold} />
+            <Text style={[styles.dailyContentType, { color: colors.gold }]}>
+              {dailyContent.type === "quran" ? "Quran" : "Hadith"}
+            </Text>
+          </View>
+          <Text style={[styles.dailyContentText, { color: colors.text }]}>
+            "{dailyContent.text}"
+          </Text>
+          <Text style={[styles.dailyContentSource, { color: colors.textTertiary }]}>
+            — {dailyContent.source}
+          </Text>
+        </View>
 
         {masjidsExpanded ? (
           <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
@@ -968,6 +1012,12 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     marginTop: 2,
   },
+  headerMasjid: {
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    marginTop: 3,
+  },
   headerNotifBtn: {
     width: 36,
     height: 36,
@@ -1081,48 +1131,86 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: "Inter_500Medium",
   },
-  qiblaSmall: {
+  prayerStatusDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    marginTop: 4,
+  },
+  ramadanCard: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    padding: 16,
+  },
+  ramadanHeader: {
     flexDirection: "row",
     alignItems: "center",
-    alignSelf: "flex-end",
-    gap: 6,
-    marginTop: 12,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 12,
+    gap: 8,
+    marginBottom: 12,
   },
-  qiblaRing: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 1.5,
-    justifyContent: "center",
-    alignItems: "center",
+  ramadanTitle: {
+    fontSize: 16,
+    fontFamily: "Inter_700Bold",
   },
-  qiblaArrowWrap: {
-    position: "absolute",
-    width: 8,
-    height: 18,
+  ramadanTimesRow: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 0,
   },
-  qiblaArrowHead: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 3,
-    borderRightWidth: 3,
-    borderBottomWidth: 5,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
+  ramadanTimeBlock: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 8,
   },
-  qiblaArrowBody: {
-    width: 1.5,
-    height: 7,
-    borderRadius: 1,
-  },
-  qiblaLabel: {
-    fontSize: 10,
+  ramadanTimeLabel: {
+    fontSize: 11,
     fontFamily: "Inter_500Medium",
+    textTransform: "uppercase" as const,
+    letterSpacing: 0.5,
+  },
+  ramadanTimeValue: {
+    fontSize: 22,
+    fontFamily: "Inter_700Bold",
+    marginTop: 4,
+  },
+  ramadanDivider: {
+    width: 1,
+    height: 36,
+  },
+  ramadanCountdown: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    textAlign: "center" as const,
+    marginTop: 10,
+  },
+  dailyContentCard: {
+    marginHorizontal: 16,
+    marginTop: 18,
+    padding: 16,
+  },
+  dailyContentHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 10,
+  },
+  dailyContentType: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    textTransform: "uppercase" as const,
+    letterSpacing: 0.8,
+  },
+  dailyContentText: {
+    fontSize: 15,
+    fontFamily: "Inter_500Medium",
+    lineHeight: 22,
+    fontStyle: "italic" as const,
+  },
+  dailyContentSource: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    marginTop: 8,
   },
   permissionBanner: {
     marginHorizontal: 16,
