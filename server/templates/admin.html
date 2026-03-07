@@ -121,6 +121,23 @@
     </div>
 
     <div class="section">
+      <div class="section-title"><span class="icon">🕌</span> Jumu'ah Schedules</div>
+      <div class="row">
+        <div><label>Masjid</label><input type="text" id="jumuahMasjid" placeholder="Masjid name"></div>
+      </div>
+      <div class="row">
+        <div><label>Khutbah Time</label><input type="text" id="jumuahKhutbah" placeholder="1:00 PM"></div>
+        <div><label>Iqama Time</label><input type="text" id="jumuahIqama" placeholder="1:30 PM"></div>
+      </div>
+      <div class="row">
+        <div><label>Speaker (optional)</label><input type="text" id="jumuahSpeaker" placeholder="Sheikh name"></div>
+        <div><label>Topic (optional)</label><input type="text" id="jumuahTopic" placeholder="Khutbah topic"></div>
+      </div>
+      <button class="btn btn-primary" onclick="addJumuah()" id="addJumuahBtn">Add Schedule</button>
+      <div id="jumuahList" style="margin-top:14px;"><div class="loading">Loading...</div></div>
+    </div>
+
+    <div class="section">
       <div class="section-title"><span class="icon">🔔</span> Send Push Notification</div>
       <label>Title</label>
       <input type="text" id="pushTitle" placeholder="Notification title">
@@ -161,6 +178,7 @@
           document.getElementById('loginError').style.display = 'none';
           loadTickers();
           loadBusinesses('pending');
+          loadJumuah();
         } else {
           document.getElementById('loginError').style.display = 'block';
         }
@@ -365,6 +383,78 @@
       } catch { showToast('Connection error', true); }
     }
 
+    async function loadJumuah() {
+      try {
+        const res = await fetch('/api/admin/jumuah', { headers: { 'Authorization': 'Bearer ' + adminToken } });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        const items = await res.json();
+        const list = document.getElementById('jumuahList');
+        if (!items.length) { list.innerHTML = '<div class="empty-state">No Jumu\'ah schedules</div>'; return; }
+        list.innerHTML = '<ul class="message-list">' + items.map(j => {
+          const status = j.active ? '' : ' (inactive)';
+          const speaker = j.speaker ? '<br>Speaker: ' + escHtml(j.speaker) : '';
+          const topic = j.topic ? '<br>Topic: ' + escHtml(j.topic) : '';
+          return '<li class="message-item">' +
+            '<span class="message-badge badge-event">' + escHtml(j.khutbah_time) + '</span>' +
+            '<div class="message-text">' + escHtml(j.masjid) + status + speaker + topic +
+            '<div class="message-meta">Iqama: ' + escHtml(j.iqama_time) + '</div></div>' +
+            '<div class="message-actions" style="gap:6px;display:flex;">' +
+            '<button class="btn btn-sm" style="background:#2A2318;color:#D4A843;" onclick="toggleJumuah(' + j.id + ',' + !j.active + ')">' + (j.active ? 'Disable' : 'Enable') + '</button>' +
+            '<button class="btn btn-danger btn-sm" onclick="deleteJumuah(' + j.id + ')">Delete</button>' +
+            '</div></li>';
+        }).join('') + '</ul>';
+      } catch { showToast('Failed to load Jumu\'ah schedules', true); }
+    }
+
+    async function addJumuah() {
+      const masjid = document.getElementById('jumuahMasjid').value.trim();
+      const khutbah_time = document.getElementById('jumuahKhutbah').value.trim();
+      const iqama_time = document.getElementById('jumuahIqama').value.trim();
+      const speaker = document.getElementById('jumuahSpeaker').value.trim();
+      const topic = document.getElementById('jumuahTopic').value.trim();
+      if (!masjid || !khutbah_time || !iqama_time) { showToast('Masjid, khutbah time, and iqama time are required', true); return; }
+      try {
+        const res = await fetch('/api/admin/jumuah', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify({ masjid, khutbah_time, iqama_time, speaker: speaker || null, topic: topic || null }),
+        });
+        if (res.ok) {
+          showToast('Schedule added');
+          document.getElementById('jumuahMasjid').value = '';
+          document.getElementById('jumuahKhutbah').value = '';
+          document.getElementById('jumuahIqama').value = '';
+          document.getElementById('jumuahSpeaker').value = '';
+          document.getElementById('jumuahTopic').value = '';
+          loadJumuah();
+        } else { showToast('Failed to add schedule', true); }
+      } catch { showToast('Connection error', true); }
+    }
+
+    async function toggleJumuah(id, active) {
+      try {
+        const res = await fetch('/api/admin/jumuah/' + id, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify({ active }),
+        });
+        if (res.ok) { showToast(active ? 'Enabled' : 'Disabled'); loadJumuah(); }
+        else { showToast('Failed to update', true); }
+      } catch { showToast('Connection error', true); }
+    }
+
+    async function deleteJumuah(id) {
+      if (!confirm('Delete this Jumu\'ah schedule?')) return;
+      try {
+        const res = await fetch('/api/admin/jumuah/' + id, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + adminToken },
+        });
+        if (res.ok) { showToast('Deleted'); loadJumuah(); }
+        else { showToast('Failed to delete', true); }
+      } catch { showToast('Connection error', true); }
+    }
+
     function escHtml(s) {
       const d = document.createElement('div');
       d.textContent = s;
@@ -393,6 +483,7 @@
             document.getElementById('appWrap').style.display = 'block';
             loadTickers();
             loadBusinesses('pending');
+            loadJumuah();
           } else {
             handleUnauthorized();
           }

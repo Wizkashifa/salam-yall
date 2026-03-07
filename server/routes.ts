@@ -371,6 +371,39 @@ function getDbPool() {
   });
 }
 
+async function ensureJumuahTable(pool: pg.Pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS jumuah_schedules (
+      id SERIAL PRIMARY KEY,
+      masjid VARCHAR(255) NOT NULL,
+      khutbah_time VARCHAR(20) NOT NULL,
+      iqama_time VARCHAR(50) NOT NULL,
+      speaker VARCHAR(255),
+      topic VARCHAR(500),
+      active BOOLEAN DEFAULT true,
+      sort_order INT DEFAULT 0,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  const { rows } = await pool.query("SELECT COUNT(*) as count FROM jumuah_schedules");
+  if (parseInt(rows[0].count) === 0) {
+    await pool.query(`
+      INSERT INTO jumuah_schedules (masjid, khutbah_time, iqama_time, sort_order) VALUES
+        ('IAR (Atwater)', '1:00 PM', '1:30 PM', 1),
+        ('IAR (Page Rd)', '1:00 PM', '1:30 PM', 2),
+        ('Islamic Center of Morrisville', '12:30 PM', '1:00 PM', 3),
+        ('Islamic Center of Cary', '1:00 PM', '1:30 PM', 4),
+        ('As-Salaam Islamic Center', '1:15 PM', '1:45 PM', 5),
+        ('Chapel Hill Islamic Society', '1:00 PM', '1:30 PM', 6),
+        ('Ar-Razzaq Islamic Center', '1:15 PM', '1:45 PM', 7),
+        ('JIAR (Fayetteville St)', '1:00 PM', '1:30 PM', 8),
+        ('JIAR Parkwood (3 shifts)', '12:10 PM', '1:10 / 2:10 PM', 9);
+    `);
+    console.log("[DB] Seeded default Jumuah schedules");
+  }
+}
+
 async function ensureTickerTable(pool: pg.Pool) {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS ticker_messages (
@@ -590,6 +623,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   startAutoRefresh();
 
   const pool = getDbPool();
+  await ensureJumuahTable(pool).catch(err => console.error("[DB] Jumuah table init error:", err.message));
   await ensureTickerTable(pool).catch(err => console.error("[DB] Ticker table init error:", err.message));
   await ensurePushTokensTable(pool).catch(err => console.error("[DB] Push tokens table init error:", err.message));
   await ensureHalalRestaurantsTable(pool).catch(err => console.error("[DB] Halal restaurants table init error:", err.message));
@@ -1244,6 +1278,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching iqama times:", error.message);
       res.status(500).json({ error: "Failed to fetch iqama times" });
+    }
+  });
+
+  app.get("/api/jumuah-schedules", async (_req, res) => {
+    try {
+      const pool = getDbPool();
+      const result = await pool.query(
+        "SELECT id, masjid, khutbah_time, iqama_time, speaker, topic FROM jumuah_schedules WHERE active = true ORDER BY sort_order ASC"
+      );
+      res.json(result.rows);
+      pool.end();
+    } catch (error: any) {
+      console.error("Error fetching jumuah schedules:", error.message);
+      res.status(500).json({ error: "Failed to fetch jumuah schedules" });
+    }
+  });
+
+  app.get("/api/admin/jumuah", async (req, res) => {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (!token || !adminSessions.has(token)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const pool = getDbPool();
+      const result = await pool.query("SELECT * FROM jumuah_schedules ORDER BY sort_order ASC");
+      res.json(result.rows);
+      pool.end();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/admin/jumuah", async (req, res) => {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (!token || !adminSessions.has(token)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { masjid, khutbah_time, iqama_time, speaker, topic, sort_order } = req.body;
+      if (!masjid || !khutbah_time || !iqama_time) {
+        return res.status(400).json({ error: "masjid, khutbah_time, and iqama_time are required" });
+      }
+      const pool = getDbPool();
+      const result = await pool.query(
+        "INSERT INTO jumuah_schedules (masjid, khutbah_time, iqama_time, speaker, topic, sort_order) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+        [masjid, khutbah_time, iqama_time, speaker || null, topic || null, sort_order || 0]
+      );
+      res.json(result.rows[0]);
+      pool.end();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/admin/jumuah/:id", async (req, res) => {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (!token || !adminSessions.has(token)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { id } = req.params;
+      const { masjid, khutbah_time, iqama_time, speaker, topic, active, sort_order } = req.body;
+      const pool = getDbPool();
+      const setClauses: string[] = ["updated_at = NOW()"];
+      const params: any[] = [];
+      let paramIdx = 1;
+      if (masjid !== undefined) { setClauses.push(`masjid = $${paramIdx++}`); params.push(masjid); }
+      if (khutbah_time !== undefined) { setClauses.push(`khutbah_time = $${paramIdx++}`); params.push(khutbah_time); }
+      if (iqama_time !== undefined) { setClauses.push(`iqama_time = $${paramIdx++}`); params.push(iqama_time); }
+      if (speaker !== undefined) { setClauses.push(`speaker = $${paramIdx++}`); params.push(speaker); }
+      if (topic !== undefined) { setClauses.push(`topic = $${paramIdx++}`); params.push(topic); }
+      if (active !== undefined) { setClauses.push(`active = $${paramIdx++}`); params.push(active); }
+      if (sort_order !== undefined) { setClauses.push(`sort_order = $${paramIdx++}`); params.push(sort_order); }
+      params.push(id);
+      const result = await pool.query(
+        `UPDATE jumuah_schedules SET ${setClauses.join(", ")} WHERE id = $${paramIdx} RETURNING *`,
+        params
+      );
+      if (result.rows.length === 0) return res.status(404).json({ error: "Not found" });
+      res.json(result.rows[0]);
+      pool.end();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/admin/jumuah/:id", async (req, res) => {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (!token || !adminSessions.has(token)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const pool = getDbPool();
+      await pool.query("DELETE FROM jumuah_schedules WHERE id = $1", [req.params.id]);
+      res.json({ success: true });
+      pool.end();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 

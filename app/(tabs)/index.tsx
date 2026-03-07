@@ -41,7 +41,7 @@ import {
   type Masjid,
 } from "@/lib/prayer-utils";
 import { cyclePrayerStatus, getPrayerLog, type DayLog, type PrayerName as TrackerPrayerName } from "@/lib/prayer-tracker";
-import { getDailyContent, isFriday, getJumuahSchedules } from "@/lib/daily-content";
+import { getDailyContent, isFriday } from "@/lib/daily-content";
 
 interface CalendarEvent {
   id: string;
@@ -506,7 +506,21 @@ export default function PrayerScreen() {
 
   const dailyContent = useMemo(() => getDailyContent(), []);
   const fridayMode = useMemo(() => isFriday(), []);
-  const jumuahSchedules = useMemo(() => fridayMode ? getJumuahSchedules() : [], [fridayMode]);
+
+  interface JumuahSchedule {
+    id: number;
+    masjid: string;
+    khutbah_time: string;
+    iqama_time: string;
+    speaker: string | null;
+    topic: string | null;
+  }
+
+  const { data: jumuahSchedules = [] } = useQuery<JumuahSchedule[]>({
+    queryKey: ["/api/jumuah-schedules"],
+    enabled: fridayMode,
+    staleTime: 60 * 60 * 1000,
+  });
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -856,7 +870,7 @@ export default function PrayerScreen() {
             </Text>
             {jumuahSchedules.map((j, idx) => (
               <View
-                key={j.masjid}
+                key={j.id}
                 style={[
                   styles.jumuahRow,
                   idx < jumuahSchedules.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)" },
@@ -864,7 +878,7 @@ export default function PrayerScreen() {
               >
                 <Text style={[styles.jumuahMasjid, { color: colors.text }]} numberOfLines={1}>{j.masjid}</Text>
                 <View style={styles.jumuahTimesCol}>
-                  <Text style={[styles.jumuahTime, { color: colors.textSecondary }]}>{j.khutbah}</Text>
+                  <Text style={[styles.jumuahTime, { color: colors.textSecondary }]}>{j.khutbah_time}</Text>
                   <Text style={[styles.jumuahTimeLabel, { color: colors.textTertiary }]}>Khutbah</Text>
                 </View>
               </View>

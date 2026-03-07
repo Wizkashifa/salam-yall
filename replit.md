@@ -116,7 +116,7 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 - **Iqama Times**: IAR sourced from `raleighmasjid.org/API/prayer/month/` (monthly JSON); ICMNC sourced from `icmnc.org/wp-json/dpt/v1/prayertime?filter=today` (daily WP plugin); both cached 24h; displayed in gold under each adhan pill; defaults to IAR, switches to ICMNC if preferred masjid includes "morrisville" or "icm"
 - **Interactive Prayer Pills**: Tap to cycle prayer status (not done → gold/completed → green/at masjid); persists to AsyncStorage via prayer-tracker
 - **Prayer Tracker Calendar**: Monthly calendar view in Settings showing colored dots per prayer per day; tap day for detail
-- **Daily Quran/Hadith**: Rotating card with curated verses and hadith, changes daily based on day-of-year; on Fridays replaced by Jumu'ah prayer schedule card with khutbah times for local masjids
+- **Daily Quran/Hadith**: Rotating card with curated verses and hadith, changes daily based on day-of-year; on Fridays replaced by Jumu'ah prayer schedule card fetched from `jumuah_schedules` DB table via `/api/jumuah-schedules`
 - **Ramadan Mode**: Auto-detects Hijri month 9; shows suhoor end time (Fajr) and iftar time (Maghrib) with countdown
 - **Preferred Masjid**: Star a masjid in Settings → shown in home header subtitle; persists via AsyncStorage
 - **Qibla**: Quick action links to Google Qibla Finder
@@ -124,6 +124,14 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 - **Prayer Notifications**: Toggle for local notifications at each prayer time
 - **Mosque Proximity Alert**: Dismissable "silence your phone" banner when within 100m of a masjid
 - **Calculation Method**: Configurable; supports all 12 adhan library methods; default ISNA
+
+## Database Tables (PostgreSQL)
+
+- `jumuah_schedules`: id, masjid, khutbah_time, iqama_time, speaker, topic, active, sort_order, created_at, updated_at — auto-seeded with defaults if empty
+- `ticker_messages`: id, message, type, active, created_at, expires_at
+- `push_tokens`: id, token (unique), created_at
+- `halal_restaurants`: id, external_id, name, formatted_address, phone, url, place_id, lat, lng, is_halal, cuisine_types, rating, photo_reference
+- `businesses`: id, name, category, description, address, phone, website, submitted_by_email, status, place_id, rating, photo_reference, lat, lng
 
 ## Integrations
 
