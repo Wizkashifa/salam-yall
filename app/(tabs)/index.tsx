@@ -411,7 +411,9 @@ export default function PrayerScreen() {
               <Text style={[styles.hijriDate, { color: colors.gold }]}>{hijriDate}</Text>
             ) : null}
           </View>
-          <QiblaCompass qiblaBearing={qiblaBearing} colors={colors} isDark={isDark} />
+          <Pressable onPress={() => Linking.openURL("https://qiblafinder.withgoogle.com/intl/en/finder/ar")}>
+            <QiblaCompass qiblaBearing={qiblaBearing} colors={colors} isDark={isDark} />
+          </Pressable>
         </View>
       </View>
 
