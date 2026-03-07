@@ -79,53 +79,21 @@ function useCompassHeading() {
 function QiblaCompass({ qiblaBearing, colors, isDark }: { qiblaBearing: number; colors: any; isDark: boolean }) {
   const { heading, available } = useCompassHeading();
   const rotation = available ? qiblaBearing - heading : qiblaBearing;
-
-  const compassSize = 160;
   const arrowRotation = `${rotation}deg`;
 
   return (
-    <View style={[styles.compassContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      <Text style={[styles.compassTitle, { color: colors.text }]}>Qibla Direction</Text>
-      <View style={[styles.compassOuter, { borderColor: colors.gold }]}>
-        <View style={[styles.compassInner, { backgroundColor: isDark ? "#1C2E24" : "#E8F0EC" }]}>
-          {["N", "E", "S", "W"].map((dir, i) => (
-            <Text
-              key={dir}
-              style={[
-                styles.compassCardinal,
-                { color: colors.textSecondary },
-                i === 0 && { top: 8, left: compassSize / 2 - 6 },
-                i === 1 && { right: 8, top: compassSize / 2 - 8 },
-                i === 2 && { bottom: 8, left: compassSize / 2 - 6 },
-                i === 3 && { left: 8, top: compassSize / 2 - 8 },
-              ]}
-            >
-              {dir}
-            </Text>
-          ))}
-
-          <View style={[styles.compassArrowContainer, { transform: [{ rotate: arrowRotation }] }]}>
-            <View style={[styles.compassArrow, { backgroundColor: colors.emerald }]} />
-            <View style={[styles.compassArrowHead, { borderBottomColor: colors.emerald }]} />
-          </View>
-
-          <View style={[styles.compassCenter, { backgroundColor: colors.gold }]}>
-            <MaterialCommunityIcons name="star-four-points" size={14} color="#fff" />
-          </View>
+    <View style={[styles.compassContainer, { backgroundColor: isDark ? "#1C2E24" : "#E8F0EC", borderColor: colors.border }]}>
+      <View style={[styles.compassRing, { borderColor: colors.gold }]}>
+        <View style={[styles.compassArrowWrap, { transform: [{ rotate: arrowRotation }] }]}>
+          <View style={[styles.compassArrow, { backgroundColor: colors.emerald }]} />
+          <View style={[styles.compassArrowHead, { borderBottomColor: colors.emerald }]} />
         </View>
+        <View style={[styles.compassDot, { backgroundColor: colors.gold }]} />
       </View>
-      <Text style={[styles.compassBearing, { color: colors.textSecondary }]}>
-        {Math.round(qiblaBearing)}° from North
-      </Text>
-      {Platform.OS === "web" ? (
-        <Text style={[styles.compassHint, { color: colors.textSecondary }]}>
-          Static direction — use a physical device for live compass
-        </Text>
-      ) : !available ? (
-        <Text style={[styles.compassHint, { color: colors.textSecondary }]}>
-          Compass sensor not available on this device
-        </Text>
-      ) : null}
+      <View style={styles.compassLabels}>
+        <Text style={[styles.compassTitle, { color: colors.text }]}>Qibla</Text>
+        <Text style={[styles.compassBearing, { color: colors.textSecondary }]}>{Math.round(qiblaBearing)}°</Text>
+      </View>
     </View>
   );
 }
@@ -372,10 +340,15 @@ export default function PrayerScreen() {
       }
     >
       <View style={styles.headerSection}>
-        <Text style={[styles.greeting, { color: colors.textSecondary }]}>{gregorianDate}</Text>
-        {hijriDate ? (
-          <Text style={[styles.hijriDate, { color: colors.gold }]}>{hijriDate}</Text>
-        ) : null}
+        <View style={styles.headerRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.greeting, { color: colors.textSecondary }]}>{gregorianDate}</Text>
+            {hijriDate ? (
+              <Text style={[styles.hijriDate, { color: colors.gold }]}>{hijriDate}</Text>
+            ) : null}
+          </View>
+          <QiblaCompass qiblaBearing={qiblaBearing} colors={colors} isDark={isDark} />
+        </View>
       </View>
 
       <LinearGradient
@@ -472,8 +445,6 @@ export default function PrayerScreen() {
           </Text>
         </Pressable>
       ) : null}
-
-      <QiblaCompass qiblaBearing={qiblaBearing} colors={colors} isDark={isDark} />
 
       <View style={styles.prayerListSection}>
         <View style={styles.prayerListHeader}>
@@ -713,80 +684,65 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   compassContainer: {
-    marginHorizontal: 20,
-    borderRadius: 14,
-    padding: 20,
+    flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
-    borderWidth: 1,
+    gap: 8,
+    borderRadius: 22,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
   },
-  compassTitle: {
-    fontSize: 16,
-    fontFamily: "Inter_700Bold",
-    marginBottom: 16,
-  },
-  compassOuter: {
-    width: 172,
-    height: 172,
-    borderRadius: 86,
-    borderWidth: 2,
+  compassRing: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
     justifyContent: "center",
     alignItems: "center",
   },
-  compassInner: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    justifyContent: "center",
-    alignItems: "center",
-    position: "relative",
-  },
-  compassCardinal: {
+  compassArrowWrap: {
     position: "absolute",
-    fontSize: 12,
-    fontFamily: "Inter_700Bold",
-  },
-  compassArrowContainer: {
-    position: "absolute",
-    width: 20,
-    height: 120,
+    width: 12,
+    height: 30,
     alignItems: "center",
   },
   compassArrow: {
-    width: 3,
-    height: 50,
-    borderRadius: 2,
+    width: 2,
+    height: 12,
+    borderRadius: 1,
   },
   compassArrowHead: {
     width: 0,
     height: 0,
-    borderLeftWidth: 8,
-    borderRightWidth: 8,
-    borderBottomWidth: 14,
+    borderLeftWidth: 5,
+    borderRightWidth: 5,
+    borderBottomWidth: 8,
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
-    marginTop: -2,
+    marginTop: -1,
     transform: [{ rotate: "180deg" }],
   },
-  compassCenter: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
+  compassDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     position: "absolute",
   },
-  compassBearing: {
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
-    marginTop: 12,
+  compassLabels: {
+    alignItems: "center",
   },
-  compassHint: {
+  compassTitle: {
     fontSize: 11,
-    fontFamily: "Inter_400Regular",
-    marginTop: 4,
-    textAlign: "center",
+    fontFamily: "Inter_700Bold",
+  },
+  compassBearing: {
+    fontSize: 10,
+    fontFamily: "Inter_500Medium",
   },
   prayerListSection: {
     paddingHorizontal: 20,
