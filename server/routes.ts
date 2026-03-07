@@ -982,6 +982,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     path.resolve(process.cwd(), "server", "templates", "privacy-policy.html"),
     "utf-8"
   );
+  const supportHtml = fs.readFileSync(
+    path.resolve(process.cwd(), "server", "templates", "support.html"),
+    "utf-8"
+  );
 
   app.get("/admin", (_req, res) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -991,6 +995,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/privacy", (_req, res) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.send(privacyHtml);
+  });
+
+  app.get("/support", (_req, res) => {
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.send(supportHtml);
   });
 
   const crypto = await import("crypto");
