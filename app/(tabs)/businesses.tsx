@@ -592,39 +592,41 @@ export default function BusinessesScreen() {
         </Pressable>
       </LinearGradient>
 
-      <FlatList
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        data={CATEGORIES}
-        keyExtractor={(item) => item}
-        contentContainerStyle={[styles.filterRow, { paddingHorizontal: 16, paddingVertical: 10, backgroundColor: colors.background }]}
-        renderItem={({ item }) => {
-          const isActive = item === selectedCategory;
-          return (
-            <Pressable
-              style={[
-                styles.filterChip,
-                isActive
-                  ? { backgroundColor: colors.gold }
-                  : { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-              ]}
-              onPress={() => {
-                setSelectedCategory(item);
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }}
-            >
-              <Text
+      <View style={{ backgroundColor: colors.background }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10, gap: 8 }}
+        >
+          {CATEGORIES.map((item) => {
+            const isActive = item === selectedCategory;
+            return (
+              <Pressable
+                key={item}
                 style={[
-                  styles.filterChipText,
-                  { color: isActive ? "#fff" : colors.textSecondary },
+                  styles.filterChip,
+                  isActive
+                    ? { backgroundColor: colors.gold }
+                    : { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
                 ]}
+                onPress={() => {
+                  setSelectedCategory(item);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
               >
-                {item}
-              </Text>
-            </Pressable>
-          );
-        }}
-      />
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    { color: isActive ? "#fff" : colors.textSecondary },
+                  ]}
+                >
+                  {item}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
 
       {isLoading ? (
         <View style={styles.centerContainer}>
