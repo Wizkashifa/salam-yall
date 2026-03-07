@@ -17,10 +17,6 @@ function NativeTabLayout() {
       <TickerBanner />
       <View style={{ flex: 1 }}>
         <NativeTabs>
-          <NativeTabs.Trigger name="index">
-            <Icon sf={{ default: "house", selected: "house.fill" }} />
-            <Label>Home</Label>
-          </NativeTabs.Trigger>
           <NativeTabs.Trigger name="halal">
             <Icon sf={{ default: "fork.knife", selected: "fork.knife" }} />
             <Label>Dines</Label>
@@ -29,9 +25,17 @@ function NativeTabLayout() {
             <Icon sf={{ default: "calendar", selected: "calendar" }} />
             <Label>Events</Label>
           </NativeTabs.Trigger>
+          <NativeTabs.Trigger name="index">
+            <Icon sf={{ default: "house", selected: "house.fill" }} />
+            <Label>Home</Label>
+          </NativeTabs.Trigger>
           <NativeTabs.Trigger name="businesses">
             <Icon sf={{ default: "storefront", selected: "storefront.fill" }} />
             <Label>Directory</Label>
+          </NativeTabs.Trigger>
+          <NativeTabs.Trigger name="settings">
+            <Icon sf={{ default: "gearshape", selected: "gearshape.fill" }} />
+            <Label>Settings</Label>
           </NativeTabs.Trigger>
         </NativeTabs>
       </View>
@@ -92,15 +96,6 @@ function ClassicTabLayout() {
         }}
       >
         <Tabs.Screen
-          name="index"
-          options={{
-            title: "Home",
-            tabBarIcon: ({ color, size, focused }) => (
-              <Ionicons name={focused ? "home" : "home-outline"} size={size - 2} color={color} />
-            ),
-          }}
-        />
-        <Tabs.Screen
           name="halal"
           options={{
             title: "Dines",
@@ -119,11 +114,29 @@ function ClassicTabLayout() {
           }}
         />
         <Tabs.Screen
+          name="index"
+          options={{
+            title: "Home",
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons name={focused ? "home" : "home-outline"} size={size - 2} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="businesses"
           options={{
             title: "Directory",
             tabBarIcon: ({ color, size, focused }) => (
               <Ionicons name={focused ? "storefront" : "storefront-outline"} size={size - 2} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="settings"
+          options={{
+            title: "Settings",
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons name={focused ? "settings" : "settings-outline"} size={size - 2} color={color} />
             ),
           }}
         />

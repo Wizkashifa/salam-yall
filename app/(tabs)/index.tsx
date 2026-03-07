@@ -112,7 +112,7 @@ interface HalalRestaurant {
 
 export default function PrayerScreen() {
   const { colors, isDark } = useTheme();
-  const { calcMethod, notificationsEnabled, setNotificationsEnabled, openMenu } = useSettings();
+  const { calcMethod, notificationsEnabled, setNotificationsEnabled } = useSettings();
   const router = useRouter();
   const [prayers, setPrayers] = useState<PrayerTimeEntry[]>([]);
   const [nextPrayer, setNextPrayer] = useState<PrayerTimeEntry | null>(null);
@@ -126,7 +126,6 @@ export default function PrayerScreen() {
   const [nearMosque, setNearMosque] = useState<Masjid | null>(null);
   const [silenceAlertDismissed, setSilenceAlertDismissed] = useState(false);
   const [masjidsExpanded, setMasjidsExpanded] = useState(false);
-  const prayerListRef = useRef<View>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
   const { data: calendarEvents } = useQuery<any[]>({
@@ -405,14 +404,7 @@ export default function PrayerScreen() {
         colors={isDark ? ["#0A2E1E", "#143D2E"] : ["#14523A", "#1B6B4A"]}
         style={[styles.headerBar, { paddingTop: Platform.OS === "web" ? 12 : 8 }]}
       >
-        <Pressable
-          onPress={() => { openMenu(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-          testID="menu-button"
-          hitSlop={8}
-          style={styles.headerMenuBtn}
-        >
-          <Ionicons name="menu" size={22} color="rgba(255,255,255,0.9)" />
-        </Pressable>
+        <View style={styles.headerMenuBtn} />
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Ummah Connect</Text>
           {hijriDate ? (
@@ -507,30 +499,6 @@ export default function PrayerScreen() {
           </Pressable>
         ) : null}
 
-        <View style={styles.quickActionsRow}>
-          {[
-            { icon: "time-outline" as const, label: "Prayer\nTimes", onPress: () => {
-              scrollViewRef.current?.scrollToEnd({ animated: true });
-            }},
-            { icon: "location-outline" as const, label: "Masjids", onPress: () => setMasjidsExpanded(prev => !prev) },
-            { icon: "restaurant-outline" as const, label: "Halal\nEats", onPress: () => router.push("/(tabs)/halal") },
-            { icon: "calendar-outline" as const, label: "Events", onPress: () => router.push("/(tabs)/events") },
-          ].map((action, idx) => (
-            <Pressable
-              key={idx}
-              style={({ pressed }) => [
-                styles.quickActionBtn,
-                { backgroundColor: isDark ? "#1A2E22" : "#EDF5F0", opacity: pressed ? 0.7 : 1 },
-              ]}
-              onPress={() => { action.onPress(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-            >
-              <View style={[styles.quickActionIcon, { backgroundColor: isDark ? "#143D2E" : colors.emerald }]}>
-                <Ionicons name={action.icon} size={20} color="#FFFFFF" />
-              </View>
-              <Text style={[styles.quickActionLabel, { color: colors.text }]}>{action.label}</Text>
-            </Pressable>
-          ))}
-        </View>
 
         {masjidsExpanded ? (
           <View style={[styles.sectionCard, { backgroundColor: colors.surface }]}>
@@ -649,62 +617,6 @@ export default function PrayerScreen() {
           </View>
         ) : null}
 
-        <View ref={prayerListRef} style={styles.prayerListSection}>
-          <View style={styles.prayerListHeader}>
-            <Text style={[styles.sectionCardTitle, { color: colors.text }]}>All Prayer Times</Text>
-          </View>
-          <View style={[styles.prayerListCard, { backgroundColor: colors.surface }]}>
-            {prayers.map((prayer, idx) => {
-              const isNext = nextPrayer?.name === prayer.name;
-              const isPast = prayer.time < now && !isNext;
-
-              return (
-                <View
-                  key={prayer.name}
-                  style={[
-                    styles.prayerRow,
-                    isNext && { backgroundColor: isDark ? colors.goldLight : "#FDFAF2" },
-                    idx < prayers.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight },
-                  ]}
-                >
-                  <View style={[
-                    styles.prayerIconBg,
-                    isNext ? { backgroundColor: colors.gold + "20" } : { backgroundColor: colors.prayerIconBg },
-                  ]}>
-                    <MaterialCommunityIcons
-                      name={prayer.icon as any}
-                      size={16}
-                      color={isNext ? colors.gold : isPast ? colors.textTertiary : colors.emerald}
-                    />
-                  </View>
-                  <Text
-                    style={[
-                      styles.prayerName,
-                      { color: isPast ? colors.textTertiary : colors.text },
-                      isNext && { color: colors.gold, fontFamily: "Inter_700Bold" },
-                    ]}
-                  >
-                    {prayer.label}
-                  </Text>
-                  {isNext ? (
-                    <View style={[styles.nextBadge, { backgroundColor: colors.gold + "18" }]}>
-                      <Text style={[styles.nextBadgeText, { color: colors.gold }]}>Next</Text>
-                    </View>
-                  ) : null}
-                  <Text
-                    style={[
-                      styles.prayerTime,
-                      { color: isPast ? colors.textTertiary : colors.text },
-                      isNext && { color: colors.gold, fontFamily: "Inter_700Bold" },
-                    ]}
-                  >
-                    {formatTime(prayer.time)}
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
-        </View>
       </ScrollView>
     </View>
   );
@@ -882,33 +794,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  quickActionsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    marginTop: 18,
-    gap: 10,
-  },
-  quickActionBtn: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 14,
-    borderRadius: 14,
-    gap: 8,
-  },
-  quickActionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  quickActionLabel: {
-    fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
-    textAlign: "center" as const,
-    lineHeight: 14,
-  },
   sectionCard: {
     marginHorizontal: 16,
     marginTop: 18,
@@ -1042,51 +927,5 @@ const styles = StyleSheet.create({
   halalRatingCount: {
     fontSize: 10,
     fontFamily: "Inter_400Regular",
-  },
-  prayerListSection: {
-    paddingHorizontal: 16,
-    marginTop: 18,
-  },
-  prayerListHeader: {
-    marginBottom: 10,
-  },
-  prayerListCard: {
-    borderRadius: 16,
-    overflow: "hidden",
-  },
-  prayerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 13,
-    paddingHorizontal: 16,
-  },
-  prayerIconBg: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  prayerName: {
-    flex: 1,
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-    marginLeft: 12,
-  },
-  nextBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    marginRight: 10,
-  },
-  nextBadgeText: {
-    fontSize: 10,
-    fontFamily: "Inter_700Bold",
-    textTransform: "uppercase" as const,
-    letterSpacing: 0.5,
-  },
-  prayerTime: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
   },
 });
