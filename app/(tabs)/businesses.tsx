@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef } from "react";
+import { useCallback, useState, useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -14,13 +14,15 @@ import {
   ScrollView,
   Alert,
   KeyboardAvoidingView,
+  Image,
+  Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "@/lib/theme-context";
-import { apiRequest } from "@/lib/query-client";
+import { apiRequest, getApiUrl } from "@/lib/query-client";
 
 interface Business {
   id: string;
@@ -30,6 +32,23 @@ interface Business {
   address: string;
   phone: string;
   website: string;
+  place_id?: string;
+  rating?: number;
+  user_ratings_total?: number;
+  photo_reference?: string;
+  business_hours?: string[];
+  lat?: number;
+  lng?: number;
+}
+
+interface PlacesDetails {
+  place_id?: string;
+  rating?: number;
+  user_ratings_total?: number;
+  has_photo?: boolean;
+  business_hours?: string[];
+  lat?: number;
+  lng?: number;
 }
 
 const CATEGORY_ICONS: Record<string, { icon: string; color: string }> = {
@@ -51,6 +70,194 @@ function getCategoryInfo(category: string) {
 
 const CATEGORIES = ["All", "Restaurant", "Grocery", "Finance", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Technology"];
 const SUBMIT_CATEGORIES = ["Restaurant", "Grocery", "Finance", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Technology"];
+
+function renderStars(rating: number): string {
+  const full = Math.floor(rating);
+  const half = rating - full >= 0.3 && rating - full < 0.8;
+  let stars = "\u2605".repeat(full);
+  if (half) stars += "\u00BD";
+  return stars;
+}
+
+function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { business: Business | null; visible: boolean; onClose: () => void; colors: any; isDark: boolean }) {
+  const insets = useSafeAreaInsets();
+  const [details, setDetails] = useState<PlacesDetails | null>(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+
+  useEffect(() => {
+    if (!visible || !business) {
+      setDetails(null);
+      return;
+    }
+    const controller = new AbortController();
+    const bizId = business.id;
+    setLoadingDetails(true);
+    const url = new URL(`/api/businesses/${bizId}/places-details`, getApiUrl());
+    fetch(url.toString(), { signal: controller.signal })
+      .then(r => r.json())
+      .then(d => { if (!controller.signal.aborted) { setDetails(d); setLoadingDetails(false); } })
+      .catch(e => { if (!controller.signal.aborted) setLoadingDetails(false); });
+    return () => controller.abort();
+  }, [visible, business?.id]);
+
+  if (!business) return null;
+
+  const catInfo = getCategoryInfo(business.category);
+  const rating = details?.rating || (business.rating ? Number(business.rating) : null);
+  const reviewCount = details?.user_ratings_total || business.user_ratings_total;
+  const hasPhoto = details?.has_photo || !!business.photo_reference;
+  const photoUrl = hasPhoto ? new URL(`/api/businesses/${business.id}/photo`, getApiUrl()).toString() : null;
+  const hours = details?.business_hours || business.business_hours;
+
+  const openMaps = () => {
+    const lat = details?.lat || business.lat;
+    const lng = details?.lng || business.lng;
+    if (lat && lng) {
+      const url = Platform.select({
+        ios: `maps:0,0?q=${encodeURIComponent(business.name)}@${lat},${lng}`,
+        android: `geo:0,0?q=${lat},${lng}(${encodeURIComponent(business.name)})`,
+        default: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
+      });
+      Linking.openURL(url);
+    } else {
+      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.address)}`);
+    }
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+      <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+        <View style={[styles.detailHeader, { borderBottomColor: colors.divider, paddingTop: Platform.OS === "web" ? 67 : insets.top + 12 }]}>
+          <View style={{ flex: 1 }} />
+          <Pressable onPress={onClose} hitSlop={8} style={[styles.closeButton, { backgroundColor: colors.surface }]}>
+            <Ionicons name="close" size={20} color={colors.textSecondary} />
+          </Pressable>
+        </View>
+
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: 40 }}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          {photoUrl ? (
+            <Image
+              source={{ uri: photoUrl }}
+              style={styles.detailPhoto}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={[styles.detailPhotoPlaceholder, { backgroundColor: isDark ? "#1A2E22" : "#EDF5F0" }]}>
+              <Ionicons name={catInfo.icon as any} size={48} color={catInfo.color} />
+            </View>
+          )}
+
+          <View style={styles.detailContent}>
+            <View style={[styles.categoryPill, { backgroundColor: colors.categoryBadgeBg(catInfo.color) }]}>
+              <Ionicons name={catInfo.icon as any} size={12} color={catInfo.color} />
+              <Text style={[styles.categoryPillText, { color: catInfo.color }]}>{business.category}</Text>
+            </View>
+
+            <Text style={[styles.detailName, { color: colors.text }]}>{business.name}</Text>
+
+            {rating && rating > 0 ? (
+              <View style={styles.ratingRow}>
+                <Text style={[styles.ratingScore, { color: colors.gold }]}>{rating.toFixed(1)}</Text>
+                <Text style={styles.ratingStars}>{renderStars(rating)}</Text>
+                {reviewCount ? (
+                  <Text style={[styles.ratingCount, { color: colors.textTertiary }]}>({reviewCount.toLocaleString()} reviews)</Text>
+                ) : null}
+              </View>
+            ) : loadingDetails ? (
+              <ActivityIndicator size="small" color={colors.gold} style={{ marginVertical: 4 }} />
+            ) : null}
+
+            {business.description ? (
+              <Text style={[styles.detailDesc, { color: colors.textSecondary }]}>{business.description}</Text>
+            ) : null}
+
+            <View style={[styles.detailSection, { borderTopColor: colors.divider }]}>
+              <Pressable style={styles.detailInfoRow} onPress={openMaps}>
+                <Ionicons name="location-outline" size={18} color={colors.emerald} />
+                <Text style={[styles.detailInfoText, { color: colors.text }]}>{business.address}</Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+              </Pressable>
+
+              {business.phone ? (
+                <Pressable style={styles.detailInfoRow} onPress={() => Linking.openURL(`tel:${business.phone}`)}>
+                  <Ionicons name="call-outline" size={18} color={colors.emerald} />
+                  <Text style={[styles.detailInfoText, { color: colors.text }]}>{business.phone}</Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                </Pressable>
+              ) : null}
+
+              {business.website ? (
+                <Pressable style={styles.detailInfoRow} onPress={() => Linking.openURL(business.website)}>
+                  <Ionicons name="globe-outline" size={18} color={colors.emerald} />
+                  <Text style={[styles.detailInfoText, { color: colors.text }]} numberOfLines={1}>{business.website.replace(/^https?:\/\//, "")}</Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                </Pressable>
+              ) : null}
+            </View>
+
+            {hours && hours.length > 0 ? (
+              <View style={[styles.hoursSection, { borderTopColor: colors.divider }]}>
+                <View style={styles.hoursSectionHeader}>
+                  <Ionicons name="time-outline" size={18} color={colors.gold} />
+                  <Text style={[styles.hoursSectionTitle, { color: colors.text }]}>Hours</Text>
+                </View>
+                {hours.map((h: string, i: number) => {
+                  const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
+                  const isToday = h.toLowerCase().startsWith(today.toLowerCase());
+                  return (
+                    <Text
+                      key={i}
+                      style={[
+                        styles.hoursText,
+                        { color: isToday ? colors.text : colors.textSecondary },
+                        isToday && { fontFamily: "Inter_600SemiBold" },
+                      ]}
+                    >
+                      {h}
+                    </Text>
+                  );
+                })}
+              </View>
+            ) : null}
+
+            <View style={styles.detailActions}>
+              {business.phone ? (
+                <Pressable
+                  style={({ pressed }) => [styles.detailActionBtn, { backgroundColor: colors.emerald, opacity: pressed ? 0.8 : 1 }]}
+                  onPress={() => Linking.openURL(`tel:${business.phone}`)}
+                >
+                  <Ionicons name="call" size={18} color="#fff" />
+                  <Text style={styles.detailActionText}>Call</Text>
+                </Pressable>
+              ) : null}
+              <Pressable
+                style={({ pressed }) => [styles.detailActionBtn, { backgroundColor: colors.gold, opacity: pressed ? 0.8 : 1 }]}
+                onPress={openMaps}
+              >
+                <Ionicons name="navigate" size={18} color="#fff" />
+                <Text style={styles.detailActionText}>Directions</Text>
+              </Pressable>
+              {business.website ? (
+                <Pressable
+                  style={({ pressed }) => [styles.detailActionBtn, { backgroundColor: isDark ? "#4B5563" : "#374151", opacity: pressed ? 0.8 : 1 }]}
+                  onPress={() => Linking.openURL(business.website)}
+                >
+                  <Ionicons name="globe" size={18} color="#fff" />
+                  <Text style={styles.detailActionText}>Website</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+}
 
 function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: boolean; onClose: () => void; colors: any; isDark: boolean }) {
   const insets = useSafeAreaInsets();
@@ -286,6 +493,7 @@ export default function BusinessesScreen() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [refreshing, setRefreshing] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
 
   const { data: businesses, isLoading } = useQuery<Business[]>({
     queryKey: ["/api/businesses"],
@@ -305,42 +513,44 @@ export default function BusinessesScreen() {
     setRefreshing(false);
   }, [queryClient]);
 
-  const handleCall = useCallback((phone: string) => {
-    Linking.openURL(`tel:${phone}`);
-  }, []);
-
-  const handleDirections = useCallback((address: string) => {
-    const encoded = encodeURIComponent(address);
-    if (Platform.OS === "ios") {
-      Linking.openURL(`maps://maps.apple.com/?q=${encoded}`);
-    } else {
-      Linking.openURL(`https://maps.google.com/?q=${encoded}`);
-    }
-  }, []);
-
-  const handleWebsite = useCallback((url: string) => {
-    Linking.openURL(url);
-  }, []);
-
   const renderItem = useCallback(
     ({ item }: { item: Business }) => {
       const catInfo = getCategoryInfo(item.category);
+      const rating = item.rating ? Number(item.rating) : null;
 
       return (
-        <View style={[styles.businessCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Pressable
+          style={({ pressed }) => [styles.businessCard, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.95 : 1 }]}
+          onPress={() => {
+            setSelectedBusiness(item);
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          }}
+          testID={`business-${item.id}`}
+        >
           <View style={styles.cardHeader}>
             <View style={[styles.categoryBadge, { backgroundColor: colors.categoryBadgeBg(catInfo.color) }]}>
               <Ionicons name={catInfo.icon as any} size={16} color={catInfo.color} />
             </View>
             <View style={styles.cardHeaderText}>
               <Text style={[styles.businessName, { color: colors.text }]}>{item.name}</Text>
-              <Text style={[styles.categoryLabel, { color: catInfo.color }]}>{item.category}</Text>
+              <View style={styles.cardSubRow}>
+                <Text style={[styles.categoryLabel, { color: catInfo.color }]}>{item.category}</Text>
+                {rating && rating > 0 ? (
+                  <View style={styles.cardRatingRow}>
+                    <Text style={[styles.cardRatingScore, { color: colors.gold }]}>{rating.toFixed(1)}</Text>
+                    <Text style={styles.cardRatingStars}>{renderStars(rating)}</Text>
+                  </View>
+                ) : null}
+              </View>
             </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </View>
 
-          <Text style={[styles.businessDesc, { color: colors.textSecondary }]} numberOfLines={2}>
-            {item.description}
-          </Text>
+          {item.description ? (
+            <Text style={[styles.businessDesc, { color: colors.textSecondary }]} numberOfLines={2}>
+              {item.description}
+            </Text>
+          ) : null}
 
           <View style={styles.addressRow}>
             <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
@@ -348,33 +558,10 @@ export default function BusinessesScreen() {
               {item.address}
             </Text>
           </View>
-
-          <View style={[styles.actionRow, { borderTopColor: colors.divider }]}>
-            <Pressable
-              style={({ pressed }) => [styles.actionButton, { backgroundColor: colors.actionButtonBg, opacity: pressed ? 0.7 : 1 }]}
-              onPress={() => handleCall(item.phone)}
-            >
-              <Ionicons name="call-outline" size={18} color={colors.emerald} />
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [styles.actionButton, { backgroundColor: colors.actionButtonBg, opacity: pressed ? 0.7 : 1 }]}
-              onPress={() => handleDirections(item.address)}
-            >
-              <Ionicons name="navigate-outline" size={18} color={colors.emerald} />
-            </Pressable>
-            {item.website ? (
-              <Pressable
-                style={({ pressed }) => [styles.actionButton, { backgroundColor: colors.actionButtonBg, opacity: pressed ? 0.7 : 1 }]}
-                onPress={() => handleWebsite(item.website)}
-              >
-                <Ionicons name="globe-outline" size={18} color={colors.emerald} />
-              </Pressable>
-            ) : null}
-          </View>
-        </View>
+        </Pressable>
       );
     },
-    [colors, handleCall, handleDirections, handleWebsite]
+    [colors]
   );
 
   return (
@@ -466,6 +653,14 @@ export default function BusinessesScreen() {
         />
       )}
 
+      <BusinessDetailModal
+        business={selectedBusiness}
+        visible={!!selectedBusiness}
+        onClose={() => setSelectedBusiness(null)}
+        colors={colors}
+        isDark={isDark}
+      />
+
       <SubmitBusinessModal
         visible={showSubmitModal}
         onClose={() => setShowSubmitModal(false)}
@@ -475,6 +670,8 @@ export default function BusinessesScreen() {
     </View>
   );
 }
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const styles = StyleSheet.create({
   container: {
@@ -555,10 +752,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "Inter_700Bold",
   },
+  cardSubRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 2,
+  },
   categoryLabel: {
     fontSize: 12,
     fontFamily: "Inter_600SemiBold",
-    marginTop: 1,
+  },
+  cardRatingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+  },
+  cardRatingScore: {
+    fontSize: 12,
+    fontFamily: "Inter_700Bold",
+  },
+  cardRatingStars: {
+    fontSize: 10,
+    color: "#F59E0B",
   },
   businessDesc: {
     fontSize: 13,
@@ -570,25 +785,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    marginBottom: 12,
   },
   addressText: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
     flex: 1,
-  },
-  actionRow: {
-    flexDirection: "row",
-    gap: 12,
-    borderTopWidth: 1,
-    paddingTop: 12,
-  },
-  actionButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
   },
   emptyText: {
     fontSize: 16,
@@ -602,6 +803,137 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
+  },
+  detailHeader: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 0,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  detailPhoto: {
+    width: SCREEN_WIDTH,
+    height: 220,
+  },
+  detailPhotoPlaceholder: {
+    width: SCREEN_WIDTH,
+    height: 160,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  detailContent: {
+    padding: 20,
+  },
+  categoryPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 12,
+    alignSelf: "flex-start",
+    marginBottom: 10,
+  },
+  categoryPillText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+  },
+  detailName: {
+    fontSize: 24,
+    fontFamily: "Inter_700Bold",
+    marginBottom: 6,
+  },
+  ratingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginBottom: 12,
+  },
+  ratingScore: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+  },
+  ratingStars: {
+    fontSize: 13,
+    color: "#F59E0B",
+  },
+  ratingCount: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+  },
+  detailDesc: {
+    fontSize: 15,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 22,
+    marginBottom: 16,
+  },
+  detailSection: {
+    borderTopWidth: 1,
+    paddingTop: 16,
+    marginBottom: 8,
+  },
+  detailInfoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 12,
+  },
+  detailInfoText: {
+    fontSize: 15,
+    fontFamily: "Inter_400Regular",
+    flex: 1,
+  },
+  hoursSection: {
+    borderTopWidth: 1,
+    paddingTop: 16,
+    marginBottom: 16,
+  },
+  hoursSectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 10,
+  },
+  hoursSectionTitle: {
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
+  },
+  hoursText: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 24,
+  },
+  detailActions: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 8,
+  },
+  detailActionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  detailActionText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: "#fff",
   },
   modalHeader: {
     flexDirection: "row",
@@ -673,20 +1005,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    padding: 16,
+    paddingVertical: 16,
     borderRadius: 12,
     marginTop: 24,
   },
   submitButtonText: {
-    color: "#fff",
     fontSize: 16,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Inter_600SemiBold",
+    color: "#fff",
   },
   successContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 40,
+    padding: 40,
   },
   successIcon: {
     width: 80,
@@ -694,12 +1026,12 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 16,
   },
   successTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontFamily: "Inter_700Bold",
-    marginBottom: 12,
+    marginBottom: 8,
   },
   successMessage: {
     fontSize: 14,
@@ -709,13 +1041,13 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   successButton: {
-    paddingHorizontal: 32,
+    paddingHorizontal: 40,
     paddingVertical: 14,
     borderRadius: 12,
   },
   successButtonText: {
-    color: "#fff",
     fontSize: 16,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Inter_600SemiBold",
+    color: "#fff",
   },
 });

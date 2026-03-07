@@ -490,6 +490,7 @@ export default function PrayerScreen() {
               backgroundColor: colors.surface,
               borderColor: prayWhereOpen ? colors.emerald + "40" : colors.border,
               opacity: pressed ? 0.95 : 1,
+              ...(prayWhereOpen ? { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 } : {}),
             },
           ]}
           onPress={togglePrayWhere}
@@ -554,6 +555,7 @@ export default function PrayerScreen() {
                   borderColor: tonightOpen ? colors.gold + "40" : colors.border,
                   marginTop: 10,
                   opacity: pressed ? 0.95 : 1,
+                  ...(tonightOpen ? { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 } : {}),
                 },
               ]}
               onPress={toggleTonight}

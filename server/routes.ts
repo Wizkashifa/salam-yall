@@ -546,6 +546,18 @@ async function ensureBusinessesTable(pool: pg.Pool) {
   `);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_businesses_status ON businesses(status);`);
 
+  const colCheck = await pool.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'businesses' AND column_name = 'place_id'`);
+  if (colCheck.rows.length === 0) {
+    await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS place_id VARCHAR(255)`);
+    await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS rating DECIMAL(2,1)`);
+    await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS user_ratings_total INTEGER`);
+    await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS photo_reference TEXT`);
+    await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS business_hours JSONB`);
+    await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION`);
+    await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION`);
+    console.log("[DB] Added Google Places columns to businesses table");
+  }
+
   const { rows } = await pool.query("SELECT COUNT(*) as count FROM businesses");
   if (parseInt(rows[0].count) === 0) {
     const seed = [
@@ -702,12 +714,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/businesses", async (_req, res) => {
     try {
       const result = await pool.query(
-        "SELECT id, name, category, description, address, phone, website FROM businesses WHERE status = 'approved' ORDER BY name"
+        "SELECT id, name, category, description, address, phone, website, place_id, rating, user_ratings_total, photo_reference, business_hours, lat, lng FROM businesses WHERE status = 'approved' ORDER BY name"
       );
       res.json(result.rows);
     } catch (error: any) {
       console.error("Error fetching businesses:", error.message);
       res.status(500).json({ error: "Failed to fetch businesses" });
+    }
+  });
+
+  app.get("/api/businesses/:id/places-details", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const biz = await pool.query("SELECT * FROM businesses WHERE id = $1", [id]);
+      if (biz.rows.length === 0) return res.status(404).json({ error: "Business not found" });
+      const business = biz.rows[0];
+
+      if (business.place_id) {
+        return res.json({
+          place_id: business.place_id,
+          rating: business.rating,
+          user_ratings_total: business.user_ratings_total,
+          has_photo: !!business.photo_reference,
+          business_hours: business.business_hours,
+          lat: business.lat,
+          lng: business.lng,
+        });
+      }
+
+      const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+      if (!apiKey) return res.json({ error: "No API key configured" });
+
+      const searchResp = await fetch(
+        `https://places.googleapis.com/v1/places:searchText`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": "places.id,places.rating,places.userRatingCount,places.photos,places.regularOpeningHours,places.location" },
+          body: JSON.stringify({ textQuery: `${business.name} ${business.address}` }),
+        }
+      );
+      const searchData = await searchResp.json();
+      const place = searchData.places?.[0];
+      if (!place) {
+        await pool.query(`UPDATE businesses SET place_id = 'none' WHERE id = $1`, [id]);
+        return res.json({});
+      }
+
+      const photoRef = place.photos?.[0]?.name || null;
+      const hours = place.regularOpeningHours?.weekdayDescriptions || null;
+
+      await pool.query(
+        `UPDATE businesses SET place_id = $1, rating = $2, user_ratings_total = $3, photo_reference = $4, business_hours = $5, lat = $6, lng = $7 WHERE id = $8`,
+        [place.id, place.rating || null, place.userRatingCount || null, photoRef, hours ? JSON.stringify(hours) : null, place.location?.latitude || null, place.location?.longitude || null, id]
+      );
+
+      res.json({
+        place_id: place.id,
+        rating: place.rating,
+        user_ratings_total: place.userRatingCount,
+        has_photo: !!photoRef,
+        business_hours: hours,
+        lat: place.location?.latitude,
+        lng: place.location?.longitude,
+      });
+    } catch (error: any) {
+      console.error("Error fetching places details:", error.message);
+      res.status(500).json({ error: "Failed to fetch details" });
+    }
+  });
+
+  app.get("/api/businesses/:id/photo", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const biz = await pool.query("SELECT photo_reference FROM businesses WHERE id = $1", [id]);
+      if (biz.rows.length === 0 || !biz.rows[0].photo_reference) {
+        return res.status(404).json({ error: "No photo available" });
+      }
+      const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+      if (!apiKey) return res.status(500).json({ error: "No API key" });
+
+      const photoUrl = `https://places.googleapis.com/v1/${biz.rows[0].photo_reference}/media?maxWidthPx=800&key=${apiKey}`;
+      const photoResp = await fetch(photoUrl);
+      if (!photoResp.ok) return res.status(404).json({ error: "Photo not found" });
+
+      res.set("Content-Type", photoResp.headers.get("content-type") || "image/jpeg");
+      res.set("Cache-Control", "public, max-age=86400");
+      const buffer = Buffer.from(await photoResp.arrayBuffer());
+      res.send(buffer);
+    } catch (error: any) {
+      console.error("Error proxying photo:", error.message);
+      res.status(500).json({ error: "Failed to load photo" });
     }
   });
 

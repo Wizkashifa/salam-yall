@@ -10,24 +10,29 @@ import { TickerBanner } from "@/components/TickerBanner";
 
 function NativeTabLayout() {
   return (
-    <NativeTabs>
-      <NativeTabs.Trigger name="index">
-        <Icon sf={{ default: "moon.stars", selected: "moon.stars.fill" }} />
-        <Label>Prayer</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="halal">
-        <Icon sf={{ default: "fork.knife", selected: "fork.knife" }} />
-        <Label>Halal Eats</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="events">
-        <Icon sf={{ default: "calendar", selected: "calendar" }} />
-        <Label>Events</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="businesses">
-        <Icon sf={{ default: "storefront", selected: "storefront.fill" }} />
-        <Label>Directory</Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
+    <View style={{ flex: 1 }}>
+      <View style={{ flex: 1 }}>
+        <NativeTabs>
+          <NativeTabs.Trigger name="index">
+            <Icon sf={{ default: "moon.stars", selected: "moon.stars.fill" }} />
+            <Label>Prayer</Label>
+          </NativeTabs.Trigger>
+          <NativeTabs.Trigger name="halal">
+            <Icon sf={{ default: "fork.knife", selected: "fork.knife" }} />
+            <Label>Halal Eats</Label>
+          </NativeTabs.Trigger>
+          <NativeTabs.Trigger name="events">
+            <Icon sf={{ default: "calendar", selected: "calendar" }} />
+            <Label>Events</Label>
+          </NativeTabs.Trigger>
+          <NativeTabs.Trigger name="businesses">
+            <Icon sf={{ default: "storefront", selected: "storefront.fill" }} />
+            <Label>Directory</Label>
+          </NativeTabs.Trigger>
+        </NativeTabs>
+      </View>
+      <TickerBanner />
+    </View>
   );
 }
 
