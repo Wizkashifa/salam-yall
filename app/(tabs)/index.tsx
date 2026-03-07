@@ -1,14 +1,16 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import {
   StyleSheet,
   Text,
   View,
+  ScrollView,
   Platform,
   Pressable,
   ActivityIndicator,
   Linking,
   Alert,
   Animated,
+  LayoutAnimation,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
@@ -16,6 +18,7 @@ import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
 import * as Notifications from "expo-notifications";
 import { LinearGradient } from "expo-linear-gradient";
+import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/lib/theme-context";
 import { useSettings } from "@/lib/settings-context";
 import {
@@ -25,8 +28,11 @@ import {
   formatTime,
   toHijriDate,
   findNearestMasjid,
+  getAllMasjidsByDistance,
   calculateQiblaBearing,
   checkNearMosque,
+  matchEventsToMasjid,
+  NEARBY_MASJIDS,
   type PrayerTimeEntry,
   type Masjid,
 } from "@/lib/prayer-utils";
@@ -109,6 +115,51 @@ export default function PrayerScreen() {
   const [userCoords, setUserCoords] = useState({ lat: 35.7796, lon: -78.6382 });
   const [nearMosque, setNearMosque] = useState<Masjid | null>(null);
   const [silenceAlertDismissed, setSilenceAlertDismissed] = useState(false);
+  const [tonightOpen, setTonightOpen] = useState(false);
+  const [prayWhereOpen, setPrayWhereOpen] = useState(false);
+
+  const { data: calendarEvents } = useQuery<any[]>({
+    queryKey: ["/api/events"],
+  });
+
+  const nearbyMasjids = useMemo(() => {
+    return getAllMasjidsByDistance(userCoords.lat, userCoords.lon).slice(0, 3);
+  }, [userCoords]);
+
+  const tonightEvents = useMemo(() => {
+    if (!calendarEvents) return [];
+    const now = new Date();
+    const tonight = new Date(now);
+    tonight.setHours(17, 0, 0, 0);
+    const midnightEnd = new Date(now);
+    midnightEnd.setDate(midnightEnd.getDate() + 1);
+    midnightEnd.setHours(2, 0, 0, 0);
+
+    const allNearby = getAllMasjidsByDistance(userCoords.lat, userCoords.lon).slice(0, 8);
+
+    const tonightFiltered = calendarEvents.filter((ev: any) => {
+      const start = new Date(ev.start);
+      return start >= tonight && start <= midnightEnd && !ev.isAllDay;
+    });
+
+    const results: { id: string; title: string; masjidName: string; time: Date }[] = [];
+    for (const ev of tonightFiltered) {
+      for (const item of allNearby) {
+        const matched = matchEventsToMasjid(item.masjid, [ev]);
+        if (matched.length > 0) {
+          results.push({
+            id: ev.id,
+            title: ev.title,
+            masjidName: item.masjid.name.replace(/\s*\(.*\)/, ""),
+            time: new Date(ev.start),
+          });
+          break;
+        }
+      }
+      if (results.length >= 4) break;
+    }
+    return results;
+  }, [calendarEvents, userCoords]);
 
   const loadDefaultPrayers = useCallback((lat = 35.7796, lon = -78.6382) => {
     const now = new Date();
@@ -269,11 +320,22 @@ export default function PrayerScreen() {
     }
   }, [notificationsEnabled, prayers, schedulePrayerNotifications, setNotificationsEnabled]);
 
-  const openMasjidDirections = useCallback(async () => {
-    if (!nearestMasjid) return;
-    const { masjid } = nearestMasjid;
-    const encoded = encodeURIComponent(masjid.address);
+  const dismissSilenceAlert = useCallback(() => {
+    setSilenceAlertDismissed(true);
+  }, []);
 
+  const toggleTonight = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setTonightOpen((prev) => !prev);
+  }, []);
+
+  const togglePrayWhere = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setPrayWhereOpen((prev) => !prev);
+  }, []);
+
+  const openMasjidNav = useCallback(async (masjid: Masjid) => {
+    const encoded = encodeURIComponent(masjid.address);
     try {
       if (Platform.OS === "ios") {
         const mapsUrl = `maps://maps.apple.com/?daddr=${encoded}&dirflg=d`;
@@ -289,10 +351,6 @@ export default function PrayerScreen() {
     } catch {
       Alert.alert("Unable to Open Maps", "Could not open a maps application for directions.");
     }
-  }, [nearestMasjid]);
-
-  const dismissSilenceAlert = useCallback(() => {
-    setSilenceAlertDismissed(true);
   }, []);
 
   const now = new Date();
@@ -313,13 +371,16 @@ export default function PrayerScreen() {
 
   const padNum = (n: number) => n.toString().padStart(2, "0");
 
+  const countdownMins = countdown.hours * 60 + countdown.minutes;
+
   return (
-    <View
-      style={[styles.container, {
-        backgroundColor: colors.background,
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      contentContainerStyle={{
         paddingTop: Platform.OS === "web" ? 67 : insets.top + 8,
         paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 56,
-      }]}
+      }}
+      showsVerticalScrollIndicator={false}
     >
       <View style={styles.headerSection}>
         <View style={styles.headerTopRow}>
@@ -391,26 +452,101 @@ export default function PrayerScreen() {
         )}
       </LinearGradient>
 
-      {nearestMasjid ? (
-        <Pressable
-          style={[styles.masjidStrip, { backgroundColor: colors.surface }]}
-          onPress={openMasjidDirections}
-          testID="directions-button"
-        >
-          <MaterialCommunityIcons name="mosque" size={14} color={colors.emerald} />
-          <Text style={[styles.masjidStripText, { color: colors.textSecondary }]} numberOfLines={1}>
-            {nearestMasjid.name}
-          </Text>
-          <Text style={[styles.masjidStripDist, { color: colors.gold }]}>
-            {nearestMasjid.distanceMiles.toFixed(1)} mi
-          </Text>
-          <Ionicons name="navigate" size={12} color={colors.emerald} />
-        </Pressable>
+      {}
+      <Pressable
+        style={[styles.dropdownHeader, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        onPress={togglePrayWhere}
+        testID="pray-where-toggle"
+      >
+        <View style={[styles.dropdownIconWrap, { backgroundColor: isDark ? "#1C2E24" : "#E8F0EC" }]}>
+          <MaterialCommunityIcons name="mosque" size={16} color={colors.emerald} />
+        </View>
+        <View style={styles.dropdownHeaderText}>
+          <Text style={[styles.dropdownTitle, { color: colors.text }]}>Where Should I Pray?</Text>
+          {!prayWhereOpen && nextPrayer ? (
+            <Text style={[styles.dropdownSubtitle, { color: colors.textSecondary }]}>
+              {nextPrayer.label} in {countdownMins > 0 ? `${countdownMins} min` : "< 1 min"}
+            </Text>
+          ) : null}
+        </View>
+        <Ionicons name={prayWhereOpen ? "chevron-up" : "chevron-down"} size={18} color={colors.textSecondary} />
+      </Pressable>
+      {prayWhereOpen ? (
+        <View style={[styles.dropdownBody, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {nextPrayer ? (
+            <View style={styles.prayWhereSubhead}>
+              <Text style={[styles.prayWhereTimerLabel, { color: colors.gold }]}>
+                {nextPrayer.label} in {countdownMins > 0 ? `${countdownMins} minutes` : "< 1 minute"}
+              </Text>
+              <Text style={[styles.prayWhereSubtext, { color: colors.textSecondary }]}>Best options near you</Text>
+            </View>
+          ) : null}
+          {nearbyMasjids.map((item, idx) => (
+            <Pressable
+              key={item.masjid.name}
+              style={({ pressed }) => [styles.prayWhereRow, idx < nearbyMasjids.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }, pressed && { opacity: 0.7 }]}
+              onPress={() => openMasjidNav(item.masjid)}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.prayWhereName, { color: colors.text }]} numberOfLines={1}>
+                  {item.masjid.name.replace(/\s*\(.*\)/, "")}
+                </Text>
+              </View>
+              <Text style={[styles.prayWhereDist, { color: colors.gold }]}>{item.driveMinutes} min</Text>
+              <Ionicons name="navigate-outline" size={14} color={colors.emerald} style={{ marginLeft: 6 }} />
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+
+      {}
+      {tonightEvents.length > 0 ? (
+        <>
+          <Pressable
+            style={[styles.dropdownHeader, { backgroundColor: colors.surface, borderColor: colors.border, marginTop: 6 }]}
+            onPress={toggleTonight}
+            testID="tonight-toggle"
+          >
+            <View style={[styles.dropdownIconWrap, { backgroundColor: isDark ? "#3D3323" : "#FEF3C7" }]}>
+              <Ionicons name="moon" size={14} color={colors.gold} />
+            </View>
+            <View style={styles.dropdownHeaderText}>
+              <Text style={[styles.dropdownTitle, { color: colors.text }]}>Tonight Near You</Text>
+              {!tonightOpen ? (
+                <Text style={[styles.dropdownSubtitle, { color: colors.textSecondary }]}>
+                  {tonightEvents.length} event{tonightEvents.length !== 1 ? "s" : ""} happening
+                </Text>
+              ) : null}
+            </View>
+            <Ionicons name={tonightOpen ? "chevron-up" : "chevron-down"} size={18} color={colors.textSecondary} />
+          </Pressable>
+          {tonightOpen ? (
+            <View style={[styles.dropdownBody, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              {tonightEvents.map((ev, idx) => (
+                <View
+                  key={ev.id}
+                  style={[styles.tonightRow, idx < tonightEvents.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}
+                >
+                  <View style={[styles.tonightDot, { backgroundColor: colors.gold }]} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.tonightTitle, { color: colors.text }]} numberOfLines={1}>{ev.title}</Text>
+                    {ev.masjidName ? (
+                      <Text style={[styles.tonightMasjid, { color: colors.textSecondary }]} numberOfLines={1}>{ev.masjidName}</Text>
+                    ) : null}
+                  </View>
+                  <Text style={[styles.tonightTime, { color: colors.gold }]}>
+                    {ev.time.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+        </>
       ) : null}
 
       {locationPermission === false ? (
         <Pressable
-          style={[styles.permissionBanner, { backgroundColor: colors.bannerBg }]}
+          style={[styles.permissionBanner, { backgroundColor: colors.bannerBg, marginTop: 6 }]}
           onPress={loadPrayerData}
         >
           <Ionicons name="location-outline" size={14} color={colors.bannerText} />
@@ -477,7 +613,7 @@ export default function PrayerScreen() {
           );
         })}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -509,7 +645,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 20,
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 10,
     overflow: "hidden",
   },
   countdownGoldAccent: {
@@ -536,7 +672,7 @@ const styles = StyleSheet.create({
   countdownPrayerName: {
     color: "#D4A843",
     fontSize: 22,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlayfairDisplay_700Bold",
     marginTop: 2,
   },
   countdownTimerRow: {
@@ -588,24 +724,95 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inter_600SemiBold",
   },
-  masjidStrip: {
+  dropdownHeader: {
     marginHorizontal: 16,
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 10,
+    borderWidth: 1,
   },
-  masjidStripText: {
+  dropdownIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+  },
+  dropdownHeaderText: {
     flex: 1,
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
   },
-  masjidStripDist: {
-    fontSize: 12,
+  dropdownTitle: {
+    fontSize: 14,
+    fontFamily: "PlayfairDisplay_700Bold",
+  },
+  dropdownSubtitle: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    marginTop: 1,
+  },
+  dropdownBody: {
+    marginHorizontal: 16,
+    marginTop: -1,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    borderWidth: 1,
+    borderTopWidth: 0,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  prayWhereSubhead: {
+    paddingVertical: 6,
+    marginBottom: 2,
+  },
+  prayWhereTimerLabel: {
+    fontSize: 13,
+    fontFamily: "PlayfairDisplay_600SemiBold",
+  },
+  prayWhereSubtext: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    marginTop: 1,
+  },
+  prayWhereRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 9,
+  },
+  prayWhereName: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+  },
+  prayWhereDist: {
+    fontSize: 13,
     fontFamily: "Inter_700Bold",
+  },
+  tonightRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 9,
+    gap: 10,
+  },
+  tonightDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  tonightTitle: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+  },
+  tonightMasjid: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    marginTop: 1,
+  },
+  tonightTime: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    marginLeft: 8,
   },
   permissionBanner: {
     marginHorizontal: 16,
@@ -613,7 +820,6 @@ const styles = StyleSheet.create({
     padding: 10,
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
   },
   headerTopRow: {
     flexDirection: "row",
@@ -683,8 +889,8 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
   },
   prayerListSection: {
-    flex: 1,
     paddingHorizontal: 16,
+    marginTop: 10,
   },
   prayerListHeader: {
     flexDirection: "row",
@@ -694,7 +900,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "PlayfairDisplay_700Bold",
   },
   notifToggle: {
     width: 30,

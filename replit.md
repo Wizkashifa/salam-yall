@@ -14,7 +14,7 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 
 ## Tab Structure
 
-1. **Prayer (index.tsx)**: Prayer times via `adhan` library, countdown timer, Hijri date, nearest masjid with directions button, Qibla compass (uses expo-sensors Magnetometer on native), notification toggle for prayer alerts, mosque proximity silence reminder, hamburger menu button for drawer
+1. **Prayer (index.tsx)**: Prayer times via `adhan` library, countdown timer, Hijri date, Qibla compass (uses expo-sensors Magnetometer on native), notification toggle for prayer alerts, mosque proximity silence reminder, hamburger menu button for drawer, "Where Should I Pray?" expandable dropdown (3 nearest masjids with estimated drive times + navigation), "Tonight Near You" expandable dropdown (tonight's events matched to nearby masjids from calendar API)
 2. **Halal Eats (halal.tsx)**: WebView embedding of HalalEatsNC.com with timeout handling, retry, and caching
 3. **Events (events.tsx)**: Google Calendar integration displaying community events with flyer images, organizer names, and registration links. Tapping opens a full-screen modal with image, details, and Register/RSVP button
 4. **Directory (businesses.tsx)**: Muslim business directory with category filtering, business submission form with pending verification
@@ -65,10 +65,12 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 ## Prayer Screen Features
 
 - **Qibla Compass**: Calculates bearing to Kaaba using great-circle formula; rotates with device magnetometer on native, static on web
-- **Directions Button**: Opens Apple Maps (iOS) or Google Maps (Android/web) with directions to nearest masjid
+- **Where Should I Pray?**: Expandable dropdown showing 3 nearest masjids with estimated drive times; each row opens native maps navigation. Uses `getAllMasjidsByDistance()` from prayer-utils
+- **Tonight Near You**: Expandable dropdown showing tonight's events (5pm–2am) matched to nearby masjids (top 8 by distance) via `matchEventsToMasjid()`. Only shows events confirmed to be at a recognized masjid
 - **Prayer Notifications**: Toggle to schedule local notifications at each prayer time via expo-notifications; preference stored in AsyncStorage via settings context
 - **Mosque Proximity Alert**: Checks distance to all known masjids; shows dismissable "silence your phone" banner when within 100m
 - **Calculation Method**: Configurable via drawer settings; supports all 12 adhan library methods; default is ISNA (North America)
+- **Fonts**: Inter (modern sans-serif) for body text, Playfair Display (serif) for section headers and prayer names — Islamic elegance pairing
 
 ## Integrations
 
@@ -81,4 +83,4 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 
 ## Dependencies
 
-Key packages: adhan, react-native-webview, expo-location, expo-linear-gradient, googleapis, expo-sensors, expo-notifications, @react-native-async-storage/async-storage, pg
+Key packages: adhan, react-native-webview, expo-location, expo-linear-gradient, googleapis, expo-sensors, expo-notifications, @react-native-async-storage/async-storage, pg, @expo-google-fonts/playfair-display

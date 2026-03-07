@@ -186,6 +186,15 @@ export function findNearestMasjid(latitude: number, longitude: number): { masjid
   return { masjid: nearest, distanceMiles: kmToMiles(minDist) };
 }
 
+export function getAllMasjidsByDistance(latitude: number, longitude: number): { masjid: Masjid; distanceMiles: number; driveMinutes: number }[] {
+  return NEARBY_MASJIDS.map((m) => {
+    const km = getDistanceKm(latitude, longitude, m.latitude, m.longitude);
+    const miles = kmToMiles(km);
+    const driveMinutes = Math.round(miles * 2.5 + 2);
+    return { masjid: m, distanceMiles: miles, driveMinutes };
+  }).sort((a, b) => a.distanceMiles - b.distanceMiles);
+}
+
 const KAABA_LAT = 21.4225;
 const KAABA_LON = 39.8262;
 
