@@ -120,6 +120,8 @@ export default function PrayerScreen() {
 
   const { data: calendarEvents } = useQuery<any[]>({
     queryKey: ["/api/events"],
+    staleTime: 2 * 60 * 1000,
+    refetchInterval: 2 * 60 * 1000,
   });
 
   const nearbyMasjids = useMemo(() => {

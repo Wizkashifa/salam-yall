@@ -167,7 +167,8 @@ export default function EventsScreen() {
 
   const { data: events, isLoading, error } = useQuery<CalendarEvent[]>({
     queryKey: ["/api/events"],
-    staleTime: 5 * 60 * 1000,
+    staleTime: 2 * 60 * 1000,
+    refetchInterval: 2 * 60 * 1000,
   });
 
   const onRefresh = useCallback(async () => {

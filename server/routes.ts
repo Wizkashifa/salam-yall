@@ -213,8 +213,8 @@ interface CachedEvent {
 
 let cachedEvents: CachedEvent[] = [];
 let lastFetchTime = 0;
-const CACHE_TTL = 15 * 60 * 1000;
-const DAILY_REFRESH_INTERVAL = 60 * 60 * 1000;
+const CACHE_TTL = 2 * 60 * 1000;
+const REFRESH_INTERVAL = 5 * 60 * 1000;
 
 function cleanDescription(rawDesc: string): string {
   let text = rawDesc;
@@ -349,17 +349,16 @@ async function fetchAndCacheEvents(): Promise<CachedEvent[]> {
   }
 }
 
-function startDailyRefresh() {
+function startAutoRefresh() {
   fetchAndCacheEvents().catch(err =>
     console.error("[Calendar Sync] Initial fetch failed:", err.message)
   );
 
   setInterval(() => {
-    console.log("[Calendar Sync] Running scheduled refresh...");
     fetchAndCacheEvents().catch(err =>
       console.error("[Calendar Sync] Scheduled refresh failed:", err.message)
     );
-  }, DAILY_REFRESH_INTERVAL);
+  }, REFRESH_INTERVAL);
 }
 
 function getDbPool() {
@@ -410,7 +409,7 @@ async function ensureBusinessesTable(pool: pg.Pool) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  startDailyRefresh();
+  startAutoRefresh();
 
   const pool = getDbPool();
   await ensureBusinessesTable(pool).catch(err => console.error("[DB] Init error:", err.message));
@@ -426,6 +425,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching calendar events:", error.message);
       res.status(500).json({ error: "Failed to fetch events" });
+    }
+  });
+
+  app.post("/api/events/refresh", async (_req, res) => {
+    try {
+      const events = await fetchAndCacheEvents();
+      res.json({ refreshed: true, count: events.length });
+    } catch (error: any) {
+      console.error("Error refreshing events:", error.message);
+      res.status(500).json({ error: "Failed to refresh events" });
     }
   });
 
