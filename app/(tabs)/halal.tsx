@@ -446,11 +446,7 @@ export default function HalalScreen() {
         ) : null}
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filtersRow}
-      >
+      <View style={styles.filtersRow}>
         {HALAL_FILTERS.map((f) => (
           <Pressable
             key={f.key}
@@ -514,7 +510,7 @@ export default function HalalScreen() {
             color={cuisineFilter !== "ALL" ? colors.gold : colors.textTertiary}
           />
         </Pressable>
-      </ScrollView>
+      </View>
 
       {showCuisineDropdown ? (
         <View style={[styles.dropdown, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -655,9 +651,11 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   filtersRow: {
+    flexDirection: "row",
     paddingHorizontal: 20,
-    paddingVertical: 10,
+    marginTop: 10,
     gap: 8,
+    flexWrap: "wrap",
   },
   filterChip: {
     paddingHorizontal: 14,
