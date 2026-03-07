@@ -111,6 +111,16 @@
     </div>
 
     <div class="section">
+      <div class="section-title"><span class="icon">🏪</span> Business Submissions</div>
+      <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <button class="btn btn-sm" id="filterPending" onclick="loadBusinesses('pending')" style="background:#2A2318;color:#D4A843;">Pending</button>
+        <button class="btn btn-sm" id="filterApproved" onclick="loadBusinesses('approved')" style="background:#1E1E1E;color:#9CA3AF;">Approved</button>
+        <button class="btn btn-sm" id="filterRejected" onclick="loadBusinesses('rejected')" style="background:#1E1E1E;color:#9CA3AF;">Rejected</button>
+      </div>
+      <div id="businessList"><div class="loading">Loading...</div></div>
+    </div>
+
+    <div class="section">
       <div class="section-title"><span class="icon">🔔</span> Send Push Notification</div>
       <label>Title</label>
       <input type="text" id="pushTitle" placeholder="Notification title">
@@ -150,6 +160,7 @@
           document.getElementById('appWrap').style.display = 'block';
           document.getElementById('loginError').style.display = 'none';
           loadTickers();
+          loadBusinesses('pending');
         } else {
           document.getElementById('loginError').style.display = 'block';
         }
@@ -261,6 +272,98 @@
       btn.disabled = false;
     }
 
+    let currentBizFilter = 'pending';
+
+    async function loadBusinesses(status) {
+      currentBizFilter = status || 'pending';
+      ['Pending','Approved','Rejected'].forEach(s => {
+        const btn = document.getElementById('filter' + s);
+        if (s.toLowerCase() === currentBizFilter) {
+          btn.style.background = '#2A2318';
+          btn.style.color = '#D4A843';
+        } else {
+          btn.style.background = '#1E1E1E';
+          btn.style.color = '#9CA3AF';
+        }
+      });
+      const list = document.getElementById('businessList');
+      list.innerHTML = '<div class="loading">Loading...</div>';
+      try {
+        const res = await fetch('/api/admin/businesses?status=' + currentBizFilter, {
+          headers: { 'Authorization': 'Bearer ' + adminToken },
+        });
+        const businesses = await res.json();
+        if (!businesses.length) {
+          list.innerHTML = '<div class="empty-state">No ' + currentBizFilter + ' businesses</div>';
+          return;
+        }
+        list.innerHTML = '<ul class="message-list">' + businesses.map(b => {
+          const date = new Date(b.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          const desc = b.description ? '<div style="font-size:12px;color:#9CA3AF;margin-top:4px;">' + escHtml(b.description) + '</div>' : '';
+          const contact = [b.phone, b.website].filter(Boolean).join(' · ');
+          const contactLine = contact ? '<div style="font-size:11px;color:#6B7280;margin-top:2px;">' + escHtml(contact) + '</div>' : '';
+          const emailLine = '<div style="font-size:11px;color:#6B7280;margin-top:2px;">Submitted by: ' + escHtml(b.submitted_by_email) + '</div>';
+          let actions = '';
+          if (currentBizFilter === 'pending') {
+            actions = '<button class="btn btn-primary btn-sm" onclick="updateBusiness(' + b.id + ',\'approved\')" style="margin-right:6px;">Approve</button>' +
+                      '<button class="btn btn-danger btn-sm" onclick="updateBusiness(' + b.id + ',\'rejected\')">Reject</button>';
+          } else if (currentBizFilter === 'approved') {
+            actions = '<button class="btn btn-danger btn-sm" onclick="updateBusiness(' + b.id + ',\'rejected\')">Reject</button>';
+          } else {
+            actions = '<button class="btn btn-primary btn-sm" onclick="updateBusiness(' + b.id + ',\'approved\')">Approve</button>' +
+                      '<button class="btn btn-danger btn-sm" onclick="deleteBusiness(' + b.id + ')" style="margin-left:6px;">Delete</button>';
+          }
+          return '<li class="message-item" style="flex-direction:column;gap:8px;">' +
+            '<div style="display:flex;align-items:flex-start;gap:12px;width:100%;">' +
+              '<span class="message-badge badge-event">' + escHtml(b.category) + '</span>' +
+              '<div style="flex:1;">' +
+                '<div style="font-size:14px;font-weight:600;color:#F5F5F5;">' + escHtml(b.name) + '</div>' +
+                '<div style="font-size:12px;color:#9CA3AF;margin-top:2px;">' + escHtml(b.address) + '</div>' +
+                desc + contactLine + emailLine +
+                '<div class="message-meta">' + date + '</div>' +
+              '</div>' +
+            '</div>' +
+            '<div style="display:flex;gap:6px;">' + actions + '</div>' +
+          '</li>';
+        }).join('') + '</ul>';
+      } catch {
+        list.innerHTML = '<div class="empty-state">Failed to load businesses</div>';
+      }
+    }
+
+    async function updateBusiness(id, status) {
+      try {
+        const res = await fetch('/api/admin/businesses/' + id, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify({ status }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          showToast(escHtml(data.name) + ' ' + status);
+          loadBusinesses(currentBizFilter);
+        } else {
+          showToast('Failed to update', true);
+        }
+      } catch { showToast('Connection error', true); }
+    }
+
+    async function deleteBusiness(id) {
+      if (!confirm('Permanently delete this business?')) return;
+      try {
+        const res = await fetch('/api/admin/businesses/' + id, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + adminToken },
+        });
+        if (res.ok) {
+          showToast('Business deleted');
+          loadBusinesses(currentBizFilter);
+        } else {
+          showToast('Failed to delete', true);
+        }
+      } catch { showToast('Connection error', true); }
+    }
+
     function escHtml(s) {
       const d = document.createElement('div');
       d.textContent = s;
@@ -277,6 +380,7 @@
       document.getElementById('loginWrap').style.display = 'none';
       document.getElementById('appWrap').style.display = 'block';
       loadTickers();
+      loadBusinesses('pending');
     }
 
     setInterval(loadTickers, 30000);

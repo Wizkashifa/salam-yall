@@ -572,6 +572,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/admin/businesses", async (req, res) => {
+    try {
+      if (!isAdminAuthorized(req)) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const status = (req.query.status as string) || "pending";
+      const validStatuses = ["pending", "approved", "rejected"];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ error: "Invalid status filter" });
+      }
+      const result = await pool.query(
+        "SELECT id, name, category, description, address, phone, website, submitted_by_email, status, created_at FROM businesses WHERE status = $1 ORDER BY created_at DESC",
+        [status]
+      );
+      res.json(result.rows);
+    } catch (error: any) {
+      console.error("Error fetching businesses for admin:", error.message);
+      res.status(500).json({ error: "Failed to fetch businesses" });
+    }
+  });
+
+  app.patch("/api/admin/businesses/:id", async (req, res) => {
+    try {
+      if (!isAdminAuthorized(req)) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid business ID" });
+      }
+      const { status } = req.body;
+      if (!status || !["approved", "rejected"].includes(status)) {
+        return res.status(400).json({ error: "Status must be 'approved' or 'rejected'" });
+      }
+      const result = await pool.query(
+        "UPDATE businesses SET status = $1 WHERE id = $2 RETURNING id, name, status",
+        [status, id]
+      );
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: "Business not found" });
+      }
+      res.json(result.rows[0]);
+    } catch (error: any) {
+      console.error("Error updating business status:", error.message);
+      res.status(500).json({ error: "Failed to update business" });
+    }
+  });
+
+  app.delete("/api/admin/businesses/:id", async (req, res) => {
+    try {
+      if (!isAdminAuthorized(req)) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid business ID" });
+      }
+      const result = await pool.query(
+        "DELETE FROM businesses WHERE id = $1 RETURNING id",
+        [id]
+      );
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: "Business not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting business:", error.message);
+      res.status(500).json({ error: "Failed to delete business" });
+    }
+  });
+
   const adminHtml = fs.readFileSync(
     path.resolve(process.cwd(), "server", "templates", "admin.html"),
     "utf-8"

@@ -49,6 +49,9 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 - `POST /api/admin/login` - Admin login (returns session token)
 - `POST /api/push-token` - Register Expo push token for notifications
 - `POST /api/admin/push` - Send push notification to all registered devices (admin-only)
+- `GET /api/admin/businesses?status=pending|approved|rejected` - List businesses by status (admin-only)
+- `PATCH /api/admin/businesses/:id` - Approve or reject a business (admin-only)
+- `DELETE /api/admin/businesses/:id` - Permanently delete a business (admin-only)
 - `GET /api/businesses` - Returns approved businesses from PostgreSQL database
 - `POST /api/businesses/submit` - Submit a new business for review (requires name, category, address, email)
 
@@ -88,6 +91,7 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
   - Post/remove ticker announcements (type, optional expiration)
   - Send push notifications to all registered devices via Expo Push API
   - Auto-refreshes announcement list every 30 seconds
+- **Business review**: View pending/approved/rejected submissions, approve, reject, or permanently delete businesses
 - **Push notifications**: App registers Expo push tokens on launch (native only); stored in `push_tokens` table; admin can broadcast to all devices
 
 ## Prayer Screen Features
