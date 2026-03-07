@@ -105,7 +105,8 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
   if (!business) return null;
 
   const catInfo = getCategoryInfo(business.category);
-  const rating = details?.rating || (business.rating ? Number(business.rating) : null);
+  const rawRating = details?.rating ?? business.rating;
+  const rating = rawRating != null ? Number(rawRating) : null;
   const reviewCount = details?.user_ratings_total || business.user_ratings_total;
   const hasPhoto = details?.has_photo || !!business.photo_reference;
   const photoUrl = hasPhoto ? `${getApiUrl()}/api/businesses/${business.id}/photo` : null;
@@ -162,10 +163,10 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
 
             <Text style={[styles.detailName, { color: colors.text }]}>{business.name}</Text>
 
-            {rating && rating > 0 ? (
+            {rating != null && !isNaN(rating) && rating > 0 ? (
               <View style={styles.ratingRow}>
-                <Text style={[styles.ratingScore, { color: colors.gold }]}>{rating.toFixed(1)}</Text>
-                <Text style={styles.ratingStars}>{renderStars(rating)}</Text>
+                <Text style={[styles.ratingScore, { color: colors.gold }]}>{Number(rating).toFixed(1)}</Text>
+                <Text style={styles.ratingStars}>{renderStars(Number(rating))}</Text>
                 {reviewCount ? (
                   <Text style={[styles.ratingCount, { color: colors.textTertiary }]}>({(reviewCount || 0).toLocaleString()} reviews)</Text>
                 ) : null}
