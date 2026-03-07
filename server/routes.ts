@@ -393,6 +393,33 @@ async function ensurePushTokensTable(pool: pg.Pool) {
   `);
 }
 
+async function ensureHalalRestaurantsTable(pool: pg.Pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS halal_restaurants (
+      id SERIAL PRIMARY KEY,
+      external_id INTEGER,
+      name VARCHAR(255) NOT NULL,
+      formatted_address TEXT,
+      formatted_phone VARCHAR(50),
+      url TEXT,
+      place_id VARCHAR(255),
+      lat DOUBLE PRECISION,
+      lng DOUBLE PRECISION,
+      is_halal VARCHAR(30) NOT NULL DEFAULT 'UNKNOWN',
+      halal_comment TEXT,
+      cuisine_types TEXT[],
+      emoji VARCHAR(10),
+      evidence TEXT[],
+      considerations TEXT[],
+      opening_hours JSONB,
+      date_checked JSONB,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_halal_is_halal ON halal_restaurants(is_halal);`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_halal_name ON halal_restaurants(name);`);
+}
+
 async function ensureBusinessesTable(pool: pg.Pool) {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS businesses (
@@ -440,6 +467,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const pool = getDbPool();
   await ensureTickerTable(pool).catch(err => console.error("[DB] Ticker table init error:", err.message));
   await ensurePushTokensTable(pool).catch(err => console.error("[DB] Push tokens table init error:", err.message));
+  await ensureHalalRestaurantsTable(pool).catch(err => console.error("[DB] Halal restaurants table init error:", err.message));
   await ensureBusinessesTable(pool).catch(err => console.error("[DB] Init error:", err.message));
 
   app.get("/api/events", async (_req, res) => {
@@ -522,6 +550,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error deleting ticker message:", error.message);
       res.status(500).json({ error: "Failed to delete ticker message" });
+    }
+  });
+
+  app.get("/api/halal-restaurants", async (req, res) => {
+    try {
+      const { cuisine, status, search } = req.query;
+      let query = "SELECT id, external_id, name, formatted_address, formatted_phone, url, lat, lng, is_halal, halal_comment, cuisine_types, emoji, evidence, considerations, opening_hours FROM halal_restaurants";
+      const conditions: string[] = [];
+      const params: any[] = [];
+
+      if (status && typeof status === "string" && ["IS_HALAL", "PARTIALLY_HALAL", "NOT_HALAL", "UNKNOWN"].includes(status)) {
+        params.push(status);
+        conditions.push(`is_halal = $${params.length}`);
+      }
+
+      if (cuisine && typeof cuisine === "string") {
+        params.push(cuisine);
+        conditions.push(`$${params.length} = ANY(cuisine_types)`);
+      }
+
+      if (search && typeof search === "string") {
+        params.push(`%${search}%`);
+        conditions.push(`(name ILIKE $${params.length} OR formatted_address ILIKE $${params.length})`);
+      }
+
+      if (conditions.length > 0) {
+        query += " WHERE " + conditions.join(" AND ");
+      }
+
+      query += " ORDER BY name";
+      const result = await pool.query(query, params);
+      res.json(result.rows);
+    } catch (error: any) {
+      console.error("Error fetching halal restaurants:", error.message);
+      res.status(500).json({ error: "Failed to fetch halal restaurants" });
     }
   });
 

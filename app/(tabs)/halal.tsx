@@ -1,163 +1,516 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
   StyleSheet,
   Text,
   View,
+  FlatList,
   Platform,
   ActivityIndicator,
   Pressable,
   Linking,
+  TextInput,
+  RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import { WebView } from "react-native-webview";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "@/lib/theme-context";
 
-const HALAL_EATS_URL = "https://halaleatsnc.com";
-const TIMEOUT_MS = 15000;
+interface HalalRestaurant {
+  id: number;
+  external_id: number;
+  name: string;
+  formatted_address: string | null;
+  formatted_phone: string | null;
+  url: string | null;
+  lat: number | null;
+  lng: number | null;
+  is_halal: string;
+  halal_comment: string | null;
+  cuisine_types: string[] | null;
+  emoji: string | null;
+  evidence: string[] | null;
+  considerations: string[] | null;
+  opening_hours: {
+    openNow: boolean;
+    periods: Array<{
+      open: { day: string; time: number[] };
+      close: { day: string; time: number[] };
+    }>;
+  } | null;
+}
+
+const HALAL_FILTERS = [
+  { key: "ALL", label: "All" },
+  { key: "IS_HALAL", label: "Halal" },
+  { key: "PARTIALLY_HALAL", label: "Partial" },
+];
+
+const CUISINE_FILTERS = [
+  { key: "ALL", label: "All Cuisines" },
+  { key: "INDIAN_PAKISTANI", label: "Indian/Pakistani" },
+  { key: "MEDITERRANEAN", label: "Mediterranean" },
+  { key: "MIDDLE_EASTERN", label: "Middle Eastern" },
+  { key: "TURKISH", label: "Turkish" },
+  { key: "AMERICAN", label: "American" },
+  { key: "ITALIAN", label: "Italian" },
+  { key: "MEXICAN", label: "Mexican" },
+  { key: "EAST_ASIAN", label: "East Asian" },
+  { key: "CHINESE", label: "Chinese" },
+  { key: "JAPANESE", label: "Japanese" },
+  { key: "CENTRAL_ASIAN", label: "Central Asian" },
+  { key: "SENEGALESE", label: "Senegalese" },
+  { key: "GREEK", label: "Greek" },
+  { key: "SOUTH_INDIAN", label: "South Indian" },
+  { key: "NEPALI", label: "Nepali" },
+];
+
+function formatCuisine(cuisine: string): string {
+  return cuisine
+    .split("_")
+    .map((w) => w.charAt(0) + w.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function getHalalBadge(status: string): { label: string; color: string; bg: string } {
+  switch (status) {
+    case "IS_HALAL":
+      return { label: "Halal", color: "#166534", bg: "#DCFCE7" };
+    case "PARTIALLY_HALAL":
+      return { label: "Partially Halal", color: "#92400E", bg: "#FEF3C7" };
+    case "NOT_HALAL":
+      return { label: "Not Halal", color: "#991B1B", bg: "#FEE2E2" };
+    default:
+      return { label: "Unknown", color: "#6B7280", bg: "#F3F4F6" };
+  }
+}
+
+function isCurrentlyOpen(hours: HalalRestaurant["opening_hours"]): boolean | null {
+  if (!hours || !hours.periods || hours.periods.length === 0) return null;
+  const now = new Date();
+  const days = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+  const today = days[now.getDay()];
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+  const todayPeriod = hours.periods.find((p) => p.open.day === today);
+  if (!todayPeriod) return false;
+
+  const openMinutes = todayPeriod.open.time[0] * 60 + todayPeriod.open.time[1];
+  const closeMinutes = todayPeriod.close.time[0] * 60 + todayPeriod.close.time[1];
+
+  if (closeMinutes < openMinutes) {
+    return currentMinutes >= openMinutes || currentMinutes < closeMinutes;
+  }
+  return currentMinutes >= openMinutes && currentMinutes < closeMinutes;
+}
 
 export default function HalalScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [webViewKey, setWebViewKey] = useState(0);
-  const [canGoBack, setCanGoBack] = useState(false);
-  const webViewRef = useRef<WebView>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const queryClient = useQueryClient();
+  const [searchText, setSearchText] = useState("");
+  const [halalFilter, setHalalFilter] = useState("ALL");
+  const [cuisineFilter, setCuisineFilter] = useState("ALL");
+  const [refreshing, setRefreshing] = useState(false);
+  const [showCuisineDropdown, setShowCuisineDropdown] = useState(false);
 
-  const startTimeout = useCallback(() => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => {
-      if (loading) {
-        setLoading(false);
-        setError(true);
-      }
-    }, TIMEOUT_MS);
-  }, [loading]);
+  const { data: restaurants = [], isLoading } = useQuery<HalalRestaurant[]>({
+    queryKey: ["/api/halal-restaurants"],
+    staleTime: 10 * 60 * 1000,
+  });
 
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
+  const filtered = useMemo(() => {
+    let result = restaurants;
+
+    if (halalFilter !== "ALL") {
+      result = result.filter((r) => r.is_halal === halalFilter);
+    }
+
+    if (cuisineFilter !== "ALL") {
+      result = result.filter(
+        (r) => r.cuisine_types && r.cuisine_types.includes(cuisineFilter)
+      );
+    }
+
+    if (searchText.trim()) {
+      const q = searchText.toLowerCase().trim();
+      result = result.filter(
+        (r) =>
+          r.name.toLowerCase().includes(q) ||
+          (r.formatted_address && r.formatted_address.toLowerCase().includes(q))
+      );
+    }
+
+    return result;
+  }, [restaurants, halalFilter, cuisineFilter, searchText]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await queryClient.invalidateQueries({ queryKey: ["/api/halal-restaurants"] });
+    setRefreshing(false);
+  }, [queryClient]);
+
+  const openMaps = useCallback((restaurant: HalalRestaurant) => {
+    if (restaurant.lat && restaurant.lng) {
+      const url = Platform.select({
+        ios: `maps:0,0?q=${encodeURIComponent(restaurant.name)}@${restaurant.lat},${restaurant.lng}`,
+        android: `geo:0,0?q=${restaurant.lat},${restaurant.lng}(${encodeURIComponent(restaurant.name)})`,
+        default: `https://www.google.com/maps/search/?api=1&query=${restaurant.lat},${restaurant.lng}`,
+      });
+      Linking.openURL(url);
+    } else if (restaurant.formatted_address) {
+      Linking.openURL(
+        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurant.formatted_address)}`
+      );
+    }
   }, []);
 
-  const handleRetry = useCallback(() => {
-    setError(false);
-    setLoading(true);
-    setWebViewKey((k) => k + 1);
-  }, []);
+  const renderRestaurant = useCallback(
+    ({ item }: { item: HalalRestaurant }) => {
+      const badge = getHalalBadge(item.is_halal);
+      const openStatus = isCurrentlyOpen(item.opening_hours);
+      const cuisines = item.cuisine_types
+        ? item.cuisine_types.map(formatCuisine).join(", ")
+        : "";
 
-  const handleLoadEnd = useCallback(() => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    setLoading(false);
-    setError(false);
-  }, []);
-
-  const handleError = useCallback(() => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    setLoading(false);
-    setError(true);
-  }, []);
-
-  const handleLoadStart = useCallback(() => {
-    setLoading(true);
-    startTimeout();
-  }, [startTimeout]);
-
-  if (Platform.OS === "web") {
-    return (
-      <View style={[styles.container, { paddingTop: 67 + insets.top, backgroundColor: colors.background }]}>
-        <View style={styles.webFallbackContainer}>
-          <View style={[styles.webFallbackCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Ionicons name="restaurant" size={48} color={colors.gold} />
-            <Text style={[styles.webFallbackTitle, { color: colors.text }]}>Halal Eats NC</Text>
-            <Text style={[styles.webFallbackDesc, { color: colors.textSecondary }]}>
-              Find halal restaurants and food options in North Carolina
-            </Text>
-            <Pressable
-              style={({ pressed }) => [
-                styles.webOpenButton,
-                { backgroundColor: colors.gold, opacity: pressed ? 0.8 : 1 },
-              ]}
-              onPress={() => Linking.openURL(HALAL_EATS_URL)}
-            >
-              <Ionicons name="open-outline" size={18} color="#fff" />
-              <Text style={styles.webOpenButtonText}>Open Website</Text>
-            </Pressable>
-          </View>
-        </View>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={[styles.errorContainer, { paddingTop: insets.top, backgroundColor: colors.background }]}>
-        <Ionicons name="cloud-offline-outline" size={48} color={colors.textSecondary} />
-        <Text style={[styles.errorTitle, { color: colors.text }]}>Unable to Load</Text>
-        <Text style={[styles.errorMessage, { color: colors.textSecondary }]}>
-          Halal Eats NC may be temporarily unavailable. Check your connection and try again.
-        </Text>
+      return (
         <Pressable
           style={({ pressed }) => [
-            styles.retryButton,
-            { backgroundColor: colors.gold, opacity: pressed ? 0.8 : 1 },
+            styles.card,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              opacity: pressed ? 0.95 : 1,
+            },
           ]}
-          onPress={handleRetry}
+          onPress={() => openMaps(item)}
+          testID={`restaurant-${item.id}`}
         >
-          <Ionicons name="refresh" size={18} color="#fff" />
-          <Text style={styles.retryText}>Retry</Text>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardTitleRow}>
+              {item.emoji ? (
+                <Text style={styles.emoji}>{item.emoji}</Text>
+              ) : (
+                <Ionicons name="restaurant" size={20} color={colors.gold} />
+              )}
+              <Text
+                style={[styles.restaurantName, { color: colors.text }]}
+                numberOfLines={2}
+              >
+                {item.name}
+              </Text>
+            </View>
+            <View style={[styles.halalBadge, { backgroundColor: isDark ? badge.bg + "40" : badge.bg }]}>
+              <Text style={[styles.halalBadgeText, { color: isDark ? (badge.color === "#166534" ? "#86EFAC" : badge.color === "#92400E" ? "#FCD34D" : badge.color) : badge.color }]}>
+                {badge.label}
+              </Text>
+            </View>
+          </View>
+
+          {cuisines ? (
+            <Text
+              style={[styles.cuisineText, { color: colors.textSecondary }]}
+              numberOfLines={1}
+            >
+              {cuisines}
+            </Text>
+          ) : null}
+
+          {item.formatted_address ? (
+            <View style={styles.infoRow}>
+              <Ionicons
+                name="location-outline"
+                size={14}
+                color={colors.textTertiary}
+              />
+              <Text
+                style={[styles.infoText, { color: colors.textSecondary }]}
+                numberOfLines={2}
+              >
+                {item.formatted_address}
+              </Text>
+            </View>
+          ) : null}
+
+          <View style={styles.cardFooter}>
+            {item.formatted_phone ? (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.actionChip,
+                  { backgroundColor: colors.emerald + "12", opacity: pressed ? 0.7 : 1 },
+                ]}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  Linking.openURL(`tel:${item.formatted_phone}`);
+                }}
+              >
+                <Ionicons name="call-outline" size={13} color={colors.emerald} />
+                <Text style={[styles.actionChipText, { color: colors.emerald }]}>
+                  Call
+                </Text>
+              </Pressable>
+            ) : null}
+
+            {openStatus !== null ? (
+              <View
+                style={[
+                  styles.openBadge,
+                  {
+                    backgroundColor: openStatus
+                      ? (isDark ? "#16653420" : "#DCFCE7")
+                      : (isDark ? "#991B1B20" : "#FEE2E2"),
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.openDot,
+                    { backgroundColor: openStatus ? "#22C55E" : "#EF4444" },
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.openText,
+                    { color: openStatus ? (isDark ? "#86EFAC" : "#166534") : (isDark ? "#FCA5A5" : "#991B1B") },
+                  ]}
+                >
+                  {openStatus ? "Open" : "Closed"}
+                </Text>
+              </View>
+            ) : null}
+
+            {item.halal_comment ? (
+              <View style={[styles.commentChip, { backgroundColor: colors.gold + "15" }]}>
+                <MaterialCommunityIcons name="information-outline" size={12} color={colors.gold} />
+                <Text style={[styles.commentText, { color: colors.gold }]} numberOfLines={1}>
+                  {item.halal_comment}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+
+          {item.considerations && item.considerations.length > 0 ? (
+            <View style={styles.considerationsRow}>
+              {item.considerations.map((c) => (
+                <View
+                  key={c}
+                  style={[styles.considerationChip, { backgroundColor: isDark ? "#92400E20" : "#FEF3C7" }]}
+                >
+                  <Text style={[styles.considerationText, { color: isDark ? "#FCD34D" : "#92400E" }]}>
+                    {c === "SERVES_ALCOHOL"
+                      ? "Serves Alcohol"
+                      : c.split("_").map((w) => w.charAt(0) + w.slice(1).toLowerCase()).join(" ")}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
         </Pressable>
-      </View>
-    );
-  }
+      );
+    },
+    [colors, isDark, openMaps]
+  );
+
+  const selectedCuisineLabel = CUISINE_FILTERS.find((c) => c.key === cuisineFilter)?.label || "All Cuisines";
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, backgroundColor: colors.background }]}>
-      {canGoBack ? (
-        <View style={[styles.navBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-          <Pressable
-            style={({ pressed }) => [styles.backButton, { opacity: pressed ? 0.6 : 1 }]}
-            onPress={() => webViewRef.current?.goBack()}
-          >
-            <Ionicons name="chevron-back" size={22} color={colors.gold} />
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: colors.background,
+          paddingTop: Platform.OS === "web" ? 67 : insets.top,
+        },
+      ]}
+    >
+      <View style={styles.header}>
+        <Text style={[styles.title, { color: colors.text }]}>Halal Eats</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          {restaurants.length} restaurants in NC
+        </Text>
+      </View>
+
+      <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Ionicons name="search" size={18} color={colors.textTertiary} />
+        <TextInput
+          style={[styles.searchInput, { color: colors.text }]}
+          placeholder="Search restaurants or addresses..."
+          placeholderTextColor={colors.textTertiary}
+          value={searchText}
+          onChangeText={setSearchText}
+          returnKeyType="search"
+          testID="halal-search"
+        />
+        {searchText ? (
+          <Pressable onPress={() => setSearchText("")}>
+            <Ionicons name="close-circle" size={18} color={colors.textTertiary} />
           </Pressable>
-          <Text style={[styles.navTitle, { color: colors.text }]} numberOfLines={1}>
-            Halal Eats NC
+        ) : null}
+      </View>
+
+      <View style={styles.filtersRow}>
+        {HALAL_FILTERS.map((f) => (
+          <Pressable
+            key={f.key}
+            style={[
+              styles.filterChip,
+              {
+                backgroundColor:
+                  halalFilter === f.key
+                    ? colors.emerald
+                    : colors.surface,
+                borderColor:
+                  halalFilter === f.key ? colors.emerald : colors.border,
+              },
+            ]}
+            onPress={() => setHalalFilter(f.key)}
+          >
+            <Text
+              style={[
+                styles.filterChipText,
+                {
+                  color:
+                    halalFilter === f.key ? "#fff" : colors.textSecondary,
+                },
+              ]}
+            >
+              {f.label}
+            </Text>
+          </Pressable>
+        ))}
+
+        <Pressable
+          style={[
+            styles.filterChip,
+            styles.cuisineChip,
+            {
+              backgroundColor:
+                cuisineFilter !== "ALL"
+                  ? colors.gold + "20"
+                  : colors.surface,
+              borderColor:
+                cuisineFilter !== "ALL" ? colors.gold : colors.border,
+            },
+          ]}
+          onPress={() => setShowCuisineDropdown(!showCuisineDropdown)}
+        >
+          <Text
+            style={[
+              styles.filterChipText,
+              {
+                color:
+                  cuisineFilter !== "ALL" ? colors.gold : colors.textSecondary,
+              },
+            ]}
+            numberOfLines={1}
+          >
+            {selectedCuisineLabel}
           </Text>
-          <Pressable
-            style={({ pressed }) => [styles.backButton, { opacity: pressed ? 0.6 : 1 }]}
-            onPress={handleRetry}
-          >
-            <Ionicons name="refresh" size={20} color={colors.gold} />
-          </Pressable>
+          <Ionicons
+            name={showCuisineDropdown ? "chevron-up" : "chevron-down"}
+            size={14}
+            color={cuisineFilter !== "ALL" ? colors.gold : colors.textTertiary}
+          />
+        </Pressable>
+      </View>
+
+      {showCuisineDropdown ? (
+        <View style={[styles.dropdown, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {CUISINE_FILTERS.map((c) => (
+            <Pressable
+              key={c.key}
+              style={({ pressed }) => [
+                styles.dropdownItem,
+                {
+                  backgroundColor:
+                    cuisineFilter === c.key
+                      ? colors.emerald + "15"
+                      : pressed
+                      ? colors.borderLight
+                      : "transparent",
+                },
+              ]}
+              onPress={() => {
+                setCuisineFilter(c.key);
+                setShowCuisineDropdown(false);
+              }}
+            >
+              <Text
+                style={[
+                  styles.dropdownText,
+                  {
+                    color:
+                      cuisineFilter === c.key
+                        ? colors.emerald
+                        : colors.text,
+                    fontFamily:
+                      cuisineFilter === c.key
+                        ? "Inter_600SemiBold"
+                        : "Inter_400Regular",
+                  },
+                ]}
+              >
+                {c.label}
+              </Text>
+              {cuisineFilter === c.key ? (
+                <Ionicons name="checkmark" size={16} color={colors.emerald} />
+              ) : null}
+            </Pressable>
+          ))}
         </View>
       ) : null}
-      {loading ? (
-        <View style={[styles.loadingOverlay, { backgroundColor: colors.background }]}>
+
+      <Text style={[styles.resultCount, { color: colors.textTertiary }]}>
+        {filtered.length} result{filtered.length !== 1 ? "s" : ""}
+      </Text>
+
+      {isLoading ? (
+        <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={colors.gold} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading Halal Eats NC...</Text>
         </View>
-      ) : null}
-      <WebView
-        ref={webViewRef}
-        key={webViewKey}
-        source={{ uri: HALAL_EATS_URL }}
-        style={styles.webview}
-        onLoadStart={handleLoadStart}
-        onLoadEnd={handleLoadEnd}
-        onError={handleError}
-        onHttpError={handleError}
-        onNavigationStateChange={(navState) => setCanGoBack(!!navState.canGoBack)}
-        javaScriptEnabled
-        domStorageEnabled
-        startInLoadingState={false}
-        allowsBackForwardNavigationGestures
-        cacheEnabled
-        cacheMode="LOAD_CACHE_ELSE_NETWORK"
-        pullToRefreshEnabled
-      />
+      ) : (
+        <FlatList
+          data={filtered}
+          renderItem={renderRestaurant}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: Platform.OS === "web" ? 34 : 20 },
+          ]}
+          showsVerticalScrollIndicator={false}
+          scrollEnabled={filtered.length > 0}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.gold}
+            />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons name="restaurant-outline" size={40} color={colors.textTertiary} />
+              <Text style={[styles.emptyTitle, { color: colors.textSecondary }]}>
+                No restaurants found
+              </Text>
+              <Text style={[styles.emptyDesc, { color: colors.textTertiary }]}>
+                Try adjusting your filters or search
+              </Text>
+            </View>
+          }
+          testID="halal-list"
+        />
+      )}
+
+      <View style={[styles.creditBar, { borderTopColor: colors.border }]}>
+        <Text style={[styles.creditText, { color: colors.textTertiary }]}>
+          Data from{" "}
+        </Text>
+        <Pressable onPress={() => Linking.openURL("https://halaleatsnc.com")}>
+          <Text style={[styles.creditLink, { color: colors.gold }]}>
+            HalalEatsNC.com
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -166,109 +519,238 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  webFallbackContainer: {
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  title: {
+    fontSize: 26,
+    fontFamily: "Inter_700Bold",
+  },
+  subtitle: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 20,
+    marginTop: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: "Inter_400Regular",
+    padding: 0,
+  },
+  filtersRow: {
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    marginTop: 10,
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  cuisineChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    maxWidth: 160,
+  },
+  filterChipText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+  },
+  dropdown: {
+    marginHorizontal: 20,
+    marginTop: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    maxHeight: 250,
+    overflow: "hidden",
+  },
+  dropdownItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 11,
+  },
+  dropdownText: {
+    fontSize: 14,
+  },
+  resultCount: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+  },
+  listContent: {
+    paddingHorizontal: 20,
+  },
+  card: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 14,
+    marginBottom: 10,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  cardTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+  },
+  emoji: {
+    fontSize: 20,
+  },
+  restaurantName: {
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
+    flex: 1,
+  },
+  halalBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  halalBadgeText: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+  },
+  cuisineText: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    marginTop: 4,
+    marginLeft: 28,
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+    marginTop: 8,
+  },
+  infoText: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    flex: 1,
+    lineHeight: 18,
+  },
+  cardFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 10,
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  actionChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  actionChipText: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+  },
+  openBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  openDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  openText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+  },
+  commentChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    flex: 1,
+    maxWidth: 200,
+  },
+  commentText: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    flex: 1,
+  },
+  considerationsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 8,
+  },
+  considerationChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  considerationText: {
+    fontSize: 10,
+    fontFamily: "Inter_500Medium",
+  },
+  centerContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 40,
   },
-  webFallbackCard: {
+  emptyContainer: {
     alignItems: "center",
-    padding: 32,
-    borderRadius: 20,
-    borderWidth: 1,
-    width: "100%",
-    maxWidth: 360,
-  },
-  webFallbackTitle: {
-    fontSize: 22,
-    fontFamily: "Inter_700Bold",
-    marginTop: 16,
-  },
-  webFallbackDesc: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    textAlign: "center",
-    marginTop: 8,
-    lineHeight: 20,
-  },
-  webOpenButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 12,
-    marginTop: 24,
+    justifyContent: "center",
+    paddingTop: 60,
     gap: 8,
   },
-  webOpenButtonText: {
-    color: "#fff",
+  emptyTitle: {
     fontSize: 16,
     fontFamily: "Inter_600SemiBold",
   },
-  navBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  navTitle: {
-    flex: 1,
-    fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
-    textAlign: "center",
-  },
-  webview: {
-    flex: 1,
-  },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 10,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    fontFamily: "Inter_500Medium",
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 40,
-  },
-  errorTitle: {
-    fontSize: 20,
-    fontFamily: "Inter_700Bold",
-    marginTop: 16,
-  },
-  errorMessage: {
-    fontSize: 14,
+  emptyDesc: {
+    fontSize: 13,
     fontFamily: "Inter_400Regular",
-    textAlign: "center",
-    marginTop: 8,
-    lineHeight: 20,
   },
-  retryButton: {
+  creditBar: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 10,
-    marginTop: 20,
-    gap: 6,
+    justifyContent: "center",
+    paddingVertical: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
-  retryText: {
-    color: "#fff",
-    fontSize: 15,
+  creditText: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+  },
+  creditLink: {
+    fontSize: 11,
     fontFamily: "Inter_600SemiBold",
   },
 });
