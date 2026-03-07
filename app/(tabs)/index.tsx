@@ -18,8 +18,8 @@ import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
 import * as Notifications from "expo-notifications";
 import { LinearGradient } from "expo-linear-gradient";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "@/lib/theme-context";
+import { useSettings } from "@/lib/settings-context";
 import {
   getPrayerTimes,
   getNextPrayer,
@@ -32,8 +32,6 @@ import {
   type PrayerTimeEntry,
   type Masjid,
 } from "@/lib/prayer-utils";
-
-const NOTIF_PREF_KEY = "prayer_notifications_enabled";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -101,6 +99,7 @@ function QiblaCompass({ qiblaBearing, colors, isDark }: { qiblaBearing: number; 
 export default function PrayerScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
+  const { calcMethod, notificationsEnabled, setNotificationsEnabled, openMenu } = useSettings();
   const [prayers, setPrayers] = useState<PrayerTimeEntry[]>([]);
   const [nextPrayer, setNextPrayer] = useState<PrayerTimeEntry | null>(null);
   const [countdown, setCountdown] = useState({ hours: 0, minutes: 0, seconds: 0 });
@@ -111,19 +110,12 @@ export default function PrayerScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [qiblaBearing, setQiblaBearing] = useState(58.5);
   const [userCoords, setUserCoords] = useState({ lat: 35.7796, lon: -78.6382 });
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [nearMosque, setNearMosque] = useState<Masjid | null>(null);
   const [silenceAlertDismissed, setSilenceAlertDismissed] = useState(false);
 
-  useEffect(() => {
-    AsyncStorage.getItem(NOTIF_PREF_KEY).then((val) => {
-      if (val === "true") setNotificationsEnabled(true);
-    });
-  }, []);
-
   const loadDefaultPrayers = useCallback((lat = 35.7796, lon = -78.6382) => {
     const now = new Date();
-    const todayPrayers = getPrayerTimes(lat, lon, now);
+    const todayPrayers = getPrayerTimes(lat, lon, now, calcMethod);
     setPrayers(todayPrayers);
     setHijriDate(toHijriDate(now));
     setQiblaBearing(calculateQiblaBearing(lat, lon));
@@ -139,11 +131,11 @@ export default function PrayerScreen() {
     } else {
       const tomorrow = new Date(now);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      const tomorrowPrayers = getPrayerTimes(lat, lon, tomorrow);
+      const tomorrowPrayers = getPrayerTimes(lat, lon, tomorrow, calcMethod);
       setNextPrayer(tomorrowPrayers[0]);
       setCountdown(getCountdown(tomorrowPrayers[0].time, now));
     }
-  }, []);
+  }, [calcMethod]);
 
   const loadPrayerData = useCallback(async () => {
     try {
@@ -211,6 +203,12 @@ export default function PrayerScreen() {
     return () => clearInterval(interval);
   }, [nextPrayer, loadPrayerData]);
 
+  useEffect(() => {
+    if (userCoords.lat && prayers.length > 0) {
+      loadDefaultPrayers(userCoords.lat, userCoords.lon);
+    }
+  }, [calcMethod]);
+
   const schedulePrayerNotifications = useCallback(async (prayerList: PrayerTimeEntry[], lat: number, lon: number) => {
     try {
       await Notifications.cancelAllScheduledNotificationsAsync();
@@ -219,7 +217,7 @@ export default function PrayerScreen() {
 
       const tomorrow = new Date(now);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      const tomorrowPrayers = getPrayerTimes(lat, lon, tomorrow).filter(p => p.name !== "sunrise");
+      const tomorrowPrayers = getPrayerTimes(lat, lon, tomorrow, calcMethod).filter(p => p.name !== "sunrise");
 
       const allPrayers = [...todayPrayers, ...tomorrowPrayers];
 
@@ -239,7 +237,7 @@ export default function PrayerScreen() {
     } catch (err) {
       console.error("Error scheduling notifications:", err);
     }
-  }, []);
+  }, [calcMethod]);
 
   useEffect(() => {
     if (notificationsEnabled && prayers.length > 0) {
@@ -260,7 +258,6 @@ export default function PrayerScreen() {
           return;
         }
         setNotificationsEnabled(true);
-        await AsyncStorage.setItem(NOTIF_PREF_KEY, "true");
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         if (prayers.length > 0) {
           await schedulePrayerNotifications(prayers, userCoords.lat, userCoords.lon);
@@ -270,11 +267,10 @@ export default function PrayerScreen() {
       }
     } else {
       setNotificationsEnabled(false);
-      await AsyncStorage.setItem(NOTIF_PREF_KEY, "false");
       await Notifications.cancelAllScheduledNotificationsAsync();
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-  }, [notificationsEnabled, prayers, schedulePrayerNotifications]);
+  }, [notificationsEnabled, prayers, schedulePrayerNotifications, setNotificationsEnabled]);
 
   const openMasjidDirections = useCallback(async () => {
     if (!nearestMasjid) return;
@@ -340,6 +336,17 @@ export default function PrayerScreen() {
       }
     >
       <View style={styles.headerSection}>
+        <View style={styles.headerTopRow}>
+          <Pressable
+            style={({ pressed }) => [styles.menuButton, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
+            onPress={() => { openMenu(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+            testID="menu-button"
+            hitSlop={8}
+          >
+            <Ionicons name="menu" size={20} color={colors.text} />
+          </Pressable>
+          <QiblaCompass qiblaBearing={qiblaBearing} colors={colors} isDark={isDark} />
+        </View>
         <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
             <Text style={[styles.greeting, { color: colors.textSecondary }]}>{gregorianDate}</Text>
@@ -347,7 +354,6 @@ export default function PrayerScreen() {
               <Text style={[styles.hijriDate, { color: colors.gold }]}>{hijriDate}</Text>
             ) : null}
           </View>
-          <QiblaCompass qiblaBearing={qiblaBearing} colors={colors} isDark={isDark} />
         </View>
       </View>
 
@@ -683,6 +689,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 16,
+  },
+  headerTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  menuButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
   },
   headerRow: {
     flexDirection: "row",

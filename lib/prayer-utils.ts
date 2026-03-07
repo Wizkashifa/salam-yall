@@ -7,6 +7,35 @@ import {
 
 export type PrayerName = "fajr" | "sunrise" | "dhuhr" | "asr" | "maghrib" | "isha";
 
+export type CalcMethodKey =
+  | "NorthAmerica"
+  | "MuslimWorldLeague"
+  | "Egyptian"
+  | "Karachi"
+  | "UmmAlQura"
+  | "Dubai"
+  | "MoonsightingCommittee"
+  | "Kuwait"
+  | "Qatar"
+  | "Singapore"
+  | "Tehran"
+  | "Turkey";
+
+export const CALC_METHOD_LABELS: Record<CalcMethodKey, string> = {
+  NorthAmerica: "ISNA (North America)",
+  MuslimWorldLeague: "Muslim World League",
+  Egyptian: "Egyptian General Authority",
+  Karachi: "University of Karachi",
+  UmmAlQura: "Umm Al-Qura (Makkah)",
+  Dubai: "Dubai",
+  MoonsightingCommittee: "Moonsighting Committee",
+  Kuwait: "Kuwait",
+  Qatar: "Qatar",
+  Singapore: "Singapore",
+  Tehran: "Tehran",
+  Turkey: "Turkey",
+};
+
 export interface PrayerTimeEntry {
   name: PrayerName;
   label: string;
@@ -14,9 +43,13 @@ export interface PrayerTimeEntry {
   icon: string;
 }
 
-export function getPrayerTimes(latitude: number, longitude: number, date: Date): PrayerTimeEntry[] {
+function getCalcParams(method: CalcMethodKey) {
+  return CalculationMethod[method]();
+}
+
+export function getPrayerTimes(latitude: number, longitude: number, date: Date, method: CalcMethodKey = "NorthAmerica"): PrayerTimeEntry[] {
   const coordinates = new Coordinates(latitude, longitude);
-  const params = CalculationMethod.NorthAmerica();
+  const params = getCalcParams(method);
   const prayerTimes = new PrayerTimes(coordinates, date, params);
 
   return [
