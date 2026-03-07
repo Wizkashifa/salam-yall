@@ -182,22 +182,21 @@ export default function EventsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <View style={[styles.headerSection, { paddingTop: Platform.OS === "web" ? 67 : insets.top + 16, backgroundColor: colors.background }]}>
+        <Text style={[styles.title, { color: colors.text }]}>Community Events</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          Programs and events in the local area
+        </Text>
+      </View>
       <ScrollView
         style={[styles.container, { backgroundColor: colors.background }]}
         contentContainerStyle={{
-          paddingTop: Platform.OS === "web" ? 67 + insets.top : insets.top + 16,
           paddingBottom: Platform.OS === "web" ? 34 : 100,
         }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />
         }
       >
-        <View style={styles.headerSection}>
-          <Text style={[styles.title, { color: colors.text }]}>Community Events</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Programs and events in the local area
-          </Text>
-        </View>
 
         {isLoading ? (
           <View style={styles.centerContainer}>

@@ -3,7 +3,6 @@ import {
   StyleSheet,
   Text,
   View,
-  ScrollView,
   Platform,
   Pressable,
   ActivityIndicator,
@@ -458,13 +457,8 @@ export default function PrayerScreen() {
   const countdownMins = countdown.hours * 60 + countdown.minutes;
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={{
-        paddingTop: Platform.OS === "web" ? 67 : insets.top,
-        paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 60,
-      }}
-      showsVerticalScrollIndicator={false}
+    <View
+      style={[styles.container, { backgroundColor: colors.background, paddingTop: Platform.OS === "web" ? 67 : insets.top, paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 60 }]}
     >
       <TickerBanner colors={colors} isDark={isDark} />
 
@@ -755,7 +749,7 @@ export default function PrayerScreen() {
           })}
         </View>
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
