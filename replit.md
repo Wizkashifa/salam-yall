@@ -57,6 +57,7 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 - `GET /api/businesses/:id/places-details` - Fetches/caches Google Places details (rating, hours, location) for a business
 - `GET /api/businesses/:id/photo` - Proxies Google Places photo for a business (keeps API key server-side)
 - `POST /api/businesses/submit` - Submit a new business for review (requires name, category, address, email)
+- `GET /privacy` - Privacy policy page (HTML)
 
 ## Database Schema
 
@@ -77,6 +78,7 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
   4. Regex pattern detection for new venues
   5. Venue name extraction from location field
 - **Scheduled refresh**: Events cached server-side, refreshed every hour, with 15-min TTL for API requests
+- **Business enrichment**: Approved businesses without Google Places data are auto-enriched on startup (15s delay) and daily (24h interval); also triggered immediately when a business is approved via admin dashboard
 
 ## Ticker/Announcement System
 

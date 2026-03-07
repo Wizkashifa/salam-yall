@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — Ummah Connect</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #FAFAF8;
+      color: #1A1A1A;
+      line-height: 1.7;
+    }
+    .header {
+      background: linear-gradient(135deg, #1B6B4A 0%, #145A3D 100%);
+      padding: 48px 24px 40px;
+      text-align: center;
+    }
+    .header h1 {
+      color: #fff;
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .header p {
+      color: rgba(255,255,255,0.75);
+      font-size: 14px;
+    }
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 32px 24px 64px;
+    }
+    .effective {
+      font-size: 13px;
+      color: #6B7280;
+      margin-bottom: 32px;
+    }
+    h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1B6B4A;
+      margin: 32px 0 12px;
+    }
+    h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1A1A1A;
+      margin: 20px 0 8px;
+    }
+    p, li {
+      font-size: 15px;
+      color: #374151;
+      margin-bottom: 12px;
+    }
+    ul {
+      padding-left: 24px;
+      margin-bottom: 16px;
+    }
+    li { margin-bottom: 6px; }
+    a { color: #1B6B4A; }
+    .section {
+      background: #fff;
+      border: 1px solid #E5E2DB;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .section h2 { margin-top: 0; }
+    .footer {
+      text-align: center;
+      padding: 32px 24px;
+      border-top: 1px solid #E5E2DB;
+      margin-top: 32px;
+    }
+    .footer p {
+      font-size: 13px;
+      color: #9CA3AF;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Privacy Policy</h1>
+    <p>Ummah Connect</p>
+  </div>
+  <div class="container">
+    <p class="effective">Last updated: March 7, 2026</p>
+
+    <div class="section">
+      <h2>1. Introduction</h2>
+      <p>Ummah Connect ("we," "our," or "us") is a community mobile application serving the Muslim community in the Triangle area of North Carolina. This Privacy Policy explains how we collect, use, and protect your information when you use our application.</p>
+      <p>By using Ummah Connect, you agree to the collection and use of information in accordance with this policy.</p>
+    </div>
+
+    <div class="section">
+      <h2>2. Information We Collect</h2>
+
+      <h3>2.1 Information You Provide</h3>
+      <ul>
+        <li><strong>Business Submissions:</strong> When you submit a business to our directory, we collect the business name, category, description, address, phone number, website, and your email address for verification purposes.</li>
+        <li><strong>Feedback:</strong> If you submit a bug report or feature request through the app, any information you include (description, optional email) is sent via your device's email client.</li>
+      </ul>
+
+      <h3>2.2 Information Collected Automatically</h3>
+      <ul>
+        <li><strong>Location Data:</strong> With your permission, we access your device's location to calculate prayer times for your exact position, determine Qibla direction, show distance to nearby masjids, and sort restaurants and businesses by proximity. Location data is processed on your device and is not stored on our servers.</li>
+        <li><strong>Push Notification Tokens:</strong> If you enable notifications, your device's Expo push token is stored on our server to deliver prayer time reminders and community announcements. No personal identity is tied to these tokens.</li>
+        <li><strong>Device Sensor Data:</strong> We access your device's magnetometer (compass) to display the Qibla direction. This data is used locally and never transmitted.</li>
+      </ul>
+
+      <h3>2.3 Information from Third Parties</h3>
+      <ul>
+        <li><strong>Google Calendar:</strong> Community event data is fetched from a linked Google Calendar to display upcoming events. No personal calendar data is accessed.</li>
+        <li><strong>Google Places API:</strong> We use Google Places to enrich business directory listings with ratings, photos, hours of operation, and location data. This data is cached on our server to minimize API usage.</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2>3. How We Use Your Information</h2>
+      <p>We use the information we collect to:</p>
+      <ul>
+        <li>Display accurate prayer times and Qibla direction based on your location</li>
+        <li>Show nearby masjids, halal restaurants, and Muslim-owned businesses</li>
+        <li>Send push notifications for prayer reminders and community announcements (if opted in)</li>
+        <li>Process and review business directory submissions</li>
+        <li>Display community events from the shared calendar</li>
+        <li>Improve and maintain the application</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2>4. Data Storage and Security</h2>
+      <ul>
+        <li><strong>Server Data:</strong> Business submissions, push notification tokens, and cached third-party data (restaurant listings, event data, Google Places details) are stored in a PostgreSQL database hosted on Replit.</li>
+        <li><strong>On-Device Data:</strong> User preferences (theme, calculation method, notification settings) are stored locally on your device using AsyncStorage and are never transmitted to our servers.</li>
+        <li><strong>Location Data:</strong> Your GPS coordinates are processed in real-time on your device for prayer calculations and proximity features. We do not store or transmit your location to our servers.</li>
+        <li>We use industry-standard security measures to protect the data we store, including encrypted connections (HTTPS) for all communications.</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2>5. Data Sharing</h2>
+      <p>We do not sell, trade, or rent your personal information to third parties. We may share data only in the following circumstances:</p>
+      <ul>
+        <li><strong>Service Providers:</strong> We use Google APIs (Calendar, Places) to power certain features. Data sent to these services is governed by <a href="https://policies.google.com/privacy" target="_blank">Google's Privacy Policy</a>.</li>
+        <li><strong>Push Notifications:</strong> Push tokens are sent to Expo's push notification service to deliver notifications. See <a href="https://expo.dev/privacy" target="_blank">Expo's Privacy Policy</a>.</li>
+        <li><strong>Legal Requirements:</strong> We may disclose information if required by law or to protect the rights and safety of our users or the public.</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2>6. Your Rights and Choices</h2>
+      <ul>
+        <li><strong>Location Access:</strong> You can deny or revoke location permissions at any time through your device settings. The app will still function with reduced features (manual location entry is not supported; prayer times will use a default location).</li>
+        <li><strong>Push Notifications:</strong> You can disable notifications through the app settings or your device settings. Your push token will remain stored but no notifications will be delivered.</li>
+        <li><strong>Business Submissions:</strong> You may request removal of a business listing you submitted by contacting us.</li>
+        <li><strong>Data Deletion:</strong> You may request deletion of any personal data we hold by contacting us at the email below.</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2>7. Children's Privacy</h2>
+      <p>Ummah Connect is not directed at children under 13. We do not knowingly collect personal information from children. If you believe a child has provided us with personal data, please contact us so we can take appropriate action.</p>
+    </div>
+
+    <div class="section">
+      <h2>8. Third-Party Links</h2>
+      <p>Our app may contain links to external websites (business websites, event registration pages, Google Maps, etc.). We are not responsible for the privacy practices of these external sites. We encourage you to read the privacy policies of any third-party services you interact with.</p>
+    </div>
+
+    <div class="section">
+      <h2>9. Changes to This Policy</h2>
+      <p>We may update this Privacy Policy from time to time. Changes will be reflected on this page with an updated "Last updated" date. Your continued use of the app after changes constitutes acceptance of the updated policy.</p>
+    </div>
+
+    <div class="section">
+      <h2>10. Contact Us</h2>
+      <p>If you have any questions about this Privacy Policy or wish to exercise your data rights, please contact us at:</p>
+      <p><strong>Email:</strong> <a href="mailto:admin@ummahconnect.app">admin@ummahconnect.app</a></p>
+      <p><strong>App:</strong> Use the feedback form in the app's settings menu</p>
+    </div>
+
+    <div class="footer">
+      <p>&copy; 2026 Ummah Connect. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>

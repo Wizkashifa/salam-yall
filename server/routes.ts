@@ -863,6 +863,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  async function enrichBusinessWithPlaces(businessId: number) {
+    try {
+      const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+      if (!apiKey) return;
+      const biz = await pool.query("SELECT * FROM businesses WHERE id = $1", [businessId]);
+      if (biz.rows.length === 0) return;
+      const business = biz.rows[0];
+      if (business.place_id) return;
+
+      const searchResp = await fetch(
+        `https://places.googleapis.com/v1/places:searchText`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": "places.id,places.rating,places.userRatingCount,places.photos,places.regularOpeningHours,places.location" },
+          body: JSON.stringify({ textQuery: `${business.name} ${business.address}` }),
+        }
+      );
+      const searchData = await searchResp.json();
+      const place = searchData.places?.[0];
+      if (!place) {
+        await pool.query(`UPDATE businesses SET place_id = 'none' WHERE id = $1`, [businessId]);
+        return;
+      }
+      const photoRef = place.photos?.[0]?.name || null;
+      const hours = place.regularOpeningHours?.weekdayDescriptions || null;
+      await pool.query(
+        `UPDATE businesses SET place_id = $1, rating = $2, user_ratings_total = $3, photo_reference = $4, business_hours = $5, lat = $6, lng = $7 WHERE id = $8`,
+        [place.id, place.rating || null, place.userRatingCount || null, photoRef, hours ? JSON.stringify(hours) : null, place.location?.latitude || null, place.location?.longitude || null, businessId]
+      );
+      console.log(`[Business Enrich] Enriched business #${businessId} "${business.name}" with Places data`);
+    } catch (err: any) {
+      console.error(`[Business Enrich] Error enriching business #${businessId}:`, err.message);
+    }
+  }
+
+  async function dailyBusinessEnrichment() {
+    try {
+      const result = await pool.query(
+        "SELECT id, name FROM businesses WHERE status = 'approved' AND place_id IS NULL"
+      );
+      if (result.rows.length === 0) {
+        console.log("[Business Enrich] All approved businesses already enriched");
+        return;
+      }
+      console.log(`[Business Enrich] Found ${result.rows.length} approved businesses to enrich`);
+      for (const biz of result.rows) {
+        await enrichBusinessWithPlaces(biz.id);
+        await new Promise(r => setTimeout(r, 500));
+      }
+      console.log("[Business Enrich] Daily enrichment complete");
+    } catch (err: any) {
+      console.error("[Business Enrich] Daily enrichment error:", err.message);
+    }
+  }
+
+  setTimeout(() => dailyBusinessEnrichment(), 15000);
+  setInterval(() => dailyBusinessEnrichment(), 24 * 60 * 60 * 1000);
+
   app.patch("/api/admin/businesses/:id", async (req, res) => {
     try {
       if (!isAdminAuthorized(req)) {
@@ -882,6 +940,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       if (result.rows.length === 0) {
         return res.status(404).json({ error: "Business not found" });
+      }
+      if (status === "approved") {
+        enrichBusinessWithPlaces(id).catch(() => {});
       }
       res.json(result.rows[0]);
     } catch (error: any) {
@@ -917,10 +978,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     path.resolve(process.cwd(), "server", "templates", "admin.html"),
     "utf-8"
   );
+  const privacyHtml = fs.readFileSync(
+    path.resolve(process.cwd(), "server", "templates", "privacy-policy.html"),
+    "utf-8"
+  );
 
   app.get("/admin", (_req, res) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.send(adminHtml);
+  });
+
+  app.get("/privacy", (_req, res) => {
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.send(privacyHtml);
   });
 
   const crypto = await import("crypto");
