@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="triGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#D4A843"/>
+      <stop offset="55%" stop-color="#D4A843"/>
+      <stop offset="100%" stop-color="#F0E0B0"/>
+    </linearGradient>
+    <mask id="crescentMask">
+      <rect width="1024" height="1024" fill="white"/>
+      <circle cx="560" cy="455" r="88" fill="black"/>
+    </mask>
+  </defs>
+
+  <polygon points="512,165 160,755 864,755" fill="none" stroke="url(#triGrad)" stroke-width="48" stroke-linejoin="round"/>
+
+  <circle cx="525" cy="488" r="108" fill="white" mask="url(#crescentMask)"/>
+</svg>
