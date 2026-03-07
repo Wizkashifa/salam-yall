@@ -44,8 +44,8 @@ function ClassicTabLayout() {
         tabBarStyle: {
           position: "absolute",
           backgroundColor: isIOS ? "transparent" : colors.background,
-          borderTopWidth: isWeb ? 1 : 0,
-          borderTopColor: colors.border,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: colors.borderLight,
           elevation: 0,
           ...(isWeb ? { height: 84 } : {}),
         },

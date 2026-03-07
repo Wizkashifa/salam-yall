@@ -41,12 +41,17 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 
 ## APIs
 
-- `GET /api/events` - Fetches upcoming events with caching (15min TTL), returns organizer, imageUrl, registrationUrl fields
+- `GET /api/events` - Fetches upcoming events with caching (2min TTL), returns organizer, imageUrl, registrationUrl fields
+- `POST /api/events/refresh` - Force-refresh events from Google Calendar
+- `GET /api/ticker` - Fetches active ticker/announcement messages (auto-filters expired)
+- `POST /api/ticker` - Create a ticker message (fields: message, type: info|urgent|event|reminder, expires_at)
+- `DELETE /api/ticker/:id` - Deactivate a ticker message
 - `GET /api/businesses` - Returns approved businesses from PostgreSQL database
 - `POST /api/businesses/submit` - Submit a new business for review (requires name, category, address, email)
 
 ## Database Schema
 
+- **ticker_messages** table: id (serial PK), message, type (info/urgent/event/reminder), active (boolean), created_at, expires_at
 - **businesses** table: id (serial PK), name, category, description, address, phone, website, submitted_by_email, status (pending/approved/rejected), created_at
 
 ## Event Processing Pipeline
@@ -61,6 +66,15 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
   4. Regex pattern detection for new venues
   5. Venue name extraction from location field
 - **Scheduled refresh**: Events cached server-side, refreshed every hour, with 15-min TTL for API requests
+
+## Ticker/Announcement System
+
+- **Dynamic ticker banner** on home screen — scrolling text for community announcements
+- Only renders when there are active ticker messages in the database
+- Supports 4 message types: info (gold), urgent (red), event, reminder
+- Messages can have optional `expires_at` timestamp for auto-expiry
+- Refreshes every 60 seconds via React Query
+- Manage via API: POST to create, DELETE to deactivate — no app update needed
 
 ## Prayer Screen Features
 

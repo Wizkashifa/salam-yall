@@ -37,6 +37,8 @@ import {
   type Masjid,
 } from "@/lib/prayer-utils";
 
+const USE_NATIVE_DRIVER = Platform.OS !== "web";
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -84,7 +86,7 @@ function QiblaCompass({ qiblaBearing, colors, isDark }: { qiblaBearing: number; 
   const arrowRotation = `${rotation}deg`;
 
   return (
-    <View style={[styles.compassContainer, { backgroundColor: isDark ? "#1C2E24" : "#E8F0EC", borderColor: colors.border }]}>
+    <View style={[styles.compassContainer, { backgroundColor: isDark ? "#1A2E22" : "#EDF5F0", borderColor: colors.borderLight }]}>
       <View style={[styles.compassRing, { borderColor: colors.gold }]}>
         <View style={[styles.compassArrowWrap, { transform: [{ rotate: arrowRotation }] }]}>
           <View style={[styles.compassArrow, { backgroundColor: colors.emerald }]} />
@@ -96,6 +98,83 @@ function QiblaCompass({ qiblaBearing, colors, isDark }: { qiblaBearing: number; 
         <Text style={[styles.compassTitle, { color: colors.text }]}>Qibla</Text>
         <Text style={[styles.compassBearing, { color: colors.textSecondary }]}>{Math.round(qiblaBearing)}°</Text>
       </View>
+    </View>
+  );
+}
+
+interface TickerMessage {
+  id: number;
+  message: string;
+  type: string;
+  created_at: string;
+  expires_at: string | null;
+}
+
+function TickerBanner({ colors, isDark }: { colors: any; isDark: boolean }) {
+  const { data: messages } = useQuery<TickerMessage[]>({
+    queryKey: ["/api/ticker"],
+    refetchInterval: 60 * 1000,
+  });
+
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  const activeMessages = messages?.filter(m => m.type !== "urgent") || [];
+  const urgentMessages = messages?.filter(m => m.type === "urgent") || [];
+  const allMessages = [...urgentMessages, ...activeMessages];
+  const messageSignature = allMessages.map(m => m.id).join(",");
+
+  useEffect(() => {
+    if (!allMessages.length || !containerWidth) return;
+    const textWidth = allMessages.reduce((sum, m) => sum + m.message.length * 8 + 60, 0);
+    const totalWidth = Math.max(textWidth, containerWidth * 2);
+
+    scrollX.setValue(containerWidth);
+    const animation = Animated.loop(
+      Animated.timing(scrollX, {
+        toValue: -totalWidth,
+        duration: totalWidth * 30,
+        useNativeDriver: USE_NATIVE_DRIVER,
+      })
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [messageSignature, containerWidth]);
+
+  if (!allMessages.length) return null;
+
+  const hasUrgent = urgentMessages.length > 0;
+  const bgColor = hasUrgent ? colors.tickerUrgentBg : colors.tickerBg;
+  const textColor = hasUrgent ? colors.tickerUrgentText : colors.tickerText;
+  const iconColor = hasUrgent ? colors.tickerUrgentText : colors.gold;
+
+  return (
+    <View style={[styles.tickerContainer, { backgroundColor: bgColor, borderBottomColor: colors.borderLight }]}>
+      <View style={styles.tickerIconWrap}>
+        <Ionicons name={hasUrgent ? "alert-circle" : "megaphone"} size={14} color={iconColor} />
+      </View>
+      <View
+        style={styles.tickerScrollArea}
+        onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
+      >
+        <Animated.View style={[styles.tickerTextRow, { transform: [{ translateX: scrollX }] }]}>
+          {allMessages.map((msg, i) => (
+            <Text key={msg.id} style={[styles.tickerText, { color: textColor }]}>
+              {msg.message}
+              {i < allMessages.length - 1 ? "     ✦     " : ""}
+            </Text>
+          ))}
+        </Animated.View>
+      </View>
+    </View>
+  );
+}
+
+function SectionHeader({ title, colors, rightElement }: { title: string; colors: any; rightElement?: React.ReactNode }) {
+  return (
+    <View style={styles.sectionHeaderRow}>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
+      {rightElement}
     </View>
   );
 }
@@ -374,29 +453,33 @@ export default function PrayerScreen() {
   }
 
   const padNum = (n: number) => n.toString().padStart(2, "0");
-
   const countdownMins = countdown.hours * 60 + countdown.minutes;
 
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={{
-        paddingTop: Platform.OS === "web" ? 67 : insets.top + 8,
-        paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 56,
+        paddingTop: Platform.OS === "web" ? 67 : insets.top,
+        paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 60,
       }}
       showsVerticalScrollIndicator={false}
     >
+      <TickerBanner colors={colors} isDark={isDark} />
+
       <View style={styles.headerSection}>
         <View style={styles.headerTopRow}>
           <Pressable
-            style={({ pressed }) => [styles.menuButton, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
+            style={({ pressed }) => [
+              styles.menuButton,
+              { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.7 : 1 },
+            ]}
             onPress={() => { openMenu(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
             testID="menu-button"
             hitSlop={8}
           >
             <Ionicons name="menu" size={20} color={colors.text} />
           </Pressable>
-          <View style={{ flex: 1, marginLeft: 12 }}>
+          <View style={styles.headerDateBlock}>
             <Text style={[styles.greeting, { color: colors.textSecondary }]}>{gregorianDate}</Text>
             {hijriDate ? (
               <Text style={[styles.hijriDate, { color: colors.gold }]}>{hijriDate}</Text>
@@ -407,215 +490,268 @@ export default function PrayerScreen() {
       </View>
 
       {nearMosque && !silenceAlertDismissed ? (
-        <View style={[styles.silenceAlert, { backgroundColor: isDark ? "#3D2323" : "#FEF2F2", borderColor: isDark ? "#5C3333" : "#FECACA" }]}>
+        <View style={[styles.silenceAlert, { backgroundColor: isDark ? "#2A1818" : "#FEF2F2", borderColor: isDark ? "#3D2323" : "#FECACA" }]}>
           <View style={styles.silenceAlertContent}>
-            <MaterialCommunityIcons name="volume-off" size={18} color={isDark ? "#F87171" : "#DC2626"} />
+            <View style={[styles.silenceIconWrap, { backgroundColor: isDark ? "rgba(248, 113, 113, 0.15)" : "rgba(220, 38, 38, 0.08)" }]}>
+              <MaterialCommunityIcons name="volume-off" size={16} color={isDark ? "#F87171" : "#DC2626"} />
+            </View>
             <Text style={[styles.silenceAlertTitle, { color: isDark ? "#F87171" : "#DC2626", flex: 1 }]}>
               Near {nearMosque.name} — silence your phone
             </Text>
             <Pressable onPress={dismissSilenceAlert} hitSlop={8}>
-              <Ionicons name="close" size={18} color={isDark ? "#FCA5A5" : "#991B1B"} />
+              <Ionicons name="close" size={16} color={isDark ? "#FCA5A5" : "#991B1B"} />
             </Pressable>
           </View>
         </View>
       ) : null}
 
-      <LinearGradient
-        colors={[colors.gradientStart, colors.gradientEnd]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.countdownCard}
-      >
-        <View style={styles.countdownGoldAccent} />
-        {nextPrayer ? (
-          <>
-            <View style={styles.countdownTopRow}>
-              <Text style={styles.countdownLabel}>Next Prayer</Text>
-              <Text style={styles.countdownTime}>at {formatTime(nextPrayer.time)}</Text>
-            </View>
-            <Text style={styles.countdownPrayerName}>{nextPrayer.label}</Text>
-            <View style={styles.countdownTimerRow}>
-              <View style={styles.countdownUnit}>
-                <Text style={styles.countdownNumber}>{padNum(countdown.hours)}</Text>
-                <Text style={styles.countdownUnitLabel}>hrs</Text>
-              </View>
-              <Text style={styles.countdownSeparator}>:</Text>
-              <View style={styles.countdownUnit}>
-                <Text style={styles.countdownNumber}>{padNum(countdown.minutes)}</Text>
-                <Text style={styles.countdownUnitLabel}>min</Text>
-              </View>
-              <Text style={styles.countdownSeparator}>:</Text>
-              <View style={styles.countdownUnit}>
-                <Text style={styles.countdownNumber}>{padNum(countdown.seconds)}</Text>
-                <Text style={styles.countdownUnitLabel}>sec</Text>
-              </View>
-            </View>
-          </>
-        ) : (
-          <Text style={styles.countdownLabel}>All prayers completed for today</Text>
-        )}
-      </LinearGradient>
-
-      {}
-      <Pressable
-        style={[styles.dropdownHeader, { backgroundColor: colors.surface, borderColor: colors.border }]}
-        onPress={togglePrayWhere}
-        testID="pray-where-toggle"
-      >
-        <View style={[styles.dropdownIconWrap, { backgroundColor: isDark ? "#1C2E24" : "#E8F0EC" }]}>
-          <MaterialCommunityIcons name="mosque" size={16} color={colors.emerald} />
-        </View>
-        <View style={styles.dropdownHeaderText}>
-          <Text style={[styles.dropdownTitle, { color: colors.text }]}>Where Should I Pray?</Text>
-          {!prayWhereOpen && nextPrayer ? (
-            <Text style={[styles.dropdownSubtitle, { color: colors.textSecondary }]}>
-              {nextPrayer.label} in {countdownMins > 0 ? `${countdownMins} min` : "< 1 min"}
-            </Text>
-          ) : null}
-        </View>
-        <Ionicons name={prayWhereOpen ? "chevron-up" : "chevron-down"} size={18} color={colors.textSecondary} />
-      </Pressable>
-      {prayWhereOpen ? (
-        <View style={[styles.dropdownBody, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={styles.heroCardWrapper}>
+        <LinearGradient
+          colors={[colors.gradientStart, colors.gradientMid, colors.gradientEnd]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.heroCard}
+        >
+          <View style={styles.heroGoldAccent} />
+          <View style={styles.heroBottomAccent} />
           {nextPrayer ? (
-            <View style={styles.prayWhereSubhead}>
-              <Text style={[styles.prayWhereTimerLabel, { color: colors.gold }]}>
-                {nextPrayer.label} in {countdownMins > 0 ? `${countdownMins} minutes` : "< 1 minute"}
-              </Text>
-              <Text style={[styles.prayWhereSubtext, { color: colors.textSecondary }]}>Best options near you</Text>
-            </View>
-          ) : null}
-          {nearbyMasjids.map((item, idx) => (
-            <Pressable
-              key={item.masjid.name}
-              style={({ pressed }) => [styles.prayWhereRow, idx < nearbyMasjids.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }, pressed && { opacity: 0.7 }]}
-              onPress={() => openMasjidNav(item.masjid)}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.prayWhereName, { color: colors.text }]} numberOfLines={1}>
-                  {item.masjid.name.replace(/\s*\(.*\)/, "")}
-                </Text>
+            <>
+              <View style={styles.heroTopRow}>
+                <View style={styles.heroLabelPill}>
+                  <MaterialCommunityIcons name="clock-outline" size={12} color="rgba(255,255,255,0.8)" />
+                  <Text style={styles.heroLabelText}>Next Prayer</Text>
+                </View>
+                <Text style={styles.heroTimeAt}>at {formatTime(nextPrayer.time)}</Text>
               </View>
-              <Text style={[styles.prayWhereDist, { color: colors.gold }]}>{item.driveMinutes} min</Text>
-              <Ionicons name="navigate-outline" size={14} color={colors.emerald} style={{ marginLeft: 6 }} />
-            </Pressable>
-          ))}
-        </View>
-      ) : null}
+              <Text style={styles.heroPrayerName}>{nextPrayer.label}</Text>
+              <View style={styles.heroTimerRow}>
+                <View style={styles.heroTimerUnit}>
+                  <Text style={styles.heroTimerNumber}>{padNum(countdown.hours)}</Text>
+                  <Text style={styles.heroTimerLabel}>hrs</Text>
+                </View>
+                <Text style={styles.heroTimerSep}>:</Text>
+                <View style={styles.heroTimerUnit}>
+                  <Text style={styles.heroTimerNumber}>{padNum(countdown.minutes)}</Text>
+                  <Text style={styles.heroTimerLabel}>min</Text>
+                </View>
+                <Text style={styles.heroTimerSep}>:</Text>
+                <View style={styles.heroTimerUnit}>
+                  <Text style={styles.heroTimerNumber}>{padNum(countdown.seconds)}</Text>
+                  <Text style={styles.heroTimerLabel}>sec</Text>
+                </View>
+              </View>
+            </>
+          ) : (
+            <Text style={styles.heroLabelText}>All prayers completed for today</Text>
+          )}
+        </LinearGradient>
+      </View>
 
-      {}
-      {tonightEvents.length > 0 ? (
-        <>
-          <Pressable
-            style={[styles.dropdownHeader, { backgroundColor: colors.surface, borderColor: colors.border, marginTop: 6 }]}
-            onPress={toggleTonight}
-            testID="tonight-toggle"
-          >
-            <View style={[styles.dropdownIconWrap, { backgroundColor: isDark ? "#3D3323" : "#FEF3C7" }]}>
-              <Ionicons name="moon" size={14} color={colors.gold} />
-            </View>
-            <View style={styles.dropdownHeaderText}>
-              <Text style={[styles.dropdownTitle, { color: colors.text }]}>Tonight Near You</Text>
-              {!tonightOpen ? (
-                <Text style={[styles.dropdownSubtitle, { color: colors.textSecondary }]}>
-                  {tonightEvents.length} event{tonightEvents.length !== 1 ? "s" : ""} happening
+      <View style={styles.cardsSection}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.dropdownHeader,
+            {
+              backgroundColor: colors.surface,
+              borderColor: prayWhereOpen ? colors.emerald + "40" : colors.border,
+              opacity: pressed ? 0.95 : 1,
+            },
+          ]}
+          onPress={togglePrayWhere}
+          testID="pray-where-toggle"
+        >
+          <View style={[styles.dropdownIconWrap, { backgroundColor: isDark ? "#1A2E22" : "#EDF5F0" }]}>
+            <MaterialCommunityIcons name="mosque" size={16} color={colors.emerald} />
+          </View>
+          <View style={styles.dropdownHeaderText}>
+            <Text style={[styles.dropdownTitle, { color: colors.text }]}>Where Should I Pray?</Text>
+            {!prayWhereOpen && nextPrayer ? (
+              <Text style={[styles.dropdownSubtitle, { color: colors.textSecondary }]}>
+                {nextPrayer.label} in {countdownMins > 0 ? `${countdownMins} min` : "< 1 min"}
+              </Text>
+            ) : null}
+          </View>
+          <View style={[styles.chevronCircle, { backgroundColor: isDark ? "#1A2E22" : "#EDF5F0" }]}>
+            <Ionicons name={prayWhereOpen ? "chevron-up" : "chevron-down"} size={14} color={colors.textSecondary} />
+          </View>
+        </Pressable>
+        {prayWhereOpen ? (
+          <View style={[styles.dropdownBody, { backgroundColor: colors.surface, borderColor: prayWhereOpen ? colors.emerald + "40" : colors.border }]}>
+            {nextPrayer ? (
+              <View style={styles.prayWhereSubhead}>
+                <Text style={[styles.prayWhereTimerLabel, { color: colors.gold }]}>
+                  {nextPrayer.label} in {countdownMins > 0 ? `${countdownMins} minutes` : "< 1 minute"}
                 </Text>
-              ) : null}
-            </View>
-            <Ionicons name={tonightOpen ? "chevron-up" : "chevron-down"} size={18} color={colors.textSecondary} />
-          </Pressable>
-          {tonightOpen ? (
-            <View style={[styles.dropdownBody, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              {tonightEvents.map((ev, idx) => (
-                <View
-                  key={ev.id}
-                  style={[styles.tonightRow, idx < tonightEvents.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}
-                >
-                  <View style={[styles.tonightDot, { backgroundColor: colors.gold }]} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.tonightTitle, { color: colors.text }]} numberOfLines={1}>{ev.title}</Text>
-                    {ev.masjidName ? (
-                      <Text style={[styles.tonightMasjid, { color: colors.textSecondary }]} numberOfLines={1}>{ev.masjidName}</Text>
-                    ) : null}
-                  </View>
-                  <Text style={[styles.tonightTime, { color: colors.gold }]}>
-                    {ev.time.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                <Text style={[styles.prayWhereSubtext, { color: colors.textSecondary }]}>Best options near you</Text>
+              </View>
+            ) : null}
+            {nearbyMasjids.map((item, idx) => (
+              <Pressable
+                key={item.masjid.name}
+                style={({ pressed }) => [
+                  styles.prayWhereRow,
+                  idx < nearbyMasjids.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight },
+                  pressed && { opacity: 0.7, backgroundColor: colors.heroOverlay },
+                ]}
+                onPress={() => openMasjidNav(item.masjid)}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.prayWhereName, { color: colors.text }]} numberOfLines={1}>
+                    {item.masjid.name.replace(/\s*\(.*\)/, "")}
                   </Text>
                 </View>
-              ))}
-            </View>
-          ) : null}
-        </>
-      ) : null}
+                <View style={styles.prayWhereDistPill}>
+                  <Text style={[styles.prayWhereDist, { color: colors.gold }]}>{item.driveMinutes} min</Text>
+                </View>
+                <Ionicons name="navigate-outline" size={14} color={colors.emerald} style={{ marginLeft: 8 }} />
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+
+        {tonightEvents.length > 0 ? (
+          <>
+            <Pressable
+              style={({ pressed }) => [
+                styles.dropdownHeader,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: tonightOpen ? colors.gold + "40" : colors.border,
+                  marginTop: 10,
+                  opacity: pressed ? 0.95 : 1,
+                },
+              ]}
+              onPress={toggleTonight}
+              testID="tonight-toggle"
+            >
+              <View style={[styles.dropdownIconWrap, { backgroundColor: isDark ? "#2A2318" : "#FFF8E7" }]}>
+                <Ionicons name="moon" size={14} color={colors.gold} />
+              </View>
+              <View style={styles.dropdownHeaderText}>
+                <Text style={[styles.dropdownTitle, { color: colors.text }]}>Tonight Near You</Text>
+                {!tonightOpen ? (
+                  <Text style={[styles.dropdownSubtitle, { color: colors.textSecondary }]}>
+                    {tonightEvents.length} event{tonightEvents.length !== 1 ? "s" : ""} happening
+                  </Text>
+                ) : null}
+              </View>
+              <View style={[styles.chevronCircle, { backgroundColor: isDark ? "#2A2318" : "#FFF8E7" }]}>
+                <Ionicons name={tonightOpen ? "chevron-up" : "chevron-down"} size={14} color={colors.textSecondary} />
+              </View>
+            </Pressable>
+            {tonightOpen ? (
+              <View style={[styles.dropdownBody, { backgroundColor: colors.surface, borderColor: tonightOpen ? colors.gold + "40" : colors.border }]}>
+                {tonightEvents.map((ev, idx) => (
+                  <View
+                    key={ev.id}
+                    style={[styles.tonightRow, idx < tonightEvents.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight }]}
+                  >
+                    <View style={[styles.tonightDot, { backgroundColor: colors.gold }]} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.tonightTitle, { color: colors.text }]} numberOfLines={1}>{ev.title}</Text>
+                      {ev.masjidName ? (
+                        <Text style={[styles.tonightMasjid, { color: colors.textSecondary }]} numberOfLines={1}>{ev.masjidName}</Text>
+                      ) : null}
+                    </View>
+                    <Text style={[styles.tonightTime, { color: colors.gold }]}>
+                      {ev.time.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+          </>
+        ) : null}
+      </View>
 
       {locationPermission === false ? (
         <Pressable
-          style={[styles.permissionBanner, { backgroundColor: colors.bannerBg, marginTop: 6 }]}
+          style={[styles.permissionBanner, { backgroundColor: colors.bannerBg }]}
           onPress={loadPrayerData}
         >
           <Ionicons name="location-outline" size={14} color={colors.bannerText} />
-          <Text style={{ color: colors.bannerText, fontSize: 12, flex: 1, marginLeft: 6, fontFamily: "Inter_500Medium" }}>
+          <Text style={{ color: colors.bannerText, fontSize: 12, flex: 1, marginLeft: 8, fontFamily: "Inter_500Medium" }}>
             Enable location for accurate prayer times
           </Text>
         </Pressable>
       ) : null}
 
       <View style={styles.prayerListSection}>
-        <View style={styles.prayerListHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Prayer Times</Text>
-          <Pressable
-            style={[styles.notifToggle, { backgroundColor: notificationsEnabled ? colors.emerald : colors.surface, borderColor: colors.border, borderWidth: notificationsEnabled ? 0 : 1 }]}
-            onPress={toggleNotifications}
-            testID="notification-toggle"
-          >
-            <Ionicons
-              name={notificationsEnabled ? "notifications" : "notifications-outline"}
-              size={14}
-              color={notificationsEnabled ? "#fff" : colors.textSecondary}
-            />
-          </Pressable>
-        </View>
-        {prayers.map((prayer) => {
-          const isNext = nextPrayer?.name === prayer.name;
-          const isPast = prayer.time < now && !isNext;
-
-          return (
-            <View
-              key={prayer.name}
+        <SectionHeader
+          title="Prayer Times"
+          colors={colors}
+          rightElement={
+            <Pressable
               style={[
-                styles.prayerRow,
-                { backgroundColor: colors.surface },
-                isNext && { borderWidth: 1.5, borderColor: colors.gold },
+                styles.notifToggle,
+                {
+                  backgroundColor: notificationsEnabled ? colors.emerald : colors.surface,
+                  borderColor: notificationsEnabled ? colors.emerald : colors.border,
+                  borderWidth: 1,
+                },
               ]}
+              onPress={toggleNotifications}
+              testID="notification-toggle"
             >
-              <View style={[styles.prayerIconBg, isNext ? { backgroundColor: colors.prayerActiveBg } : { backgroundColor: colors.prayerIconBg }]}>
-                <MaterialCommunityIcons
-                  name={prayer.icon as any}
-                  size={16}
-                  color={isNext ? colors.prayerActiveText : colors.emerald}
-                />
+              <Ionicons
+                name={notificationsEnabled ? "notifications" : "notifications-outline"}
+                size={14}
+                color={notificationsEnabled ? "#fff" : colors.textSecondary}
+              />
+            </Pressable>
+          }
+        />
+        <View style={[styles.prayerListCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {prayers.map((prayer, idx) => {
+            const isNext = nextPrayer?.name === prayer.name;
+            const isPast = prayer.time < now && !isNext;
+
+            return (
+              <View
+                key={prayer.name}
+                style={[
+                  styles.prayerRow,
+                  isNext && { backgroundColor: isDark ? colors.goldLight : "#FDFAF2" },
+                  idx < prayers.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight },
+                ]}
+              >
+                <View style={[
+                  styles.prayerIconBg,
+                  isNext ? { backgroundColor: colors.gold + "20" } : { backgroundColor: colors.prayerIconBg },
+                ]}>
+                  <MaterialCommunityIcons
+                    name={prayer.icon as any}
+                    size={16}
+                    color={isNext ? colors.gold : isPast ? colors.textTertiary : colors.emerald}
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.prayerName,
+                    { color: isPast ? colors.textTertiary : colors.text },
+                    isNext && { color: colors.gold, fontFamily: "Inter_700Bold" },
+                  ]}
+                >
+                  {prayer.label}
+                </Text>
+                {isNext ? (
+                  <View style={[styles.nextBadge, { backgroundColor: colors.gold + "18" }]}>
+                    <Text style={[styles.nextBadgeText, { color: colors.gold }]}>Next</Text>
+                  </View>
+                ) : null}
+                <Text
+                  style={[
+                    styles.prayerTime,
+                    { color: isPast ? colors.textTertiary : colors.text },
+                    isNext && { color: colors.gold, fontFamily: "Inter_700Bold" },
+                  ]}
+                >
+                  {formatTime(prayer.time)}
+                </Text>
               </View>
-              <Text
-                style={[
-                  styles.prayerName,
-                  { color: isPast ? colors.textSecondary : colors.text },
-                  isNext && { color: colors.gold, fontFamily: "Inter_700Bold" },
-                ]}
-              >
-                {prayer.label}
-              </Text>
-              <Text
-                style={[
-                  styles.prayerTime,
-                  { color: isPast ? colors.textSecondary : colors.text },
-                  isNext && { color: colors.gold, fontFamily: "Inter_700Bold" },
-                ]}
-              >
-                {formatTime(prayer.time)}
-              </Text>
-            </View>
-          );
-        })}
+            );
+          })}
+        </View>
       </View>
     </ScrollView>
   );
@@ -630,209 +766,58 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  headerSection: {
-    paddingHorizontal: 16,
-    marginBottom: 8,
-  },
-  greeting: {
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
-  },
-  hijriDate: {
-    fontSize: 14,
-    fontFamily: "Inter_700Bold",
-    marginTop: 1,
-  },
-  countdownCard: {
-    marginHorizontal: 16,
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+  tickerContainer: {
+    flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     overflow: "hidden",
   },
-  countdownGoldAccent: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 2,
-    backgroundColor: "#D4A843",
-  },
-  countdownTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
-  },
-  countdownLabel: {
-    color: "rgba(255,255,255,0.7)",
-    fontSize: 11,
-    fontFamily: "Inter_500Medium",
-    textTransform: "uppercase" as const,
-    letterSpacing: 1,
-  },
-  countdownPrayerName: {
-    color: "#D4A843",
-    fontSize: 30,
-    fontFamily: "PlayfairDisplay_700Bold",
-    marginTop: 2,
-  },
-  countdownTimerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 8,
-  },
-  countdownUnit: {
-    alignItems: "center",
-    minWidth: 44,
-  },
-  countdownNumber: {
-    color: "#fff",
-    fontSize: 32,
-    fontFamily: "Inter_700Bold",
-  },
-  countdownUnitLabel: {
-    color: "rgba(255,255,255,0.6)",
-    fontSize: 10,
-    fontFamily: "Inter_500Medium",
-    marginTop: -2,
-  },
-  countdownSeparator: {
-    color: "rgba(255,255,255,0.5)",
-    fontSize: 28,
-    fontFamily: "Inter_700Bold",
-    marginHorizontal: 2,
-    marginTop: -6,
-  },
-  countdownTime: {
-    color: "rgba(255,255,255,0.6)",
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
-  },
-  silenceAlert: {
-    marginHorizontal: 16,
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-  },
-  silenceAlertContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  silenceAlertTitle: {
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
-  },
-  dropdownHeader: {
-    marginHorizontal: 16,
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-  },
-  dropdownIconWrap: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
+  tickerIconWrap: {
     marginRight: 10,
   },
-  dropdownHeaderText: {
+  tickerScrollArea: {
     flex: 1,
+    overflow: "hidden",
+    height: 18,
   },
-  dropdownTitle: {
-    fontSize: 14,
-    fontFamily: "PlayfairDisplay_700Bold",
-  },
-  dropdownSubtitle: {
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
-    marginTop: 1,
-  },
-  dropdownBody: {
-    marginHorizontal: 16,
-    marginTop: -1,
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
-    borderWidth: 1,
-    borderTopWidth: 0,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-  },
-  prayWhereSubhead: {
-    paddingVertical: 6,
-    marginBottom: 2,
-  },
-  prayWhereTimerLabel: {
-    fontSize: 13,
-    fontFamily: "PlayfairDisplay_600SemiBold",
-  },
-  prayWhereSubtext: {
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
-    marginTop: 1,
-  },
-  prayWhereRow: {
+  tickerTextRow: {
     flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 9,
+    position: "absolute",
   },
-  prayWhereName: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-  },
-  prayWhereDist: {
-    fontSize: 13,
-    fontFamily: "Inter_700Bold",
-  },
-  tonightRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 9,
-    gap: 10,
-  },
-  tonightDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  tonightTitle: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-  },
-  tonightMasjid: {
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
-    marginTop: 1,
-  },
-  tonightTime: {
+  tickerText: {
     fontSize: 12,
     fontFamily: "Inter_600SemiBold",
-    marginLeft: 8,
+    lineHeight: 18,
   },
-  permissionBanner: {
-    marginHorizontal: 16,
-    borderRadius: 10,
-    padding: 10,
-    flexDirection: "row",
-    alignItems: "center",
+  headerSection: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 16,
   },
   headerTopRow: {
     flexDirection: "row",
     alignItems: "center",
   },
+  headerDateBlock: {
+    flex: 1,
+    marginLeft: 14,
+  },
+  greeting: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    letterSpacing: 0.1,
+  },
+  hijriDate: {
+    fontSize: 14,
+    fontFamily: "PlayfairDisplay_700Bold",
+    marginTop: 2,
+  },
   menuButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
@@ -842,13 +827,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     borderRadius: 20,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   compassRing: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     borderWidth: 1.5,
     justifyContent: "center",
     alignItems: "center",
@@ -856,12 +842,12 @@ const styles = StyleSheet.create({
   compassArrowWrap: {
     position: "absolute",
     width: 10,
-    height: 26,
+    height: 24,
     alignItems: "center",
   },
   compassArrow: {
     width: 2,
-    height: 10,
+    height: 9,
     borderRadius: 1,
   },
   compassArrowHead: {
@@ -892,39 +878,270 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontFamily: "Inter_500Medium",
   },
-  prayerListSection: {
-    paddingHorizontal: 16,
-    marginTop: 10,
+  silenceAlert: {
+    marginHorizontal: 20,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+    borderWidth: 1,
   },
-  prayerListHeader: {
+  silenceAlertContent: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 6,
+    gap: 10,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontFamily: "PlayfairDisplay_700Bold",
-  },
-  notifToggle: {
+  silenceIconWrap: {
     width: 30,
     height: 30,
     borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
   },
+  silenceAlertTitle: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    lineHeight: 16,
+  },
+  heroCardWrapper: {
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  heroCard: {
+    borderRadius: 20,
+    paddingVertical: 24,
+    paddingHorizontal: 24,
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  heroGoldAccent: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: "#D4A843",
+  },
+  heroBottomAccent: {
+    position: "absolute",
+    bottom: 0,
+    left: 24,
+    right: 24,
+    height: 1,
+    backgroundColor: "rgba(212, 168, 67, 0.2)",
+  },
+  heroTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    marginBottom: 4,
+  },
+  heroLabelPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  heroLabelText: {
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    textTransform: "uppercase" as const,
+    letterSpacing: 0.8,
+  },
+  heroTimeAt: {
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+  },
+  heroPrayerName: {
+    color: "#D4A843",
+    fontSize: 36,
+    fontFamily: "PlayfairDisplay_700Bold",
+    marginTop: 4,
+    marginBottom: 4,
+    letterSpacing: 0.5,
+  },
+  heroTimerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+  },
+  heroTimerUnit: {
+    alignItems: "center",
+    minWidth: 50,
+  },
+  heroTimerNumber: {
+    color: "#FFFFFF",
+    fontSize: 36,
+    fontFamily: "Inter_700Bold",
+  },
+  heroTimerLabel: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 10,
+    fontFamily: "Inter_500Medium",
+    textTransform: "uppercase" as const,
+    letterSpacing: 1,
+    marginTop: -1,
+  },
+  heroTimerSep: {
+    color: "rgba(255,255,255,0.35)",
+    fontSize: 30,
+    fontFamily: "Inter_400Regular",
+    marginHorizontal: 2,
+    marginTop: -8,
+  },
+  cardsSection: {
+    paddingHorizontal: 20,
+    marginBottom: 8,
+  },
+  dropdownHeader: {
+    borderRadius: 14,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+  },
+  dropdownIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  dropdownHeaderText: {
+    flex: 1,
+  },
+  dropdownTitle: {
+    fontSize: 15,
+    fontFamily: "PlayfairDisplay_700Bold",
+  },
+  dropdownSubtitle: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
+  },
+  chevronCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  dropdownBody: {
+    marginTop: -1,
+    borderBottomLeftRadius: 14,
+    borderBottomRightRadius: 14,
+    borderWidth: 1,
+    borderTopWidth: 0,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  prayWhereSubhead: {
+    paddingVertical: 8,
+    marginBottom: 2,
+  },
+  prayWhereTimerLabel: {
+    fontSize: 13,
+    fontFamily: "PlayfairDisplay_600SemiBold",
+  },
+  prayWhereSubtext: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
+  },
+  prayWhereRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 11,
+  },
+  prayWhereName: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+  },
+  prayWhereDistPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  prayWhereDist: {
+    fontSize: 13,
+    fontFamily: "Inter_700Bold",
+  },
+  tonightRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 11,
+    gap: 12,
+  },
+  tonightDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+  },
+  tonightTitle: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+  },
+  tonightMasjid: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
+  },
+  tonightTime: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    marginLeft: 8,
+  },
+  permissionBanner: {
+    marginHorizontal: 20,
+    borderRadius: 12,
+    padding: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontFamily: "PlayfairDisplay_700Bold",
+  },
+  notifToggle: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  prayerListSection: {
+    paddingHorizontal: 20,
+    marginTop: 8,
+  },
+  prayerListCard: {
+    borderRadius: 16,
+    overflow: "hidden",
+    borderWidth: 1,
+  },
   prayerRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    marginBottom: 5,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
   },
   prayerIconBg: {
-    width: 30,
-    height: 30,
-    borderRadius: 7,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -932,7 +1149,19 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontFamily: "Inter_600SemiBold",
-    marginLeft: 10,
+    marginLeft: 12,
+  },
+  nextBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginRight: 10,
+  },
+  nextBadgeText: {
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    textTransform: "uppercase" as const,
+    letterSpacing: 0.5,
   },
   prayerTime: {
     fontSize: 14,

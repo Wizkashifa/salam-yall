@@ -367,6 +367,20 @@ function getDbPool() {
   });
 }
 
+async function ensureTickerTable(pool: pg.Pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ticker_messages (
+      id SERIAL PRIMARY KEY,
+      message TEXT NOT NULL,
+      type VARCHAR(20) DEFAULT 'info' CHECK (type IN ('info', 'urgent', 'event', 'reminder')),
+      active BOOLEAN DEFAULT true,
+      created_at TIMESTAMP DEFAULT NOW(),
+      expires_at TIMESTAMP
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ticker_active ON ticker_messages(active);`);
+}
+
 async function ensureBusinessesTable(pool: pg.Pool) {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS businesses (
@@ -412,6 +426,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   startAutoRefresh();
 
   const pool = getDbPool();
+  await ensureTickerTable(pool).catch(err => console.error("[DB] Ticker table init error:", err.message));
   await ensureBusinessesTable(pool).catch(err => console.error("[DB] Init error:", err.message));
 
   app.get("/api/events", async (_req, res) => {
@@ -435,6 +450,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error refreshing events:", error.message);
       res.status(500).json({ error: "Failed to refresh events" });
+    }
+  });
+
+  app.get("/api/ticker", async (_req, res) => {
+    try {
+      const result = await pool.query(
+        `SELECT id, message, type, created_at, expires_at FROM ticker_messages
+         WHERE active = true AND (expires_at IS NULL OR expires_at > NOW())
+         ORDER BY created_at DESC`
+      );
+      res.json(result.rows);
+    } catch (error: any) {
+      console.error("Error fetching ticker messages:", error.message);
+      res.status(500).json({ error: "Failed to fetch ticker messages" });
+    }
+  });
+
+  const ADMIN_KEY = process.env.SESSION_SECRET || "";
+
+  app.post("/api/ticker", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!ADMIN_KEY || authHeader !== `Bearer ${ADMIN_KEY}`) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const { message, type, expires_at } = req.body;
+      if (!message || !message.trim()) {
+        return res.status(400).json({ error: "Message is required" });
+      }
+      const validTypes = ["info", "urgent", "event", "reminder"];
+      const msgType = validTypes.includes(type) ? type : "info";
+      const expiresValue = expires_at ? new Date(expires_at) : null;
+      if (expires_at && (!expiresValue || isNaN(expiresValue.getTime()))) {
+        return res.status(400).json({ error: "Invalid expires_at timestamp" });
+      }
+      const result = await pool.query(
+        `INSERT INTO ticker_messages (message, type, expires_at) VALUES ($1, $2, $3) RETURNING id, message, type, created_at, expires_at`,
+        [message.trim(), msgType, expiresValue]
+      );
+      res.status(201).json(result.rows[0]);
+    } catch (error: any) {
+      console.error("Error creating ticker message:", error.message);
+      res.status(500).json({ error: "Failed to create ticker message" });
+    }
+  });
+
+  app.delete("/api/ticker/:id", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!ADMIN_KEY || authHeader !== `Bearer ${ADMIN_KEY}`) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ticker ID" });
+      }
+      await pool.query("UPDATE ticker_messages SET active = false WHERE id = $1", [id]);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting ticker message:", error.message);
+      res.status(500).json({ error: "Failed to delete ticker message" });
     }
   });
 
