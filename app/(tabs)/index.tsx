@@ -113,10 +113,11 @@ interface TickerMessage {
 function TickerBanner({ colors, isDark }: { colors: any; isDark: boolean }) {
   const { data: messages } = useQuery<TickerMessage[]>({
     queryKey: ["/api/ticker"],
-    refetchInterval: 60 * 1000,
+    refetchInterval: 30 * 1000,
+    staleTime: 0,
   });
 
-  const scrollX = useRef(new Animated.Value(0)).current;
+  const scrollAnim = useRef(new Animated.Value(0)).current;
   const [containerWidth, setContainerWidth] = useState(0);
 
   const activeMessages = messages?.filter(m => m.type !== "urgent") || [];
@@ -124,22 +125,24 @@ function TickerBanner({ colors, isDark }: { colors: any; isDark: boolean }) {
   const allMessages = [...urgentMessages, ...activeMessages];
   const messageSignature = allMessages.map(m => m.id).join(",");
 
-  useEffect(() => {
-    if (!allMessages.length || !containerWidth) return;
-    const textWidth = allMessages.reduce((sum, m) => sum + m.message.length * 8 + 60, 0);
-    const totalWidth = Math.max(textWidth, containerWidth * 2);
+  const needsScroll = allMessages.length > 1 || (allMessages.length === 1 && allMessages[0].message.length > 30);
 
-    scrollX.setValue(containerWidth);
+  useEffect(() => {
+    if (!needsScroll || !allMessages.length || !containerWidth) return;
+    const textWidth = allMessages.reduce((sum, m) => sum + m.message.length * 8 + 60, 0);
+    const totalWidth = Math.max(textWidth, containerWidth * 1.5);
+
+    scrollAnim.setValue(containerWidth);
     const animation = Animated.loop(
-      Animated.timing(scrollX, {
+      Animated.timing(scrollAnim, {
         toValue: -totalWidth,
-        duration: totalWidth * 30,
+        duration: totalWidth * 25,
         useNativeDriver: USE_NATIVE_DRIVER,
       })
     );
     animation.start();
     return () => animation.stop();
-  }, [messageSignature, containerWidth]);
+  }, [messageSignature, containerWidth, needsScroll]);
 
   if (!allMessages.length) return null;
 
@@ -153,19 +156,27 @@ function TickerBanner({ colors, isDark }: { colors: any; isDark: boolean }) {
       <View style={styles.tickerIconWrap}>
         <Ionicons name={hasUrgent ? "alert-circle" : "megaphone"} size={14} color={iconColor} />
       </View>
-      <View
-        style={styles.tickerScrollArea}
-        onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
-      >
-        <Animated.View style={[styles.tickerTextRow, { transform: [{ translateX: scrollX }] }]}>
-          {allMessages.map((msg, i) => (
-            <Text key={msg.id} style={[styles.tickerText, { color: textColor }]}>
-              {msg.message}
-              {i < allMessages.length - 1 ? "     ✦     " : ""}
-            </Text>
-          ))}
-        </Animated.View>
-      </View>
+      {needsScroll ? (
+        <View
+          style={styles.tickerScrollArea}
+          onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
+        >
+          <Animated.View style={[styles.tickerTextRow, { transform: [{ translateX: scrollAnim }] }]}>
+            {allMessages.map((msg, i) => (
+              <Text key={msg.id} style={[styles.tickerText, { color: textColor }]}>
+                {msg.message}
+                {i < allMessages.length - 1 ? "     ✦     " : ""}
+              </Text>
+            ))}
+          </Animated.View>
+        </View>
+      ) : (
+        <View style={styles.tickerScrollArea}>
+          <Text style={[styles.tickerText, { color: textColor }]} numberOfLines={1}>
+            {allMessages[0].message}
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -447,8 +458,11 @@ export default function PrayerScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: colors.background, paddingTop: Platform.OS === "web" ? 67 + insets.top : insets.top }]}>
-        <ActivityIndicator size="large" color={colors.gold} />
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background, paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
+        <TickerBanner colors={colors} isDark={isDark} />
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+          <ActivityIndicator size="large" color={colors.gold} />
+        </View>
       </View>
     );
   }
@@ -756,8 +770,6 @@ export default function PrayerScreen() {
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
   },
   container: {
     flex: 1,
