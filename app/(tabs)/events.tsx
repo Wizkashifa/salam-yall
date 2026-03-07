@@ -44,11 +44,6 @@ function formatEventDate(dateStr: string, isAllDay: boolean): { day: string; mon
   return { day, month, weekday, time, fullDate };
 }
 
-function getEventColor(index: number): string {
-  const palette = ["#1B6B4A", "#D4A843", "#2563EB", "#DC2626", "#7C3AED", "#0891B2"];
-  return palette[index % palette.length];
-}
-
 const MASJID_KEYWORDS = [
   "masjid", "mosque", "islamic association", "islamic center", "islamic society",
   "as-salaam", "al-noor", "ar-razzaq", "king khalid", "jamaat ibad",
@@ -60,15 +55,38 @@ function isMasjid(organizer: string): boolean {
   return MASJID_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
-function groupEventsByDate(events: CalendarEvent[]): { dateLabel: string; events: CalendarEvent[] }[] {
+function groupEventsByDate(events: CalendarEvent[]): { dateLabel: string; dateKey: string; events: CalendarEvent[] }[] {
   const groups: Record<string, CalendarEvent[]> = {};
+  const keyOrder: string[] = [];
   for (const event of events) {
     const date = new Date(event.start);
     const key = date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
-    if (!groups[key]) groups[key] = [];
+    if (!groups[key]) {
+      groups[key] = [];
+      keyOrder.push(key);
+    }
     groups[key].push(event);
   }
-  return Object.entries(groups).map(([dateLabel, events]) => ({ dateLabel, events }));
+  return keyOrder.map((dateLabel) => ({ dateLabel, dateKey: dateLabel, events: groups[dateLabel] }));
+}
+
+function isToday(dateLabel: string): boolean {
+  const today = new Date();
+  const todayLabel = today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  return dateLabel === todayLabel;
+}
+
+function isTomorrow(dateLabel: string): boolean {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowLabel = tomorrow.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  return dateLabel === tomorrowLabel;
+}
+
+function getRelativeLabel(dateLabel: string): string {
+  if (isToday(dateLabel)) return "Today";
+  if (isTomorrow(dateLabel)) return "Tomorrow";
+  return dateLabel;
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -182,32 +200,26 @@ export default function EventsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <View style={[styles.headerSection, { paddingTop: 16, backgroundColor: colors.background }]}>
-        <Text style={[styles.title, { color: colors.text }]}>Community Events</Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Programs and events in the local area
-        </Text>
-      </View>
       <ScrollView
         style={[styles.container, { backgroundColor: colors.background }]}
         contentContainerStyle={{
           paddingBottom: Platform.OS === "web" ? 34 : 20,
+          paddingTop: 12,
         }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />
         }
       >
-
         {isLoading ? (
           <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color={colors.gold} />
+            <ActivityIndicator size="large" color={colors.emerald} />
           </View>
         ) : error ? (
           <View style={styles.centerContainer}>
-            <Ionicons name="cloud-offline-outline" size={40} color={colors.textSecondary} />
+            <Ionicons name="cloud-offline-outline" size={36} color={colors.textSecondary} />
             <Text style={[styles.errorText, { color: colors.text }]}>Unable to load events</Text>
             <Pressable
-              style={({ pressed }) => [styles.retryButton, { backgroundColor: colors.gold, opacity: pressed ? 0.8 : 1 }]}
+              style={({ pressed }) => [styles.retryButton, { backgroundColor: colors.emerald, opacity: pressed ? 0.8 : 1 }]}
               onPress={onRefresh}
             >
               <Text style={styles.retryButtonText}>Retry</Text>
@@ -215,86 +227,103 @@ export default function EventsScreen() {
           </View>
         ) : grouped.length === 0 ? (
           <View style={styles.centerContainer}>
-            <MaterialCommunityIcons name="calendar-blank-outline" size={40} color={colors.textSecondary} />
+            <Ionicons name="calendar-outline" size={36} color={colors.textSecondary} />
             <Text style={[styles.emptyText, { color: colors.text }]}>No upcoming events</Text>
             <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
               Pull down to refresh
             </Text>
           </View>
         ) : (
-          grouped.map((group) => (
-            <View key={group.dateLabel} style={styles.dateGroup}>
-              <Text style={[styles.dateGroupLabel, { color: colors.textSecondary }]}>{group.dateLabel}</Text>
-              {group.events.map((event, idx) => {
-                const dateInfo = formatEventDate(event.start, event.isAllDay);
-                const color = getEventColor(idx);
+          grouped.map((group, groupIdx) => {
+            const relativeLabel = getRelativeLabel(group.dateLabel);
+            const isTodayGroup = isToday(group.dateLabel);
 
-                return (
-                  <Pressable
-                    key={event.id}
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      setSelectedEvent(event);
-                    }}
-                    style={({ pressed }) => [
-                      styles.eventCard,
-                      { backgroundColor: colors.surface, opacity: pressed ? 0.95 : 1 },
-                    ]}
-                  >
-                    {event.imageUrl ? (
-                      <Image
-                        source={{ uri: event.imageUrl }}
-                        style={styles.eventImage}
-                        resizeMode="cover"
-                      />
-                    ) : null}
-                    <View style={styles.eventBody}>
-                      <View style={styles.eventTopRow}>
-                        <View style={[styles.dateBadge, { backgroundColor: color }]}>
-                          <Text style={styles.dateBadgeDay}>{dateInfo.day}</Text>
-                          <Text style={styles.dateBadgeMonth}>{dateInfo.month}</Text>
-                        </View>
-                        <View style={styles.eventContent}>
-                          <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={2}>
-                            {event.title}
-                          </Text>
-                          {event.organizer ? (
-                            <View style={styles.organizerRow}>
-                              <MaterialCommunityIcons
-                                name={isMasjid(event.organizer) ? "mosque" : "office-building-outline"}
-                                size={13}
-                                color={colors.gold}
-                              />
-                              <Text style={[styles.organizerText, { color: colors.gold }]} numberOfLines={1}>
-                                {event.organizer}
-                              </Text>
-                            </View>
-                          ) : null}
-                        </View>
-                        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-                      </View>
-                      <View style={styles.eventMetaRow}>
-                        <View style={styles.eventMeta}>
-                          <Ionicons name="time-outline" size={13} color={colors.textSecondary} />
-                          <Text style={[styles.eventMetaText, { color: colors.textSecondary }]}>
-                            {dateInfo.time}
-                          </Text>
-                        </View>
-                        {event.location ? (
-                          <View style={[styles.eventMeta, { flex: 1 }]}>
-                            <Ionicons name="location-outline" size={13} color={colors.textSecondary} />
-                            <Text style={[styles.eventMetaText, { color: colors.textSecondary }]} numberOfLines={1}>
-                              {event.location}
+            return (
+              <View key={group.dateKey} style={[styles.dateGroup, groupIdx === 0 && { marginTop: 0 }]}>
+                <View style={styles.dateHeaderRow}>
+                  {isTodayGroup ? (
+                    <View style={[styles.todayDot, { backgroundColor: colors.emerald }]} />
+                  ) : null}
+                  <Text style={[
+                    styles.dateGroupLabel,
+                    { color: isTodayGroup ? colors.emerald : colors.textSecondary },
+                  ]}>
+                    {relativeLabel}
+                  </Text>
+                </View>
+
+                {group.events.map((event) => {
+                  const dateInfo = formatEventDate(event.start, event.isAllDay);
+
+                  return (
+                    <Pressable
+                      key={event.id}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setSelectedEvent(event);
+                      }}
+                      style={({ pressed }) => [
+                        styles.eventCard,
+                        {
+                          backgroundColor: colors.surface,
+                          opacity: pressed ? 0.92 : 1,
+                          shadowColor: colors.cardShadow,
+                        },
+                      ]}
+                    >
+                      {event.imageUrl ? (
+                        <Image
+                          source={{ uri: event.imageUrl }}
+                          style={styles.eventImage}
+                          resizeMode="cover"
+                        />
+                      ) : null}
+
+                      <View style={styles.eventBody}>
+                        <View style={styles.eventRow}>
+                          <View style={[styles.timeColumn, { borderRightColor: colors.borderLight }]}>
+                            <Text style={[styles.timeText, { color: colors.emerald }]}>
+                              {dateInfo.time}
                             </Text>
                           </View>
-                        ) : null}
+
+                          <View style={styles.eventContent}>
+                            <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={2}>
+                              {event.title}
+                            </Text>
+
+                            {event.organizer ? (
+                              <View style={styles.organizerRow}>
+                                <MaterialCommunityIcons
+                                  name={isMasjid(event.organizer) ? "mosque" : "office-building-outline"}
+                                  size={14}
+                                  color={colors.gold}
+                                />
+                                <Text style={[styles.organizerText, { color: colors.textSecondary }]} numberOfLines={1}>
+                                  {event.organizer}
+                                </Text>
+                              </View>
+                            ) : null}
+
+                            {event.location ? (
+                              <View style={styles.locationRow}>
+                                <Ionicons name="location-outline" size={13} color={colors.textSecondary} />
+                                <Text style={[styles.locationText, { color: colors.textSecondary }]} numberOfLines={1}>
+                                  {event.location}
+                                </Text>
+                              </View>
+                            ) : null}
+                          </View>
+
+                          <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                        </View>
                       </View>
-                    </View>
-                  </Pressable>
-                );
-              })}
-            </View>
-          ))
+                    </Pressable>
+                  );
+                })}
+              </View>
+            );
+          })
         )}
       </ScrollView>
 
@@ -311,34 +340,21 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  headerSection: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 26,
-    fontFamily: "Inter_700Bold",
-  },
-  subtitle: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    marginTop: 4,
-  },
   centerContainer: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 60,
+    paddingVertical: 80,
   },
   errorText: {
     fontSize: 16,
     fontFamily: "Inter_600SemiBold",
-    marginTop: 12,
+    marginTop: 14,
   },
   retryButton: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingVertical: 10,
-    borderRadius: 8,
-    marginTop: 12,
+    borderRadius: 10,
+    marginTop: 14,
   },
   retryButtonText: {
     color: "#fff",
@@ -348,7 +364,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     fontFamily: "Inter_600SemiBold",
-    marginTop: 12,
+    marginTop: 14,
   },
   emptySubtext: {
     fontSize: 13,
@@ -356,56 +372,62 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   dateGroup: {
-    marginBottom: 20,
+    marginTop: 24,
+    marginBottom: 4,
+  },
+  dateHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    marginBottom: 10,
+    gap: 6,
+  },
+  todayDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   dateGroupLabel: {
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
-    textTransform: "uppercase" as const,
-    letterSpacing: 0.5,
-    paddingHorizontal: 20,
-    marginBottom: 8,
+    letterSpacing: 0.3,
   },
   eventCard: {
-    marginHorizontal: 20,
-    borderRadius: 14,
+    marginHorizontal: 16,
+    borderRadius: 12,
     overflow: "hidden",
-    marginBottom: 12,
+    marginBottom: 10,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   eventImage: {
     width: "100%",
-    height: 160,
+    height: 140,
   },
   eventBody: {
-    padding: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
   },
-  eventTopRow: {
+  eventRow: {
     flexDirection: "row",
+    alignItems: "center",
     gap: 12,
-    alignItems: "center",
   },
-  dateBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
+  timeColumn: {
+    width: 64,
+    borderRightWidth: 1,
+    paddingRight: 10,
+    alignItems: "flex-end",
   },
-  dateBadgeDay: {
-    fontSize: 18,
-    fontFamily: "Inter_700Bold",
-    color: "#fff",
-    lineHeight: 20,
-  },
-  dateBadgeMonth: {
-    fontSize: 10,
+  timeText: {
+    fontSize: 13,
     fontFamily: "Inter_600SemiBold",
-    textTransform: "uppercase" as const,
-    color: "rgba(255,255,255,0.85)",
-    lineHeight: 12,
   },
   eventContent: {
     flex: 1,
+    gap: 4,
   },
   eventTitle: {
     fontSize: 15,
@@ -416,27 +438,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    marginTop: 4,
   },
   organizerText: {
     fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Inter_400Regular",
     flex: 1,
   },
-  eventMetaRow: {
-    flexDirection: "row",
-    gap: 16,
-    marginTop: 10,
-  },
-  eventMeta: {
+  locationRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
   },
-  eventMetaText: {
+  locationText: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
-    flexShrink: 1,
+    flex: 1,
   },
 
   modalContainer: {

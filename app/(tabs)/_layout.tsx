@@ -18,12 +18,12 @@ function NativeTabLayout() {
       <View style={{ flex: 1 }}>
         <NativeTabs>
           <NativeTabs.Trigger name="index">
-            <Icon sf={{ default: "moon.stars", selected: "moon.stars.fill" }} />
-            <Label>Prayer</Label>
+            <Icon sf={{ default: "house", selected: "house.fill" }} />
+            <Label>Home</Label>
           </NativeTabs.Trigger>
           <NativeTabs.Trigger name="halal">
             <Icon sf={{ default: "fork.knife", selected: "fork.knife" }} />
-            <Label>Halal Eats</Label>
+            <Label>Dines</Label>
           </NativeTabs.Trigger>
           <NativeTabs.Trigger name="events">
             <Icon sf={{ default: "calendar", selected: "calendar" }} />
@@ -62,15 +62,17 @@ function ClassicTabLayout() {
           tabBarActiveTintColor: colors.tint,
           tabBarInactiveTintColor: colors.tabIconDefault,
           tabBarStyle: {
-            backgroundColor: isIOS ? "transparent" : colors.background,
-            borderTopWidth: 0,
+            backgroundColor: isIOS ? "transparent" : colors.surface,
+            borderTopWidth: StyleSheet.hairlineWidth,
+            borderTopColor: colors.borderLight,
             elevation: 0,
+            shadowColor: "transparent",
             ...(isWeb ? { height: 84 } : {}),
           },
           tabBarBackground: () =>
             isIOS ? (
               <BlurView
-                intensity={100}
+                intensity={80}
                 tint={isDark ? "dark" : "light"}
                 style={StyleSheet.absoluteFill}
               />
@@ -78,31 +80,32 @@ function ClassicTabLayout() {
               <View
                 style={[
                   StyleSheet.absoluteFill,
-                  { backgroundColor: colors.background },
+                  { backgroundColor: colors.surface },
                 ]}
               />
             ) : null,
           tabBarLabelStyle: {
             fontFamily: "Inter_500Medium",
-            fontSize: 11,
+            fontSize: 10,
+            letterSpacing: 0.2,
           },
         }}
       >
         <Tabs.Screen
           name="index"
           options={{
-            title: "Prayer",
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="moon-outline" size={size} color={color} />
+            title: "Home",
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons name={focused ? "home" : "home-outline"} size={size - 2} color={color} />
             ),
           }}
         />
         <Tabs.Screen
           name="halal"
           options={{
-            title: "Halal Eats",
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="restaurant-outline" size={size} color={color} />
+            title: "Dines",
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons name={focused ? "restaurant" : "restaurant-outline"} size={size - 2} color={color} />
             ),
           }}
         />
@@ -110,8 +113,8 @@ function ClassicTabLayout() {
           name="events"
           options={{
             title: "Events",
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="calendar-outline" size={size} color={color} />
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons name={focused ? "calendar" : "calendar-outline"} size={size - 2} color={color} />
             ),
           }}
         />
@@ -119,8 +122,8 @@ function ClassicTabLayout() {
           name="businesses"
           options={{
             title: "Directory",
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="storefront-outline" size={size} color={color} />
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons name={focused ? "storefront" : "storefront-outline"} size={size - 2} color={color} />
             ),
           }}
         />
