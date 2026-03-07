@@ -450,6 +450,85 @@ async function ensureHalalRestaurantsTable(pool: pg.Pool) {
   }
 }
 
+const HALAL_SYNC_INTERVAL = 6 * 60 * 60 * 1000;
+const HALAL_API_URL = "https://halaleatsnc.com/api/restaurants";
+
+async function syncHalalRestaurants(pool: pg.Pool) {
+  try {
+    console.log("[Halal Sync] Checking for new restaurants from halaleatsnc.com...");
+    const response = await fetch(HALAL_API_URL);
+    if (!response.ok) {
+      console.log(`[Halal Sync] API returned ${response.status}, skipping sync`);
+      return;
+    }
+    const data = await response.json();
+    const restaurants = Array.isArray(data) ? data : (data.restaurants || data.data || []);
+    if (!Array.isArray(restaurants) || restaurants.length === 0) {
+      console.log("[Halal Sync] No restaurants in API response, skipping");
+      return;
+    }
+
+    const existingResult = await pool.query("SELECT external_id FROM halal_restaurants WHERE external_id IS NOT NULL");
+    const existingIds = new Set(existingResult.rows.map((r: any) => r.external_id));
+
+    let newCount = 0;
+    for (const r of restaurants) {
+      const externalId = r.id || r.external_id;
+      if (externalId && existingIds.has(externalId)) continue;
+
+      const name = r.name || r.restaurantName;
+      if (!name) continue;
+
+      const nameCheck = await pool.query("SELECT id FROM halal_restaurants WHERE LOWER(name) = LOWER($1)", [name]);
+      if (nameCheck.rows.length > 0) continue;
+
+      await pool.query(
+        `INSERT INTO halal_restaurants (external_id, name, formatted_address, formatted_phone, url, lat, lng, is_halal, halal_comment, cuisine_types, emoji, evidence, considerations, opening_hours)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+        [
+          externalId || null,
+          name,
+          r.formattedAddress || r.formatted_address || null,
+          r.formattedPhone || r.formatted_phone || null,
+          r.url || null,
+          r.lat || r.latitude || null,
+          r.lng || r.longitude || null,
+          r.isHalal || r.is_halal || "UNKNOWN",
+          r.halalComment || r.halal_comment || null,
+          r.cuisineTypes || r.cuisine_types || null,
+          r.emoji || null,
+          r.evidence || null,
+          r.considerations || null,
+          r.openingHours || r.opening_hours ? JSON.stringify(r.openingHours || r.opening_hours) : null,
+        ]
+      );
+      newCount++;
+    }
+
+    if (newCount > 0) {
+      console.log(`[Halal Sync] Added ${newCount} new restaurants`);
+    } else {
+      console.log(`[Halal Sync] No new restaurants found (${restaurants.length} checked, ${existingIds.size} existing)`);
+    }
+  } catch (err: any) {
+    console.log(`[Halal Sync] Sync skipped: ${err.message}`);
+  }
+}
+
+function startHalalAutoSync(pool: pg.Pool) {
+  setTimeout(() => {
+    syncHalalRestaurants(pool).catch(err =>
+      console.error("[Halal Sync] Error:", err.message)
+    );
+  }, 30000);
+
+  setInterval(() => {
+    syncHalalRestaurants(pool).catch(err =>
+      console.error("[Halal Sync] Scheduled sync error:", err.message)
+    );
+  }, HALAL_SYNC_INTERVAL);
+}
+
 async function ensureBusinessesTable(pool: pg.Pool) {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS businesses (
@@ -499,6 +578,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await ensurePushTokensTable(pool).catch(err => console.error("[DB] Push tokens table init error:", err.message));
   await ensureHalalRestaurantsTable(pool).catch(err => console.error("[DB] Halal restaurants table init error:", err.message));
   await ensureBusinessesTable(pool).catch(err => console.error("[DB] Init error:", err.message));
+
+  startHalalAutoSync(pool);
 
   app.get("/api/events", async (_req, res) => {
     try {
