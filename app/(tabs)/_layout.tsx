@@ -74,9 +74,9 @@ function ClassicTabLayout() {
         },
       }}
       tabBar={(props) => (
-        <View style={{ backgroundColor: isIOS ? "transparent" : colors.background }}>
+        <View>
           <TickerBanner />
-          <View>
+          <View style={{ backgroundColor: isIOS ? "transparent" : colors.background }}>
             {isIOS ? (
               <BlurView
                 intensity={100}
