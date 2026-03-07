@@ -421,6 +421,33 @@ async function ensureHalalRestaurantsTable(pool: pg.Pool) {
   `);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_halal_is_halal ON halal_restaurants(is_halal);`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_halal_name ON halal_restaurants(name);`);
+
+  const countResult = await pool.query("SELECT COUNT(*) as cnt FROM halal_restaurants");
+  const count = parseInt(countResult.rows[0].cnt, 10);
+  if (count === 0) {
+    console.log("Halal restaurants table is empty, seeding from halal-seed-data.json...");
+    try {
+      const seedPath = path.join(__dirname, "halal-seed-data.json");
+      const seedData = JSON.parse(fs.readFileSync(seedPath, "utf-8"));
+      for (const r of seedData) {
+        await pool.query(
+          `INSERT INTO halal_restaurants (external_id, name, formatted_address, formatted_phone, url, lat, lng, is_halal, halal_comment, cuisine_types, emoji, evidence, considerations, opening_hours, rating, user_ratings_total, website)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+          [
+            r.external_id, r.name, r.formatted_address, r.formatted_phone, r.url,
+            r.lat, r.lng, r.is_halal, r.halal_comment,
+            r.cuisine_types || null, r.emoji,
+            r.evidence || null, r.considerations || null,
+            r.opening_hours ? JSON.stringify(r.opening_hours) : null,
+            r.rating || null, r.user_ratings_total || null, r.website || null,
+          ]
+        );
+      }
+      console.log(`Seeded ${seedData.length} halal restaurants`);
+    } catch (err: any) {
+      console.error("Failed to seed halal restaurants:", err.message);
+    }
+  }
 }
 
 async function ensureBusinessesTable(pool: pg.Pool) {
