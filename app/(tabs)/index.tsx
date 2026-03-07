@@ -231,10 +231,25 @@ export default function PrayerScreen() {
       }
       setLocationPermission(true);
 
-      const location = await Location.getCurrentPositionAsync({
+      const locationPromise = Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
-      const { latitude, longitude } = location.coords;
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Location timeout")), 5000)
+      );
+      let latitude = 35.7796;
+      let longitude = -78.6382;
+      try {
+        const location = await Promise.race([locationPromise, timeoutPromise]);
+        latitude = location.coords.latitude;
+        longitude = location.coords.longitude;
+      } catch {
+        const lastKnown = await Location.getLastKnownPositionAsync().catch(() => null);
+        if (lastKnown) {
+          latitude = lastKnown.coords.latitude;
+          longitude = lastKnown.coords.longitude;
+        }
+      }
 
       loadDefaultPrayers(latitude, longitude);
 
