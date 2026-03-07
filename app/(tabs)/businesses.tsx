@@ -92,11 +92,12 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
     const controller = new AbortController();
     const bizId = business.id;
     setLoadingDetails(true);
-    const url = new URL(`/api/businesses/${bizId}/places-details`, getApiUrl());
-    fetch(url.toString(), { signal: controller.signal })
+    const baseUrl = getApiUrl();
+    const fetchUrl = `${baseUrl}/api/businesses/${bizId}/places-details`;
+    fetch(fetchUrl, { signal: controller.signal })
       .then(r => r.json())
-      .then(d => { if (!controller.signal.aborted) { setDetails(d); setLoadingDetails(false); } })
-      .catch(e => { if (!controller.signal.aborted) setLoadingDetails(false); });
+      .then(d => { if (!controller.signal.aborted && d && !d.error) { setDetails(d); setLoadingDetails(false); } else if (!controller.signal.aborted) { setLoadingDetails(false); } })
+      .catch(() => { if (!controller.signal.aborted) setLoadingDetails(false); });
     return () => controller.abort();
   }, [visible, business?.id]);
 
@@ -106,7 +107,7 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
   const rating = details?.rating || (business.rating ? Number(business.rating) : null);
   const reviewCount = details?.user_ratings_total || business.user_ratings_total;
   const hasPhoto = details?.has_photo || !!business.photo_reference;
-  const photoUrl = hasPhoto ? new URL(`/api/businesses/${business.id}/photo`, getApiUrl()).toString() : null;
+  const photoUrl = hasPhoto ? `${getApiUrl()}/api/businesses/${business.id}/photo` : null;
   const hours = details?.business_hours || business.business_hours;
 
   const openMaps = () => {
@@ -165,7 +166,7 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
                 <Text style={[styles.ratingScore, { color: colors.gold }]}>{rating.toFixed(1)}</Text>
                 <Text style={styles.ratingStars}>{renderStars(rating)}</Text>
                 {reviewCount ? (
-                  <Text style={[styles.ratingCount, { color: colors.textTertiary }]}>({reviewCount.toLocaleString()} reviews)</Text>
+                  <Text style={[styles.ratingCount, { color: colors.textTertiary }]}>({(reviewCount || 0).toLocaleString()} reviews)</Text>
                 ) : null}
               </View>
             ) : loadingDetails ? (
@@ -569,7 +570,7 @@ export default function BusinessesScreen() {
       <View
         style={[
           styles.headerSection,
-          { paddingTop: Platform.OS === "web" ? 67 + insets.top : insets.top + 16 },
+          { paddingTop: 16 },
         ]}
       >
         <View style={styles.headerRow}>

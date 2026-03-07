@@ -3,6 +3,7 @@ import { Animated, Platform, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/lib/theme-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const USE_NATIVE_DRIVER = Platform.OS !== "web";
 
@@ -16,6 +17,7 @@ interface TickerMessage {
 
 export function TickerBanner() {
   const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const { data: messages } = useQuery<TickerMessage[]>({
     queryKey: ["/api/ticker"],
     refetchInterval: 30 * 1000,
@@ -57,9 +59,9 @@ export function TickerBanner() {
   const iconColor = hasUrgent ? colors.tickerUrgentText : colors.gold;
 
   return (
-    <View style={[styles.tickerContainer, { backgroundColor: bgColor, borderTopColor: colors.borderLight }]}>
+    <View style={[styles.tickerContainer, { backgroundColor: bgColor, borderBottomColor: colors.borderLight }]}>
       <View style={styles.tickerIconWrap}>
-        <Ionicons name={hasUrgent ? "alert-circle" : "megaphone"} size={12} color={iconColor} />
+        <Ionicons name={hasUrgent ? "alert-circle" : "megaphone"} size={14} color={iconColor} />
       </View>
       {needsScroll ? (
         <View
@@ -90,26 +92,26 @@ const styles = StyleSheet.create({
   tickerContainer: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     overflow: "hidden",
   },
   tickerIconWrap: {
-    marginRight: 8,
+    marginRight: 10,
   },
   tickerScrollArea: {
     flex: 1,
     overflow: "hidden",
-    height: 16,
+    height: 18,
   },
   tickerTextRow: {
     flexDirection: "row",
     position: "absolute",
   },
   tickerText: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: "Inter_500Medium",
-    lineHeight: 16,
+    lineHeight: 18,
   },
 });

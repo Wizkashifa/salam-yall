@@ -7,10 +7,14 @@ import { Platform, StyleSheet, View } from "react-native";
 import React from "react";
 import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function NativeTabLayout() {
+  const insets = useSafeAreaInsets();
   return (
     <View style={{ flex: 1 }}>
+      <View style={{ height: insets.top, backgroundColor: "transparent" }} />
+      <TickerBanner />
       <View style={{ flex: 1 }}>
         <NativeTabs>
           <NativeTabs.Trigger name="index">
@@ -31,7 +35,6 @@ function NativeTabLayout() {
           </NativeTabs.Trigger>
         </NativeTabs>
       </View>
-      <TickerBanner />
     </View>
   );
 }
@@ -40,95 +43,89 @@ function ClassicTabLayout() {
   const { colors, isDark } = useTheme();
   const isWeb = Platform.OS === "web";
   const isIOS = Platform.OS === "ios";
+  const insets = useSafeAreaInsets();
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: colors.tint,
-        tabBarInactiveTintColor: colors.tabIconDefault,
-        tabBarStyle: {
-          backgroundColor: isIOS ? "transparent" : colors.background,
-          borderTopWidth: 0,
-          elevation: 0,
-          ...(isWeb ? { height: 84 } : {}),
-        },
-        tabBarBackground: () =>
-          isIOS ? (
-            <BlurView
-              intensity={100}
-              tint={isDark ? "dark" : "light"}
-              style={StyleSheet.absoluteFill}
-            />
-          ) : isWeb ? (
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                { backgroundColor: colors.background },
-              ]}
-            />
-          ) : null,
-        tabBarLabelStyle: {
-          fontFamily: "Inter_500Medium",
-          fontSize: 11,
-        },
-      }}
-      tabBar={(props) => (
-        <View>
+    <View style={{ flex: 1 }}>
+      {isWeb ? (
+        <View style={{ paddingTop: 67, backgroundColor: colors.background }}>
           <TickerBanner />
-          <View style={{ backgroundColor: isIOS ? "transparent" : colors.background }}>
-            {isIOS ? (
+        </View>
+      ) : (
+        <View style={{ paddingTop: insets.top, backgroundColor: colors.tickerBg }}>
+          <TickerBanner />
+        </View>
+      )}
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarActiveTintColor: colors.tint,
+          tabBarInactiveTintColor: colors.tabIconDefault,
+          tabBarStyle: {
+            backgroundColor: isIOS ? "transparent" : colors.background,
+            borderTopWidth: 0,
+            elevation: 0,
+            ...(isWeb ? { height: 84 } : {}),
+          },
+          tabBarBackground: () =>
+            isIOS ? (
               <BlurView
                 intensity={100}
                 tint={isDark ? "dark" : "light"}
                 style={StyleSheet.absoluteFill}
               />
-            ) : null}
-            {React.createElement(
-              require("@react-navigation/bottom-tabs").BottomTabBar,
-              props
-            )}
-          </View>
-        </View>
-      )}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Prayer",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="moon-outline" size={size} color={color} />
-          ),
+            ) : isWeb ? (
+              <View
+                style={[
+                  StyleSheet.absoluteFill,
+                  { backgroundColor: colors.background },
+                ]}
+              />
+            ) : null,
+          tabBarLabelStyle: {
+            fontFamily: "Inter_500Medium",
+            fontSize: 11,
+          },
         }}
-      />
-      <Tabs.Screen
-        name="halal"
-        options={{
-          title: "Halal Eats",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="restaurant-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="events"
-        options={{
-          title: "Events",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="businesses"
-        options={{
-          title: "Directory",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="storefront-outline" size={size} color={color} />
-          ),
-        }}
-      />
-    </Tabs>
+      >
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: "Prayer",
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="moon-outline" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="halal"
+          options={{
+            title: "Halal Eats",
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="restaurant-outline" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="events"
+          options={{
+            title: "Events",
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="calendar-outline" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="businesses"
+          options={{
+            title: "Directory",
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="storefront-outline" size={size} color={color} />
+            ),
+          }}
+        />
+      </Tabs>
+    </View>
   );
 }
 

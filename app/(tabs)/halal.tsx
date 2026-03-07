@@ -416,7 +416,7 @@ export default function HalalScreen() {
         styles.container,
         {
           backgroundColor: colors.background,
-          paddingTop: Platform.OS === "web" ? 67 : insets.top,
+          paddingTop: 0,
         },
       ]}
     >

@@ -394,7 +394,7 @@ export default function PrayerScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: colors.background, paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.gold} />
       </View>
     );
@@ -405,7 +405,7 @@ export default function PrayerScreen() {
 
   return (
     <View
-      style={[styles.container, { backgroundColor: colors.background, paddingTop: Platform.OS === "web" ? 67 : insets.top }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
     >
       <View style={styles.headerSection}>
         <View style={styles.headerTopRow}>
