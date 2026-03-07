@@ -95,7 +95,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 function EventDetailModal({ event, visible, onClose }: { event: CalendarEvent | null; visible: boolean; onClose: () => void }) {
   const insets = useSafeAreaInsets();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
 
   if (!event) return null;
 
@@ -107,35 +107,45 @@ function EventDetailModal({ event, visible, onClose }: { event: CalendarEvent | 
 
   const cleanDescription = event.description.trim();
 
+  const openMaps = () => {
+    if (event.location) {
+      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`);
+    }
+  };
+
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-        <View style={[styles.modalHeader, { paddingTop: Platform.OS === "web" ? 16 : insets.top + 8 }]}>
-          <Pressable onPress={onClose} hitSlop={12} style={({ pressed }) => [styles.modalCloseBtn, { backgroundColor: colors.surface, opacity: pressed ? 0.7 : 1 }]}>
-            <Ionicons name="close" size={22} color={colors.text} />
+        <View style={[styles.modalHeader, { paddingTop: Platform.OS === "web" ? 67 : insets.top + 12 }]}>
+          <Pressable onPress={onClose} hitSlop={8} style={[styles.modalCloseBtn, { backgroundColor: isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.85)" }]}>
+            <Ionicons name="close" size={20} color={isDark ? "#fff" : "#374151"} />
           </Pressable>
         </View>
 
-        <ScrollView style={styles.modalScroll} contentContainerStyle={{ paddingBottom: insets.bottom + 24 }} bounces={false}>
+        <ScrollView style={styles.modalScroll} contentContainerStyle={{ paddingBottom: insets.bottom + 40 }} bounces={false} showsVerticalScrollIndicator={false}>
           {event.imageUrl ? (
-            <Image source={{ uri: event.imageUrl }} style={styles.modalImage} resizeMode="contain" />
-          ) : null}
+            <Image source={{ uri: event.imageUrl }} style={styles.modalImage} resizeMode="cover" />
+          ) : (
+            <View style={[styles.modalImagePlaceholder, { backgroundColor: isDark ? "#1A2E22" : "#EDF5F0" }]}>
+              <Ionicons name="calendar" size={48} color={colors.emerald} />
+            </View>
+          )}
 
           <View style={styles.modalBody}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>{event.title}</Text>
-
             {event.organizer ? (
-              <View style={styles.modalOrganizerRow}>
+              <View style={[styles.modalOrganizerPill, { backgroundColor: colors.categoryBadgeBg ? colors.categoryBadgeBg(colors.gold) : (colors.gold + "20") }]}>
                 <MaterialCommunityIcons
                   name={isMasjid(event.organizer) ? "mosque" : "office-building-outline"}
-                  size={16}
+                  size={12}
                   color={colors.gold}
                 />
                 <Text style={[styles.modalOrganizerText, { color: colors.gold }]}>{event.organizer}</Text>
               </View>
             ) : null}
 
-            <View style={[styles.modalInfoCard, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>{event.title}</Text>
+
+            <View style={[styles.modalInfoSection, { borderTopColor: colors.divider }]}>
               <View style={styles.modalInfoRow}>
                 <Ionicons name="calendar-outline" size={18} color={colors.emerald} />
                 <Text style={[styles.modalInfoText, { color: colors.text }]}>{dateInfo.fullDate}</Text>
@@ -145,32 +155,44 @@ function EventDetailModal({ event, visible, onClose }: { event: CalendarEvent | 
                 <Text style={[styles.modalInfoText, { color: colors.text }]}>{timeRange}</Text>
               </View>
               {event.location ? (
-                <View style={styles.modalInfoRow}>
+                <Pressable style={styles.modalInfoRow} onPress={openMaps}>
                   <Ionicons name="location-outline" size={18} color={colors.emerald} />
                   <Text style={[styles.modalInfoText, { color: colors.text }]}>{event.location}</Text>
-                </View>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                </Pressable>
               ) : null}
             </View>
 
-            {event.registrationUrl ? (
-              <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  Linking.openURL(event.registrationUrl);
-                }}
-                style={({ pressed }) => [styles.registerButton, { backgroundColor: colors.emerald, opacity: pressed ? 0.85 : 1 }]}
-              >
-                <Ionicons name="open-outline" size={18} color="#fff" />
-                <Text style={styles.registerButtonText}>Register / RSVP</Text>
-              </Pressable>
-            ) : null}
-
             {cleanDescription ? (
-              <View style={styles.modalDescriptionSection}>
+              <View style={[styles.modalDescriptionSection, { borderTopColor: colors.divider }]}>
                 <Text style={[styles.modalSectionLabel, { color: colors.textSecondary }]}>Details</Text>
                 <Text style={[styles.modalDescription, { color: colors.text }]}>{cleanDescription}</Text>
               </View>
             ) : null}
+
+            <View style={styles.modalActions}>
+              {event.registrationUrl ? (
+                <Pressable
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    Linking.openURL(event.registrationUrl);
+                  }}
+                  style={({ pressed }) => [styles.modalActionBtn, { backgroundColor: colors.emerald, opacity: pressed ? 0.85 : 1 }]}
+                >
+                  <Ionicons name="open-outline" size={18} color="#fff" />
+                  <Text style={styles.modalActionText}>Register / RSVP</Text>
+                </Pressable>
+              ) : null}
+              {event.location ? (
+                <Pressable
+                  style={({ pressed }) => [styles.modalActionBtn, { backgroundColor: colors.gold, opacity: pressed ? 0.85 : 1 }]}
+                  onPress={openMaps}
+                >
+                  <Ionicons name="navigate" size={18} color="#fff" />
+                  <Text style={styles.modalActionText}>Directions</Text>
+                </Pressable>
+              ) : null}
+            </View>
           </View>
         </ScrollView>
       </View>
@@ -471,16 +493,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalHeader: {
-    paddingHorizontal: 16,
-    paddingBottom: 8,
     flexDirection: "row",
     justifyContent: "flex-end",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 0,
+    position: "absolute" as const,
+    top: 0,
+    left: 0,
+    right: 0,
     zIndex: 10,
   },
   modalCloseBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -489,60 +517,58 @@ const styles = StyleSheet.create({
   },
   modalImage: {
     width: SCREEN_WIDTH,
-    height: SCREEN_WIDTH,
-    backgroundColor: "#000",
+    height: SCREEN_WIDTH * 0.75,
+  },
+  modalImagePlaceholder: {
+    width: SCREEN_WIDTH,
+    height: 160,
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalBody: {
     padding: 20,
   },
-  modalTitle: {
-    fontSize: 22,
-    fontFamily: "Inter_700Bold",
-    lineHeight: 28,
-  },
-  modalOrganizerRow: {
+  modalOrganizerPill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 12,
+    alignSelf: "flex-start",
+    marginBottom: 10,
   },
   modalOrganizerText: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: "Inter_600SemiBold",
   },
-  modalInfoCard: {
-    borderRadius: 12,
-    padding: 16,
-    gap: 12,
-    marginTop: 20,
+  modalTitle: {
+    fontSize: 24,
+    fontFamily: "Inter_700Bold",
+    lineHeight: 30,
+    marginBottom: 4,
+  },
+  modalInfoSection: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    marginTop: 12,
+    paddingTop: 12,
   },
   modalInfoRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 10,
   },
   modalInfoText: {
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Inter_500Medium",
     flex: 1,
     lineHeight: 20,
   },
-  registerButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 12,
-    marginTop: 16,
-  },
-  registerButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-  },
   modalDescriptionSection: {
-    marginTop: 20,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    marginTop: 12,
+    paddingTop: 12,
   },
   modalSectionLabel: {
     fontSize: 12,
@@ -555,5 +581,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inter_400Regular",
     lineHeight: 22,
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 20,
+  },
+  modalActionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  modalActionText: {
+    color: "#fff",
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
   },
 });

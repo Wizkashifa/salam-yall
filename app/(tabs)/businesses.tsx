@@ -129,18 +129,17 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
   };
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-        <View style={[styles.detailHeader, { borderBottomColor: colors.divider, paddingTop: Platform.OS === "web" ? 67 : insets.top + 12 }]}>
-          <View style={{ flex: 1 }} />
-          <Pressable onPress={onClose} hitSlop={8} style={[styles.closeButton, { backgroundColor: colors.surface }]}>
-            <Ionicons name="close" size={20} color={colors.textSecondary} />
+        <View style={[styles.detailHeader, { paddingTop: Platform.OS === "web" ? 67 : insets.top + 12 }]}>
+          <Pressable onPress={onClose} hitSlop={8} style={[styles.closeButton, { backgroundColor: isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.85)" }]}>
+            <Ionicons name="close" size={20} color={isDark ? "#fff" : "#374151"} />
           </Pressable>
         </View>
 
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 40 }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
           showsVerticalScrollIndicator={false}
           bounces={false}
         >

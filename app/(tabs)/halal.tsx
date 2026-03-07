@@ -13,6 +13,7 @@ import {
   ScrollView,
   Image,
   Modal,
+  Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -144,6 +145,30 @@ function renderStars(rating: number): string {
   return "★".repeat(full) + (half ? "½" : "") + "☆".repeat(5 - full - half);
 }
 
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+
+function formatTimings(openingHours: HalalRestaurant["opening_hours"]): string[] | null {
+  if (!openingHours) return null;
+  if (openingHours.weekdayDescriptions && openingHours.weekdayDescriptions.length > 0) {
+    return openingHours.weekdayDescriptions;
+  }
+  if (!openingHours.periods || openingHours.periods.length === 0) return null;
+  const dayOrder = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
+  const formatTime = (t: number[]) => {
+    const h = t[0];
+    const m = t[1];
+    const ampm = h >= 12 ? "PM" : "AM";
+    const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return `${h12}:${m.toString().padStart(2, "0")} ${ampm}`;
+  };
+  return dayOrder.map((day) => {
+    const periods = openingHours.periods?.filter((p) => p.open.day === day) || [];
+    if (periods.length === 0) return `${day.charAt(0) + day.slice(1).toLowerCase()}: Closed`;
+    const ranges = periods.map((p) => `${formatTime(p.open.time)} – ${formatTime(p.close.time)}`);
+    return `${day.charAt(0) + day.slice(1).toLowerCase()}: ${ranges.join(", ")}`;
+  });
+}
+
 function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }: {
   restaurant: HalalRestaurant | null; visible: boolean; onClose: () => void; colors: any; isDark: boolean;
 }) {
@@ -156,7 +181,7 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
   const hasPhoto = !!restaurant.photo_reference;
   const photoUrl = hasPhoto ? `${getApiUrl()}/api/halal-restaurants/${restaurant.id}/photo` : null;
   const rating = restaurant.rating != null ? Number(restaurant.rating) : null;
-  const hours = restaurant.opening_hours?.weekdayDescriptions;
+  const hours = formatTimings(restaurant.opening_hours);
 
   const openMaps = () => {
     if (restaurant.lat && restaurant.lng) {
@@ -172,16 +197,15 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
   };
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-        <View style={[styles.detailHeader, { borderBottomColor: colors.divider, paddingTop: Platform.OS === "web" ? 67 : insets.top + 12 }]}>
-          <View style={{ flex: 1 }} />
-          <Pressable onPress={onClose} hitSlop={8} style={[styles.closeButton, { backgroundColor: colors.surface }]}>
-            <Ionicons name="close" size={20} color={colors.textSecondary} />
+        <View style={[styles.detailHeader, { paddingTop: Platform.OS === "web" ? 67 : insets.top + 12 }]}>
+          <Pressable onPress={onClose} hitSlop={8} style={[styles.closeButton, { backgroundColor: isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.85)" }]}>
+            <Ionicons name="close" size={20} color={isDark ? "#fff" : "#374151"} />
           </Pressable>
         </View>
 
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false} bounces={false}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: insets.bottom + 40 }} showsVerticalScrollIndicator={false} bounces={false}>
           {photoUrl ? (
             <Image source={{ uri: photoUrl }} style={styles.detailPhoto} resizeMode="cover" />
           ) : (
@@ -191,7 +215,7 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
           )}
 
           <View style={styles.detailContent}>
-            <View style={{ flexDirection: "row", gap: 8, marginBottom: 8 }}>
+            <View style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}>
               <View style={[styles.halalPill, { backgroundColor: badge.bg }]}>
                 <Text style={[styles.halalPillText, { color: badge.color }]}>{badge.label}</Text>
               </View>
@@ -889,11 +913,16 @@ const styles = StyleSheet.create({
   },
   detailHeader: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "flex-end",
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 0,
+    position: "absolute" as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
   },
   closeButton: {
     width: 32,
@@ -903,11 +932,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   detailPhoto: {
-    width: "100%",
+    width: SCREEN_WIDTH,
     height: 220,
   },
   detailPhotoPlaceholder: {
-    width: "100%",
+    width: SCREEN_WIDTH,
     height: 160,
     justifyContent: "center",
     alignItems: "center",
