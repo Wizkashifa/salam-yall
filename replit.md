@@ -4,7 +4,7 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 
 ## Architecture
 
-- **Frontend**: Expo Router with file-based routing, 5 tab layout (Dines | Events | Home | Directory | Settings)
+- **Frontend**: Expo Router with file-based routing, 5 tab layout (HalalEats | Events | Home | Directory | Settings)
 - **Backend**: Express server on port 5000 serving APIs and landing page
 - **Database**: PostgreSQL via Replit's built-in database (businesses table)
 - **State**: React Query for server state, useState for local state, AsyncStorage for preferences
@@ -14,7 +14,7 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 
 ## Tab Structure
 
-1. **Prayer (index.tsx)**: Prayer times via `adhan` library, countdown timer, Hijri date, Qibla compass (uses expo-sensors Magnetometer on native), notification toggle for prayer alerts, mosque proximity silence reminder, hamburger menu button for drawer, "Where Should I Pray?" expandable dropdown (3 nearest masjids with estimated drive times + navigation), "Tonight Near You" expandable dropdown (tonight's events matched to nearby masjids from calendar API)
+1. **Home (index.tsx)**: "As-salamu alaykum" greeting header with time-based subtitle + Hijri date; redesigned prayer card with prominent countdown ring (mosque icon), hero next-prayer name/timer, horizontal prayer pills; quick actions row (Masjids/Qibla/Events/Halal); skeleton loading state; glass-effect cards; Qibla compass, notification toggle, mosque proximity silence reminder, expandable masjids section, "Tonight in the Community" events matched to nearby masjids
 2. **Halal Eats (halal.tsx)**: Native restaurant directory with 317 halal restaurants from HalalEatsNC data, compact row cards (80×80 thumbnail + text), detail modal (pageSheet), search, halal/cuisine filters, open/closed status, Google Places photos via proxy, distance sorting with location
 3. **Events (events.tsx)**: Google Calendar integration displaying community events with flyer images, organizer names, and registration links. Tapping opens a full-screen modal with image, details, and Register/RSVP button
 4. **Directory (businesses.tsx)**: Muslim business directory with category filtering, Google Places integration (ratings, photos, hours), detail modal with Call/Directions/Website actions, business submission form with pending verification
@@ -22,9 +22,9 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 
 ## Safe Area & TickerBanner
 
-- **TickerBanner** (`components/TickerBanner.tsx`) renders at the top of every screen and includes safe area top padding (67px web, `insets.top` native)
-- When no ticker messages exist, it renders a spacer `View` with the same height to keep headers properly positioned
-- Individual screens do NOT add their own top safe area padding — TickerBanner handles it
+- **TickerBanner** (`components/TickerBanner.tsx`) renders BELOW gradient headers on all screens; returns `null` when no messages (no spacer)
+- All screens use `paddingTop: isWeb ? 77 : insets.top + 10` on the gradient header so it extends into the status bar area
+- Individual screens handle their own top padding via useSafeAreaInsets
 
 ## Slide-In Drawer Menu
 
