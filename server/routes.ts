@@ -631,7 +631,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const ADMIN_KEY = process.env.SESSION_SECRET || "";
+  const ADMIN_KEY = "password";
 
   app.post("/api/ticker", async (req, res) => {
     try {
