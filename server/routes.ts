@@ -413,6 +413,9 @@ async function ensureHalalRestaurantsTable(pool: pg.Pool) {
       considerations TEXT[],
       opening_hours JSONB,
       date_checked JSONB,
+      rating DECIMAL(2,1),
+      user_ratings_total INTEGER,
+      website TEXT,
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
@@ -556,7 +559,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/halal-restaurants", async (req, res) => {
     try {
       const { cuisine, status, search } = req.query;
-      let query = "SELECT id, external_id, name, formatted_address, formatted_phone, url, lat, lng, is_halal, halal_comment, cuisine_types, emoji, evidence, considerations, opening_hours FROM halal_restaurants";
+      let query = "SELECT id, external_id, name, formatted_address, formatted_phone, url, lat, lng, is_halal, halal_comment, cuisine_types, emoji, evidence, considerations, opening_hours, rating, user_ratings_total, website FROM halal_restaurants";
       const conditions: string[] = [];
       const params: any[] = [];
 
