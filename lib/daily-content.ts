@@ -215,3 +215,28 @@ export function getDailyContent(): DailyContent {
   const dayOfYear = Math.floor(diff / oneDay);
   return islamicReminders[dayOfYear % islamicReminders.length];
 }
+
+export interface JumuahInfo {
+  masjid: string;
+  khutbah: string;
+  iqama: string;
+}
+
+const jumuahSchedules: JumuahInfo[] = [
+  { masjid: "IAR (Atwater)", khutbah: "1:00 PM", iqama: "1:30 PM" },
+  { masjid: "IAR (Page Rd)", khutbah: "1:00 PM", iqama: "1:30 PM" },
+  { masjid: "Islamic Center of Morrisville", khutbah: "12:30 PM", iqama: "1:00 PM" },
+  { masjid: "Islamic Center of Cary", khutbah: "1:00 PM", iqama: "1:30 PM" },
+  { masjid: "As-Salaam Islamic Center", khutbah: "1:15 PM", iqama: "1:45 PM" },
+  { masjid: "Chapel Hill Islamic Society", khutbah: "1:00 PM", iqama: "1:30 PM" },
+  { masjid: "Ar-Razzaq Islamic Center", khutbah: "1:15 PM", iqama: "1:45 PM" },
+  { masjid: "Jamaat Ibad Ar-Rahman", khutbah: "1:00 PM", iqama: "1:30 PM" },
+];
+
+export function isFriday(): boolean {
+  return new Date().getDay() === 5;
+}
+
+export function getJumuahSchedules(): JumuahInfo[] {
+  return jumuahSchedules;
+}

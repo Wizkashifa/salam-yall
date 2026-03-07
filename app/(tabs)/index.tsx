@@ -41,7 +41,7 @@ import {
   type Masjid,
 } from "@/lib/prayer-utils";
 import { cyclePrayerStatus, getPrayerLog, type DayLog, type PrayerName as TrackerPrayerName } from "@/lib/prayer-tracker";
-import { getDailyContent } from "@/lib/daily-content";
+import { getDailyContent, isFriday, getJumuahSchedules } from "@/lib/daily-content";
 
 interface CalendarEvent {
   id: string;
@@ -483,6 +483,8 @@ export default function PrayerScreen() {
   }, []);
 
   const dailyContent = useMemo(() => getDailyContent(), []);
+  const fridayMode = useMemo(() => isFriday(), []);
+  const jumuahSchedules = useMemo(() => fridayMode ? getJumuahSchedules() : [], [fridayMode]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -807,20 +809,50 @@ export default function PrayerScreen() {
           </Pressable>
         ) : null}
 
-        <View style={[styles.glassCard, styles.dailyContentCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
-          <View style={styles.dailyContentHeader}>
-            <Ionicons name={dailyContent.type === "quran" ? "book" : "chatbox-ellipses"} size={16} color={colors.gold} />
-            <Text style={[styles.dailyContentType, { color: colors.gold }]}>
-              {dailyContent.type === "quran" ? "Quran" : "Hadith"}
+        {fridayMode ? (
+          <View style={[styles.glassCard, styles.dailyContentCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
+            <View style={styles.dailyContentHeader}>
+              <MaterialCommunityIcons name="mosque" size={18} color={colors.emerald} />
+              <Text style={[styles.dailyContentType, { color: colors.emerald }]}>Jumu'ah Prayer</Text>
+            </View>
+            <Text style={[styles.jumuahVerse, { color: colors.text }]}>
+              "O you who believe, when the call to prayer is made on Friday, hasten to the remembrance of Allah."
+            </Text>
+            <Text style={[styles.dailyContentSource, { color: colors.textTertiary, marginBottom: 12 }]}>
+              — Surah Al-Jumu'ah 62:9
+            </Text>
+            {jumuahSchedules.map((j, idx) => (
+              <View
+                key={j.masjid}
+                style={[
+                  styles.jumuahRow,
+                  idx < jumuahSchedules.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)" },
+                ]}
+              >
+                <Text style={[styles.jumuahMasjid, { color: colors.text }]} numberOfLines={1}>{j.masjid}</Text>
+                <View style={styles.jumuahTimesCol}>
+                  <Text style={[styles.jumuahTime, { color: colors.textSecondary }]}>{j.khutbah}</Text>
+                  <Text style={[styles.jumuahTimeLabel, { color: colors.textTertiary }]}>Khutbah</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <View style={[styles.glassCard, styles.dailyContentCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
+            <View style={styles.dailyContentHeader}>
+              <Ionicons name={dailyContent.type === "quran" ? "book" : "chatbox-ellipses"} size={16} color={colors.gold} />
+              <Text style={[styles.dailyContentType, { color: colors.gold }]}>
+                {dailyContent.type === "quran" ? "Quran" : "Hadith"}
+              </Text>
+            </View>
+            <Text style={[styles.dailyContentText, { color: colors.text }]}>
+              "{dailyContent.text}"
+            </Text>
+            <Text style={[styles.dailyContentSource, { color: colors.textTertiary }]}>
+              — {dailyContent.source}
             </Text>
           </View>
-          <Text style={[styles.dailyContentText, { color: colors.text }]}>
-            "{dailyContent.text}"
-          </Text>
-          <Text style={[styles.dailyContentSource, { color: colors.textTertiary }]}>
-            — {dailyContent.source}
-          </Text>
-        </View>
+        )}
 
         {masjidsExpanded ? (
           <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
@@ -1211,6 +1243,38 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inter_400Regular",
     marginTop: 8,
+  },
+  jumuahVerse: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+    lineHeight: 20,
+    fontStyle: "italic" as const,
+    marginBottom: 4,
+  },
+  jumuahRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 8,
+  },
+  jumuahMasjid: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    flex: 1,
+    marginRight: 12,
+  },
+  jumuahTimesCol: {
+    alignItems: "center",
+  },
+  jumuahTime: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+  },
+  jumuahTimeLabel: {
+    fontSize: 9,
+    fontFamily: "Inter_400Regular",
+    textTransform: "uppercase" as const,
+    letterSpacing: 0.3,
   },
   permissionBanner: {
     marginHorizontal: 16,
