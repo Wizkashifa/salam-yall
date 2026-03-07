@@ -406,6 +406,9 @@ export default function SettingsScreen() {
         style={{ paddingHorizontal: 20, paddingVertical: 14 }}
       >
         <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>Settings</Text>
+        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
+          Customize your experience
+        </Text>
       </LinearGradient>
       <ScrollView
         style={{ flex: 1 }}

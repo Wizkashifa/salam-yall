@@ -505,9 +505,14 @@ export default function HalalScreen() {
       <TickerBanner />
       <LinearGradient
         colors={[colors.gradientStart, colors.gradientEnd]}
-        style={[styles.headerBar, { paddingTop: isWeb ? 8 : 0 }]}
+        style={{ paddingHorizontal: 20, paddingVertical: 14, flexDirection: "row", alignItems: "center" }}
       >
-        <Text style={styles.headerTitle}>Halal Eats</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>Halal Eats</Text>
+          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
+            Halal-certified restaurants nearby
+          </Text>
+        </View>
         <Pressable
           onPress={() => setShowSearch(!showSearch)}
           style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
@@ -698,19 +703,6 @@ export default function HalalScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  headerBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 14,
-    paddingTop: 14,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontFamily: "Inter_700Bold",
-    color: "#FFFFFF",
   },
   searchContainer: {
     flexDirection: "row",

@@ -403,11 +403,10 @@ export default function PrayerScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <TickerBanner />
       <LinearGradient
-        colors={isDark ? ["#0A2E1E", "#143D2E"] : ["#14523A", "#1B6B4A"]}
-        style={[styles.headerBar, { paddingTop: Platform.OS === "web" ? 12 : 8 }]}
+        colors={[colors.gradientStart, colors.gradientEnd]}
+        style={styles.headerBar}
       >
-        <View style={styles.headerMenuBtn} />
-        <View style={styles.headerCenter}>
+        <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>Ummah Connect</Text>
           {hijriDate ? (
             <Text style={styles.headerSubtitle}>{hijriDate}</Text>
@@ -540,32 +539,59 @@ export default function PrayerScreen() {
         {tonightEvents.length > 0 ? (
           <View style={[styles.sectionCard, { backgroundColor: colors.surface }]}>
             <View style={styles.sectionCardHeader}>
-              <Text style={[styles.sectionCardTitle, { color: colors.text }]}>Tonight at the Masjid</Text>
+              <Text style={[styles.sectionCardTitle, { color: colors.text }]}>Tonight in the Community</Text>
             </View>
-            {tonightEvents.map((ev, idx) => (
-              <View
-                key={ev.id}
-                style={[
-                  styles.eventRow,
-                  idx < tonightEvents.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight },
-                ]}
-              >
-                <View style={[styles.eventIcon, { backgroundColor: isDark ? "#2A2318" : "#FFF8E7" }]}>
-                  <Ionicons name="moon" size={14} color={colors.gold} />
+            {tonightEvents.map((ev, idx) => {
+              const title = (ev.title ?? "").toLowerCase();
+              let iconName: keyof typeof Ionicons.glyphMap = "calendar";
+              let iconBg = isDark ? "#2A2318" : "#FFF8E7";
+              if (title.includes("quran") || title.includes("halaqa") || title.includes("tafsir") || title.includes("study")) {
+                iconName = "book";
+                iconBg = isDark ? "#1A2E22" : "#EDF5F0";
+              } else if (title.includes("iftar") || title.includes("suhoor") || title.includes("dinner") || title.includes("potluck") || title.includes("food")) {
+                iconName = "restaurant";
+                iconBg = isDark ? "#2E2318" : "#FEF3E7";
+              } else if (title.includes("bazaar") || title.includes("market") || title.includes("shop") || title.includes("fundrais")) {
+                iconName = "bag-handle";
+                iconBg = isDark ? "#1A2638" : "#EDF2FA";
+              } else if (title.includes("workshop") || title.includes("lecture") || title.includes("talk") || title.includes("seminar") || title.includes("speaker") || title.includes("khutbah")) {
+                iconName = "mic";
+                iconBg = isDark ? "#2A1A38" : "#F5EDF9";
+              } else if (title.includes("youth") || title.includes("kids") || title.includes("children")) {
+                iconName = "people";
+                iconBg = isDark ? "#1A3038" : "#EDF8FA";
+              } else if (title.includes("prayer") || title.includes("salah") || title.includes("taraweeh") || title.includes("tahajjud") || title.includes("qiyam")) {
+                iconName = "moon";
+                iconBg = isDark ? "#2A2318" : "#FFF8E7";
+              } else if (title.includes("fitness") || title.includes("sports") || title.includes("basketball") || title.includes("soccer") || title.includes("gym")) {
+                iconName = "fitness";
+                iconBg = isDark ? "#1A2E22" : "#EDF5F0";
+              }
+              return (
+                <View
+                  key={ev.id}
+                  style={[
+                    styles.eventRow,
+                    idx < tonightEvents.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight },
+                  ]}
+                >
+                  <View style={[styles.eventIcon, { backgroundColor: iconBg }]}>
+                    <Ionicons name={iconName} size={14} color={colors.gold} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={1}>{ev.title}</Text>
+                    {ev.masjidName ? (
+                      <Text style={[styles.eventVenue, { color: colors.textSecondary }]} numberOfLines={1}>
+                        {ev.masjidName}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <Text style={[styles.eventTime, { color: colors.gold }]}>
+                    {ev.time.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                  </Text>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={1}>{ev.title}</Text>
-                  {ev.masjidName ? (
-                    <Text style={[styles.eventVenue, { color: colors.textSecondary }]} numberOfLines={1}>
-                      {ev.masjidName}
-                    </Text>
-                  ) : null}
-                </View>
-                <Text style={[styles.eventTime, { color: colors.gold }]}>
-                  {ev.time.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
-                </Text>
-              </View>
-            ))}
+              );
+            })}
           </View>
         ) : null}
 
@@ -636,28 +662,17 @@ const styles = StyleSheet.create({
   headerBar: {
     flexDirection: "row",
     alignItems: "center",
-    paddingBottom: 14,
+    paddingVertical: 14,
     paddingHorizontal: 20,
-  },
-  headerMenuBtn: {
-    width: 36,
-    height: 36,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: "center",
   },
   headerTitle: {
     color: "#FFFFFF",
-    fontSize: 20,
-    fontFamily: "PlayfairDisplay_700Bold",
-    letterSpacing: 0.3,
+    fontSize: 22,
+    fontFamily: "Inter_700Bold",
   },
   headerSubtitle: {
-    color: "rgba(255,255,255,0.6)",
-    fontSize: 11,
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 13,
     fontFamily: "Inter_400Regular",
     marginTop: 2,
   },
