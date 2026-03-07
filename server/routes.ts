@@ -4,6 +4,7 @@ import pg from "pg";
 import * as fs from "fs";
 import * as path from "path";
 import { getUncachableGoogleCalendarClient } from "./google-calendar";
+import halalSeedData from "./halal-seed-data.json";
 
 const CALENDAR_ID = "5c6138b3c670e90f28b9ec65a6650268569a070eff5ae0ae919129f763d216af@group.calendar.google.com";
 
@@ -425,10 +426,9 @@ async function ensureHalalRestaurantsTable(pool: pg.Pool) {
   const countResult = await pool.query("SELECT COUNT(*) as cnt FROM halal_restaurants");
   const count = parseInt(countResult.rows[0].cnt, 10);
   if (count === 0) {
-    console.log("Halal restaurants table is empty, seeding from halal-seed-data.json...");
+    console.log("Halal restaurants table is empty, seeding from bundled data...");
     try {
-      const seedPath = path.join(__dirname, "halal-seed-data.json");
-      const seedData = JSON.parse(fs.readFileSync(seedPath, "utf-8"));
+      const seedData = halalSeedData as any[];
       for (const r of seedData) {
         await pool.query(
           `INSERT INTO halal_restaurants (external_id, name, formatted_address, formatted_phone, url, lat, lng, is_halal, halal_comment, cuisine_types, emoji, evidence, considerations, opening_hours, rating, user_ratings_total, website)
