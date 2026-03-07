@@ -129,17 +129,16 @@ export default function PrayerScreen() {
   const tonightEvents = useMemo(() => {
     if (!calendarEvents) return [];
     const now = new Date();
-    const tonight = new Date(now);
-    tonight.setHours(17, 0, 0, 0);
-    const midnightEnd = new Date(now);
-    midnightEnd.setDate(midnightEnd.getDate() + 1);
-    midnightEnd.setHours(2, 0, 0, 0);
+    const endOfTonight = new Date(now);
+    endOfTonight.setDate(endOfTonight.getDate() + 1);
+    endOfTonight.setHours(2, 0, 0, 0);
 
     const allNearby = getAllMasjidsByDistance(userCoords.lat, userCoords.lon).slice(0, 8);
 
     const tonightFiltered = calendarEvents.filter((ev: any) => {
       const start = new Date(ev.start);
-      return start >= tonight && start <= midnightEnd && !ev.isAllDay;
+      const end = ev.end ? new Date(ev.end) : start;
+      return !ev.isAllDay && ((start >= now && start <= endOfTonight) || (start <= now && end >= now));
     });
 
     const results: { id: string; title: string; masjidName: string; time: Date }[] = [];
@@ -671,7 +670,7 @@ const styles = StyleSheet.create({
   },
   countdownPrayerName: {
     color: "#D4A843",
-    fontSize: 22,
+    fontSize: 30,
     fontFamily: "PlayfairDisplay_700Bold",
     marginTop: 2,
   },
