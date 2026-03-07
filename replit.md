@@ -25,12 +25,12 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 - **Component**: `components/AppDrawer.tsx` — animated slide-in from left using Modal + Animated API
 - **Sections**:
   - **Settings**: Calculation method picker (12 methods from adhan library), Adhan notification toggle, Appearance switcher (System/Light/Dark)
-  - **Masjid Directory**: Full list of nearby masjids with names, addresses, and directions links
+  - **Masjid Directory**: Full list of nearby masjids; tapping a masjid opens a detail view with address (tappable for directions), website link, and matched upcoming events from the calendar
   - **Bug / Feature Request**: Feedback form with type toggle (bug/feature), text description, optional email, sends via mailto
 
 ## Key Files
 
-- `lib/prayer-utils.ts` - Prayer time calculations, Hijri date, masjid data, Qibla bearing calculation, mosque proximity check, calculation method types/labels
+- `lib/prayer-utils.ts` - Prayer time calculations, Hijri date, masjid data (with websites and matchTerms), Qibla bearing, mosque proximity check, calculation methods, event-masjid matching
 - `lib/theme-context.tsx` - Dark/light/system mode context provider with AsyncStorage persistence
 - `lib/settings-context.tsx` - Settings context: calcMethod, notifications toggle, drawer open/close state
 - `lib/query-client.ts` - React Query setup with API fetcher
