@@ -18,6 +18,7 @@ import {
   Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -567,21 +568,19 @@ export default function BusinessesScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View
-        style={[
-          styles.headerSection,
-          { paddingTop: 16 },
-        ]}
+      <LinearGradient
+        colors={[colors.gradientStart, colors.gradientEnd]}
+        style={{ paddingHorizontal: 20, paddingVertical: 14 }}
       >
-        <View style={styles.headerRow}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.title, { color: colors.text }]}>Muslim Businesses</Text>
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+            <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>Muslim Businesses</Text>
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
               Support local Muslim-owned businesses
             </Text>
           </View>
           <Pressable
-            style={({ pressed }) => [styles.addButton, { backgroundColor: colors.emerald, opacity: pressed ? 0.8 : 1 }]}
+            style={({ pressed }) => [styles.addButton, { backgroundColor: "rgba(255,255,255,0.2)", opacity: pressed ? 0.8 : 1 }]}
             onPress={() => {
               setShowSubmitModal(true);
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -625,7 +624,7 @@ export default function BusinessesScreen() {
             );
           }}
         />
-      </View>
+      </LinearGradient>
 
       {isLoading ? (
         <View style={styles.centerContainer}>
