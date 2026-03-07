@@ -27,6 +27,8 @@ function setupCors(app: express.Application) {
       });
     }
 
+    origins.add("https://announcement-ticker-manager.replit.app");
+
     const origin = req.header("origin");
 
     // Allow localhost origins for Expo web development (any port)
@@ -40,7 +42,7 @@ function setupCors(app: express.Application) {
         "Access-Control-Allow-Methods",
         "GET, POST, PUT, DELETE, OPTIONS",
       );
-      res.header("Access-Control-Allow-Headers", "Content-Type");
+      res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
       res.header("Access-Control-Allow-Credentials", "true");
     }
 
