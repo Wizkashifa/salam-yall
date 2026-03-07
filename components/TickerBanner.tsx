@@ -3,7 +3,6 @@ import { Animated, Platform, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/lib/theme-context";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const USE_NATIVE_DRIVER = Platform.OS !== "web";
 
@@ -16,8 +15,7 @@ interface TickerMessage {
 }
 
 export function TickerBanner() {
-  const { colors, isDark } = useTheme();
-  const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const { data: messages } = useQuery<TickerMessage[]>({
     queryKey: ["/api/ticker"],
     refetchInterval: 30 * 1000,
@@ -51,11 +49,8 @@ export function TickerBanner() {
     return () => animation.stop();
   }, [messageSignature, containerWidth, needsScroll]);
 
-  const isWeb = Platform.OS === "web";
-  const topPad = isWeb ? 67 : insets.top;
-
   if (!allMessages.length) {
-    return <View style={{ height: topPad, backgroundColor: colors.background }} />;
+    return null;
   }
 
   const hasUrgent = urgentMessages.length > 0;
@@ -64,7 +59,7 @@ export function TickerBanner() {
   const iconColor = hasUrgent ? colors.tickerUrgentText : colors.gold;
 
   return (
-    <View style={[styles.tickerContainer, { backgroundColor: bgColor, borderBottomColor: colors.borderLight, paddingTop: topPad }]}>
+    <View style={[styles.tickerContainer, { backgroundColor: bgColor, borderBottomColor: colors.borderLight }]}>
       <View style={styles.tickerIconWrap}>
         <Ionicons name={hasUrgent ? "alert-circle" : "megaphone"} size={14} color={iconColor} />
       </View>

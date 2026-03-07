@@ -398,18 +398,21 @@ export default function SettingsScreen() {
     </>
   );
 
+  const isWeb = Platform.OS === "web";
+  const headerTopPad = isWeb ? 67 : insets.top;
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <TickerBanner />
       <LinearGradient
         colors={[colors.gradientStart, colors.gradientEnd]}
-        style={{ paddingHorizontal: 20, paddingVertical: 14 }}
+        style={{ paddingHorizontal: 20, paddingTop: headerTopPad + 10, paddingBottom: 14 }}
       >
         <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>Settings</Text>
         <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
           Customize your experience
         </Text>
       </LinearGradient>
+      <TickerBanner />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 20, paddingBottom: Platform.OS === "web" ? 34 : 20 }}

@@ -222,18 +222,21 @@ export default function EventsScreen() {
 
   const grouped = events ? groupEventsByDate(events) : [];
 
+  const isWeb = Platform.OS === "web";
+  const headerTopPad = isWeb ? 67 : insets.top;
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <TickerBanner />
       <LinearGradient
         colors={[colors.gradientStart, colors.gradientEnd]}
-        style={{ paddingHorizontal: 20, paddingVertical: 14 }}
+        style={{ paddingHorizontal: 20, paddingTop: headerTopPad + 10, paddingBottom: 14 }}
       >
         <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>Community Events</Text>
         <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
           Programs and events in the local area
         </Text>
       </LinearGradient>
+      <TickerBanner />
       <ScrollView
         style={[styles.container, { backgroundColor: colors.background }]}
         contentContainerStyle={{

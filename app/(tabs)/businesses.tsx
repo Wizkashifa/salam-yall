@@ -95,7 +95,7 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
     const bizId = business.id;
     setLoadingDetails(true);
     const baseUrl = getApiUrl();
-    const fetchUrl = `${baseUrl}/api/businesses/${bizId}/places-details`;
+    const fetchUrl = new URL(`/api/businesses/${bizId}/places-details`, baseUrl).toString();
     fetch(fetchUrl, { signal: controller.signal })
       .then(r => r.json())
       .then(d => { if (!controller.signal.aborted && d && !d.error) { setDetails(d); setLoadingDetails(false); } else if (!controller.signal.aborted) { setLoadingDetails(false); } })
@@ -110,7 +110,7 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
   const rating = rawRating != null ? Number(rawRating) : null;
   const reviewCount = details?.user_ratings_total || business.user_ratings_total;
   const hasPhoto = details?.has_photo || !!business.photo_reference;
-  const photoUrl = hasPhoto ? `${getApiUrl()}/api/businesses/${business.id}/photo` : null;
+  const photoUrl = hasPhoto ? new URL(`/api/businesses/${business.id}/photo`, getApiUrl()).toString() : null;
   const hours = details?.business_hours || business.business_hours;
 
   const openMaps = () => {
@@ -567,12 +567,14 @@ export default function BusinessesScreen() {
     [colors]
   );
 
+  const isWeb = Platform.OS === "web";
+  const headerTopPad = isWeb ? 67 : insets.top;
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <TickerBanner />
       <LinearGradient
         colors={[colors.gradientStart, colors.gradientEnd]}
-        style={{ paddingHorizontal: 20, paddingVertical: 14, flexDirection: "row", alignItems: "center" }}
+        style={{ paddingHorizontal: 20, paddingTop: headerTopPad + 10, paddingBottom: 14, flexDirection: "row", alignItems: "center" }}
       >
         <View style={{ flex: 1 }}>
           <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>Muslim Businesses</Text>
@@ -591,6 +593,7 @@ export default function BusinessesScreen() {
           <Ionicons name="add" size={22} color="#fff" />
         </Pressable>
       </LinearGradient>
+      <TickerBanner />
 
       <View style={{ backgroundColor: colors.background }}>
         <ScrollView

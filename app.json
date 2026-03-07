@@ -16,6 +16,11 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.ummahconnect",
+      "icon": {
+        "light": "./assets/images/icon.png",
+        "dark": "./assets/images/icon-dark.png",
+        "tinted": "./assets/images/icon-tinted.png"
+      },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "We need your location to calculate prayer times and find the nearest masjid."
       }

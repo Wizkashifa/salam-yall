@@ -239,6 +239,7 @@ interface HalalRestaurant {
 }
 
 export default function PrayerScreen() {
+  const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const { calcMethod, notificationsEnabled, setNotificationsEnabled } = useSettings();
   const router = useRouter();
@@ -527,12 +528,14 @@ export default function PrayerScreen() {
 
   const padNum = (n: number) => n.toString().padStart(2, "0");
 
+  const isWeb = Platform.OS === "web";
+  const headerTopPad = isWeb ? 67 : insets.top;
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <TickerBanner />
       <LinearGradient
         colors={[colors.gradientStart, colors.gradientEnd]}
-        style={styles.headerBar}
+        style={[styles.headerBar, { paddingTop: headerTopPad + 10 }]}
       >
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>Ummah Connect</Text>
@@ -553,6 +556,7 @@ export default function PrayerScreen() {
           />
         </Pressable>
       </LinearGradient>
+      <TickerBanner />
 
       <ScrollView
         ref={scrollViewRef}

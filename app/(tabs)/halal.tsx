@@ -179,7 +179,7 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
   const openStatus = isCurrentlyOpen(restaurant.opening_hours);
   const cuisines = restaurant.cuisine_types ? restaurant.cuisine_types.map(formatCuisine).join(" · ") : "";
   const hasPhoto = !!restaurant.photo_reference;
-  const photoUrl = hasPhoto ? `${getApiUrl()}/api/halal-restaurants/${restaurant.id}/photo` : null;
+  const photoUrl = hasPhoto ? new URL(`/api/halal-restaurants/${restaurant.id}/photo`, getApiUrl()).toString() : null;
   const rating = restaurant.rating != null ? Number(restaurant.rating) : null;
   const hours = formatTimings(restaurant.opening_hours);
 
@@ -425,7 +425,7 @@ export default function HalalScreen() {
         ? item.cuisine_types.map(formatCuisine).join(" · ")
         : "";
       const hasPhoto = !!item.photo_reference;
-      const photoUrl = hasPhoto ? `${getApiUrl()}/api/halal-restaurants/${item.id}/photo` : null;
+      const photoUrl = hasPhoto ? new URL(`/api/halal-restaurants/${item.id}/photo`, getApiUrl()).toString() : null;
 
       return (
         <Pressable
@@ -500,12 +500,13 @@ export default function HalalScreen() {
   const selectedCuisineLabel = CUISINE_FILTERS.find((c) => c.key === cuisineFilter)?.label || "All Cuisines";
   const isWeb = Platform.OS === "web";
 
+  const headerTopPad = isWeb ? 67 : insets.top;
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <TickerBanner />
       <LinearGradient
         colors={[colors.gradientStart, colors.gradientEnd]}
-        style={{ paddingHorizontal: 20, paddingVertical: 14, flexDirection: "row", alignItems: "center" }}
+        style={{ paddingHorizontal: 20, paddingTop: headerTopPad + 10, paddingBottom: 14, flexDirection: "row", alignItems: "center" }}
       >
         <View style={{ flex: 1 }}>
           <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>Halal Eats</Text>
@@ -520,6 +521,7 @@ export default function HalalScreen() {
           <Ionicons name={showSearch ? "close" : "search"} size={22} color="#FFFFFF" />
         </Pressable>
       </LinearGradient>
+      <TickerBanner />
 
       {showSearch && (
         <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
