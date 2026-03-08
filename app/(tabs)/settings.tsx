@@ -262,6 +262,32 @@ export default function SettingsScreen() {
         <Ionicons name="open-outline" size={16} color={colors.textSecondary} />
       </Pressable>
 
+      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>ATTRIBUTIONS</Text>
+
+      <View style={[styles.attributionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Pressable style={styles.attributionRow} onPress={() => Linking.openURL("https://halaleatsnc.com")}>
+          <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg, marginRight: 0 }]}>
+            <Ionicons name="restaurant-outline" size={18} color="#DC2626" />
+          </View>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={[styles.attributionName, { color: colors.text }]}>HalalEats NC</Text>
+            <Text style={[styles.attributionDesc, { color: colors.textSecondary }]}>Halal restaurant directory for North Carolina</Text>
+          </View>
+          <Ionicons name="open-outline" size={14} color={colors.textSecondary} />
+        </Pressable>
+        <View style={[styles.attributionDivider, { backgroundColor: colors.divider }]} />
+        <Pressable style={styles.attributionRow} onPress={() => Linking.openURL("https://www.nctrianglemuslims.org")}>
+          <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg, marginRight: 0 }]}>
+            <Ionicons name="calendar-outline" size={18} color={colors.emerald} />
+          </View>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={[styles.attributionName, { color: colors.text }]}>NC Triangle Muslims</Text>
+            <Text style={[styles.attributionDesc, { color: colors.textSecondary }]}>Community events and gatherings</Text>
+          </View>
+          <Ionicons name="open-outline" size={14} color={colors.textSecondary} />
+        </Pressable>
+      </View>
+
       <Text style={[styles.versionText, { color: colors.textTertiary }]}>Ummah Connect v1.0</Text>
     </>
   );
@@ -485,6 +511,53 @@ export default function SettingsScreen() {
     else setTrackerMonth(m => m + 1);
   }, [trackerMonth]);
 
+  const trackerStats = useMemo(() => {
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    const currentDay = now.getDate();
+    const currentHour = now.getHours();
+    const daysInMonth = new Date(trackerYear, trackerMonth, 0).getDate();
+
+    const isFutureMonth = trackerYear > currentYear || (trackerYear === currentYear && trackerMonth > currentMonth);
+    if (isFutureMonth) {
+      return { prayedCount: 0, masjidCount: 0, elapsedPrayers: 0, prayedPct: 0, masjidPct: 0 };
+    }
+
+    const isCurrentMonth = trackerYear === currentYear && trackerMonth === currentMonth;
+    const fullDays = isCurrentMonth ? Math.max(0, currentDay - 1) : daysInMonth;
+
+    let todayElapsedPrayers = 0;
+    if (isCurrentMonth) {
+      if (currentHour >= 5) todayElapsedPrayers++;
+      if (currentHour >= 13) todayElapsedPrayers++;
+      if (currentHour >= 16) todayElapsedPrayers++;
+      if (currentHour >= 18) todayElapsedPrayers++;
+      if (currentHour >= 20) todayElapsedPrayers++;
+    }
+
+    const elapsedPrayers = (fullDays * 5) + todayElapsedPrayers;
+
+    let prayedCount = 0;
+    let masjidCount = 0;
+    const countDays = isCurrentMonth ? currentDay : daysInMonth;
+
+    for (let d = 1; d <= countDays; d++) {
+      const dateKey = `${trackerYear}-${String(trackerMonth).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      const log = monthLogs[dateKey];
+      if (log) {
+        for (const p of PRAYER_NAMES) {
+          if (log[p] === 1) prayedCount++;
+          if (log[p] === 2) { prayedCount++; masjidCount++; }
+        }
+      }
+    }
+
+    const prayedPct = elapsedPrayers > 0 ? Math.round((prayedCount / elapsedPrayers) * 100) : 0;
+    const masjidPct = elapsedPrayers > 0 ? Math.round((masjidCount / elapsedPrayers) * 100) : 0;
+
+    return { prayedCount, masjidCount, elapsedPrayers, prayedPct, masjidPct };
+  }, [monthLogs, trackerYear, trackerMonth, now]);
+
   const renderPrayerTracker = () => {
     const selectedLog = selectedDay ? monthLogs[selectedDay] : null;
     return (
@@ -496,6 +569,25 @@ export default function SettingsScreen() {
           <Ionicons name="arrow-back" size={20} color={colors.text} />
           <Text style={[styles.backLabel, { color: colors.text }]}>Prayer Tracker</Text>
         </Pressable>
+
+        {trackerStats.elapsedPrayers > 0 ? (
+          <View style={[styles.statsRow, { marginBottom: 12 }]}>
+            <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={[styles.statCircle, { borderColor: colors.gold }]}>
+                <Text style={[styles.statPct, { color: colors.gold }]}>{trackerStats.prayedPct}%</Text>
+              </View>
+              <Text style={[styles.statLabel, { color: colors.text }]}>Prayers Completed</Text>
+              <Text style={[styles.statSub, { color: colors.textSecondary }]}>{trackerStats.prayedCount} of {trackerStats.elapsedPrayers}</Text>
+            </View>
+            <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={[styles.statCircle, { borderColor: colors.emerald }]}>
+                <Text style={[styles.statPct, { color: colors.emerald }]}>{trackerStats.masjidPct}%</Text>
+              </View>
+              <Text style={[styles.statLabel, { color: colors.text }]}>At the Masjid</Text>
+              <Text style={[styles.statSub, { color: colors.textSecondary }]}>{trackerStats.masjidCount} of {trackerStats.elapsedPrayers}</Text>
+            </View>
+          </View>
+        ) : null}
 
         <View style={[styles.calMonthRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Pressable onPress={handlePrevMonth} hitSlop={12}>
@@ -848,6 +940,63 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     marginTop: 30,
     marginBottom: 10,
+  },
+  statsRow: {
+    flexDirection: "row" as const,
+    gap: 12,
+  },
+  statCard: {
+    flex: 1,
+    alignItems: "center" as const,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  statCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 3,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+    marginBottom: 8,
+  },
+  statPct: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+  },
+  statLabel: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    textAlign: "center" as const,
+  },
+  statSub: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
+  },
+  attributionCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: "hidden" as const,
+  },
+  attributionRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    padding: 14,
+  },
+  attributionDivider: {
+    height: 1,
+    marginHorizontal: 14,
+  },
+  attributionName: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+  },
+  attributionDesc: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
   },
   calMonthRow: {
     flexDirection: "row",
