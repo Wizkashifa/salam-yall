@@ -1089,6 +1089,7 @@ const styles = StyleSheet.create({
   },
   headerTitleSalams: {
     fontFamily: "PlayfairDisplay_700Bold",
+    fontStyle: "italic" as const,
     color: "#FFFFFF",
     fontSize: 22,
   },
