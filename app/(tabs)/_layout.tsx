@@ -57,8 +57,8 @@ function ClassicTabLayout() {
         tabBarBackground: () =>
           isIOS ? (
             <BlurView
-              intensity={80}
-              tint={isDark ? "dark" : "light"}
+              intensity={isDark ? 120 : 80}
+              tint={isDark ? "systemChromeMaterialDark" : "light"}
               style={StyleSheet.absoluteFill}
             />
           ) : isWeb ? (

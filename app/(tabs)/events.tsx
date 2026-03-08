@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -12,6 +12,7 @@ import {
   Modal,
   Dimensions,
   Linking,
+  Share,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -20,6 +21,8 @@ import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
+import { useDeepLink } from "@/lib/deeplink-context";
+import { getApiUrl } from "@/lib/query-client";
 
 interface CalendarEvent {
   id: string;
@@ -120,9 +123,16 @@ function EventDetailModal({ event, visible, onClose }: { event: CalendarEvent | 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-        <View style={[styles.modalHeader, { paddingTop: Platform.OS === "web" ? 67 : insets.top + 12 }]}>
+        <View style={[styles.modalHeader, { paddingTop: Platform.OS === "web" ? 67 : insets.top + 12, justifyContent: "space-between" }]}>
           <Pressable onPress={onClose} hitSlop={8} style={[styles.modalCloseBtn, { backgroundColor: isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.85)" }]}>
             <Ionicons name="close" size={20} color={isDark ? "#fff" : "#374151"} />
+          </Pressable>
+          <Pressable onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            const shareUrl = `${getApiUrl()}share/event/${encodeURIComponent(event.id)}`;
+            Share.share({ message: `${event.title} — check it out on Ummah Connect! ${shareUrl}` });
+          }} hitSlop={8} style={[styles.modalCloseBtn, { backgroundColor: isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.85)" }]}>
+            <Ionicons name="share-outline" size={18} color={isDark ? "#fff" : "#374151"} />
           </Pressable>
         </View>
 
@@ -223,12 +233,22 @@ export default function EventsScreen() {
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const { consumeTarget } = useDeepLink();
 
   const { data: events, isLoading, error } = useQuery<CalendarEvent[]>({
     queryKey: ["/api/events"],
     staleTime: 2 * 60 * 1000,
     refetchInterval: 2 * 60 * 1000,
   });
+
+  useEffect(() => {
+    if (!events || events.length === 0) return;
+    const targetId = consumeTarget("event");
+    if (targetId) {
+      const ev = events.find((e) => e.id === targetId);
+      if (ev) setSelectedEvent(ev);
+    }
+  }, [events]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

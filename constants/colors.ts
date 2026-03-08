@@ -4,7 +4,7 @@ const forestGreen = "#14523A";
 const richGold = "#D4A843";
 const darkGold = "#B8922E";
 const lightGold = "#F0DDA0";
-const warmCream = "#FAF8F5";
+const warmCream = "#F9F4EB";
 const ivory = "#F5F2ED";
 
 const ramadanPurple = "#6B3FA0";
@@ -44,29 +44,29 @@ const baseDark = {
   text: "#F5F5F5",
   textSecondary: "#9CA3AF",
   textTertiary: "#6B7280",
-  background: "#0C0C0C",
-  surface: "#161616",
-  surfaceElevated: "#1E1E1E",
-  surfaceSecondary: "#1A1A1A",
+  background: "#0A1A12",
+  surface: "#0F2118",
+  surfaceElevated: "#14281E",
+  surfaceSecondary: "#0D1E15",
   accent: richGold,
   accentMuted: "#3D3323",
   tabIconDefault: "#6B7280",
-  border: "#252525",
-  borderLight: "#1E1E1E",
-  card: "#161616",
+  border: "#1A3025",
+  borderLight: "#152A1F",
+  card: "#0F2118",
   cardShadow: "rgba(0, 0, 0, 0.3)",
   gold: richGold,
   goldLight: "#2A2318",
-  prayerActiveText: "#0C0C0C",
+  prayerActiveText: "#0A1A12",
   categoryBadgeBg: (hex: string) => hex + "25",
   bannerBg: "#3D3323",
   bannerText: "#D4A843",
-  divider: "#1E1E1E",
+  divider: "#152A1F",
   tickerBg: "#2A2318",
   tickerUrgentBg: "#2A1818",
   tickerText: "#D4A843",
   tickerUrgentText: "#F87171",
-  sectionDivider: "#1E1E1E",
+  sectionDivider: "#152A1F",
 };
 
 export default {
@@ -117,6 +117,16 @@ export default {
   },
   darkRamadan: {
     ...baseDark,
+    background: "#120A1F",
+    surface: "#18102A",
+    surfaceElevated: "#1E1533",
+    surfaceSecondary: "#150D25",
+    card: "#18102A",
+    border: "#2A1E40",
+    borderLight: "#221838",
+    divider: "#221838",
+    sectionDivider: "#221838",
+    prayerActiveText: "#120A1F",
     tint: richGold,
     tabIconSelected: richGold,
     emerald: ramadanPurple,

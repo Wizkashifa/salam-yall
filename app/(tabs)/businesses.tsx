@@ -16,6 +16,7 @@ import {
   KeyboardAvoidingView,
   Image,
   Dimensions,
+  Share,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -24,6 +25,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
+import { useDeepLink } from "@/lib/deeplink-context";
 import { apiRequest, getApiUrl } from "@/lib/query-client";
 
 interface Business {
@@ -131,9 +133,15 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-        <View style={[styles.detailHeader, { paddingTop: Platform.OS === "web" ? 67 : insets.top + 12 }]}>
+        <View style={[styles.detailHeader, { paddingTop: Platform.OS === "web" ? 67 : insets.top + 12, justifyContent: "space-between" }]}>
           <Pressable onPress={onClose} hitSlop={8} style={[styles.closeButton, { backgroundColor: isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.85)" }]}>
             <Ionicons name="close" size={20} color={isDark ? "#fff" : "#374151"} />
+          </Pressable>
+          <Pressable onPress={() => {
+            const shareUrl = `${getApiUrl()}share/business/${business.id}`;
+            Share.share({ message: `${business.name} — check it out on Ummah Connect! ${shareUrl}` });
+          }} hitSlop={8} style={[styles.closeButton, { backgroundColor: isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.85)" }]}>
+            <Ionicons name="share-outline" size={18} color={isDark ? "#fff" : "#374151"} />
           </Pressable>
         </View>
 
@@ -525,11 +533,21 @@ export default function BusinessesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
+  const { consumeTarget } = useDeepLink();
 
   const { data: businesses, isLoading } = useQuery<Business[]>({
     queryKey: ["/api/businesses"],
     staleTime: 10 * 60 * 1000,
   });
+
+  useEffect(() => {
+    if (!businesses || businesses.length === 0) return;
+    const targetId = consumeTarget("business");
+    if (targetId) {
+      const b = businesses.find((biz) => String(biz.id) === targetId);
+      if (b) setSelectedBusiness(b);
+    }
+  }, [businesses]);
 
   const categoryCounts = businesses
     ? businesses.reduce<Record<string, number>>((acc, b) => {

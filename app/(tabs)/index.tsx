@@ -12,6 +12,9 @@ import {
   Modal,
   Image,
   Dimensions,
+  TextInput,
+  FlatList,
+  Share,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
@@ -20,6 +23,7 @@ import * as Haptics from "expo-haptics";
 import * as Notifications from "expo-notifications";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
+import { getApiUrl } from "@/lib/query-client";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
@@ -35,6 +39,7 @@ import {
   getAllMasjidsByDistance,
   checkNearMosque,
   matchEventsToMasjid,
+  calculateQiblaBearing,
   isRamadan,
   NEARBY_MASJIDS,
   type PrayerTimeEntry,
@@ -96,9 +101,16 @@ function HomeEventDetailModal({ event, visible, onClose }: { event: CalendarEven
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <View style={{ position: "absolute", top: Platform.OS === "web" ? 67 : insets.top + 12, right: 16, zIndex: 10 }}>
+        <View style={{ position: "absolute", top: Platform.OS === "web" ? 67 : insets.top + 12, left: 16, right: 16, zIndex: 10, flexDirection: "row", justifyContent: "space-between" }}>
           <Pressable onPress={onClose} hitSlop={8} style={{ width: 32, height: 32, borderRadius: 16, justifyContent: "center", alignItems: "center", backgroundColor: isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.85)" }}>
             <Ionicons name="close" size={20} color={isDark ? "#fff" : "#374151"} />
+          </Pressable>
+          <Pressable onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            const shareUrl = `${getApiUrl()}share/event/${encodeURIComponent(event.id)}`;
+            Share.share({ message: `${event.title} — check it out on Ummah Connect! ${shareUrl}` });
+          }} hitSlop={8} style={{ width: 32, height: 32, borderRadius: 16, justifyContent: "center", alignItems: "center", backgroundColor: isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.85)" }}>
+            <Ionicons name="share-outline" size={18} color={isDark ? "#fff" : "#374151"} />
           </Pressable>
         </View>
         <ScrollView bounces={false} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
@@ -281,8 +293,19 @@ function SkeletonHomeScreen({ colors, isDark, insets }: { colors: any; isDark: b
   );
 }
 
-function CountdownRing({ colors, isDark, progress }: {
-  colors: any; isDark: boolean; progress: number;
+function getWeatherIcon(code: number, isDay: boolean): { name: string; lib: "ionicons" | "mci" } {
+  if (code <= 1) return { name: isDay ? "sunny" : "moon", lib: "ionicons" };
+  if (code <= 3) return { name: isDay ? "partly-sunny" : "cloudy-night", lib: "ionicons" };
+  if (code <= 48) return { name: "cloud", lib: "ionicons" };
+  if (code <= 67) return { name: "rainy", lib: "ionicons" };
+  if (code <= 77) return { name: "snow", lib: "ionicons" };
+  if (code <= 82) return { name: "rainy", lib: "ionicons" };
+  if (code <= 86) return { name: "snow", lib: "ionicons" };
+  return { name: "thunderstorm", lib: "ionicons" };
+}
+
+function CountdownRing({ colors, isDark, progress, qiblaBearing }: {
+  colors: any; isDark: boolean; progress: number; qiblaBearing: number;
 }) {
   const size = 72;
   const half = size / 2;
@@ -294,7 +317,13 @@ function CountdownRing({ colors, isDark, progress }: {
   const deg = clampedProgress * 360;
 
   return (
-    <View style={{ width: size, height: size, justifyContent: "center", alignItems: "center" }}>
+    <Pressable
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        Linking.openURL("https://qiblafinder.withgoogle.com/intl/en/finder/ar");
+      }}
+      style={{ width: size, height: size, justifyContent: "center", alignItems: "center" }}
+    >
       <View style={{
         position: "absolute", width: size, height: size, borderRadius: half,
         borderWidth: strokeWidth, borderColor: trackColor, backgroundColor: bgColor,
@@ -327,8 +356,11 @@ function CountdownRing({ colors, isDark, progress }: {
           }} />
         </View>
       )}
-      <MaterialCommunityIcons name="mosque" size={28} color={fillColor} />
-    </View>
+      <View style={{ transform: [{ rotate: `${qiblaBearing}deg` }] }}>
+        <Ionicons name="navigate" size={24} color={fillColor} />
+      </View>
+      <Text style={{ fontSize: 7, fontFamily: "Inter_600SemiBold", color: fillColor, marginTop: 1 }}>QIBLA</Text>
+    </Pressable>
   );
 }
 
@@ -351,6 +383,8 @@ export default function PrayerScreen() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [todayLog, setTodayLog] = useState<DayLog>({ fajr: 0, dhuhr: 0, asr: 0, maghrib: 0, isha: 0 });
   const [ramadanActive, setRamadanActive] = useState(false);
+  const [searchVisible, setSearchVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const scrollViewRef = useRef<ScrollView>(null);
 
   const { data: calendarEvents } = useQuery<any[]>({
@@ -364,6 +398,11 @@ export default function PrayerScreen() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: businessesData } = useQuery<{ id: string; name: string; category: string; description: string }[]>({
+    queryKey: ["/api/businesses"],
+    staleTime: 5 * 60 * 1000,
+  });
+
   interface IqamaSchedule {
     masjid: string;
     iqama: { fajr: string; dhuhr: string; asr: string; maghrib: string; isha: string };
@@ -372,6 +411,11 @@ export default function PrayerScreen() {
   const { data: iqamaData } = useQuery<IqamaSchedule[]>({
     queryKey: ["/api/iqama-times"],
     staleTime: 60 * 60 * 1000,
+  });
+
+  const { data: weatherData } = useQuery<{ temperature: number; weatherCode: number; isDay: boolean }>({
+    queryKey: [`/api/weather?lat=${userCoords.lat.toFixed(2)}&lon=${userCoords.lon.toFixed(2)}`],
+    staleTime: 30 * 60 * 1000,
   });
 
   const nearbyMasjids = useMemo(() => {
@@ -680,6 +724,10 @@ export default function PrayerScreen() {
     }
   }, []);
 
+  const qiblaBearing = useMemo(() => {
+    return calculateQiblaBearing(userCoords.lat, userCoords.lon);
+  }, [userCoords]);
+
   const countdownProgress = useMemo(() => {
     if (!nextPrayer || prayers.length === 0) return 0;
     const now2 = new Date();
@@ -817,13 +865,19 @@ export default function PrayerScreen() {
 
         <View style={[styles.glassCard, styles.prayerCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
           <View style={styles.prayerHero}>
-            <CountdownRing colors={colors} isDark={isDark} progress={countdownProgress} />
+            <CountdownRing colors={colors} isDark={isDark} progress={countdownProgress} qiblaBearing={qiblaBearing} />
             {nextPrayer ? (
               <View style={styles.prayerHeroText}>
-                <Text style={[styles.prayerHeroName, { color: colors.emerald }]}>{nextPrayer.label}</Text>
+                <Text style={[styles.prayerHeroName, { color: isDark ? "#FFFFFF" : colors.emerald }]}>{nextPrayer.label}</Text>
                 <Text style={[styles.prayerHeroCountdown, { color: isDark ? colors.gold : colors.text }]}>
                   {padNum(countdown.hours)}:{padNum(countdown.minutes)}:{padNum(countdown.seconds)}
                 </Text>
+              </View>
+            ) : null}
+            {weatherData ? (
+              <View style={{ alignItems: "center", gap: 2 }}>
+                <Ionicons name={getWeatherIcon(weatherData.weatherCode, weatherData.isDay).name as any} size={22} color={isDark ? colors.gold : colors.textSecondary} />
+                <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: isDark ? colors.gold : colors.text }}>{weatherData.temperature}°F</Text>
               </View>
             ) : null}
           </View>
@@ -880,29 +934,13 @@ export default function PrayerScreen() {
           ) : null}
         </View>
 
-        <View style={styles.quickActionsRow}>
-          {[
-            { icon: "mosque" as const, label: "Masjids", onPress: () => setMasjidsExpanded(true), isMCI: true },
-            { icon: "compass-outline" as const, label: "Qibla", onPress: () => Linking.openURL("https://qiblafinder.withgoogle.com/intl/en/finder/ar"), isMCI: false },
-            { icon: "calendar-outline" as const, label: "Events", onPress: () => router.push("/(tabs)/events"), isMCI: false },
-            { icon: "restaurant-outline" as const, label: "Halal", onPress: () => router.push("/(tabs)/halal"), isMCI: false },
-          ].map((action) => (
-            <Pressable
-              key={action.label}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); action.onPress(); }}
-              style={({ pressed }) => [styles.quickActionBtn, pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] }]}
-            >
-              <View style={[styles.quickActionIcon, { backgroundColor: isDark ? colors.emerald + "20" : colors.emerald + "12" }]}>
-                {action.isMCI ? (
-                  <MaterialCommunityIcons name={action.icon as any} size={22} color={colors.emerald} />
-                ) : (
-                  <Ionicons name={action.icon as any} size={22} color={colors.emerald} />
-                )}
-              </View>
-              <Text style={[styles.quickActionLabel, { color: colors.textSecondary }]}>{action.label}</Text>
-            </Pressable>
-          ))}
-        </View>
+        <Pressable
+          onPress={() => { setSearchVisible(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+          style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        >
+          <Ionicons name="search" size={18} color={colors.textTertiary} />
+          <Text style={[styles.searchPlaceholder, { color: colors.textTertiary }]}>Search events, restaurants, businesses...</Text>
+        </Pressable>
 
         {locationPermission === false ? (
           <Pressable
@@ -1121,6 +1159,102 @@ export default function PrayerScreen() {
         visible={!!selectedEvent}
         onClose={() => setSelectedEvent(null)}
       />
+      <Modal visible={searchVisible} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setSearchVisible(false)}>
+        <View style={{ flex: 1, backgroundColor: colors.background }}>
+          <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingTop: Platform.OS === "web" ? 67 : insets.top + 12, paddingBottom: 12, gap: 10, backgroundColor: colors.surface, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }}>
+            <View style={{ flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: colors.surfaceSecondary, borderRadius: 10, paddingHorizontal: 10, height: 40 }}>
+              <Ionicons name="search" size={18} color={colors.textTertiary} />
+              <TextInput
+                autoFocus
+                placeholder="Search..."
+                placeholderTextColor={colors.textTertiary}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                style={{ flex: 1, marginLeft: 8, fontSize: 16, fontFamily: "Inter_400Regular", color: colors.text }}
+                returnKeyType="search"
+              />
+              {searchQuery.length > 0 && (
+                <Pressable onPress={() => setSearchQuery("")} hitSlop={8}>
+                  <Ionicons name="close-circle" size={18} color={colors.textTertiary} />
+                </Pressable>
+              )}
+            </View>
+            <Pressable onPress={() => { setSearchVisible(false); setSearchQuery(""); }}>
+              <Text style={{ fontSize: 16, fontFamily: "Inter_500Medium", color: colors.emerald }}>Cancel</Text>
+            </Pressable>
+          </View>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+            {(() => {
+              const q = searchQuery.toLowerCase().trim();
+              if (q.length < 2) return (
+                <Text style={{ textAlign: "center", marginTop: 40, color: colors.textTertiary, fontFamily: "Inter_400Regular", fontSize: 14 }}>Type at least 2 characters to search</Text>
+              );
+              const eventResults = (calendarEvents || []).filter((e: any) => e.title?.toLowerCase().includes(q) || e.description?.toLowerCase().includes(q) || e.organizer?.toLowerCase().includes(q)).slice(0, 5);
+              const restaurantResults = (halalRestaurants || []).filter((r: HalalRestaurant) => r.name?.toLowerCase().includes(q) || (r.cuisine_types || []).some(c => c.toLowerCase().includes(q))).slice(0, 5);
+              const businessResults = (businessesData || []).filter((b: any) => b.name?.toLowerCase().includes(q) || b.category?.toLowerCase().includes(q) || b.description?.toLowerCase().includes(q)).slice(0, 5);
+              const totalResults = eventResults.length + restaurantResults.length + businessResults.length;
+              if (totalResults === 0) return (
+                <Text style={{ textAlign: "center", marginTop: 40, color: colors.textTertiary, fontFamily: "Inter_400Regular", fontSize: 14 }}>No results found</Text>
+              );
+              return (
+                <>
+                  {eventResults.length > 0 && (
+                    <>
+                      <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.textSecondary, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: 8 }}>Events</Text>
+                      {eventResults.map((ev: any) => (
+                        <Pressable key={ev.id} onPress={() => { setSearchVisible(false); setSearchQuery(""); router.push("/(tabs)/events"); }} style={({ pressed }) => [{ flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 10, backgroundColor: colors.surface, marginBottom: 8, gap: 12 }, pressed && { opacity: 0.7 }]}>
+                          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.prayerIconBg, justifyContent: "center", alignItems: "center" }}>
+                            <Ionicons name="calendar" size={16} color={colors.emerald} />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.text }} numberOfLines={1}>{ev.title}</Text>
+                            {ev.organizer ? <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.textSecondary }} numberOfLines={1}>{ev.organizer}</Text> : null}
+                          </View>
+                          <Ionicons name="chevron-forward" size={14} color={colors.textTertiary} />
+                        </Pressable>
+                      ))}
+                    </>
+                  )}
+                  {restaurantResults.length > 0 && (
+                    <>
+                      <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.textSecondary, textTransform: "uppercase" as const, letterSpacing: 0.8, marginTop: eventResults.length > 0 ? 12 : 0, marginBottom: 8 }}>Restaurants</Text>
+                      {restaurantResults.map((r: HalalRestaurant) => (
+                        <Pressable key={r.id} onPress={() => { setSearchVisible(false); setSearchQuery(""); router.push("/(tabs)/halal"); }} style={({ pressed }) => [{ flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 10, backgroundColor: colors.surface, marginBottom: 8, gap: 12 }, pressed && { opacity: 0.7 }]}>
+                          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: isDark ? "#2E2318" : "#FEF3E7", justifyContent: "center", alignItems: "center" }}>
+                            <Ionicons name="restaurant" size={16} color={colors.gold} />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.text }} numberOfLines={1}>{r.name}</Text>
+                            {r.cuisine_types && r.cuisine_types.length > 0 ? <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.textSecondary }} numberOfLines={1}>{r.cuisine_types.join(", ")}</Text> : null}
+                          </View>
+                          <Ionicons name="chevron-forward" size={14} color={colors.textTertiary} />
+                        </Pressable>
+                      ))}
+                    </>
+                  )}
+                  {businessResults.length > 0 && (
+                    <>
+                      <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.textSecondary, textTransform: "uppercase" as const, letterSpacing: 0.8, marginTop: (eventResults.length > 0 || restaurantResults.length > 0) ? 12 : 0, marginBottom: 8 }}>Businesses</Text>
+                      {businessResults.map((b: any) => (
+                        <Pressable key={b.id} onPress={() => { setSearchVisible(false); setSearchQuery(""); router.push("/(tabs)/businesses"); }} style={({ pressed }) => [{ flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 10, backgroundColor: colors.surface, marginBottom: 8, gap: 12 }, pressed && { opacity: 0.7 }]}>
+                          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.prayerIconBg, justifyContent: "center", alignItems: "center" }}>
+                            <Ionicons name="storefront" size={16} color={colors.emerald} />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.text }} numberOfLines={1}>{b.name}</Text>
+                            <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.textSecondary }} numberOfLines={1}>{b.category}</Text>
+                          </View>
+                          <Ionicons name="chevron-forward" size={14} color={colors.textTertiary} />
+                        </Pressable>
+                      ))}
+                    </>
+                  )}
+                </>
+              );
+            })()}
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1217,6 +1351,8 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontFamily: "Inter_700Bold",
     marginTop: 2,
+    textTransform: "uppercase" as const,
+    letterSpacing: 1.5,
   },
   prayerHeroCountdown: {
     fontSize: 28,
@@ -1249,29 +1385,23 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     marginTop: 3,
   },
-  quickActionsRow: {
+  searchBar: {
     flexDirection: "row",
-    justifyContent: "space-around",
+    alignItems: "center",
     marginHorizontal: 16,
-    marginTop: 20,
+    marginTop: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    gap: 10,
   },
-  quickActionBtn: {
-    alignItems: "center",
-    gap: 6,
-  },
-  quickActionIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  quickActionLabel: {
-    fontSize: 11,
-    fontFamily: "Inter_500Medium",
+  searchPlaceholder: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
   },
   prayerIqamaTime: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: "Inter_600SemiBold",
     marginTop: 3,
   },

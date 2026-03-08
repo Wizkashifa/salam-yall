@@ -1484,6 +1484,192 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  let weatherCache: { data: any; timestamp: number; key: string } | null = null;
+  const WEATHER_CACHE_MS = 30 * 60 * 1000;
+
+  app.get("/api/weather", async (req, res) => {
+    try {
+      const lat = parseFloat(req.query.lat as string) || 35.7796;
+      const lon = parseFloat(req.query.lon as string) || -78.6382;
+      const cacheKey = `${lat.toFixed(2)}_${lon.toFixed(2)}`;
+      if (weatherCache && weatherCache.key === cacheKey && Date.now() - weatherCache.timestamp < WEATHER_CACHE_MS) {
+        return res.json(weatherCache.data);
+      }
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,is_day&temperature_unit=fahrenheit&timezone=auto`;
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error("Weather API error");
+      const json = await resp.json();
+      const current = json.current;
+      const result = {
+        temperature: Math.round(current.temperature_2m),
+        weatherCode: current.weather_code,
+        isDay: current.is_day === 1,
+      };
+      weatherCache = { data: result, timestamp: Date.now(), key: cacheKey };
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/share/event/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const event = cachedEvents.find(e => e.id === id);
+      const title = event ? event.title : "Community Event";
+      const description = event
+        ? (event.description || "").substring(0, 200) || `Event at ${event.organizer || "Ummah Connect"}`
+        : "Check out this event on Ummah Connect";
+      const imageUrl = event?.imageUrl || "";
+      const host = req.get("host") || "muslim-life-hub.replit.app";
+      const pageUrl = `https://${host}/share/event/${id}`;
+      const deepLink = `ummahconnect://event/${id}`;
+
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.send(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(title)} - Ummah Connect</title>
+  <meta property="og:title" content="${escapeHtml(title)}">
+  <meta property="og:description" content="${escapeHtml(description)}">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="${pageUrl}">
+  ${imageUrl ? `<meta property="og:image" content="${escapeHtml(imageUrl)}">` : ""}
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${escapeHtml(title)}">
+  <meta name="twitter:description" content="${escapeHtml(description)}">
+  ${imageUrl ? `<meta name="twitter:image" content="${escapeHtml(imageUrl)}">` : ""}
+  <style>body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#0A1F16;color:#fff;text-align:center;padding:20px}
+  .card{max-width:400px;background:#142E22;border-radius:16px;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,0.3)}
+  h1{font-size:24px;margin:0 0 8px}p{color:#9CA3AF;font-size:14px;margin:0 0 24px;line-height:1.5}
+  a{display:inline-block;background:#10B981;color:#fff;text-decoration:none;padding:12px 32px;border-radius:10px;font-weight:600;font-size:16px}</style>
+</head>
+<body>
+  <div class="card">
+    <h1>${escapeHtml(title)}</h1>
+    <p>${escapeHtml(description.substring(0, 150))}${description.length > 150 ? "..." : ""}</p>
+    <a href="${deepLink}" id="open">Open in App</a>
+  </div>
+  <script>
+    setTimeout(function(){window.location.href="${deepLink}"},500);
+    setTimeout(function(){document.getElementById("open").textContent="Download Ummah Connect"},3000);
+  </script>
+</body>
+</html>`);
+    } catch (error: any) {
+      res.status(500).send("Error loading share page");
+    }
+  });
+
+  app.get("/share/restaurant/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = await pool.query("SELECT id, name, formatted_address, halal_comment, is_halal FROM halal_restaurants WHERE id = $1", [id]);
+      const restaurant = result.rows[0];
+      const title = restaurant ? restaurant.name : "Halal Restaurant";
+      const description = restaurant
+        ? (restaurant.halal_comment || restaurant.formatted_address || `${restaurant.is_halal === "IS_HALAL" ? "Halal" : "Halal restaurant"} on Ummah Connect`)
+        : "Check out this restaurant on Ummah Connect";
+      const host = req.get("host") || "muslim-life-hub.replit.app";
+      const pageUrl = `https://${host}/share/restaurant/${id}`;
+      const deepLink = `ummahconnect://restaurant/${id}`;
+
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.send(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(title)} - Ummah Connect</title>
+  <meta property="og:title" content="${escapeHtml(title)}">
+  <meta property="og:description" content="${escapeHtml(description)}">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="${pageUrl}">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="${escapeHtml(title)}">
+  <meta name="twitter:description" content="${escapeHtml(description)}">
+  <style>body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#0A1F16;color:#fff;text-align:center;padding:20px}
+  .card{max-width:400px;background:#142E22;border-radius:16px;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,0.3)}
+  h1{font-size:24px;margin:0 0 8px}p{color:#9CA3AF;font-size:14px;margin:0 0 24px;line-height:1.5}
+  a{display:inline-block;background:#10B981;color:#fff;text-decoration:none;padding:12px 32px;border-radius:10px;font-weight:600;font-size:16px}</style>
+</head>
+<body>
+  <div class="card">
+    <h1>${escapeHtml(title)}</h1>
+    <p>${escapeHtml(description.substring(0, 150))}${description.length > 150 ? "..." : ""}</p>
+    <a href="${deepLink}" id="open">Open in App</a>
+  </div>
+  <script>
+    setTimeout(function(){window.location.href="${deepLink}"},500);
+    setTimeout(function(){document.getElementById("open").textContent="Download Ummah Connect"},3000);
+  </script>
+</body>
+</html>`);
+    } catch (error: any) {
+      res.status(500).send("Error loading share page");
+    }
+  });
+
+  app.get("/share/business/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = await pool.query("SELECT id, name, category, description, address FROM businesses WHERE id = $1 AND status = 'approved'", [id]);
+      const business = result.rows[0];
+      const title = business ? business.name : "Local Business";
+      const description = business
+        ? (business.description || `${business.category} business in ${business.address || "the Triangle area"}`)
+        : "Check out this business on Ummah Connect";
+      const host = req.get("host") || "muslim-life-hub.replit.app";
+      const pageUrl = `https://${host}/share/business/${id}`;
+      const deepLink = `ummahconnect://business/${id}`;
+
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.send(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(title)} - Ummah Connect</title>
+  <meta property="og:title" content="${escapeHtml(title)}">
+  <meta property="og:description" content="${escapeHtml(description)}">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="${pageUrl}">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="${escapeHtml(title)}">
+  <meta name="twitter:description" content="${escapeHtml(description)}">
+  <style>body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#0A1F16;color:#fff;text-align:center;padding:20px}
+  .card{max-width:400px;background:#142E22;border-radius:16px;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,0.3)}
+  h1{font-size:24px;margin:0 0 8px}p{color:#9CA3AF;font-size:14px;margin:0 0 24px;line-height:1.5}
+  a{display:inline-block;background:#10B981;color:#fff;text-decoration:none;padding:12px 32px;border-radius:10px;font-weight:600;font-size:16px}</style>
+</head>
+<body>
+  <div class="card">
+    <h1>${escapeHtml(title)}</h1>
+    <p>${escapeHtml(description.substring(0, 150))}${description.length > 150 ? "..." : ""}</p>
+    <a href="${deepLink}" id="open">Open in App</a>
+  </div>
+  <script>
+    setTimeout(function(){window.location.href="${deepLink}"},500);
+    setTimeout(function(){document.getElementById("open").textContent="Download Ummah Connect"},3000);
+  </script>
+</body>
+</html>`);
+    } catch (error: any) {
+      res.status(500).send("Error loading share page");
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }

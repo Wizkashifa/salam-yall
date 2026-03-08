@@ -4,7 +4,7 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 
 ## Architecture
 
-- **Frontend**: Expo Router with file-based routing, 5 tab layout (HalalEats | Events | Home | Directory | Settings)
+- **Frontend**: Expo Router with file-based routing, 5 tab layout (HalalEats | Events | Home | Directory | More)
 - **Backend**: Express server on port 5000 serving APIs and landing page
 - **Database**: PostgreSQL via Replit's built-in database (businesses table)
 - **State**: React Query for server state, useState for local state, AsyncStorage for preferences
@@ -14,11 +14,11 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 
 ## Tab Structure
 
-1. **Home (index.tsx)**: "As-salamu alaykum" greeting header with time-based subtitle + Hijri date + preferred masjid; redesigned prayer card with countdown ring, hero countdown, interactive prayer pills (tap to track: not done → gold/completed → green/at masjid); quick actions row (Masjids/Qibla/Events/Halal); daily Quran/Hadith card; Ramadan mode (suhoor/iftar times + countdown when in Ramadan); skeleton loading; glass-effect cards; notification toggle, mosque proximity silence reminder, expandable masjids section, "Tonight in the Community" events
+1. **Home (index.tsx)**: "As-salamu alaykum" greeting header with time-based subtitle + Hijri date + preferred masjid; redesigned prayer card with Qibla direction indicator (tappable, opens Google Qibla Finder), hero countdown with weather display (Open-Meteo API), interactive prayer pills (tap to track: not done → gold/completed → green/at masjid); search bar (opens modal searching events/restaurants/businesses); daily Quran/Hadith card; Ramadan mode (suhoor/iftar times + countdown when in Ramadan); skeleton loading; glass-effect cards; notification toggle, mosque proximity silence reminder, expandable masjids section, "Tonight in the Community" events
 2. **Halal Eats (halal.tsx)**: Native restaurant directory with 317 halal restaurants from HalalEatsNC data, compact row cards (80×80 thumbnail + text), detail modal (pageSheet), search, halal/cuisine filters, open/closed status, Google Places photos via proxy, distance sorting with location
 3. **Events (events.tsx)**: Google Calendar integration displaying community events with flyer images, organizer names, and registration links. Tapping opens a full-screen modal with image, details, and Register/RSVP button
 4. **Directory (businesses.tsx)**: Muslim business directory with category filtering, Google Places integration (ratings, photos, hours), detail modal with Call/Directions/Website actions, business submission form with pending verification
-5. **Settings (settings.tsx)**: Calculation method picker, adhan notification toggle, appearance switcher (System/Light/Dark), Ramadan mode toggle (purple theme), masjid directory with preferred masjid selection (star), prayer tracker calendar view (monthly dots), feedback form, privacy/support links
+5. **More (settings.tsx)**: Prayer Tracker first, then community (Masjid Directory), prayer settings (Calc Method + Adhan Alerts), appearance, legal/app (Bug/Feature Request)
 
 ## Safe Area & TickerBanner
 
@@ -43,10 +43,13 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 - `lib/theme-context.tsx` - Dark/light/system mode context provider with AsyncStorage persistence
 - `lib/settings-context.tsx` - Settings context: calcMethod, notifications toggle, preferredMasjid, drawer open/close state
 - `lib/query-client.ts` - React Query setup with API fetcher
+- `lib/deeplink-context.tsx` - Deep link context: stores pending target (event/restaurant/business + id), consumed by tab screens to auto-open detail modals
 - `components/AppDrawer.tsx` - Animated slide-in drawer menu with settings, masjid directory, feedback form
+- `components/OnboardingFlow.tsx` - 4-screen onboarding (Welcome → Location → Notifications → Preferred Masjid) with horizontal paging and dot indicators; stores `onboarding_complete` in AsyncStorage
+- `app/+native-intent.tsx` - Routes incoming deep links (/share/... and ummahconnect:// scheme) to root for processing
 - `server/google-calendar.ts` - Google Calendar OAuth integration via Replit connector
-- `server/routes.ts` - API routes, event processing, calendar refresh, business CRUD with PostgreSQL
-- `constants/colors.ts` - Light and dark color palettes (uses `emerald` not `green` for the green color key)
+- `server/routes.ts` - API routes, event processing, calendar refresh, business CRUD with PostgreSQL, weather proxy, share pages with OG meta tags
+- `constants/colors.ts` - Light and dark color palettes (uses `emerald` not `green` for the green color key); dark mode uses green-tinted backgrounds (#0A1A12); dark Ramadan uses purple-tinted backgrounds (#120A1F); light mode uses warm cream (#F9F4EB)
 
 ## APIs
 
@@ -67,6 +70,10 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 - `GET /api/businesses/:id/places-details` - Fetches/caches Google Places details (rating, hours, location) for a business
 - `GET /api/businesses/:id/photo` - Proxies Google Places photo for a business (keeps API key server-side)
 - `POST /api/businesses/submit` - Submit a new business for review (requires name, category, email; address or google_url required)
+- `GET /api/weather?lat=X&lon=Y` - Proxies Open-Meteo weather API, returns temperature (°F), weatherCode, isDay; cached 30min server-side
+- `GET /share/event/:id` - Share page with OG meta tags for events, auto-redirects to app deep link
+- `GET /share/restaurant/:id` - Share page with OG meta tags for restaurants
+- `GET /share/business/:id` - Share page with OG meta tags for businesses
 - `GET /privacy` - Privacy policy page (HTML)
 
 ## Database Schema
@@ -119,11 +126,21 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 - **Daily Quran/Hadith**: Rotating card with curated verses and hadith, changes daily based on day-of-year; on Fridays replaced by Jumu'ah prayer schedule card fetched from `jumuah_schedules` DB table via `/api/jumuah-schedules`
 - **Ramadan Mode**: Auto-detects Hijri month 9; shows suhoor end time (Fajr) and iftar time (Maghrib) with countdown
 - **Preferred Masjid**: Star a masjid in Settings → shown in home header subtitle; persists via AsyncStorage
-- **Qibla**: Quick action links to Google Qibla Finder
+- **Qibla Ring**: Tappable Qibla direction indicator in prayer hero area; opens Google Qibla Finder
+- **Weather**: Temperature + weather icon from Open-Meteo API (30-min cache)
+- **Search Bar**: Full-screen search modal across events, restaurants, and businesses
 - **Tonight Near You**: Shows tonight's events matched to nearby masjids
 - **Prayer Notifications**: Toggle for local notifications at each prayer time
 - **Mosque Proximity Alert**: Dismissable "silence your phone" banner when within 100m of a masjid
 - **Calculation Method**: Configurable; supports all 12 adhan library methods; default ISNA
+
+## Deep Linking & Sharing
+
+- **App scheme**: `ummahconnect://` (defined in app.json)
+- **Share URLs**: `https://<domain>/share/{event|restaurant|business}/:id` — serve HTML with OG meta tags for rich link previews + auto-redirect to app deep link
+- **Share buttons**: Present on all detail modals (events, restaurants, businesses) using React Native Share API
+- **Deep link flow**: URL parsed by `parseDeepLinkUrl()` → target stored in `DeepLinkProvider` context → `DeepLinkListener` navigates to correct tab → tab screen's `useEffect` calls `consumeTarget()` to open the modal
+- **Onboarding**: 4-screen flow (Welcome → Location → Notifications → Preferred Masjid) shown once on first launch; completion flag stored in AsyncStorage
 
 ## Database Tables (PostgreSQL)
 

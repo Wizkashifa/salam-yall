@@ -14,6 +14,7 @@ import {
   Image,
   Modal,
   Dimensions,
+  Share,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -23,6 +24,7 @@ import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
+import { useDeepLink } from "@/lib/deeplink-context";
 import { getApiUrl } from "@/lib/query-client";
 
 interface HalalRestaurant {
@@ -199,9 +201,15 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-        <View style={[styles.detailHeader, { paddingTop: Platform.OS === "web" ? 67 : insets.top + 12 }]}>
+        <View style={[styles.detailHeader, { paddingTop: Platform.OS === "web" ? 67 : insets.top + 12, justifyContent: "space-between" }]}>
           <Pressable onPress={onClose} hitSlop={8} style={[styles.closeButton, { backgroundColor: isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.85)" }]}>
             <Ionicons name="close" size={20} color={isDark ? "#fff" : "#374151"} />
+          </Pressable>
+          <Pressable onPress={() => {
+            const shareUrl = `${getApiUrl()}share/restaurant/${restaurant.id}`;
+            Share.share({ message: `${restaurant.name} — check it out on Ummah Connect! ${shareUrl}` });
+          }} hitSlop={8} style={[styles.closeButton, { backgroundColor: isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.85)" }]}>
+            <Ionicons name="share-outline" size={18} color={isDark ? "#fff" : "#374151"} />
           </Pressable>
         </View>
 
@@ -350,6 +358,7 @@ export default function HalalScreen() {
   const [showCuisineDropdown, setShowCuisineDropdown] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedRestaurant, setSelectedRestaurant] = useState<HalalRestaurant | null>(null);
+  const { consumeTarget } = useDeepLink();
 
   useEffect(() => {
     (async () => {
@@ -376,6 +385,15 @@ export default function HalalScreen() {
     queryKey: ["/api/halal-restaurants"],
     staleTime: 10 * 60 * 1000,
   });
+
+  useEffect(() => {
+    if (restaurants.length === 0) return;
+    const targetId = consumeTarget("restaurant");
+    if (targetId) {
+      const r = restaurants.find((rest) => String(rest.id) === targetId);
+      if (r) setSelectedRestaurant(r);
+    }
+  }, [restaurants]);
 
   const filtered = useMemo(() => {
     let result = restaurants.map((r) => {

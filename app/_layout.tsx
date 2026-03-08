@@ -10,20 +10,67 @@ import {
   PlayfairDisplay_600SemiBold,
 } from "@expo-google-fonts/playfair-display";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { Stack } from "expo-router";
+import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect, useState } from "react";
+import * as Linking from "expo-linking";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { useEffect, useState, useCallback } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AnimatedSplash } from "@/components/AnimatedSplash";
+import { OnboardingFlow } from "@/components/OnboardingFlow";
 import { AppDrawer } from "@/components/AppDrawer";
 import { queryClient } from "@/lib/query-client";
 import { ThemeProvider } from "@/lib/theme-context";
 import { SettingsProvider } from "@/lib/settings-context";
 import { registerPushToken } from "@/lib/push-utils";
+import { DeepLinkProvider, parseDeepLinkUrl, useDeepLink } from "@/lib/deeplink-context";
+
+const ONBOARDING_KEY = "onboarding_complete";
 
 SplashScreen.preventAutoHideAsync();
+
+const DEEP_LINK_TAB_MAP: Record<string, string> = {
+  event: "/(tabs)/events",
+  restaurant: "/(tabs)/halal",
+  business: "/(tabs)/businesses",
+};
+
+function DeepLinkListener() {
+  const { setPendingTarget } = useDeepLink();
+
+  useEffect(() => {
+    const handleDeepLink = (url: string) => {
+      try {
+        const target = parseDeepLinkUrl(url);
+        if (target) {
+          setPendingTarget(target);
+          const tab = DEEP_LINK_TAB_MAP[target.type];
+          if (tab) {
+            setTimeout(() => {
+              try { router.push(tab as any); } catch {}
+            }, 500);
+          }
+        }
+      } catch {}
+    };
+
+    try {
+      Linking.getInitialURL().then((url) => {
+        if (url) handleDeepLink(url);
+      }).catch(() => {});
+    } catch {}
+
+    let subscription: { remove: () => void } | null = null;
+    try {
+      subscription = Linking.addEventListener("url", (event) => handleDeepLink(event.url));
+    } catch {}
+    return () => { try { subscription?.remove(); } catch {} };
+  }, [setPendingTarget]);
+
+  return null;
+}
 
 function RootLayoutNav() {
   useEffect(() => {
@@ -32,6 +79,7 @@ function RootLayoutNav() {
 
   return (
     <>
+      <DeepLinkListener />
       <Stack screenOptions={{ headerBackTitle: "Back" }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
@@ -50,12 +98,24 @@ export default function RootLayout() {
     PlayfairDisplay_600SemiBold,
   });
   const [showSplash, setShowSplash] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    AsyncStorage.getItem(ONBOARDING_KEY).then((val) => {
+      setShowOnboarding(val !== "true");
+    });
+  }, []);
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
+
+  const handleOnboardingComplete = useCallback(() => {
+    AsyncStorage.setItem(ONBOARDING_KEY, "true");
+    setShowOnboarding(false);
+  }, []);
 
   if (!fontsLoaded && !fontError) return null;
 
@@ -64,14 +124,19 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <SettingsProvider>
-            <GestureHandlerRootView>
-              <KeyboardProvider>
-                <RootLayoutNav />
-                {showSplash && (
-                  <AnimatedSplash onFinish={() => setShowSplash(false)} />
-                )}
-              </KeyboardProvider>
-            </GestureHandlerRootView>
+            <DeepLinkProvider>
+              <GestureHandlerRootView>
+                <KeyboardProvider>
+                  <RootLayoutNav />
+                  {showSplash && (
+                    <AnimatedSplash onFinish={() => setShowSplash(false)} />
+                  )}
+                  {!showSplash && showOnboarding && (
+                    <OnboardingFlow onComplete={handleOnboardingComplete} />
+                  )}
+                </KeyboardProvider>
+              </GestureHandlerRootView>
+            </DeepLinkProvider>
           </SettingsProvider>
         </ThemeProvider>
       </QueryClientProvider>
