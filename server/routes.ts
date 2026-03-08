@@ -323,12 +323,13 @@ async function fetchAndCacheEvents(): Promise<CachedEvent[]> {
   try {
     const calendar = await getUncachableGoogleCalendarClient();
     const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const threeMonthsLater = new Date();
     threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
 
     const response = await calendar.events.list({
       calendarId: CALENDAR_ID,
-      timeMin: now.toISOString(),
+      timeMin: startOfToday.toISOString(),
       timeMax: threeMonthsLater.toISOString(),
       singleEvents: true,
       orderBy: "startTime",
