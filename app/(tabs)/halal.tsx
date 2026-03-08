@@ -353,6 +353,7 @@ export default function HalalScreen() {
   const [showSearch, setShowSearch] = useState(false);
   const [halalFilter, setHalalFilter] = useState("ALL");
   const [cuisineFilter, setCuisineFilter] = useState("ALL");
+  const [openNowFilter, setOpenNowFilter] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showCuisineDropdown, setShowCuisineDropdown] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -414,6 +415,10 @@ export default function HalalScreen() {
       );
     }
 
+    if (openNowFilter) {
+      result = result.filter((r) => isCurrentlyOpen(r.opening_hours) === true);
+    }
+
     if (searchText.trim()) {
       const q = searchText.toLowerCase().trim();
       result = result.filter(
@@ -428,7 +433,7 @@ export default function HalalScreen() {
     }
 
     return result;
-  }, [restaurants, halalFilter, cuisineFilter, searchText, userLocation]);
+  }, [restaurants, halalFilter, cuisineFilter, openNowFilter, searchText, userLocation]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -587,6 +592,27 @@ export default function HalalScreen() {
               </Text>
             </Pressable>
           ))}
+
+          <Pressable
+            style={[
+              styles.filterChip,
+              {
+                backgroundColor: openNowFilter ? colors.emerald : colors.surface,
+                borderColor: openNowFilter ? colors.emerald : colors.border,
+              },
+            ]}
+            onPress={() => setOpenNowFilter(!openNowFilter)}
+          >
+            <Ionicons name="time-outline" size={14} color={openNowFilter ? "#FFFFFF" : colors.textSecondary} style={{ marginRight: 4 }} />
+            <Text
+              style={[
+                styles.filterChipText,
+                { color: openNowFilter ? "#FFFFFF" : colors.textSecondary },
+              ]}
+            >
+              Open Now
+            </Text>
+          </Pressable>
 
           <Pressable
             style={[
@@ -750,6 +776,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   filterChip: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 20,
