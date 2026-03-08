@@ -60,9 +60,12 @@ function isMasjid(organizer: string): boolean {
 function groupEventsByDate(events: CalendarEvent[]): { dateLabel: string; dateKey: string; events: CalendarEvent[] }[] {
   const groups: Record<string, CalendarEvent[]> = {};
   const keyOrder: string[] = [];
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   for (const event of events) {
-    const date = new Date(event.start);
-    const key = date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+    const startDate = new Date(event.start);
+    const displayDate = startDate < todayStart ? todayStart : startDate;
+    const key = displayDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
     if (!groups[key]) {
       groups[key] = [];
       keyOrder.push(key);
