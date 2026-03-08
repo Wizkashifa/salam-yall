@@ -24,6 +24,7 @@ import * as Notifications from "expo-notifications";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { getApiUrl } from "@/lib/query-client";
+import { useDeepLink } from "@/lib/deeplink-context";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
@@ -369,6 +370,7 @@ export default function PrayerScreen() {
   const { colors, isDark } = useTheme();
   const { calcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid } = useSettings();
   const router = useRouter();
+  const { setPendingTarget } = useDeepLink();
   const [prayers, setPrayers] = useState<PrayerTimeEntry[]>([]);
   const [nextPrayer, setNextPrayer] = useState<PrayerTimeEntry | null>(null);
   const [countdown, setCountdown] = useState({ hours: 0, minutes: 0, seconds: 0 });
@@ -1202,7 +1204,7 @@ export default function PrayerScreen() {
                     <>
                       <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.textSecondary, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: 8 }}>Events</Text>
                       {eventResults.map((ev: any) => (
-                        <Pressable key={ev.id} onPress={() => { setSearchVisible(false); setSearchQuery(""); router.push("/(tabs)/events"); }} style={({ pressed }) => [{ flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 10, backgroundColor: colors.surface, marginBottom: 8, gap: 12 }, pressed && { opacity: 0.7 }]}>
+                        <Pressable key={ev.id} onPress={() => { setSearchVisible(false); setSearchQuery(""); setPendingTarget({ type: "event", id: ev.id }); router.push("/(tabs)/events"); }} style={({ pressed }) => [{ flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 10, backgroundColor: colors.surface, marginBottom: 8, gap: 12 }, pressed && { opacity: 0.7 }]}>
                           <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.prayerIconBg, justifyContent: "center", alignItems: "center" }}>
                             <Ionicons name="calendar" size={16} color={colors.emerald} />
                           </View>
@@ -1219,7 +1221,7 @@ export default function PrayerScreen() {
                     <>
                       <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.textSecondary, textTransform: "uppercase" as const, letterSpacing: 0.8, marginTop: eventResults.length > 0 ? 12 : 0, marginBottom: 8 }}>Restaurants</Text>
                       {restaurantResults.map((r: HalalRestaurant) => (
-                        <Pressable key={r.id} onPress={() => { setSearchVisible(false); setSearchQuery(""); router.push("/(tabs)/halal"); }} style={({ pressed }) => [{ flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 10, backgroundColor: colors.surface, marginBottom: 8, gap: 12 }, pressed && { opacity: 0.7 }]}>
+                        <Pressable key={r.id} onPress={() => { setSearchVisible(false); setSearchQuery(""); setPendingTarget({ type: "restaurant", id: String(r.id) }); router.push("/(tabs)/halal"); }} style={({ pressed }) => [{ flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 10, backgroundColor: colors.surface, marginBottom: 8, gap: 12 }, pressed && { opacity: 0.7 }]}>
                           <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: isDark ? "#2E2318" : "#FEF3E7", justifyContent: "center", alignItems: "center" }}>
                             <Ionicons name="restaurant" size={16} color={colors.gold} />
                           </View>
@@ -1236,7 +1238,7 @@ export default function PrayerScreen() {
                     <>
                       <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.textSecondary, textTransform: "uppercase" as const, letterSpacing: 0.8, marginTop: (eventResults.length > 0 || restaurantResults.length > 0) ? 12 : 0, marginBottom: 8 }}>Businesses</Text>
                       {businessResults.map((b: any) => (
-                        <Pressable key={b.id} onPress={() => { setSearchVisible(false); setSearchQuery(""); router.push("/(tabs)/businesses"); }} style={({ pressed }) => [{ flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 10, backgroundColor: colors.surface, marginBottom: 8, gap: 12 }, pressed && { opacity: 0.7 }]}>
+                        <Pressable key={b.id} onPress={() => { setSearchVisible(false); setSearchQuery(""); setPendingTarget({ type: "business", id: String(b.id) }); router.push("/(tabs)/businesses"); }} style={({ pressed }) => [{ flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 10, backgroundColor: colors.surface, marginBottom: 8, gap: 12 }, pressed && { opacity: 0.7 }]}>
                           <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.prayerIconBg, justifyContent: "center", alignItems: "center" }}>
                             <Ionicons name="storefront" size={16} color={colors.emerald} />
                           </View>

@@ -233,7 +233,7 @@ export default function EventsScreen() {
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-  const { consumeTarget } = useDeepLink();
+  const { pendingTarget, consumeTarget } = useDeepLink();
 
   const { data: events, isLoading, error } = useQuery<CalendarEvent[]>({
     queryKey: ["/api/events"],
@@ -243,12 +243,13 @@ export default function EventsScreen() {
 
   useEffect(() => {
     if (!events || events.length === 0) return;
+    if (!pendingTarget || pendingTarget.type !== "event") return;
     const targetId = consumeTarget("event");
     if (targetId) {
       const ev = events.find((e) => e.id === targetId);
       if (ev) setSelectedEvent(ev);
     }
-  }, [events]);
+  }, [events, pendingTarget]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

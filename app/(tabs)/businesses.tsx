@@ -533,7 +533,7 @@ export default function BusinessesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
-  const { consumeTarget } = useDeepLink();
+  const { pendingTarget, consumeTarget } = useDeepLink();
 
   const { data: businesses, isLoading } = useQuery<Business[]>({
     queryKey: ["/api/businesses"],
@@ -542,12 +542,13 @@ export default function BusinessesScreen() {
 
   useEffect(() => {
     if (!businesses || businesses.length === 0) return;
+    if (!pendingTarget || pendingTarget.type !== "business") return;
     const targetId = consumeTarget("business");
     if (targetId) {
       const b = businesses.find((biz) => String(biz.id) === targetId);
       if (b) setSelectedBusiness(b);
     }
-  }, [businesses]);
+  }, [businesses, pendingTarget]);
 
   const categoryCounts = businesses
     ? businesses.reduce<Record<string, number>>((acc, b) => {

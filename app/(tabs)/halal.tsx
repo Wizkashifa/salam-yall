@@ -358,7 +358,7 @@ export default function HalalScreen() {
   const [showCuisineDropdown, setShowCuisineDropdown] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedRestaurant, setSelectedRestaurant] = useState<HalalRestaurant | null>(null);
-  const { consumeTarget } = useDeepLink();
+  const { pendingTarget, consumeTarget } = useDeepLink();
 
   useEffect(() => {
     (async () => {
@@ -388,12 +388,13 @@ export default function HalalScreen() {
 
   useEffect(() => {
     if (restaurants.length === 0) return;
+    if (!pendingTarget || pendingTarget.type !== "restaurant") return;
     const targetId = consumeTarget("restaurant");
     if (targetId) {
       const r = restaurants.find((rest) => String(rest.id) === targetId);
       if (r) setSelectedRestaurant(r);
     }
-  }, [restaurants]);
+  }, [restaurants, pendingTarget]);
 
   const filtered = useMemo(() => {
     let result = restaurants.map((r) => {
