@@ -653,10 +653,7 @@ export default function PrayerScreen() {
         style={[styles.headerBar, { paddingTop: headerTopPad + 10 }]}
       >
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>
-            <Text style={styles.headerTitleSalams}>Salams</Text>
-            <Text style={styles.headerTitleYall}>{" y'all"}</Text>
-          </Text>
+          <Text style={styles.headerTitle}>As-salamu alaykum</Text>
           <Text style={styles.headerSubtitle}>
             {greeting}{hijriDate ? ` · ${hijriDate}` : ""}
           </Text>
@@ -1086,16 +1083,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: "#FFFFFF",
     fontSize: 22,
-  },
-  headerTitleSalams: {
     fontFamily: "PlayfairDisplay_700Bold",
-    color: "#FFFFFF",
-    fontSize: 22,
-  },
-  headerTitleYall: {
-    fontFamily: "Inter_400Regular",
-    color: "#D4A843",
-    fontSize: 22,
   },
   headerSubtitle: {
     color: "rgba(255,255,255,0.7)",
