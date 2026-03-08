@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -54,6 +54,7 @@ interface CalendarEvent {
   organizer: string;
   imageUrl: string;
   registrationUrl: string;
+  speaker: string;
 }
 
 const MASJID_KEYWORDS = [
@@ -136,7 +137,20 @@ function HomeEventDetailModal({ event, visible, onClose }: { event: CalendarEven
             {cleanDescription ? (
               <View style={{ borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.divider, marginTop: 16, paddingTop: 14 }}>
                 <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.textSecondary, marginBottom: 8 }}>Details</Text>
-                <Text style={{ fontSize: 15, fontFamily: "Inter_400Regular", color: colors.text, lineHeight: 22 }}>{cleanDescription}</Text>
+                <Text style={{ fontSize: 15, fontFamily: "Inter_400Regular", color: colors.text, lineHeight: 22 }}>
+                  {event.speaker && cleanDescription.includes(event.speaker) ? (
+                    <>
+                      {cleanDescription.split(event.speaker).map((part, i, arr) => (
+                        <React.Fragment key={i}>
+                          {part}
+                          {i < arr.length - 1 && (
+                            <Text style={{ fontFamily: "Inter_700Bold" }}>{event.speaker}</Text>
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </>
+                  ) : cleanDescription}
+                </Text>
               </View>
             ) : null}
             <View style={{ flexDirection: "row", gap: 12, marginTop: 20 }}>
@@ -350,12 +364,17 @@ export default function PrayerScreen() {
     return iqamaData.find(s => s.masjid === "IAR") || iqamaData[0];
   }, [iqamaData, preferredMasjid]);
 
-  const tonightEvents = useMemo(() => {
+  const isBeforeFivePM = useMemo(() => new Date().getHours() < 17, []);
+
+  const communityEvents = useMemo(() => {
     if (!calendarEvents) return [];
     const now = new Date();
     const endOfTonight = new Date(now);
     endOfTonight.setDate(endOfTonight.getDate() + 1);
     endOfTonight.setHours(2, 0, 0, 0);
+
+    const fivePM = new Date(now);
+    fivePM.setHours(17, 0, 0, 0);
 
     const allNearby = getAllMasjidsByDistance(userCoords.lat, userCoords.lon).slice(0, 8);
 
@@ -363,7 +382,13 @@ export default function PrayerScreen() {
       .filter((ev: any) => {
         const start = new Date(ev.start);
         const end = ev.end ? new Date(ev.end) : start;
-        return !ev.isAllDay && ((start >= now && start <= endOfTonight) || (start <= now && end >= now));
+        if (ev.isAllDay) return false;
+        const isHappeningOrUpcoming = (start >= now && start <= endOfTonight) || (start <= now && end >= now);
+        if (!isHappeningOrUpcoming) return false;
+        if (!isBeforeFivePM) {
+          return start >= fivePM || end >= fivePM;
+        }
+        return true;
       })
       .slice(0, 4)
       .map((ev: any) => {
@@ -385,7 +410,7 @@ export default function PrayerScreen() {
           time: new Date(ev.start),
         };
       });
-  }, [calendarEvents, userCoords]);
+  }, [calendarEvents, userCoords, isBeforeFivePM]);
 
   const nearbyHalalPreview = useMemo(() => {
     if (!halalRestaurants) return [];
@@ -929,12 +954,12 @@ export default function PrayerScreen() {
           </View>
         ) : null}
 
-        {tonightEvents.length > 0 ? (
+        {communityEvents.length > 0 ? (
           <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
             <View style={styles.sectionCardHeader}>
-              <Text style={[styles.sectionCardTitle, { color: colors.text }]}>Tonight in the Community</Text>
+              <Text style={[styles.sectionCardTitle, { color: colors.text }]}>{isBeforeFivePM ? "Today" : "Tonight"} in the Community</Text>
             </View>
-            {tonightEvents.map((ev, idx) => {
+            {communityEvents.map((ev, idx) => {
               const title = (ev.title ?? "").toLowerCase();
               let iconName: keyof typeof Ionicons.glyphMap = "calendar";
               let iconBg = isDark ? "#2A2318" : "#FFF8E7";
@@ -973,7 +998,7 @@ export default function PrayerScreen() {
                   onPress={onPress}
                   style={({ pressed }) => [
                     styles.eventRow,
-                    idx < tonightEvents.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight },
+                    idx < communityEvents.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight },
                     pressed && { opacity: 0.7 },
                   ]}
                 >
