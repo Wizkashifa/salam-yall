@@ -2,12 +2,12 @@ import React, { useEffect, useRef } from "react";
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   Animated,
   Dimensions,
   Platform,
 } from "react-native";
-import { TriangleCrescentIcon } from "@/components/TriangleCrescentIcon";
 
 const { width, height } = Dimensions.get("window");
 
@@ -108,7 +108,10 @@ export function AnimatedSplash({ onFinish }: AnimatedSplashProps) {
             },
           ]}
         >
-          <TriangleCrescentIcon size={48} color="#D4A843" />
+          <Image
+            source={require("@/assets/images/splash-icon.png")}
+            style={styles.splashIcon}
+          />
         </Animated.View>
 
         <View style={styles.textRow}>
@@ -172,8 +175,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   crescentWrap: {
-    marginBottom: 24,
+    marginBottom: 28,
     alignItems: "center" as const,
+  },
+  splashIcon: {
+    width: 120,
+    height: 120,
+    borderRadius: 16,
   },
   textRow: {
     flexDirection: "row",
