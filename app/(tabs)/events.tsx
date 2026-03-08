@@ -32,6 +32,7 @@ interface CalendarEvent {
   organizer: string;
   imageUrl: string;
   registrationUrl: string;
+  speaker: string;
 }
 
 function formatEventDate(dateStr: string, isAllDay: boolean): { day: string; month: string; weekday: string; time: string; fullDate: string } {
@@ -157,6 +158,12 @@ function EventDetailModal({ event, visible, onClose }: { event: CalendarEvent | 
                 <Ionicons name="time-outline" size={18} color={colors.emerald} />
                 <Text style={[styles.modalInfoText, { color: colors.text }]}>{timeRange}</Text>
               </View>
+              {event.speaker ? (
+                <View style={styles.modalInfoRow}>
+                  <Ionicons name="mic-outline" size={18} color={colors.emerald} />
+                  <Text style={[styles.modalInfoText, { color: colors.text, fontFamily: "Inter_700Bold" }]}>{event.speaker}</Text>
+                </View>
+              ) : null}
               {event.location ? (
                 <Pressable style={styles.modalInfoRow} onPress={openMaps}>
                   <Ionicons name="location-outline" size={18} color={colors.emerald} />
@@ -353,6 +360,15 @@ export default function EventsScreen() {
                             </View>
                           ) : null}
 
+                          {event.speaker ? (
+                            <View style={styles.organizerRow}>
+                              <Ionicons name="mic-outline" size={13} color={colors.emerald} />
+                              <Text style={[styles.speakerText, { color: colors.text }]} numberOfLines={1}>
+                                {event.speaker}
+                              </Text>
+                            </View>
+                          ) : null}
+
                           {event.location ? (
                             <View style={styles.locationRow}>
                               <Ionicons name="location-outline" size={12} color={colors.textTertiary} />
@@ -490,6 +506,11 @@ const styles = StyleSheet.create({
   organizerText: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
+    flex: 1,
+  },
+  speakerText: {
+    fontSize: 12,
+    fontFamily: "Inter_700Bold",
     flex: 1,
   },
   locationRow: {

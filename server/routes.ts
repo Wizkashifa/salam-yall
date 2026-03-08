@@ -214,6 +214,7 @@ interface CachedEvent {
   organizer: string;
   imageUrl: string;
   registrationUrl: string;
+  speaker: string;
 }
 
 let cachedEvents: CachedEvent[] = [];
@@ -315,6 +316,32 @@ function resolveLocation(location: string): string {
   return location;
 }
 
+const SPEAKER_PATTERNS = [
+  /(?:with|featuring|by|speaker[:\s]*)\s+(?:Sheikh|Shaykh|Imam|Ustadh|Ustadha|Dr\.?|Mufti|Hafiz|Qari)\s+([A-Z][a-zA-Z'-]+(?:\s+[A-Z][a-zA-Z'-]+){0,3})/i,
+  /(?:Sheikh|Shaykh|Imam|Ustadh|Ustadha|Dr\.?|Mufti|Hafiz|Qari)\s+([A-Z][a-zA-Z'-]+(?:\s+[A-Z][a-zA-Z'-]+){0,3})/,
+];
+
+function extractSpeaker(text: string): string {
+  if (!text) return "";
+  const clean = text.replace(/<[^>]*>/g, " ").replace(/&[^;]+;/g, " ");
+  for (const pattern of SPEAKER_PATTERNS) {
+    const match = clean.match(pattern);
+    if (match && match[1]) {
+      let name = match[1].trim();
+      name = name.replace(/\s+(?:and|&|with|for|in|at|on|who|will|is)\s+.*/i, "").trim();
+      name = name.replace(/[.,!?;:✨]+$/, "").trim();
+      if (name.length >= 3 && name.length <= 50) {
+        const titleMatch = clean.match(new RegExp(`(Sheikh|Shaykh|Imam|Ustadh|Ustadha|Dr\\.?|Mufti|Hafiz|Qari)\\s+${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i'));
+        if (titleMatch) {
+          return `${titleMatch[1]} ${name}`;
+        }
+        return name;
+      }
+    }
+  }
+  return "";
+}
+
 function processEvent(event: any): CachedEvent {
   const desc = event.description || "";
   const imgMatch = desc.match(/src="([^"]+)"/);
@@ -350,6 +377,7 @@ function processEvent(event: any): CachedEvent {
     organizer: resolveOrganizer(event),
     imageUrl,
     registrationUrl,
+    speaker: extractSpeaker(desc),
   };
 }
 
