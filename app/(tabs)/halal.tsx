@@ -21,9 +21,9 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
-import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
+import { GlassHeader } from "@/components/GlassHeader";
 import { useDeepLink } from "@/lib/deeplink-context";
 import { getApiUrl } from "@/lib/query-client";
 
@@ -347,7 +347,6 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
 }
 
 export default function HalalScreen() {
-  const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const queryClient = useQueryClient();
   const [searchText, setSearchText] = useState("");
@@ -359,6 +358,7 @@ export default function HalalScreen() {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedRestaurant, setSelectedRestaurant] = useState<HalalRestaurant | null>(null);
   const { pendingTarget, consumeTarget } = useDeepLink();
+  const [headerHeight, setHeaderHeight] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -519,28 +519,28 @@ export default function HalalScreen() {
   const selectedCuisineLabel = CUISINE_FILTERS.find((c) => c.key === cuisineFilter)?.label || "All Cuisines";
   const isWeb = Platform.OS === "web";
 
-  const headerTopPad = isWeb ? 67 : insets.top;
-
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <LinearGradient
-        colors={[colors.gradientStart, colors.gradientEnd]}
-        style={{ paddingHorizontal: 20, paddingTop: headerTopPad + 10, paddingBottom: 14, flexDirection: "row", alignItems: "center" }}
-      >
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>Halal Eats</Text>
-          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
-            Halal-certified restaurants nearby
-          </Text>
+      <GlassHeader onHeaderHeight={setHeaderHeight}>
+        <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14, flexDirection: "row", alignItems: "center" }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>Halal Eats</Text>
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
+              Halal-certified restaurants nearby
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => setShowSearch(!showSearch)}
+            style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+          >
+            <Ionicons name={showSearch ? "close" : "search"} size={22} color="#FFFFFF" />
+          </Pressable>
         </View>
-        <Pressable
-          onPress={() => setShowSearch(!showSearch)}
-          style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
-        >
-          <Ionicons name={showSearch ? "close" : "search"} size={22} color="#FFFFFF" />
-        </Pressable>
-      </LinearGradient>
-      <TickerBanner />
+      </GlassHeader>
+
+      <View style={{ paddingTop: headerHeight }}>
+        <TickerBanner />
+      </View>
 
       {showSearch && (
         <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>

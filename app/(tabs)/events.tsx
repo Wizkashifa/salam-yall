@@ -18,9 +18,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
+import { GlassHeader } from "@/components/GlassHeader";
 import { useDeepLink } from "@/lib/deeplink-context";
 import { getApiUrl } from "@/lib/query-client";
 
@@ -228,7 +228,6 @@ function EventDetailModal({ event, visible, onClose }: { event: CalendarEvent | 
 }
 
 export default function EventsScreen() {
-  const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
@@ -267,26 +266,24 @@ export default function EventsScreen() {
     : [];
   const grouped = groupEventsByDate(activeEvents);
 
-  const isWeb = Platform.OS === "web";
-  const headerTopPad = isWeb ? 67 : insets.top;
+  const [headerHeight, setHeaderHeight] = useState(0);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <LinearGradient
-        colors={[colors.gradientStart, colors.gradientEnd]}
-        style={{ paddingHorizontal: 20, paddingTop: headerTopPad + 10, paddingBottom: 14 }}
-      >
-        <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>Community Events</Text>
-        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
-          Programs and events in the local area
-        </Text>
-      </LinearGradient>
-      <TickerBanner />
+      <GlassHeader onHeaderHeight={setHeaderHeight}>
+        <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14 }}>
+          <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>Community Events</Text>
+          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
+            Programs and events in the local area
+          </Text>
+        </View>
+        <TickerBanner />
+      </GlassHeader>
       <ScrollView
         style={[styles.container, { backgroundColor: colors.background }]}
         contentContainerStyle={{
           paddingBottom: Platform.OS === "web" ? 34 : 20,
-          paddingTop: 12,
+          paddingTop: headerHeight + 12,
         }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />

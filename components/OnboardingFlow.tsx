@@ -11,6 +11,7 @@ import {
   Linking,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { TriangleCrescentIcon } from "@/components/TriangleCrescentIcon";
 import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -31,7 +32,7 @@ function WelcomeScreen() {
   return (
     <View style={screenStyles.container}>
       <View style={screenStyles.iconWrap}>
-        <Text style={screenStyles.crescent}>☪</Text>
+        <TriangleCrescentIcon size={48} color={richGold} />
       </View>
       <Text style={screenStyles.title}>Salams y'all</Text>
       <Text style={screenStyles.subtitle}>Welcome to Ummah Connect</Text>
@@ -359,10 +360,6 @@ const screenStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 28,
-  },
-  crescent: {
-    fontSize: 48,
-    color: richGold,
   },
   title: {
     fontFamily: "PlayfairDisplay_700Bold",

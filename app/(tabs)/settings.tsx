@@ -10,14 +10,14 @@ import {
   TextInput,
   Alert,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as Notifications from "expo-notifications";
 import { useQuery } from "@tanstack/react-query";
-import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
+import { GlassHeader } from "@/components/GlassHeader";
 import { useSettings } from "@/lib/settings-context";
 import {
   NEARBY_MASJIDS,
@@ -44,7 +44,6 @@ interface CalendarEvent {
 type SettingsSection = "main" | "calcMethod" | "masjids" | "masjidDetail" | "feedback" | "prayerTracker";
 
 export default function SettingsScreen() {
-  const insets = useSafeAreaInsets();
   const { colors, isDark, themeMode, setThemeMode, ramadanMode, setRamadanMode } = useTheme();
   const { calcMethod, setCalcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid, setPreferredMasjid } = useSettings();
   const [section, setSection] = useState<SettingsSection>("main");
@@ -685,24 +684,22 @@ export default function SettingsScreen() {
     );
   };
 
-  const isWeb = Platform.OS === "web";
-  const headerTopPad = isWeb ? 67 : insets.top;
+  const [headerHeight, setHeaderHeight] = useState(0);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <LinearGradient
-        colors={[colors.gradientStart, colors.gradientEnd]}
-        style={{ paddingHorizontal: 20, paddingTop: headerTopPad + 10, paddingBottom: 14 }}
-      >
-        <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>More</Text>
-        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
-          Customize your experience
-        </Text>
-      </LinearGradient>
-      <TickerBanner />
+      <GlassHeader onHeaderHeight={setHeaderHeight}>
+        <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14 }}>
+          <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>More</Text>
+          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
+            Customize your experience
+          </Text>
+        </View>
+        <TickerBanner />
+      </GlassHeader>
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 20, paddingBottom: Platform.OS === "web" ? 34 : 20 }}
+        contentContainerStyle={{ padding: 20, paddingTop: headerHeight + 12, paddingBottom: Platform.OS === "web" ? 34 : 20 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >

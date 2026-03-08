@@ -2,21 +2,15 @@ import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
 import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
 import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { Platform, StyleSheet, View } from "react-native";
 import React from "react";
 import { useTheme } from "@/lib/theme-context";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function NativeTabLayout() {
-  const { colors } = useTheme();
-
   return (
-    <NativeTabs
-      screenOptions={{
-        tabBarActiveTintColor: colors.tint,
-      }}
-    >
+    <NativeTabs>
       <NativeTabs.Trigger name="halal">
         <Icon sf={{ default: "fork.knife", selected: "fork.knife" }} />
         <Label>HalalEats</Label>
@@ -42,9 +36,10 @@ function NativeTabLayout() {
 }
 
 function ClassicTabLayout() {
-  const { colors, isDark } = useTheme();
+  const { colors, isDark, ramadanMode } = useTheme();
   const isWeb = Platform.OS === "web";
   const isIOS = Platform.OS === "ios";
+  const isDarkRamadan = isDark && ramadanMode;
 
   return (
     <Tabs
@@ -53,15 +48,22 @@ function ClassicTabLayout() {
         tabBarActiveTintColor: colors.tint,
         tabBarInactiveTintColor: colors.tabIconDefault,
         tabBarStyle: {
-          backgroundColor: isIOS ? "transparent" : colors.surface,
-          borderTopWidth: StyleSheet.hairlineWidth,
-          borderTopColor: colors.borderLight,
+          backgroundColor: isDarkRamadan ? "transparent" : (isIOS ? "transparent" : colors.surface),
+          borderTopWidth: isDarkRamadan ? 0 : StyleSheet.hairlineWidth,
+          borderTopColor: isDarkRamadan ? "transparent" : colors.borderLight,
           elevation: 0,
           shadowColor: "transparent",
           ...(isWeb ? { height: 84, paddingBottom: 34 } : {}),
         },
         tabBarBackground: () =>
-          isIOS ? (
+          isDarkRamadan ? (
+            <LinearGradient
+              colors={[(colors as any).tabBarGradientStart || "#2A1545", (colors as any).tabBarGradientEnd || "#1A0E30"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+          ) : isIOS ? (
             <BlurView
               intensity={isDark ? 120 : 80}
               tint={isDark ? "systemChromeMaterialDark" : "light"}

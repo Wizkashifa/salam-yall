@@ -19,12 +19,12 @@ import {
   Share,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
+import { GlassHeader } from "@/components/GlassHeader";
 import { useDeepLink } from "@/lib/deeplink-context";
 import { apiRequest, getApiUrl } from "@/lib/query-client";
 
@@ -637,39 +637,37 @@ export default function BusinessesScreen() {
     [colors]
   );
 
-  const isWeb = Platform.OS === "web";
-  const headerTopPad = isWeb ? 67 : insets.top;
-
   const dropdownCategories = CATEGORIES.filter(c => c !== "All");
   const activeCategories = dropdownCategories.filter(c => (categoryCounts[c] || 0) > 0);
   const totalCount = businesses?.length || 0;
 
+  const [headerHeight, setHeaderHeight] = useState(0);
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <LinearGradient
-        colors={[colors.gradientStart, colors.gradientEnd]}
-        style={{ paddingHorizontal: 20, paddingTop: headerTopPad + 10, paddingBottom: 14, flexDirection: "row", alignItems: "center" }}
-      >
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>Muslim Businesses</Text>
-          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
-            Support local Muslim-owned businesses
-          </Text>
+      <GlassHeader onHeaderHeight={setHeaderHeight}>
+        <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14, flexDirection: "row", alignItems: "center" }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>Muslim Businesses</Text>
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
+              Support local Muslim-owned businesses
+            </Text>
+          </View>
+          <Pressable
+            style={({ pressed }) => [styles.addButton, { backgroundColor: "rgba(255,255,255,0.2)", opacity: pressed ? 0.8 : 1 }]}
+            onPress={() => {
+              setShowSubmitModal(true);
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            }}
+            testID="add-business-button"
+          >
+            <Ionicons name="add" size={22} color="#fff" />
+          </Pressable>
         </View>
-        <Pressable
-          style={({ pressed }) => [styles.addButton, { backgroundColor: "rgba(255,255,255,0.2)", opacity: pressed ? 0.8 : 1 }]}
-          onPress={() => {
-            setShowSubmitModal(true);
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          }}
-          testID="add-business-button"
-        >
-          <Ionicons name="add" size={22} color="#fff" />
-        </Pressable>
-      </LinearGradient>
-      <TickerBanner />
+        <TickerBanner />
+      </GlassHeader>
 
-      <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6, backgroundColor: colors.background }}>
+      <View style={{ paddingHorizontal: 16, paddingTop: headerHeight + 10, paddingBottom: 6, backgroundColor: colors.background }}>
         <View style={styles.searchFilterRow}>
           <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Ionicons name="search-outline" size={18} color={colors.textSecondary} />
