@@ -124,7 +124,7 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
       });
       Linking.openURL(url);
     } else {
-      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.address)}`);
+      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.address || business.name)}`);
     }
   };
 
@@ -180,11 +180,19 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
             ) : null}
 
             <View style={[styles.detailSection, { borderTopColor: colors.divider }]}>
-              <Pressable style={styles.detailInfoRow} onPress={openMaps}>
-                <Ionicons name="location-outline" size={18} color={colors.emerald} />
-                <Text style={[styles.detailInfoText, { color: colors.text }]}>{business.address}</Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
-              </Pressable>
+              {business.address ? (
+                <Pressable style={styles.detailInfoRow} onPress={openMaps}>
+                  <Ionicons name="location-outline" size={18} color={colors.emerald} />
+                  <Text style={[styles.detailInfoText, { color: colors.text }]}>{business.address}</Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                </Pressable>
+              ) : business.lat ? (
+                <Pressable style={styles.detailInfoRow} onPress={openMaps}>
+                  <Ionicons name="location-outline" size={18} color={colors.emerald} />
+                  <Text style={[styles.detailInfoText, { color: colors.textSecondary, fontStyle: "italic" as const }]}>View on map</Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                </Pressable>
+              ) : null}
 
               {business.phone ? (
                 <Pressable style={styles.detailInfoRow} onPress={() => Linking.openURL(`tel:${business.phone}`)}>
@@ -269,6 +277,7 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
   const [address, setAddress] = useState("");
+  const [googleUrl, setGoogleUrl] = useState("");
   const [phone, setPhone] = useState("");
   const [website, setWebsite] = useState("");
   const [email, setEmail] = useState("");
@@ -277,7 +286,7 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
   const submitMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/businesses/submit", {
-        name, category, description, address, phone, website, email,
+        name, category, description, address, phone, website, email, google_url: googleUrl,
       });
       return res.json();
     },
@@ -296,6 +305,7 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
     setCategory("");
     setDescription("");
     setAddress("");
+    setGoogleUrl("");
     setPhone("");
     setWebsite("");
     setEmail("");
@@ -310,12 +320,12 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
   const handleSubmit = useCallback(() => {
     if (!name.trim()) { Alert.alert("Required", "Please enter the business name"); return; }
     if (!category) { Alert.alert("Required", "Please select a category"); return; }
-    if (!address.trim()) { Alert.alert("Required", "Please enter the business address"); return; }
+    if (!address.trim() && !googleUrl.trim()) { Alert.alert("Required", "Please enter an address or Google Maps URL"); return; }
     if (!email.trim()) { Alert.alert("Required", "Please enter your email for verification"); return; }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) { Alert.alert("Invalid Email", "Please enter a valid email address"); return; }
     submitMutation.mutate();
-  }, [name, category, address, email, submitMutation]);
+  }, [name, category, address, googleUrl, email, submitMutation]);
 
   if (submitted) {
     return (
@@ -420,7 +430,7 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
               textAlignVertical="top"
             />
 
-            <Text style={[styles.fieldLabel, { color: colors.text }]}>Address *</Text>
+            <Text style={[styles.fieldLabel, { color: colors.text }]}>Address</Text>
             <TextInput
               style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
               value={address}
@@ -428,6 +438,20 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
               placeholder="Full business address"
               placeholderTextColor={colors.textSecondary}
             />
+
+            <Text style={[styles.fieldLabel, { color: colors.text }]}>Google Maps URL</Text>
+            <TextInput
+              style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+              value={googleUrl}
+              onChangeText={setGoogleUrl}
+              placeholder="Share link from Google Maps"
+              placeholderTextColor={colors.textSecondary}
+              autoCapitalize="none"
+              keyboardType="url"
+            />
+            <Text style={[styles.fieldHint, { color: colors.textTertiary }]}>
+              Provide an address or Google Maps URL (or both). Ensure the business Google listing is up to date.
+            </Text>
 
             <Text style={[styles.fieldLabel, { color: colors.text }]}>Phone Number</Text>
             <TextInput
@@ -555,12 +579,21 @@ export default function BusinessesScreen() {
             </Text>
           ) : null}
 
-          <View style={styles.addressRow}>
-            <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
-            <Text style={[styles.addressText, { color: colors.textSecondary }]} numberOfLines={1}>
-              {item.address}
-            </Text>
-          </View>
+          {item.address ? (
+            <View style={styles.addressRow}>
+              <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
+              <Text style={[styles.addressText, { color: colors.textSecondary }]} numberOfLines={1}>
+                {item.address}
+              </Text>
+            </View>
+          ) : item.lat ? (
+            <View style={styles.addressRow}>
+              <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
+              <Text style={[styles.addressText, { color: colors.textTertiary }]} numberOfLines={1}>
+                Service area business
+              </Text>
+            </View>
+          ) : null}
         </Pressable>
       );
     },
@@ -970,6 +1003,12 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     marginBottom: 6,
     marginTop: 12,
+  },
+  fieldHint: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    marginTop: 6,
+    lineHeight: 16,
   },
   textInput: {
     borderWidth: 1,

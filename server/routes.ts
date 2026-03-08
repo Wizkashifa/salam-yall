@@ -592,6 +592,10 @@ async function ensureBusinessesTable(pool: pg.Pool) {
     console.log("[DB] Added Google Places columns to businesses table");
   }
 
+  await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS google_url TEXT DEFAULT ''`);
+  await pool.query(`ALTER TABLE businesses ALTER COLUMN address DROP NOT NULL`);
+  await pool.query(`ALTER TABLE businesses ALTER COLUMN address SET DEFAULT ''`);
+
   await pool.query(`ALTER TABLE halal_restaurants ADD COLUMN IF NOT EXISTS photo_reference TEXT`);
   await pool.query(`ALTER TABLE halal_restaurants ADD COLUMN IF NOT EXISTS place_id VARCHAR(255)`);
 
@@ -871,10 +875,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/businesses/submit", async (req, res) => {
     try {
-      const { name, category, description, address, phone, website, email } = req.body;
+      const { name, category, description, address, phone, website, email, google_url } = req.body;
 
-      if (!name || !category || !address || !email) {
-        return res.status(400).json({ error: "Name, category, address, and email are required" });
+      if (!name || !category || !email) {
+        return res.status(400).json({ error: "Name, category, and email are required" });
+      }
+
+      if (!address && !google_url) {
+        return res.status(400).json({ error: "Please provide either an address or a Google Maps URL" });
       }
 
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -888,10 +896,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const result = await pool.query(
-        `INSERT INTO businesses (name, category, description, address, phone, website, submitted_by_email, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
+        `INSERT INTO businesses (name, category, description, address, phone, website, submitted_by_email, google_url, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
          RETURNING id`,
-        [name, category, description || "", address, phone || "", website || "", email]
+        [name, category, description || "", address || "", phone || "", website || "", email, google_url || ""]
       );
 
       res.status(201).json({

@@ -66,7 +66,7 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 - `GET /api/businesses` - Returns approved businesses with Google Places data from PostgreSQL database
 - `GET /api/businesses/:id/places-details` - Fetches/caches Google Places details (rating, hours, location) for a business
 - `GET /api/businesses/:id/photo` - Proxies Google Places photo for a business (keeps API key server-side)
-- `POST /api/businesses/submit` - Submit a new business for review (requires name, category, address, email)
+- `POST /api/businesses/submit` - Submit a new business for review (requires name, category, email; address or google_url required)
 - `GET /privacy` - Privacy policy page (HTML)
 
 ## Database Schema
@@ -74,7 +74,7 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 - **ticker_messages** table: id (serial PK), message, type (info/urgent/event/reminder), active (boolean), created_at, expires_at
 - **push_tokens** table: id (serial PK), token (unique), created_at
 - **halal_restaurants** table: id (serial PK), external_id, name, formatted_address, formatted_phone, url, place_id, lat, lng, is_halal (IS_HALAL/PARTIALLY_HALAL/NOT_HALAL/UNKNOWN), halal_comment, cuisine_types (text[]), emoji, evidence (text[]), considerations (text[]), opening_hours (jsonb), date_checked (jsonb), created_at, photo_reference (text), rating, user_ratings_total
-- **businesses** table: id (serial PK), name, category, description, address, phone, website, submitted_by_email, status (pending/approved/rejected), created_at, place_id, rating, user_ratings_total, photo_reference, business_hours (jsonb), lat, lng
+- **businesses** table: id (serial PK), name, category, description, address (nullable), phone, website, submitted_by_email, google_url, status (pending/approved/rejected), created_at, place_id, rating, user_ratings_total, photo_reference, business_hours (jsonb), lat, lng
 
 ## Event Processing Pipeline
 
