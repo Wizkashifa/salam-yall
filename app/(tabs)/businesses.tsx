@@ -518,6 +518,8 @@ export default function BusinessesScreen() {
   const { colors, isDark } = useTheme();
   const queryClient = useQueryClient();
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
@@ -527,10 +529,24 @@ export default function BusinessesScreen() {
     staleTime: 10 * 60 * 1000,
   });
 
+  const categoryCounts = businesses
+    ? businesses.reduce<Record<string, number>>((acc, b) => {
+        acc[b.category] = (acc[b.category] || 0) + 1;
+        return acc;
+      }, {})
+    : {};
+
+  const searchTrimmed = searchQuery.trim().toLowerCase();
+
   const filtered = businesses
-    ? selectedCategory === "All"
-      ? businesses
-      : businesses.filter((b) => b.category === selectedCategory)
+    ? businesses.filter((b) => {
+        const matchesCategory = selectedCategory === "All" || b.category === selectedCategory;
+        const matchesSearch = !searchTrimmed || 
+          b.name.toLowerCase().includes(searchTrimmed) ||
+          (b.description && b.description.toLowerCase().includes(searchTrimmed)) ||
+          (b.address && b.address.toLowerCase().includes(searchTrimmed));
+        return matchesCategory && matchesSearch;
+      })
     : [];
 
   const onRefresh = useCallback(async () => {
@@ -603,6 +619,10 @@ export default function BusinessesScreen() {
   const isWeb = Platform.OS === "web";
   const headerTopPad = isWeb ? 67 : insets.top;
 
+  const dropdownCategories = CATEGORIES.filter(c => c !== "All");
+  const activeCategories = dropdownCategories.filter(c => (categoryCounts[c] || 0) > 0);
+  const totalCount = businesses?.length || 0;
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <LinearGradient
@@ -628,41 +648,78 @@ export default function BusinessesScreen() {
       </LinearGradient>
       <TickerBanner />
 
-      <View style={{ backgroundColor: colors.background }}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10, gap: 8 }}
-        >
-          {CATEGORIES.map((item) => {
-            const isActive = item === selectedCategory;
-            return (
-              <Pressable
-                key={item}
-                style={[
-                  styles.filterChip,
-                  isActive
-                    ? { backgroundColor: colors.gold }
-                    : { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-                ]}
-                onPress={() => {
-                  setSelectedCategory(item);
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    { color: isActive ? "#fff" : colors.textSecondary },
-                  ]}
-                >
-                  {item}
-                </Text>
+      <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6, backgroundColor: colors.background }}>
+        <View style={styles.searchFilterRow}>
+          <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Ionicons name="search-outline" size={18} color={colors.textSecondary} />
+            <TextInput
+              style={[styles.searchInput, { color: colors.text }]}
+              placeholder="Search businesses..."
+              placeholderTextColor={colors.textSecondary}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              returnKeyType="search"
+              testID="business-search-input"
+            />
+            {searchQuery.length > 0 ? (
+              <Pressable onPress={() => setSearchQuery("")} hitSlop={8}>
+                <Ionicons name="close-circle" size={18} color={colors.textTertiary} />
               </Pressable>
-            );
-          })}
-        </ScrollView>
+            ) : null}
+          </View>
+
+          <Pressable
+            style={[styles.dropdownTrigger, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            onPress={() => {
+              setShowDropdown(!showDropdown);
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }}
+            testID="category-dropdown"
+          >
+            {selectedCategory !== "All" ? (
+              <Ionicons name={getCategoryInfo(selectedCategory).icon as any} size={16} color={getCategoryInfo(selectedCategory).color} />
+            ) : (
+              <Ionicons name="filter-outline" size={16} color={colors.textSecondary} />
+            )}
+            <Text style={[styles.dropdownTriggerText, { color: selectedCategory === "All" ? colors.textSecondary : colors.text }]} numberOfLines={1}>
+              {selectedCategory === "All" ? "All" : selectedCategory}
+            </Text>
+            <Ionicons name={showDropdown ? "chevron-up" : "chevron-down"} size={14} color={colors.textTertiary} />
+          </Pressable>
+        </View>
       </View>
+
+      {showDropdown ? (
+        <>
+          <Pressable style={styles.dropdownOverlay} onPress={() => setShowDropdown(false)} />
+          <View style={[styles.dropdownMenu, { backgroundColor: colors.surface, borderColor: colors.border, ...(Platform.OS === "web" ? { boxShadow: "0 8px 24px rgba(0,0,0,0.15)" } as any : {}) }]}>
+            <Pressable
+              style={[styles.dropdownItem, selectedCategory === "All" && { backgroundColor: colors.prayerIconBg }]}
+              onPress={() => { setSelectedCategory("All"); setShowDropdown(false); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+            >
+              <Ionicons name="grid-outline" size={18} color={selectedCategory === "All" ? colors.emerald : colors.textSecondary} />
+              <Text style={[styles.dropdownItemText, { color: selectedCategory === "All" ? colors.emerald : colors.text }]}>All Categories</Text>
+              <Text style={[styles.dropdownCount, { color: colors.textTertiary }]}>{totalCount}</Text>
+            </Pressable>
+            {activeCategories.map((cat) => {
+              const info = getCategoryInfo(cat);
+              const count = categoryCounts[cat] || 0;
+              const isActive = cat === selectedCategory;
+              return (
+                <Pressable
+                  key={cat}
+                  style={[styles.dropdownItem, isActive && { backgroundColor: colors.prayerIconBg }]}
+                  onPress={() => { setSelectedCategory(cat); setShowDropdown(false); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                >
+                  <Ionicons name={info.icon as any} size={18} color={isActive ? colors.emerald : info.color} />
+                  <Text style={[styles.dropdownItemText, { color: isActive ? colors.emerald : colors.text }]}>{cat}</Text>
+                  <Text style={[styles.dropdownCount, { color: colors.textTertiary }]}>{count}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </>
+      ) : null}
 
       {isLoading ? (
         <View style={styles.centerContainer}>
@@ -684,7 +741,7 @@ export default function BusinessesScreen() {
               <MaterialCommunityIcons name="store-off-outline" size={40} color={colors.textSecondary} />
               <Text style={[styles.emptyText, { color: colors.text }]}>No businesses found</Text>
               <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-                Try selecting a different category
+                {searchQuery ? "Try a different search term" : "Try selecting a different category"}
               </Text>
             </View>
           }
@@ -742,18 +799,77 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 4,
   },
-  filterRow: {
+  searchFilterRow: {
+    flexDirection: "row" as const,
+    gap: 10,
+    alignItems: "center" as const,
+  },
+  searchBar: {
+    flex: 1,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 42,
     gap: 8,
-    paddingBottom: 12,
   },
-  filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: "Inter_400Regular",
+    height: 42,
+    paddingVertical: 0,
   },
-  filterChipText: {
+  dropdownTrigger: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 42,
+    gap: 6,
+    minWidth: 90,
+  },
+  dropdownTriggerText: {
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
+    flexShrink: 1,
+  },
+  dropdownOverlay: {
+    position: "absolute" as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 98,
+  },
+  dropdownMenu: {
+    marginHorizontal: 16,
+    marginTop: 2,
+    zIndex: 100,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: 6,
+    elevation: 8,
+  },
+  dropdownItem: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  dropdownItemText: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: "Inter_500Medium",
+  },
+  dropdownCount: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    minWidth: 24,
+    textAlign: "right" as const,
   },
   listContent: {
     paddingHorizontal: 20,
