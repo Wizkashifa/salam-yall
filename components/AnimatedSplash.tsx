@@ -181,7 +181,6 @@ const styles = StyleSheet.create({
   },
   salams: {
     fontFamily: "PlayfairDisplay_700Bold",
-    fontStyle: "italic" as const,
     fontSize: 42,
     color: "#FFFFFF",
     letterSpacing: -0.5,
