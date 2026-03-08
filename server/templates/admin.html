@@ -17,11 +17,21 @@
     .login-card button:hover { background: #14523A; }
     .login-error { color: #F87171; font-size: 13px; margin-bottom: 12px; display: none; }
 
-    .app-wrap { display: none; max-width: 600px; margin: 0 auto; padding: 20px; padding-top: 60px; padding-bottom: 40px; }
-    .top-bar { position: fixed; top: 0; left: 0; right: 0; background: #161616; border-bottom: 1px solid #252525; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; z-index: 10; }
+    .app-wrap { display: none; max-width: 600px; margin: 0 auto; padding: 20px; padding-top: 110px; padding-bottom: 40px; }
+    .top-bar { position: fixed; top: 0; left: 0; right: 0; background: #161616; border-bottom: 1px solid #252525; z-index: 10; }
+    .top-bar-inner { max-width: 600px; margin: 0 auto; padding: 14px 20px 0; }
+    .top-bar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
     .top-bar h1 { font-size: 16px; color: #D4A843; }
-    .top-bar button { background: none; border: 1px solid #333; color: #9CA3AF; padding: 6px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; }
-    .top-bar button:hover { color: #F5F5F5; border-color: #555; }
+    .top-bar button.sign-out { background: none; border: 1px solid #333; color: #9CA3AF; padding: 6px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; }
+    .top-bar button.sign-out:hover { color: #F5F5F5; border-color: #555; }
+
+    .tab-bar { display: flex; gap: 0; }
+    .tab-btn { flex: 1; padding: 10px 0; font-size: 13px; font-weight: 600; color: #6B7280; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.2s; }
+    .tab-btn:hover { color: #9CA3AF; }
+    .tab-btn.active { color: #D4A843; border-bottom-color: #D4A843; }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
 
     .section { background: #161616; border: 1px solid #252525; border-radius: 14px; padding: 20px; margin-bottom: 16px; }
     .section-title { font-size: 15px; font-weight: 700; color: #D4A843; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
@@ -79,71 +89,83 @@
 
   <div class="app-wrap" id="appWrap">
     <div class="top-bar">
-      <h1>Ummah Connect Admin</h1>
-      <button onclick="doLogout()">Sign Out</button>
-    </div>
-
-    <div class="section">
-      <div class="section-title"><span class="icon">📢</span> Post Announcement</div>
-      <label>Message</label>
-      <textarea id="tickerMessage" placeholder="Type your announcement..."></textarea>
-      <div class="row">
-        <div>
-          <label>Type</label>
-          <select id="tickerType">
-            <option value="info">Info</option>
-            <option value="urgent">Urgent</option>
-            <option value="event">Event</option>
-            <option value="reminder">Reminder</option>
-          </select>
+      <div class="top-bar-inner">
+        <div class="top-bar-header">
+          <h1>Ummah Connect Admin</h1>
+          <button class="sign-out" onclick="doLogout()">Sign Out</button>
         </div>
-        <div>
-          <label>Expires (optional)</label>
-          <input type="datetime-local" id="tickerExpires">
+        <div class="tab-bar">
+          <button class="tab-btn active" data-tab="comms" onclick="switchTab('comms')">Notifications & Ticker</button>
+          <button class="tab-btn" data-tab="businesses" onclick="switchTab('businesses')">Business Submissions</button>
         </div>
       </div>
-      <button class="btn btn-primary" onclick="postTicker()" id="postTickerBtn">Post Announcement</button>
     </div>
 
-    <div class="section">
-      <div class="section-title"><span class="icon">📋</span> Active Announcements</div>
-      <div id="tickerList"><div class="loading">Loading...</div></div>
+    <div class="tab-content active" id="tab-comms">
+      <div class="section">
+        <div class="section-title"><span class="icon">🔔</span> Send Push Notification</div>
+        <label>Title</label>
+        <input type="text" id="pushTitle" placeholder="Notification title">
+        <label>Body</label>
+        <textarea id="pushBody" placeholder="Notification message..."></textarea>
+        <button class="btn btn-gold" onclick="sendPush()" id="sendPushBtn">Send Notification</button>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="icon">📢</span> Post Announcement</div>
+        <label>Message</label>
+        <textarea id="tickerMessage" placeholder="Type your announcement..."></textarea>
+        <div class="row">
+          <div>
+            <label>Type</label>
+            <select id="tickerType">
+              <option value="info">Info</option>
+              <option value="urgent">Urgent</option>
+              <option value="event">Event</option>
+              <option value="reminder">Reminder</option>
+            </select>
+          </div>
+          <div>
+            <label>Expires (optional)</label>
+            <input type="datetime-local" id="tickerExpires">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="postTicker()" id="postTickerBtn">Post Announcement</button>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="icon">📋</span> Active Announcements</div>
+        <div id="tickerList"><div class="loading">Loading...</div></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="icon">🕌</span> Jumu'ah Schedules</div>
+        <div class="row">
+          <div><label>Masjid</label><input type="text" id="jumuahMasjid" placeholder="Masjid name"></div>
+        </div>
+        <div class="row">
+          <div><label>Khutbah Time</label><input type="text" id="jumuahKhutbah" placeholder="1:00 PM"></div>
+          <div><label>Iqama Time</label><input type="text" id="jumuahIqama" placeholder="1:30 PM"></div>
+        </div>
+        <div class="row">
+          <div><label>Speaker (optional)</label><input type="text" id="jumuahSpeaker" placeholder="Sheikh name"></div>
+          <div><label>Topic (optional)</label><input type="text" id="jumuahTopic" placeholder="Khutbah topic"></div>
+        </div>
+        <button class="btn btn-primary" onclick="addJumuah()" id="addJumuahBtn">Add Schedule</button>
+        <div id="jumuahList" style="margin-top:14px;"><div class="loading">Loading...</div></div>
+      </div>
     </div>
 
-    <div class="section">
-      <div class="section-title"><span class="icon">🏪</span> Business Submissions</div>
-      <div style="display:flex;gap:8px;margin-bottom:14px;">
-        <button class="btn btn-sm" id="filterPending" onclick="loadBusinesses('pending')" style="background:#2A2318;color:#D4A843;">Pending</button>
-        <button class="btn btn-sm" id="filterApproved" onclick="loadBusinesses('approved')" style="background:#1E1E1E;color:#9CA3AF;">Approved</button>
-        <button class="btn btn-sm" id="filterRejected" onclick="loadBusinesses('rejected')" style="background:#1E1E1E;color:#9CA3AF;">Rejected</button>
+    <div class="tab-content" id="tab-businesses">
+      <div class="section">
+        <div class="section-title"><span class="icon">🏪</span> Business Submissions</div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <button class="btn btn-sm" id="filterPending" onclick="loadBusinesses('pending')" style="background:#2A2318;color:#D4A843;">Pending</button>
+          <button class="btn btn-sm" id="filterApproved" onclick="loadBusinesses('approved')" style="background:#1E1E1E;color:#9CA3AF;">Approved</button>
+          <button class="btn btn-sm" id="filterRejected" onclick="loadBusinesses('rejected')" style="background:#1E1E1E;color:#9CA3AF;">Rejected</button>
+        </div>
+        <div id="businessList"><div class="loading">Loading...</div></div>
       </div>
-      <div id="businessList"><div class="loading">Loading...</div></div>
-    </div>
-
-    <div class="section">
-      <div class="section-title"><span class="icon">🕌</span> Jumu'ah Schedules</div>
-      <div class="row">
-        <div><label>Masjid</label><input type="text" id="jumuahMasjid" placeholder="Masjid name"></div>
-      </div>
-      <div class="row">
-        <div><label>Khutbah Time</label><input type="text" id="jumuahKhutbah" placeholder="1:00 PM"></div>
-        <div><label>Iqama Time</label><input type="text" id="jumuahIqama" placeholder="1:30 PM"></div>
-      </div>
-      <div class="row">
-        <div><label>Speaker (optional)</label><input type="text" id="jumuahSpeaker" placeholder="Sheikh name"></div>
-        <div><label>Topic (optional)</label><input type="text" id="jumuahTopic" placeholder="Khutbah topic"></div>
-      </div>
-      <button class="btn btn-primary" onclick="addJumuah()" id="addJumuahBtn">Add Schedule</button>
-      <div id="jumuahList" style="margin-top:14px;"><div class="loading">Loading...</div></div>
-    </div>
-
-    <div class="section">
-      <div class="section-title"><span class="icon">🔔</span> Send Push Notification</div>
-      <label>Title</label>
-      <input type="text" id="pushTitle" placeholder="Notification title">
-      <label>Body</label>
-      <textarea id="pushBody" placeholder="Notification message..."></textarea>
-      <button class="btn btn-gold" onclick="sendPush()" id="sendPushBtn">Send Notification</button>
     </div>
   </div>
 
@@ -151,6 +173,13 @@
 
   <script>
     let adminToken = '';
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.querySelector('[data-tab="' + tab + '"]').classList.add('active');
+      document.getElementById('tab-' + tab).classList.add('active');
+    }
 
     function showToast(msg, isError) {
       const t = document.getElementById('toast');
@@ -488,10 +517,8 @@
             handleUnauthorized();
           }
         })
-        .catch(() => { handleUnauthorized(); });
+        .catch(() => handleUnauthorized());
     }
-
-    setInterval(loadTickers, 30000);
   </script>
 </body>
 </html>
