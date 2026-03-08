@@ -9,8 +9,14 @@ import { useTheme } from "@/lib/theme-context";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function NativeTabLayout() {
+  const { colors } = useTheme();
+
   return (
-    <NativeTabs>
+    <NativeTabs
+      screenOptions={{
+        tabBarActiveTintColor: colors.tint,
+      }}
+    >
       <NativeTabs.Trigger name="halal">
         <Icon sf={{ default: "fork.knife", selected: "fork.knife" }} />
         <Label>HalalEats</Label>
