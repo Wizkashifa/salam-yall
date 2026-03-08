@@ -932,8 +932,8 @@ export default function PrayerScreen() {
             <CountdownRing colors={colors} isDark={isDark} progress={countdownProgress} qiblaBearing={qiblaRotation} />
             {nextPrayer ? (
               <View style={styles.prayerHeroText}>
-                <Text style={[styles.prayerHeroName, { color: isDark ? "#FFFFFF" : colors.emerald }]}>{nextPrayer.label}</Text>
-                <Text style={[styles.prayerHeroCountdown, { color: isDark ? colors.gold : colors.text }]}>
+                <Text style={[styles.prayerHeroName, { color: isDark ? "#FFFFFF" : colors.emerald }]} allowFontScaling={false}>{nextPrayer.label}</Text>
+                <Text style={[styles.prayerHeroCountdown, { color: isDark ? colors.gold : colors.text }]} allowFontScaling={false}>
                   {padNum(countdown.hours)}:{padNum(countdown.minutes)}:{padNum(countdown.seconds)}
                 </Text>
               </View>
@@ -946,7 +946,7 @@ export default function PrayerScreen() {
             ) : null}
           </View>
 
-          <View style={[styles.prayerPillRow, { borderTopColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)" }]}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.prayerPillRow, { borderTopColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)" }]} contentContainerStyle={styles.prayerPillRowContent}>
             {prayers.filter(p => p.name !== "sunrise").map((prayer) => {
               const isNext = nextPrayer?.name === prayer.name;
               const isPast = prayer.time < now && !isNext;
@@ -973,24 +973,24 @@ export default function PrayerScreen() {
                   <Text style={[
                     styles.prayerPillName,
                     { color: isPast ? colors.textTertiary : colors.textSecondary },
-                  ]}>
+                  ]} allowFontScaling={false}>
                     {prayer.label}
                   </Text>
                   <Text style={[
                     styles.prayerPillTime,
                     { color: isPast ? colors.textTertiary : colors.text },
-                  ]}>
+                  ]} allowFontScaling={false}>
                     {formatTime(prayer.time)}
                   </Text>
                   {iqamaTime ? (
-                    <Text style={[styles.prayerIqamaTime, { color: isDark ? colors.gold : "#9A7B2A" }]}>
+                    <Text style={[styles.prayerIqamaTime, { color: isDark ? colors.gold : "#9A7B2A" }]} allowFontScaling={false}>
                       {iqamaTime}
                     </Text>
                   ) : null}
                 </Pressable>
               );
             })}
-          </View>
+          </ScrollView>
           {activeIqama ? (
             <Text style={[styles.iqamaSource, { color: colors.textTertiary }]}>
               Iqama times from {activeIqama.masjid === "IAR" ? "Islamic Assoc. of Raleigh" : activeIqama.masjid === "ICMNC" ? "Islamic Center of Morrisville" : activeIqama.masjid === "JIAR (Parkwood)" ? "JIAR (Parkwood)" : activeIqama.masjid === "JIAR (Fayetteville)" ? "JIAR (Fayetteville St)" : activeIqama.masjid === "Al Noor" ? "Al-Noor Islamic Center" : activeIqama.masjid}
@@ -1426,10 +1426,13 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums" as const],
   },
   prayerPillRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingTop: 14,
+  },
+  prayerPillRowContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    flexGrow: 1,
   },
   prayerPill: {
     alignItems: "center",
