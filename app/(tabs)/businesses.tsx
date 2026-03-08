@@ -43,6 +43,10 @@ interface Business {
   business_hours?: string[];
   lat?: number;
   lng?: number;
+  specialty?: string;
+  keywords?: string[];
+  photo_url?: string;
+  booking_url?: string;
 }
 
 interface PlacesDetails {
@@ -74,6 +78,42 @@ function getCategoryInfo(category: string) {
 
 const CATEGORIES = ["All", "Restaurant", "Grocery", "Finance", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Technology"];
 const SUBMIT_CATEGORIES = ["Restaurant", "Grocery", "Finance", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Technology"];
+
+const HEALTHCARE_SPECIALTIES = [
+  "Primary Care", "Dentistry", "Optometry", "Dermatology", "Pediatrics",
+  "OB/GYN", "Cardiology", "Orthopedics", "Psychiatry", "Psychology",
+  "Therapy / Counseling", "Chiropractic", "Physical Therapy", "Pharmacy",
+  "Urgent Care", "Internal Medicine", "ENT", "Allergy / Immunology",
+  "Nutrition / Dietetics", "Other",
+];
+
+const BUSINESS_KEYWORDS: Record<string, string[]> = {
+  Healthcare: [
+    "Muslim-owned", "Female provider", "Male provider",
+    "Accepts insurance", "Cash / self-pay", "Sliding scale",
+    "Telehealth available", "Walk-ins welcome", "By appointment only",
+    "Family-friendly", "Pediatric", "Halal medications",
+    "Mental health", "Women's health", "Sports medicine",
+    "Arabic-speaking", "Urdu-speaking", "Spanish-speaking",
+  ],
+  Restaurant: [
+    "Muslim-owned", "Halal-certified", "Zabiha", "Dine-in", "Takeout",
+    "Delivery", "Catering", "Family-friendly", "Late night",
+  ],
+  Grocery: [
+    "Muslim-owned", "Halal meat", "Zabiha", "Imported goods",
+    "Middle Eastern", "South Asian", "African", "Bakery",
+  ],
+  Finance: [
+    "Muslim-owned", "Islamic finance", "Halal investing",
+    "No-interest loans", "Financial planning", "Tax services",
+  ],
+  _default: [
+    "Muslim-owned", "Family-friendly", "Women-owned",
+    "Veteran-owned", "By appointment only", "Walk-ins welcome",
+    "Arabic-speaking", "Urdu-speaking", "Spanish-speaking",
+  ],
+};
 
 function renderStars(rating: number): string {
   const full = Math.floor(rating);
@@ -112,7 +152,8 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
   const rating = rawRating != null ? Number(rawRating) : null;
   const reviewCount = details?.user_ratings_total || business.user_ratings_total;
   const hasPhoto = details?.has_photo || !!business.photo_reference;
-  const photoUrl = hasPhoto ? new URL(`/api/businesses/${business.id}/photo`, getApiUrl()).toString() : null;
+  const googlePhotoUrl = hasPhoto ? new URL(`/api/businesses/${business.id}/photo`, getApiUrl()).toString() : null;
+  const photoUrl = business.photo_url || googlePhotoUrl;
   const hours = details?.business_hours || business.business_hours;
 
   const openMaps = () => {
@@ -187,6 +228,23 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
               <Text style={[styles.detailDesc, { color: colors.textSecondary }]}>{business.description}</Text>
             ) : null}
 
+            {business.specialty ? (
+              <View style={[styles.specialtyRow, { backgroundColor: colors.prayerIconBg }]}>
+                <Ionicons name="medical-outline" size={14} color={colors.emerald} />
+                <Text style={[styles.specialtyText, { color: colors.text }]}>{business.specialty}</Text>
+              </View>
+            ) : null}
+
+            {business.keywords && business.keywords.length > 0 ? (
+              <View style={styles.keywordDisplayGrid}>
+                {business.keywords.map((kw) => (
+                  <View key={kw} style={[styles.keywordDisplayChip, { backgroundColor: colors.prayerIconBg }]}>
+                    <Text style={[styles.keywordDisplayText, { color: colors.textSecondary }]}>{kw}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+
             <View style={[styles.detailSection, { borderTopColor: colors.divider }]}>
               {business.address ? (
                 <Pressable style={styles.detailInfoRow} onPress={openMaps}>
@@ -214,6 +272,14 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
                 <Pressable style={styles.detailInfoRow} onPress={() => Linking.openURL(business.website)}>
                   <Ionicons name="globe-outline" size={18} color={colors.emerald} />
                   <Text style={[styles.detailInfoText, { color: colors.text }]} numberOfLines={1}>{business.website.replace(/^https?:\/\//, "")}</Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                </Pressable>
+              ) : null}
+
+              {business.booking_url ? (
+                <Pressable style={styles.detailInfoRow} onPress={() => Linking.openURL(business.booking_url!)}>
+                  <Ionicons name="calendar-outline" size={18} color={colors.emerald} />
+                  <Text style={[styles.detailInfoText, { color: colors.text }]}>Book an appointment</Text>
                   <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
                 </Pressable>
               ) : null}
@@ -272,6 +338,15 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
                   <Text style={styles.detailActionText}>Website</Text>
                 </Pressable>
               ) : null}
+              {business.booking_url ? (
+                <Pressable
+                  style={({ pressed }) => [styles.detailActionBtn, { backgroundColor: "#2563EB", opacity: pressed ? 0.8 : 1 }]}
+                  onPress={() => Linking.openURL(business.booking_url!)}
+                >
+                  <Ionicons name="calendar" size={18} color="#fff" />
+                  <Text style={styles.detailActionText}>Book</Text>
+                </Pressable>
+              ) : null}
             </View>
           </View>
         </ScrollView>
@@ -291,12 +366,25 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
   const [phone, setPhone] = useState("");
   const [website, setWebsite] = useState("");
   const [email, setEmail] = useState("");
+  const [specialty, setSpecialty] = useState("");
+  const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [bookingUrl, setBookingUrl] = useState("");
   const [submitted, setSubmitted] = useState(false);
+
+  const availableKeywords = BUSINESS_KEYWORDS[category] || BUSINESS_KEYWORDS._default;
+
+  const toggleKeyword = useCallback((kw: string) => {
+    setSelectedKeywords((prev) =>
+      prev.includes(kw) ? prev.filter((k) => k !== kw) : [...prev, kw]
+    );
+  }, []);
 
   const submitMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/businesses/submit", {
         name, category, description, address, phone, website, email, google_url: googleUrl,
+        specialty, keywords: selectedKeywords, photo_url: photoUrl, booking_url: bookingUrl,
       });
       return res.json();
     },
@@ -319,6 +407,10 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
     setPhone("");
     setWebsite("");
     setEmail("");
+    setSpecialty("");
+    setSelectedKeywords([]);
+    setPhotoUrl("");
+    setBookingUrl("");
     setSubmitted(false);
   }, []);
 
@@ -330,6 +422,7 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
   const handleSubmit = useCallback(() => {
     if (!name.trim()) { Alert.alert("Required", "Please enter the business name"); return; }
     if (!category) { Alert.alert("Required", "Please select a category"); return; }
+    if (category === "Healthcare" && !specialty) { Alert.alert("Required", "Please select a specialty"); return; }
     if (!address.trim() && !googleUrl.trim()) { Alert.alert("Required", "Please enter an address or Google Maps URL"); return; }
     if (!email.trim()) { Alert.alert("Required", "Please enter your email for verification"); return; }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -415,7 +508,11 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
                       isSelected && { borderWidth: 2 },
                     ]}
                     onPress={() => {
-                      setCategory(cat);
+                      if (cat !== category) {
+                        setCategory(cat);
+                        setSelectedKeywords([]);
+                        if (cat !== "Healthcare") setSpecialty("");
+                      }
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     }}
                   >
@@ -483,6 +580,89 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
               keyboardType="url"
               autoCapitalize="none"
             />
+
+            <Text style={[styles.fieldLabel, { color: colors.text }]}>Booking / Appointment Link</Text>
+            <TextInput
+              style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+              value={bookingUrl}
+              onChangeText={setBookingUrl}
+              placeholder="https://booking.example.com"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="url"
+              autoCapitalize="none"
+            />
+
+            <Text style={[styles.fieldLabel, { color: colors.text }]}>Photo URL</Text>
+            <TextInput
+              style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+              value={photoUrl}
+              onChangeText={setPhotoUrl}
+              placeholder="Link to a photo of your business or headshot"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="url"
+              autoCapitalize="none"
+            />
+            <Text style={[styles.fieldHint, { color: colors.textTertiary }]}>
+              Paste a link to a profile photo, logo, or storefront image
+            </Text>
+
+            {category === "Healthcare" ? (
+              <>
+                <Text style={[styles.fieldLabel, { color: colors.text }]}>Specialty *</Text>
+                <View style={styles.categoryGrid}>
+                  {HEALTHCARE_SPECIALTIES.map((spec) => {
+                    const isSelected = specialty === spec;
+                    return (
+                      <Pressable
+                        key={spec}
+                        style={[
+                          styles.categoryOption,
+                          { backgroundColor: colors.surface, borderColor: isSelected ? colors.emerald : colors.border },
+                          isSelected && { borderWidth: 2 },
+                        ]}
+                        onPress={() => {
+                          setSpecialty(spec);
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        }}
+                      >
+                        <Text style={[styles.categoryOptionText, { color: isSelected ? colors.emerald : colors.text }]}>
+                          {spec}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </>
+            ) : null}
+
+            {category ? (
+              <>
+                <Text style={[styles.fieldLabel, { color: colors.text }]}>Tags</Text>
+                <View style={styles.keywordGrid}>
+                  {availableKeywords.map((kw) => {
+                    const isSelected = selectedKeywords.includes(kw);
+                    return (
+                      <Pressable
+                        key={kw}
+                        style={[
+                          styles.keywordChip,
+                          { backgroundColor: isSelected ? colors.emerald : colors.surface, borderColor: isSelected ? colors.emerald : colors.border },
+                        ]}
+                        onPress={() => {
+                          toggleKeyword(kw);
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        }}
+                      >
+                        {isSelected ? <Ionicons name="checkmark" size={14} color="#fff" style={{ marginRight: 4 }} /> : null}
+                        <Text style={[styles.keywordChipText, { color: isSelected ? "#fff" : colors.text }]}>
+                          {kw}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </>
+            ) : null}
 
             <Text style={[styles.fieldLabel, { color: colors.text }]}>Your Email *</Text>
             <TextInput
@@ -1172,6 +1352,52 @@ const styles = StyleSheet.create({
   },
   categoryOptionText: {
     fontSize: 13,
+    fontFamily: "Inter_500Medium",
+  },
+  specialtyRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+    marginTop: 8,
+  },
+  specialtyText: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+  },
+  keywordDisplayGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 10,
+  },
+  keywordDisplayChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  keywordDisplayText: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+  },
+  keywordGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  keywordChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  keywordChipText: {
+    fontSize: 12,
     fontFamily: "Inter_500Medium",
   },
   emailHint: {

@@ -322,13 +322,6 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
                   <Text style={styles.detailActionText}>Call</Text>
                 </Pressable>
               ) : null}
-              <Pressable
-                style={({ pressed }) => [styles.detailActionBtn, { backgroundColor: colors.gold, opacity: pressed ? 0.8 : 1 }]}
-                onPress={openMaps}
-              >
-                <Ionicons name="navigate" size={18} color="#fff" />
-                <Text style={styles.detailActionText}>Directions</Text>
-              </Pressable>
               {restaurant.website ? (
                 <Pressable
                   style={({ pressed }) => [styles.detailActionBtn, { backgroundColor: isDark ? "#4B5563" : "#374151", opacity: pressed ? 0.8 : 1 }]}
@@ -338,6 +331,13 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
                   <Text style={styles.detailActionText}>Website</Text>
                 </Pressable>
               ) : null}
+              <Pressable
+                style={({ pressed }) => [styles.detailActionBtn, { backgroundColor: colors.gold, opacity: pressed ? 0.8 : 1 }]}
+                onPress={openMaps}
+              >
+                <Ionicons name="navigate" size={18} color="#fff" />
+                <Text style={styles.detailActionText}>Directions</Text>
+              </Pressable>
             </View>
           </View>
         </ScrollView>

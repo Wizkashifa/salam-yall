@@ -44,9 +44,9 @@ The application follows a client-server architecture:
 
 **Key Features:**
 - **Home Screen:** Displays prayer times, Qibla direction, weather, daily Quran/Hadith, and "Tonight in the Community" events. Includes an interactive prayer tracker and a search bar.
-- **Halal Eats:** A directory of halal restaurants with search, filters, and distance sorting.
+- **Halal Eats:** A directory of halal restaurants with search, filters, and distance sorting. Action buttons: Call → Website → Directions.
 - **Events:** Integrates Google Calendar to display community events with registration options.
-- **Directory:** A Muslim business directory with category filtering and Google Places integration.
+- **Directory:** A Muslim business directory with category filtering, Google Places integration, and enhanced submission form. Supports specialty (Healthcare), keyword tags (predefined per category), photo URL, and booking/appointment links. DB columns: `specialty VARCHAR(255)`, `keywords TEXT[]`, `photo_url TEXT`, `booking_url TEXT`.
 - **More Tab:** Access to prayer tracker, masjid directory, prayer settings, appearance settings, and feedback forms.
 - **Prayer Features:** Configurable prayer calculation methods, local notifications, mosque proximity alerts, and Iqama times from various masjids.
 

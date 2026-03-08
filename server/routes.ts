@@ -662,6 +662,11 @@ async function ensureBusinessesTable(pool: pg.Pool) {
   await pool.query(`ALTER TABLE businesses ALTER COLUMN address DROP NOT NULL`);
   await pool.query(`ALTER TABLE businesses ALTER COLUMN address SET DEFAULT ''`);
 
+  await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS specialty VARCHAR(255) DEFAULT ''`);
+  await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS keywords TEXT[] DEFAULT '{}'`);
+  await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS photo_url TEXT DEFAULT ''`);
+  await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS booking_url TEXT DEFAULT ''`);
+
   await pool.query(`ALTER TABLE halal_restaurants ADD COLUMN IF NOT EXISTS photo_reference TEXT`);
   await pool.query(`ALTER TABLE halal_restaurants ADD COLUMN IF NOT EXISTS place_id VARCHAR(255)`);
 
@@ -825,7 +830,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/businesses", async (_req, res) => {
     try {
       const result = await pool.query(
-        "SELECT id, name, category, description, address, phone, website, place_id, rating, user_ratings_total, photo_reference, business_hours, lat, lng FROM businesses WHERE status = 'approved' ORDER BY name"
+        "SELECT id, name, category, description, address, phone, website, place_id, rating, user_ratings_total, photo_reference, business_hours, lat, lng, specialty, keywords, photo_url, booking_url FROM businesses WHERE status = 'approved' ORDER BY name"
       );
       res.json(result.rows);
     } catch (error: any) {
@@ -944,7 +949,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/businesses/submit", async (req, res) => {
     try {
-      const { name, category, description, address, phone, website, email, google_url } = req.body;
+      const { name, category, description, address, phone, website, email, google_url, specialty, keywords, photo_url, booking_url } = req.body;
 
       if (!name || !category || !email) {
         return res.status(400).json({ error: "Name, category, and email are required" });
@@ -964,11 +969,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid category" });
       }
 
+      if (category === "Healthcare" && !specialty) {
+        return res.status(400).json({ error: "Specialty is required for healthcare providers" });
+      }
+
+      const keywordsArray = Array.isArray(keywords) ? keywords : [];
+
       const result = await pool.query(
-        `INSERT INTO businesses (name, category, description, address, phone, website, submitted_by_email, google_url, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
+        `INSERT INTO businesses (name, category, description, address, phone, website, submitted_by_email, google_url, specialty, keywords, photo_url, booking_url, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'pending')
          RETURNING id`,
-        [name, category, description || "", address || "", phone || "", website || "", email, google_url || ""]
+        [name, category, description || "", address || "", phone || "", website || "", email, google_url || "", specialty || "", keywordsArray, photo_url || "", booking_url || ""]
       );
 
       res.status(201).json({
