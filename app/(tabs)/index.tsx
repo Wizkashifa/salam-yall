@@ -787,15 +787,13 @@ export default function PrayerScreen() {
                 >
                   <Text style={[
                     styles.prayerPillName,
-                    { color: isGold ? colors.gold : isGreen ? colors.emerald : isPast ? colors.textTertiary : colors.textSecondary },
-                    (isGold || isGreen) && { fontFamily: "Inter_700Bold" },
+                    { color: isPast ? colors.textTertiary : colors.textSecondary },
                   ]}>
                     {prayer.label}
                   </Text>
                   <Text style={[
                     styles.prayerPillTime,
-                    { color: isGold ? colors.gold : isGreen ? colors.emerald : isPast ? colors.textTertiary : colors.text },
-                    (isGold || isGreen) && { fontFamily: "Inter_700Bold" },
+                    { color: isPast ? colors.textTertiary : colors.text },
                   ]}>
                     {formatTime(prayer.time)}
                   </Text>
