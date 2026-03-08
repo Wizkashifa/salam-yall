@@ -139,7 +139,7 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
           </Pressable>
           <Pressable onPress={() => {
             const shareUrl = `${getApiUrl()}share/business/${business.id}`;
-            Share.share({ message: `${business.name} — check it out on Ummah Connect! ${shareUrl}` });
+            Share.share({ message: `${business.name} — check it out on Salam Y'all! ${shareUrl}` });
           }} hitSlop={8} style={[styles.closeButton, { backgroundColor: isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.85)" }]}>
             <Ionicons name="share-outline" size={18} color={isDark ? "#fff" : "#374151"} />
           </Pressable>

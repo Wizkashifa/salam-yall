@@ -150,7 +150,7 @@ export function AnimatedSplash({ onFinish }: AnimatedSplashProps) {
       </View>
 
       <Animated.Text style={[styles.appName, { opacity: subtitleOpacity }]}>
-        Ummah Connect
+        Salam Y'all
       </Animated.Text>
     </Animated.View>
   );

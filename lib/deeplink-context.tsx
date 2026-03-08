@@ -52,9 +52,9 @@ export function parseDeepLinkUrl(url: string): DeepLinkTarget {
       { regex: /\/share\/event\/([^/?#]+)/, type: "event" as const },
       { regex: /\/share\/restaurant\/([^/?#]+)/, type: "restaurant" as const },
       { regex: /\/share\/business\/([^/?#]+)/, type: "business" as const },
-      { regex: /ummahconnect:\/\/event\/([^/?#]+)/, type: "event" as const },
-      { regex: /ummahconnect:\/\/restaurant\/([^/?#]+)/, type: "restaurant" as const },
-      { regex: /ummahconnect:\/\/business\/([^/?#]+)/, type: "business" as const },
+      { regex: /salamyall:\/\/event\/([^/?#]+)/, type: "event" as const },
+      { regex: /salamyall:\/\/restaurant\/([^/?#]+)/, type: "restaurant" as const },
+      { regex: /salamyall:\/\/business\/([^/?#]+)/, type: "business" as const },
     ];
     for (const { regex, type } of patterns) {
       const match = url.match(regex);

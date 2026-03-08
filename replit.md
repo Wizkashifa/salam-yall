@@ -1,8 +1,8 @@
-# Ummah Connect
+# Salam Y'all
 
 ## Overview
 
-Ummah Connect is a mobile application designed to serve the Muslim community. It provides essential Islamic resources and community features, including prayer times, halal food directories, event listings, and a business directory. The app aims to be a central hub for Muslims, fostering connection and providing convenient access to relevant local information and services. It is built using Expo (React Native) for the frontend and an Express.js backend, leveraging a PostgreSQL database.
+Salam Y'all is a mobile application designed to serve the Muslim community. It provides essential Islamic resources and community features, including prayer times, halal food directories, event listings, and a business directory. The app aims to be a central hub for Muslims, fostering connection and providing convenient access to relevant local information and services. It is built using Expo (React Native) for the frontend and an Express.js backend, leveraging a PostgreSQL database.
 
 ## User Preferences
 

@@ -5,7 +5,7 @@ export function redirectSystemPath({
   if (path.includes("/share/event/") || path.includes("/share/restaurant/") || path.includes("/share/business/")) {
     return "/";
   }
-  if (path.startsWith("ummahconnect://")) {
+  if (path.startsWith("salamyall://")) {
     return "/";
   }
   return path || "/";

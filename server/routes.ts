@@ -681,7 +681,7 @@ async function ensureBusinessesTable(pool: pg.Pool) {
     ];
     for (const b of seed) {
       await pool.query(
-        `INSERT INTO businesses (name, category, description, address, phone, website, submitted_by_email, status) VALUES ($1, $2, $3, $4, $5, $6, 'admin@ummahconnect.app', 'approved')`,
+        `INSERT INTO businesses (name, category, description, address, phone, website, submitted_by_email, status) VALUES ($1, $2, $3, $4, $5, $6, 'admin@salamyall.app', 'approved')`,
         [b.name, b.category, b.description, b.address, b.phone, b.website]
       );
     }
@@ -1602,12 +1602,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const event = cachedEvents.find(e => e.id === id);
       const title = event ? event.title : "Community Event";
       const description = event
-        ? (event.description || "").substring(0, 200) || `Event at ${event.organizer || "Ummah Connect"}`
-        : "Check out this event on Ummah Connect";
+        ? (event.description || "").substring(0, 200) || `Event at ${event.organizer || "Salam Y'all"}`
+        : "Check out this event on Salam Y'all";
       const imageUrl = event?.imageUrl || "";
       const host = req.get("host") || "muslim-life-hub.replit.app";
       const pageUrl = `https://${host}/share/event/${id}`;
-      const deepLink = `ummahconnect://event/${id}`;
+      const deepLink = `salamyall://event/${id}`;
 
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(`<!DOCTYPE html>
@@ -1615,7 +1615,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${escapeHtml(title)} - Ummah Connect</title>
+  <title>${escapeHtml(title)} - Salam Y'all</title>
   <meta property="og:title" content="${escapeHtml(title)}">
   <meta property="og:description" content="${escapeHtml(description)}">
   <meta property="og:type" content="website">
@@ -1638,7 +1638,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   </div>
   <script>
     setTimeout(function(){window.location.href="${deepLink}"},500);
-    setTimeout(function(){document.getElementById("open").textContent="Download Ummah Connect"},3000);
+    setTimeout(function(){document.getElementById("open").textContent="Download Salam Y'all"},3000);
   </script>
 </body>
 </html>`);
@@ -1654,11 +1654,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const restaurant = result.rows[0];
       const title = restaurant ? restaurant.name : "Halal Restaurant";
       const description = restaurant
-        ? (restaurant.halal_comment || restaurant.formatted_address || `${restaurant.is_halal === "IS_HALAL" ? "Halal" : "Halal restaurant"} on Ummah Connect`)
-        : "Check out this restaurant on Ummah Connect";
+        ? (restaurant.halal_comment || restaurant.formatted_address || `${restaurant.is_halal === "IS_HALAL" ? "Halal" : "Halal restaurant"} on Salam Y'all`)
+        : "Check out this restaurant on Salam Y'all";
       const host = req.get("host") || "muslim-life-hub.replit.app";
       const pageUrl = `https://${host}/share/restaurant/${id}`;
-      const deepLink = `ummahconnect://restaurant/${id}`;
+      const deepLink = `salamyall://restaurant/${id}`;
 
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(`<!DOCTYPE html>
@@ -1666,7 +1666,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${escapeHtml(title)} - Ummah Connect</title>
+  <title>${escapeHtml(title)} - Salam Y'all</title>
   <meta property="og:title" content="${escapeHtml(title)}">
   <meta property="og:description" content="${escapeHtml(description)}">
   <meta property="og:type" content="website">
@@ -1687,7 +1687,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   </div>
   <script>
     setTimeout(function(){window.location.href="${deepLink}"},500);
-    setTimeout(function(){document.getElementById("open").textContent="Download Ummah Connect"},3000);
+    setTimeout(function(){document.getElementById("open").textContent="Download Salam Y'all"},3000);
   </script>
 </body>
 </html>`);
@@ -1704,10 +1704,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const title = business ? business.name : "Local Business";
       const description = business
         ? (business.description || `${business.category} business in ${business.address || "the Triangle area"}`)
-        : "Check out this business on Ummah Connect";
+        : "Check out this business on Salam Y'all";
       const host = req.get("host") || "muslim-life-hub.replit.app";
       const pageUrl = `https://${host}/share/business/${id}`;
-      const deepLink = `ummahconnect://business/${id}`;
+      const deepLink = `salamyall://business/${id}`;
 
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(`<!DOCTYPE html>
@@ -1715,7 +1715,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${escapeHtml(title)} - Ummah Connect</title>
+  <title>${escapeHtml(title)} - Salam Y'all</title>
   <meta property="og:title" content="${escapeHtml(title)}">
   <meta property="og:description" content="${escapeHtml(description)}">
   <meta property="og:type" content="website">
@@ -1736,7 +1736,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   </div>
   <script>
     setTimeout(function(){window.location.href="${deepLink}"},500);
-    setTimeout(function(){document.getElementById("open").textContent="Download Ummah Connect"},3000);
+    setTimeout(function(){document.getElementById("open").textContent="Download Salam Y'all"},3000);
   </script>
 </body>
 </html>`);

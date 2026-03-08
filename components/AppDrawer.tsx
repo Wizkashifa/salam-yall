@@ -122,7 +122,7 @@ export function AppDrawer() {
     }
     const subject = feedbackType === "bug" ? "Bug Report" : "Feature Request";
     const body = `${subject}\n\n${feedbackText}\n\nFrom: ${feedbackEmail || "Anonymous"}`;
-    const mailUrl = `mailto:feedback@ummahconnect.app?subject=${encodeURIComponent(`[Ummah Connect] ${subject}`)}&body=${encodeURIComponent(body)}`;
+    const mailUrl = `mailto:feedback@salamyall.app?subject=${encodeURIComponent(`[Salam Y'all] ${subject}`)}&body=${encodeURIComponent(body)}`;
     Linking.openURL(mailUrl).catch(() => {
       Alert.alert("Feedback Noted", "Thank you for your feedback! We'll review it soon.");
     });
@@ -142,7 +142,7 @@ export function AppDrawer() {
 
   const renderMainMenu = () => (
     <>
-      <Text style={[styles.drawerTitle, { color: colors.text }]}>Ummah Connect</Text>
+      <Text style={[styles.drawerTitle, { color: colors.text }]}>Salam Y'all</Text>
 
       <Pressable
         style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : "transparent" }]}

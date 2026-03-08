@@ -35,7 +35,7 @@ function WelcomeScreen() {
         <TriangleCrescentIcon size={48} color={richGold} />
       </View>
       <Text style={screenStyles.title}>Salams y'all</Text>
-      <Text style={screenStyles.subtitle}>Welcome to Ummah Connect</Text>
+      <Text style={screenStyles.subtitle}>Welcome to Salam Y'all</Text>
       <Text style={screenStyles.body}>
         Your companion for the Triangle NC Muslim community — prayer times, events, halal restaurants, and local businesses all in one place.
       </Text>
