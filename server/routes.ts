@@ -283,7 +283,7 @@ function cleanDescription(rawDesc: string): string {
 }
 
 const LOCATION_ADDRESS_MAP: Record<string, string> = {
-  "Cary Mosque": "3714 W Chatham St, Cary, NC 27513",
+  "Cary Mosque": "1155 W Chatham St, Cary, NC 27511",
   "Light House Project": "1127 Kildaire Farm Rd, Cary, NC 27511",
   "The Light House Project": "1127 Kildaire Farm Rd, Cary, NC 27511",
   "The McKimmon Center": "1101 Gorman St, Raleigh, NC 27606",
