@@ -22,6 +22,7 @@ import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
 import * as Notifications from "expo-notifications";
 import { LinearGradient } from "expo-linear-gradient";
+import { Magnetometer } from "expo-sensors";
 import { useQuery } from "@tanstack/react-query";
 import { getApiUrl } from "@/lib/query-client";
 import { useDeepLink } from "@/lib/deeplink-context";
@@ -730,6 +731,25 @@ export default function PrayerScreen() {
     return calculateQiblaBearing(userCoords.lat, userCoords.lon);
   }, [userCoords]);
 
+  const [compassHeading, setCompassHeading] = useState(0);
+
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    Magnetometer.setUpdateInterval(200);
+    const sub = Magnetometer.addListener((data) => {
+      const { x, y } = data;
+      let angle = Math.atan2(y, x) * (180 / Math.PI);
+      angle = (90 - angle + 360) % 360;
+      setCompassHeading(angle);
+    });
+    return () => sub.remove();
+  }, []);
+
+  const qiblaRotation = useMemo(() => {
+    if (Platform.OS === "web") return qiblaBearing;
+    return (qiblaBearing - compassHeading + 360) % 360;
+  }, [qiblaBearing, compassHeading]);
+
   const countdownProgress = useMemo(() => {
     if (!nextPrayer || prayers.length === 0) return 0;
     const now2 = new Date();
@@ -867,7 +887,7 @@ export default function PrayerScreen() {
 
         <View style={[styles.glassCard, styles.prayerCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
           <View style={styles.prayerHero}>
-            <CountdownRing colors={colors} isDark={isDark} progress={countdownProgress} qiblaBearing={qiblaBearing} />
+            <CountdownRing colors={colors} isDark={isDark} progress={countdownProgress} qiblaBearing={qiblaRotation} />
             {nextPrayer ? (
               <View style={styles.prayerHeroText}>
                 <Text style={[styles.prayerHeroName, { color: isDark ? "#FFFFFF" : colors.emerald }]}>{nextPrayer.label}</Text>
