@@ -126,7 +126,7 @@ function EventDetailModal({ event, visible, onClose }: { event: CalendarEvent | 
           {event.imageUrl ? (
             <Image source={{ uri: event.imageUrl }} style={styles.modalImage} resizeMode="cover" />
           ) : (
-            <View style={[styles.modalImagePlaceholder, { backgroundColor: isDark ? "#1A2E22" : "#EDF5F0" }]}>
+            <View style={[styles.modalImagePlaceholder, { backgroundColor: colors.prayerIconBg }]}>
               <Ionicons name="calendar" size={48} color={colors.emerald} />
             </View>
           )}
@@ -220,7 +220,14 @@ export default function EventsScreen() {
     setRefreshing(false);
   }, [queryClient]);
 
-  const grouped = events ? groupEventsByDate(events) : [];
+  const now = new Date();
+  const activeEvents = events
+    ? events.filter((ev) => {
+        const end = ev.end ? new Date(ev.end) : new Date(ev.start);
+        return end >= now;
+      })
+    : [];
+  const grouped = groupEventsByDate(activeEvents);
 
   const isWeb = Platform.OS === "web";
   const headerTopPad = isWeb ? 67 : insets.top;
@@ -319,7 +326,7 @@ export default function EventsScreen() {
                       <View style={styles.eventBody}>
                         <View style={styles.eventRow}>
                           <View style={[styles.timeColumn, { borderRightColor: colors.borderLight }]}>
-                            <Text style={[styles.timeText, { color: colors.emerald }]}>
+                            <Text style={[styles.timeText, { color: colors.emerald }]} numberOfLines={1}>
                               {dateInfo.time}
                             </Text>
                           </View>
@@ -453,7 +460,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   timeColumn: {
-    width: 64,
+    minWidth: 72,
     borderRightWidth: 1,
     paddingRight: 10,
     alignItems: "flex-end",

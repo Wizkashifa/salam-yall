@@ -45,7 +45,7 @@ type SettingsSection = "main" | "calcMethod" | "masjids" | "masjidDetail" | "fee
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
-  const { colors, isDark, themeMode, setThemeMode } = useTheme();
+  const { colors, isDark, themeMode, setThemeMode, ramadanMode, setRamadanMode } = useTheme();
   const { calcMethod, setCalcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid, setPreferredMasjid } = useSettings();
   const [section, setSection] = useState<SettingsSection>("main");
   const [selectedMasjid, setSelectedMasjid] = useState<Masjid | null>(null);
@@ -190,6 +190,22 @@ export default function SettingsScreen() {
         })}
       </View>
 
+      <Pressable
+        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border, marginTop: 10 }]}
+        onPress={() => { setRamadanMode(!ramadanMode); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); }}
+      >
+        <View style={[styles.menuIcon, { backgroundColor: ramadanMode ? "#6B3FA020" : colors.prayerIconBg }]}>
+          <MaterialCommunityIcons name="moon-waning-crescent" size={20} color={ramadanMode ? "#6B3FA0" : colors.emerald} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.menuLabel, { color: colors.text }]}>Ramadan Mode</Text>
+          <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>Purple theme for the blessed month</Text>
+        </View>
+        <View style={[styles.toggleTrack, ramadanMode && styles.toggleTrackActive, ramadanMode && { backgroundColor: "#6B3FA0" }]}>
+          <View style={[styles.toggleThumb, ramadanMode && styles.toggleThumbActive]} />
+        </View>
+      </Pressable>
+
       <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>COMMUNITY</Text>
 
       <Pressable
@@ -265,7 +281,7 @@ export default function SettingsScreen() {
         return (
           <Pressable
             key={key}
-            style={[styles.calcRow, { backgroundColor: isActive ? (isDark ? "#1C2E24" : "#E8F0EC") : colors.surface, borderColor: colors.border }]}
+            style={[styles.calcRow, { backgroundColor: isActive ? (isDark ? colors.actionButtonBg : colors.prayerIconBg) : colors.surface, borderColor: colors.border }]}
             onPress={() => { setCalcMethod(key); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSection("main"); }}
           >
             <Text style={[styles.calcText, { color: isActive ? colors.emerald : colors.text }]}>
@@ -363,7 +379,7 @@ export default function SettingsScreen() {
           const time = ev.isAllDay ? "All Day" : date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
           return (
             <View key={ev.id} style={[styles.eventCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <View style={[styles.eventBadge, { backgroundColor: isDark ? "#1C2E24" : "#E8F0EC" }]}>
+              <View style={[styles.eventBadge, { backgroundColor: isDark ? colors.actionButtonBg : colors.prayerIconBg }]}>
                 <Text style={[styles.eventDay, { color: colors.emerald }]}>{date.getDate()}</Text>
                 <Text style={[styles.eventMonth, { color: colors.emerald }]}>{date.toLocaleDateString("en-US", { month: "short" })}</Text>
               </View>
@@ -510,7 +526,7 @@ export default function SettingsScreen() {
                 key={dateKey}
                 style={[
                   styles.calCell,
-                  isToday && { backgroundColor: isDark ? "#1C2E24" : "#E8F0EC", borderRadius: 8 },
+                  isToday && { backgroundColor: isDark ? colors.actionButtonBg : colors.prayerIconBg, borderRadius: 8 },
                   isSelected && { backgroundColor: colors.emerald, borderRadius: 8 },
                 ]}
                 onPress={() => { setSelectedDay(isSelected ? null : dateKey); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
@@ -939,5 +955,25 @@ const styles = StyleSheet.create({
   calLegendText: {
     fontSize: 12,
     fontFamily: "Inter_500Medium",
+  },
+  toggleTrack: {
+    width: 44,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "#D1D5DB",
+    justifyContent: "center",
+    padding: 2,
+  },
+  toggleTrackActive: {
+    backgroundColor: "#1B6B4A",
+  },
+  toggleThumb: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "#FFFFFF",
+  },
+  toggleThumbActive: {
+    alignSelf: "flex-end" as const,
   },
 });

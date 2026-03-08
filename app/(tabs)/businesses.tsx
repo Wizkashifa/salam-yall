@@ -150,7 +150,7 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
               resizeMode="cover"
             />
           ) : (
-            <View style={[styles.detailPhotoPlaceholder, { backgroundColor: isDark ? "#1A2E22" : "#EDF5F0" }]}>
+            <View style={[styles.detailPhotoPlaceholder, { backgroundColor: colors.prayerIconBg }]}>
               <Ionicons name={catInfo.icon as any} size={48} color={catInfo.color} />
             </View>
           )}

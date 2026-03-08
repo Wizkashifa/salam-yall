@@ -251,7 +251,7 @@ export function AppDrawer() {
         return (
           <Pressable
             key={key}
-            style={[styles.calcMethodRow, { backgroundColor: isActive ? (isDark ? "#1C2E24" : "#E8F0EC") : "transparent" }]}
+            style={[styles.calcMethodRow, { backgroundColor: isActive ? colors.prayerIconBg : "transparent" }]}
             onPress={() => { setCalcMethod(key); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSection("settings"); }}
           >
             <Text style={[styles.calcMethodText, { color: isActive ? colors.emerald : colors.text }]}>
@@ -357,7 +357,7 @@ export function AppDrawer() {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 }}
               >
-                <View style={[styles.eventDateBadge, { backgroundColor: isDark ? "#1C2E24" : "#E8F0EC" }]}>
+                <View style={[styles.eventDateBadge, { backgroundColor: colors.prayerIconBg }]}>
                   <Text style={[styles.eventDateDay, { color: colors.emerald }]}>{day}</Text>
                   <Text style={[styles.eventDateMonth, { color: colors.emerald }]}>{month}</Text>
                 </View>

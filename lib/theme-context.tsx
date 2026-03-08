@@ -11,22 +11,30 @@ interface ThemeContextValue {
   isDark: boolean;
   themeMode: ThemeMode;
   setThemeMode: (mode: ThemeMode) => void;
+  ramadanMode: boolean;
+  setRamadanMode: (enabled: boolean) => void;
 }
 
 const THEME_MODE_KEY = "theme_mode";
+const RAMADAN_MODE_KEY = "ramadan_mode";
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const systemScheme = useColorScheme();
   const [themeMode, setThemeModeState] = useState<ThemeMode>("system");
+  const [ramadanMode, setRamadanModeState] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem(THEME_MODE_KEY).then((val) => {
-      if (val === "light" || val === "dark" || val === "system") {
-        setThemeModeState(val);
+    Promise.all([
+      AsyncStorage.getItem(THEME_MODE_KEY),
+      AsyncStorage.getItem(RAMADAN_MODE_KEY),
+    ]).then(([themeVal, ramadanVal]) => {
+      if (themeVal === "light" || themeVal === "dark" || themeVal === "system") {
+        setThemeModeState(themeVal);
       }
+      if (ramadanVal === "true") setRamadanModeState(true);
       setLoaded(true);
     });
   }, []);
@@ -36,20 +44,32 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     AsyncStorage.setItem(THEME_MODE_KEY, mode);
   }, []);
 
+  const setRamadanMode = useCallback((enabled: boolean) => {
+    setRamadanModeState(enabled);
+    AsyncStorage.setItem(RAMADAN_MODE_KEY, enabled ? "true" : "false");
+  }, []);
+
   const isDark = useMemo(() => {
     if (themeMode === "system") return systemScheme === "dark";
     return themeMode === "dark";
   }, [themeMode, systemScheme]);
 
-  const value = useMemo(
-    () => ({
-      colors: isDark ? Colors.dark : Colors.light,
+  const value = useMemo(() => {
+    let colors: ThemeColors;
+    if (ramadanMode) {
+      colors = isDark ? Colors.darkRamadan : Colors.lightRamadan;
+    } else {
+      colors = isDark ? Colors.dark : Colors.light;
+    }
+    return {
+      colors,
       isDark,
       themeMode,
       setThemeMode,
-    }),
-    [isDark, themeMode, setThemeMode]
-  );
+      ramadanMode,
+      setRamadanMode,
+    };
+  }, [isDark, themeMode, setThemeMode, ramadanMode, setRamadanMode]);
 
   return (
     <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>

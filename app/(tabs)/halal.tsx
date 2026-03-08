@@ -209,7 +209,7 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
           {photoUrl ? (
             <Image source={{ uri: photoUrl }} style={styles.detailPhoto} resizeMode="cover" />
           ) : (
-            <View style={[styles.detailPhotoPlaceholder, { backgroundColor: isDark ? "#1A2E22" : "#EDF5F0" }]}>
+            <View style={[styles.detailPhotoPlaceholder, { backgroundColor: colors.prayerIconBg }]}>
               <Ionicons name="restaurant" size={48} color={colors.emerald} />
             </View>
           )}
@@ -440,7 +440,7 @@ export default function HalalScreen() {
             {photoUrl ? (
               <Image source={{ uri: photoUrl }} style={styles.cardThumb} resizeMode="cover" />
             ) : (
-              <View style={[styles.cardThumbPlaceholder, { backgroundColor: isDark ? "#1A2E22" : "#EDF5F0" }]}>
+              <View style={[styles.cardThumbPlaceholder, { backgroundColor: colors.prayerIconBg }]}>
                 <Ionicons name="restaurant" size={22} color={colors.emerald} />
               </View>
             )}

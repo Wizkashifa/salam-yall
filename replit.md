@@ -8,9 +8,9 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 - **Backend**: Express server on port 5000 serving APIs and landing page
 - **Database**: PostgreSQL via Replit's built-in database (businesses table)
 - **State**: React Query for server state, useState for local state, AsyncStorage for preferences
-- **Theme**: Dark/light/system mode via ThemeProvider context (`lib/theme-context.tsx`) — user can override via drawer settings
+- **Theme**: Dark/light/system mode + Ramadan mode via ThemeProvider context (`lib/theme-context.tsx`) — user can override via drawer settings
 - **Settings**: Shared settings state via SettingsProvider context (`lib/settings-context.tsx`) — manages calcMethod, notifications, drawer open state
-- **Colors**: Rich gold (#D4A843) and elegant green (#1B6B4A) palette in `constants/colors.ts`
+- **Colors**: Rich gold (#D4A843) and elegant green (#1B6B4A) palette in `constants/colors.ts`; Ramadan mode swaps green/emerald to purple (#6B3FA0) system-wide via `lightRamadan`/`darkRamadan` color variants
 
 ## Tab Structure
 
@@ -18,7 +18,7 @@ Muslim community mobile app built with Expo (React Native) and Express backend.
 2. **Halal Eats (halal.tsx)**: Native restaurant directory with 317 halal restaurants from HalalEatsNC data, compact row cards (80×80 thumbnail + text), detail modal (pageSheet), search, halal/cuisine filters, open/closed status, Google Places photos via proxy, distance sorting with location
 3. **Events (events.tsx)**: Google Calendar integration displaying community events with flyer images, organizer names, and registration links. Tapping opens a full-screen modal with image, details, and Register/RSVP button
 4. **Directory (businesses.tsx)**: Muslim business directory with category filtering, Google Places integration (ratings, photos, hours), detail modal with Call/Directions/Website actions, business submission form with pending verification
-5. **Settings (settings.tsx)**: Calculation method picker, adhan notification toggle, appearance switcher (System/Light/Dark), masjid directory with preferred masjid selection (star), prayer tracker calendar view (monthly dots), feedback form, privacy/support links
+5. **Settings (settings.tsx)**: Calculation method picker, adhan notification toggle, appearance switcher (System/Light/Dark), Ramadan mode toggle (purple theme), masjid directory with preferred masjid selection (star), prayer tracker calendar view (monthly dots), feedback form, privacy/support links
 
 ## Safe Area & TickerBanner
 

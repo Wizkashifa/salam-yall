@@ -104,7 +104,7 @@ function HomeEventDetailModal({ event, visible, onClose }: { event: CalendarEven
           {event.imageUrl ? (
             <Image source={{ uri: event.imageUrl }} style={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH * 0.75 }} resizeMode="cover" />
           ) : (
-            <View style={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH * 0.5, justifyContent: "center", alignItems: "center", backgroundColor: isDark ? "#1A2E22" : "#EDF5F0" }}>
+            <View style={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH * 0.5, justifyContent: "center", alignItems: "center", backgroundColor: colors.prayerIconBg }}>
               <Ionicons name="calendar" size={48} color={colors.emerald} />
             </View>
           )}
@@ -802,7 +802,7 @@ export default function PrayerScreen() {
                     {formatTime(prayer.time)}
                   </Text>
                   {iqamaTime ? (
-                    <Text style={[styles.prayerIqamaTime, { color: colors.gold }]}>
+                    <Text style={[styles.prayerIqamaTime, { color: isDark ? colors.gold : "#9A7B2A" }]}>
                       {iqamaTime}
                     </Text>
                   ) : null}
@@ -919,7 +919,7 @@ export default function PrayerScreen() {
                 ]}
                 onPress={() => openMasjidNav(item.masjid)}
               >
-                <View style={[styles.masjidIcon, { backgroundColor: isDark ? "#1A2E22" : "#EDF5F0" }]}>
+                <View style={[styles.masjidIcon, { backgroundColor: colors.prayerIconBg }]}>
                   <MaterialCommunityIcons name="mosque" size={18} color={colors.emerald} />
                 </View>
                 <View style={{ flex: 1 }}>
@@ -947,7 +947,7 @@ export default function PrayerScreen() {
               let iconBg = isDark ? "#2A2318" : "#FFF8E7";
               if (title.includes("quran") || title.includes("halaqa") || title.includes("tafsir") || title.includes("study")) {
                 iconName = "book";
-                iconBg = isDark ? "#1A2E22" : "#EDF5F0";
+                iconBg = colors.prayerIconBg;
               } else if (title.includes("iftar") || title.includes("suhoor") || title.includes("dinner") || title.includes("potluck") || title.includes("food")) {
                 iconName = "restaurant";
                 iconBg = isDark ? "#2E2318" : "#FEF3E7";
@@ -965,7 +965,7 @@ export default function PrayerScreen() {
                 iconBg = isDark ? "#2A2318" : "#FFF8E7";
               } else if (title.includes("fitness") || title.includes("sports") || title.includes("basketball") || title.includes("soccer") || title.includes("gym")) {
                 iconName = "fitness";
-                iconBg = isDark ? "#1A2E22" : "#EDF5F0";
+                iconBg = colors.prayerIconBg;
               }
               const onPress = () => {
                 const fullEvent = calendarEvents?.find((e: any) => e.id === ev.id);
@@ -1020,7 +1020,7 @@ export default function PrayerScreen() {
             >
               {nearbyHalalPreview.map((restaurant) => (
                 <View key={restaurant.id} style={[styles.halalCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder, borderWidth: 1 }]}>
-                  <View style={[styles.halalCardImage, { backgroundColor: isDark ? "#1A2E22" : "#E8F5EE" }]}>
+                  <View style={[styles.halalCardImage, { backgroundColor: colors.prayerIconBg }]}>
                     <MaterialCommunityIcons name="silverware-fork-knife" size={28} color={isDark ? "#2A5A40" : "#8DC4A8"} />
                   </View>
                   <View style={styles.halalCardInfo}>
@@ -1179,15 +1179,15 @@ const styles = StyleSheet.create({
     minWidth: 54,
   },
   prayerPillName: {
-    fontSize: 10,
-    fontFamily: "Inter_500Medium",
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
     textTransform: "uppercase" as const,
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
   },
   prayerPillTime: {
     fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-    marginTop: 2,
+    fontFamily: "Inter_700Bold",
+    marginTop: 3,
   },
   quickActionsRow: {
     flexDirection: "row",
@@ -1211,9 +1211,9 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
   },
   prayerIqamaTime: {
-    fontSize: 9,
-    fontFamily: "Inter_500Medium",
-    marginTop: 2,
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    marginTop: 3,
   },
   iqamaSource: {
     fontSize: 10,
