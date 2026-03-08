@@ -15,6 +15,7 @@ const NAME_MATCHES: [string, string][] = [
   ["islamic center of morrisville", "Islamic Center of Morrisville"],
   ["icm,", "Islamic Center of Morrisville"],
   ["islamic center of cary", "Islamic Center of Cary"],
+  ["cary mosque", "Cary Mosque"],
   ["masjid king khalid", "Masjid King Khalid"],
   ["shaw university mosque", "Masjid King Khalid"],
   ["as-salaam islamic", "As-Salaam Islamic Center"],

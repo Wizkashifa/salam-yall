@@ -127,7 +127,9 @@ function EventDetailModal({ event, visible, onClose }: { event: CalendarEvent | 
 
         <ScrollView style={styles.modalScroll} contentContainerStyle={{ paddingBottom: insets.bottom + 40 }} bounces={false} showsVerticalScrollIndicator={false}>
           {event.imageUrl ? (
-            <Image source={{ uri: event.imageUrl }} style={styles.modalImage} resizeMode="cover" />
+            <View style={[styles.modalImageWrap, { backgroundColor: isDark ? "rgba(0,0,0,0.3)" : "rgba(0,0,0,0.04)" }]}>
+              <Image source={{ uri: event.imageUrl }} style={styles.modalImage} resizeMode="contain" />
+            </View>
           ) : (
             <View style={[styles.modalImagePlaceholder, { backgroundColor: colors.prayerIconBg }]}>
               <Ionicons name="calendar" size={48} color={colors.emerald} />
@@ -319,11 +321,13 @@ export default function EventsScreen() {
                       ]}
                     >
                       {event.imageUrl ? (
-                        <Image
-                          source={{ uri: event.imageUrl }}
-                          style={styles.eventImage}
-                          resizeMode="cover"
-                        />
+                        <View style={styles.eventImageWrap}>
+                          <Image
+                            source={{ uri: event.imageUrl }}
+                            style={styles.eventImage}
+                            resizeMode="contain"
+                          />
+                        </View>
                       ) : null}
 
                       <View style={styles.eventBody}>
@@ -449,9 +453,14 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  eventImageWrap: {
+    width: "100%",
+    aspectRatio: 16 / 9,
+    overflow: "hidden",
+  },
   eventImage: {
     width: "100%",
-    height: 140,
+    height: "100%",
   },
   eventBody: {
     paddingVertical: 14,
@@ -528,9 +537,14 @@ const styles = StyleSheet.create({
   modalScroll: {
     flex: 1,
   },
-  modalImage: {
+  modalImageWrap: {
     width: SCREEN_WIDTH,
-    height: SCREEN_WIDTH * 0.75,
+    aspectRatio: 1,
+    overflow: "hidden",
+  },
+  modalImage: {
+    width: "100%",
+    height: "100%",
   },
   modalImagePlaceholder: {
     width: SCREEN_WIDTH,
