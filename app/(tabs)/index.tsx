@@ -210,13 +210,6 @@ function getGreeting(): string {
   return "Good evening";
 }
 
-function getPrayerPeriodLabel(prayers: PrayerTimeEntry[], nextPrayer: PrayerTimeEntry | null): string {
-  if (!nextPrayer || prayers.length === 0) return "";
-  const idx = prayers.findIndex(p => p.name === nextPrayer.name);
-  if (idx <= 0) return `Before ${nextPrayer.label}`;
-  const prev = prayers[idx - 1];
-  return `Between ${prev.label} & ${nextPrayer.label}`;
-}
 
 function SkeletonHomeScreen({ colors, isDark, insets }: { colors: any; isDark: boolean; insets: any }) {
   const isWeb = Platform.OS === "web";
@@ -288,20 +281,53 @@ function SkeletonHomeScreen({ colors, isDark, insets }: { colors: any; isDark: b
   );
 }
 
-function CountdownRing({ colors, isDark }: {
-  colors: any; isDark: boolean;
+function CountdownRing({ colors, isDark, progress }: {
+  colors: any; isDark: boolean; progress: number;
 }) {
   const size = 72;
-  const ringColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
-  const accentColor = isDark ? colors.gold + "30" : colors.emerald + "18";
+  const half = size / 2;
+  const strokeWidth = 3;
+  const trackColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
+  const fillColor = isDark ? colors.gold : colors.emerald;
+  const bgColor = isDark ? colors.gold + "30" : colors.emerald + "18";
+  const clampedProgress = Math.min(1, Math.max(0, progress));
+  const deg = clampedProgress * 360;
 
   return (
     <View style={{ width: size, height: size, justifyContent: "center", alignItems: "center" }}>
       <View style={{
-        position: "absolute", width: size, height: size, borderRadius: size / 2,
-        borderWidth: 3, borderColor: ringColor, backgroundColor: accentColor,
+        position: "absolute", width: size, height: size, borderRadius: half,
+        borderWidth: strokeWidth, borderColor: trackColor, backgroundColor: bgColor,
       }} />
-      <MaterialCommunityIcons name="mosque" size={28} color={isDark ? colors.gold : colors.emerald} />
+      {deg > 0 && deg <= 180 && (
+        <View style={{ position: "absolute", width: size, height: size }}>
+          <View style={{
+            position: "absolute", width: size, height: size, borderRadius: half,
+            borderWidth: strokeWidth, borderColor: "transparent",
+            borderTopColor: fillColor,
+            borderRightColor: deg > 90 ? fillColor : "transparent",
+            transform: [{ rotate: `${deg - 90}deg` }],
+          }} />
+        </View>
+      )}
+      {deg > 180 && (
+        <View style={{ position: "absolute", width: size, height: size }}>
+          <View style={{
+            position: "absolute", width: size, height: size, borderRadius: half,
+            borderWidth: strokeWidth, borderColor: "transparent",
+            borderTopColor: fillColor, borderRightColor: fillColor,
+            transform: [{ rotate: "90deg" }],
+          }} />
+          <View style={{
+            position: "absolute", width: size, height: size, borderRadius: half,
+            borderWidth: strokeWidth, borderColor: "transparent",
+            borderTopColor: fillColor,
+            borderRightColor: (deg - 180) > 90 ? fillColor : "transparent",
+            transform: [{ rotate: `${deg - 90}deg` }],
+          }} />
+        </View>
+      )}
+      <MaterialCommunityIcons name="mosque" size={28} color={fillColor} />
     </View>
   );
 }
@@ -665,7 +691,25 @@ export default function PrayerScreen() {
   const isWeb = Platform.OS === "web";
   const headerTopPad = isWeb ? 67 : insets.top;
 
-  const prayerPeriod = getPrayerPeriodLabel(prayers, nextPrayer);
+  const countdownProgress = useMemo(() => {
+    if (!nextPrayer || prayers.length === 0) return 0;
+    const now2 = new Date();
+    const nextTime = nextPrayer.time.getTime();
+    const idx = prayers.findIndex(p => p.name === nextPrayer.name);
+    let prevTime: number;
+    if (idx <= 0) {
+      const yesterday = new Date(now2);
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(prayers[prayers.length - 1].time.getHours(), prayers[prayers.length - 1].time.getMinutes(), 0, 0);
+      prevTime = yesterday.getTime();
+    } else {
+      prevTime = prayers[idx - 1].time.getTime();
+    }
+    const total = nextTime - prevTime;
+    const elapsed = now2.getTime() - prevTime;
+    if (total <= 0) return 0;
+    return Math.min(1, Math.max(0, elapsed / total));
+  }, [prayers, nextPrayer, countdown]);
   const greeting = getGreeting();
 
   const glassCardBg = isDark ? "rgba(22,22,22,0.9)" : "rgba(255,255,255,0.85)";
@@ -772,12 +816,9 @@ export default function PrayerScreen() {
 
         <View style={[styles.glassCard, styles.prayerCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
           <View style={styles.prayerHero}>
-            <CountdownRing colors={colors} isDark={isDark} />
+            <CountdownRing colors={colors} isDark={isDark} progress={countdownProgress} />
             {nextPrayer ? (
               <View style={styles.prayerHeroText}>
-                <Text style={[styles.prayerHeroLabel, { color: colors.textSecondary }]}>
-                  {prayerPeriod || "Next Prayer"}
-                </Text>
                 <Text style={[styles.prayerHeroName, { color: colors.emerald }]}>{nextPrayer.label}</Text>
                 <Text style={[styles.prayerHeroCountdown, { color: isDark ? colors.gold : colors.text }]}>
                   {padNum(countdown.hours)}:{padNum(countdown.minutes)}:{padNum(countdown.seconds)}
