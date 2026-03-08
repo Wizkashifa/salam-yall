@@ -29,8 +29,8 @@ const NAME_MATCHES: [string, string][] = [
   ["jiar", "Jamaat Ibad Ar-Rahman"],
   ["parkwood masjid", "Parkwood Masjid (JIAR)"],
   ["rumman room", "Rumman Room"],
-  ["light house project", "Lighthouse Project"],
-  ["lighthouse project", "Lighthouse Project"],
+  ["light house project", "Light House Project"],
+  ["lighthouse project", "Light House Project"],
   ["muslim american society", "Muslim American Society (MAS Raleigh)"],
   ["mas raleigh", "Muslim American Society (MAS Raleigh)"],
   ["raleigh islamic institute", "Raleigh Islamic Institute"],
@@ -67,8 +67,8 @@ const STREET_MATCHES: [string, string][] = [
   ["chapel hill rd", "Ar-Razzaq Islamic Center"],
   ["fayetteville st", "Jamaat Ibad Ar-Rahman"],
   ["revere rd", "Parkwood Masjid (JIAR)"],
-  ["nw maynard", "Lighthouse Project"],
-  ["kildaire farm", "Lighthouse Project"],
+  ["nw maynard", "Light House Project"],
+  ["kildaire farm", "Light House Project"],
   ["jones franklin", "Muslim American Society (MAS Raleigh)"],
   ["rock quarry", "Raleigh Islamic Institute"],
   ["new hope rd", "Madinah Quran & Youth Center"],
@@ -282,6 +282,23 @@ function cleanDescription(rawDesc: string): string {
   return text;
 }
 
+const LOCATION_ADDRESS_MAP: Record<string, string> = {
+  "Cary Mosque": "3714 W Chatham St, Cary, NC 27513",
+  "Light House Project": "1127 Kildaire Farm Rd, Cary, NC 27511",
+  "The Light House Project": "1127 Kildaire Farm Rd, Cary, NC 27511",
+  "The McKimmon Center": "1101 Gorman St, Raleigh, NC 27606",
+  "IAR Masjid Gym, 808 Atwater St, Raleigh": "808 Atwater St, Raleigh, NC 27607",
+};
+
+function resolveLocation(location: string): string {
+  if (!location) return "";
+  if (LOCATION_ADDRESS_MAP[location]) return LOCATION_ADDRESS_MAP[location];
+  for (const [key, addr] of Object.entries(LOCATION_ADDRESS_MAP)) {
+    if (location.toLowerCase().includes(key.toLowerCase())) return addr;
+  }
+  return location;
+}
+
 function processEvent(event: any): CachedEvent {
   const desc = event.description || "";
   const imgMatch = desc.match(/src="([^"]+)"/);
@@ -310,7 +327,7 @@ function processEvent(event: any): CachedEvent {
     id: event.id,
     title: event.summary || "Untitled Event",
     description: cleanDescription(desc),
-    location: event.location || "",
+    location: resolveLocation(event.location || ""),
     start: event.start?.dateTime || event.start?.date || "",
     end: event.end?.dateTime || event.end?.date || "",
     isAllDay: !event.start?.dateTime,
