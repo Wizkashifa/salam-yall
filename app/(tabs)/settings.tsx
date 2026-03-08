@@ -129,6 +129,37 @@ export default function SettingsScreen() {
     <>
       <Pressable
         style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
+        onPress={() => { setSection("prayerTracker"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+      >
+        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
+          <Ionicons name="calendar" size={20} color={colors.emerald} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.menuLabel, { color: colors.text }]}>Prayer Tracker</Text>
+          <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>View your prayer history</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+      </Pressable>
+
+      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>COMMUNITY</Text>
+
+      <Pressable
+        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
+        onPress={() => { setSection("masjids"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+      >
+        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
+          <MaterialCommunityIcons name="mosque" size={20} color={colors.emerald} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.menuLabel, { color: colors.text }]}>Masjid Directory</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+      </Pressable>
+
+      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>PRAYER</Text>
+
+      <Pressable
+        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
         onPress={() => { setSection("calcMethod"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
       >
         <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
@@ -155,20 +186,6 @@ export default function SettingsScreen() {
         <View style={[styles.toggle, notificationsEnabled ? { backgroundColor: colors.emerald } : { backgroundColor: colors.border }]}>
           <View style={[styles.toggleKnob, notificationsEnabled ? { transform: [{ translateX: 16 }] } : {}]} />
         </View>
-      </Pressable>
-
-      <Pressable
-        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
-        onPress={() => { setSection("prayerTracker"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-      >
-        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
-          <Ionicons name="calendar" size={20} color={colors.emerald} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.menuLabel, { color: colors.text }]}>Prayer Tracker</Text>
-          <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>View your prayer history</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
       </Pressable>
 
       <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>APPEARANCE</Text>
@@ -206,35 +223,7 @@ export default function SettingsScreen() {
         </View>
       </Pressable>
 
-      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>COMMUNITY</Text>
-
-      <Pressable
-        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
-        onPress={() => { setSection("masjids"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-      >
-        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
-          <MaterialCommunityIcons name="mosque" size={20} color={colors.emerald} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.menuLabel, { color: colors.text }]}>Masjid Directory</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-      </Pressable>
-
-      <Pressable
-        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
-        onPress={() => { setSection("feedback"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-      >
-        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
-          <Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.emerald} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.menuLabel, { color: colors.text }]}>Bug / Feature Request</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-      </Pressable>
-
-      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>LEGAL</Text>
+      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>LEGAL / APPLICATION</Text>
 
       <Pressable
         style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
@@ -260,6 +249,19 @@ export default function SettingsScreen() {
           <Text style={[styles.menuLabel, { color: colors.text }]}>Support</Text>
         </View>
         <Ionicons name="open-outline" size={16} color={colors.textSecondary} />
+      </Pressable>
+
+      <Pressable
+        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
+        onPress={() => { setSection("feedback"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+      >
+        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
+          <Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.emerald} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.menuLabel, { color: colors.text }]}>Bug / Feature Request</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
       </Pressable>
 
       <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>ATTRIBUTIONS</Text>
@@ -692,7 +694,7 @@ export default function SettingsScreen() {
         colors={[colors.gradientStart, colors.gradientEnd]}
         style={{ paddingHorizontal: 20, paddingTop: headerTopPad + 10, paddingBottom: 14 }}
       >
-        <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>Settings</Text>
+        <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>More</Text>
         <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
           Customize your experience
         </Text>
