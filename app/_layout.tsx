@@ -12,10 +12,11 @@ import {
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { AnimatedSplash } from "@/components/AnimatedSplash";
 import { AppDrawer } from "@/components/AppDrawer";
 import { queryClient } from "@/lib/query-client";
 import { ThemeProvider } from "@/lib/theme-context";
@@ -48,6 +49,7 @@ export default function RootLayout() {
     PlayfairDisplay_700Bold,
     PlayfairDisplay_600SemiBold,
   });
+  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
@@ -65,6 +67,9 @@ export default function RootLayout() {
             <GestureHandlerRootView>
               <KeyboardProvider>
                 <RootLayoutNav />
+                {showSplash && (
+                  <AnimatedSplash onFinish={() => setShowSplash(false)} />
+                )}
               </KeyboardProvider>
             </GestureHandlerRootView>
           </SettingsProvider>
