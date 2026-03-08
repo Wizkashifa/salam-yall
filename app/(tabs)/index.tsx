@@ -680,17 +680,6 @@ export default function PrayerScreen() {
     }
   }, []);
 
-  const now = new Date();
-
-  if (loading) {
-    return <SkeletonHomeScreen colors={colors} isDark={isDark} insets={insets} />;
-  }
-
-  const padNum = (n: number) => n.toString().padStart(2, "0");
-
-  const isWeb = Platform.OS === "web";
-  const headerTopPad = isWeb ? 67 : insets.top;
-
   const countdownProgress = useMemo(() => {
     if (!nextPrayer || prayers.length === 0) return 0;
     const now2 = new Date();
@@ -710,6 +699,18 @@ export default function PrayerScreen() {
     if (total <= 0) return 0;
     return Math.min(1, Math.max(0, elapsed / total));
   }, [prayers, nextPrayer, countdown]);
+
+  const now = new Date();
+
+  if (loading) {
+    return <SkeletonHomeScreen colors={colors} isDark={isDark} insets={insets} />;
+  }
+
+  const padNum = (n: number) => n.toString().padStart(2, "0");
+
+  const isWeb = Platform.OS === "web";
+  const headerTopPad = isWeb ? 67 : insets.top;
+
   const greeting = getGreeting();
 
   const glassCardBg = isDark ? "rgba(22,22,22,0.9)" : "rgba(255,255,255,0.85)";
