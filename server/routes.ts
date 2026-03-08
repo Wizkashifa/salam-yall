@@ -1098,7 +1098,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `https://places.googleapis.com/v1/places:searchText`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json", "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": "places.id,places.rating,places.userRatingCount,places.photos,places.regularOpeningHours,places.location" },
+          headers: { "Content-Type": "application/json", "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": "places.id,places.rating,places.userRatingCount,places.photos,places.regularOpeningHours,places.location,places.websiteUri" },
           body: JSON.stringify({ textQuery: `${restaurant.name} ${restaurant.formatted_address || ""}` }),
         }
       );
@@ -1110,11 +1110,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const photoRef = place.photos?.[0]?.name || null;
       const hours = place.regularOpeningHours?.weekdayDescriptions || null;
+      const placeWebsite = place.websiteUri || null;
       const existingHours = restaurant.opening_hours || {};
       const mergedHours = hours ? { ...existingHours, weekdayDescriptions: hours } : existingHours;
       await pool.query(
-        `UPDATE halal_restaurants SET place_id = $1, rating = COALESCE($2, rating), user_ratings_total = COALESCE($3, user_ratings_total), photo_reference = $4, opening_hours = $5::jsonb, lat = COALESCE($6, lat), lng = COALESCE($7, lng) WHERE id = $8`,
-        [place.id, place.rating || null, place.userRatingCount || null, photoRef, JSON.stringify(mergedHours), place.location?.latitude || null, place.location?.longitude || null, restaurantId]
+        `UPDATE halal_restaurants SET place_id = $1, rating = COALESCE($2, rating), user_ratings_total = COALESCE($3, user_ratings_total), photo_reference = $4, opening_hours = $5::jsonb, lat = COALESCE($6, lat), lng = COALESCE($7, lng), website = COALESCE($9, website) WHERE id = $8`,
+        [place.id, place.rating || null, place.userRatingCount || null, photoRef, JSON.stringify(mergedHours), place.location?.latitude || null, place.location?.longitude || null, restaurantId, placeWebsite]
       );
       console.log(`[Halal Enrich] Enriched #${restaurantId} "${restaurant.name}" with Places data`);
     } catch (err: any) {
@@ -1146,7 +1147,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      if (result.rows.length === 0 && missingPhotos.rows.length === 0) {
+      const missingWebsites = await pool.query(
+        "SELECT id, name, place_id FROM halal_restaurants WHERE place_id IS NOT NULL AND place_id != 'none' AND (website IS NULL OR website = '') LIMIT 50"
+      );
+      if (missingWebsites.rows.length > 0) {
+        console.log(`[Halal Enrich] Backfilling websites for ${missingWebsites.rows.length} restaurants`);
+        const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+        if (apiKey) {
+          for (const r of missingWebsites.rows) {
+            try {
+              const detailResp = await fetch(
+                `https://places.googleapis.com/v1/places/${r.place_id}`,
+                { headers: { "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": "websiteUri" } }
+              );
+              const detailData = await detailResp.json();
+              if (detailData.websiteUri) {
+                await pool.query("UPDATE halal_restaurants SET website = $1 WHERE id = $2", [detailData.websiteUri, r.id]);
+              }
+              await new Promise(resolve => setTimeout(resolve, 200));
+            } catch {}
+          }
+        }
+      }
+
+      if (result.rows.length === 0 && missingPhotos.rows.length === 0 && missingWebsites.rows.length === 0) {
         console.log("[Halal Enrich] All halal restaurants fully enriched");
       } else {
         console.log("[Halal Enrich] Enrichment complete");

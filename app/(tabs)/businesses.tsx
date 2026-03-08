@@ -80,11 +80,11 @@ const CATEGORIES = ["All", "Restaurant", "Grocery", "Finance", "Retail", "Automo
 const SUBMIT_CATEGORIES = ["Restaurant", "Grocery", "Finance", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Technology"];
 
 const HEALTHCARE_SPECIALTIES = [
-  "Primary Care", "Dentistry", "Optometry", "Dermatology", "Pediatrics",
-  "OB/GYN", "Cardiology", "Orthopedics", "Psychiatry", "Psychology",
-  "Therapy / Counseling", "Chiropractic", "Physical Therapy", "Pharmacy",
-  "Urgent Care", "Internal Medicine", "ENT", "Allergy / Immunology",
-  "Nutrition / Dietetics", "Other",
+  "Primary Care", "Dentistry", "Optometry", "Ophthalmology", "Dermatology",
+  "Pediatrics", "OB/GYN", "Cardiology", "Orthopedics", "Psychiatry",
+  "Psychology", "Therapy / Counseling", "Chiropractic", "Physical Therapy",
+  "Pharmacy", "Urgent Care", "Internal Medicine", "ENT",
+  "Allergy / Immunology", "Nutrition / Dietetics", "Other",
 ];
 
 const BUSINESS_KEYWORDS: Record<string, string[]> = {
