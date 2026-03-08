@@ -109,7 +109,7 @@ export default function SettingsScreen() {
     }
     const subject = feedbackType === "bug" ? "Bug Report" : "Feature Request";
     const body = `${subject}\n\n${feedbackText}\n\nFrom: ${feedbackEmail || "Anonymous"}`;
-    const mailUrl = `mailto:feedback@salamyall.app?subject=${encodeURIComponent(`[Salam Y'all] ${subject}`)}&body=${encodeURIComponent(body)}`;
+    const mailUrl = `mailto:feedback@salamyall.net?subject=${encodeURIComponent(`[Salam Y'all] ${subject}`)}&body=${encodeURIComponent(body)}`;
     Linking.openURL(mailUrl).catch(() => {
       Alert.alert("Feedback Noted", "Thank you for your feedback!");
     });

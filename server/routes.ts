@@ -681,7 +681,7 @@ async function ensureBusinessesTable(pool: pg.Pool) {
     ];
     for (const b of seed) {
       await pool.query(
-        `INSERT INTO businesses (name, category, description, address, phone, website, submitted_by_email, status) VALUES ($1, $2, $3, $4, $5, $6, 'admin@salamyall.app', 'approved')`,
+        `INSERT INTO businesses (name, category, description, address, phone, website, submitted_by_email, status) VALUES ($1, $2, $3, $4, $5, $6, 'admin@salamyall.net', 'approved')`,
         [b.name, b.category, b.description, b.address, b.phone, b.website]
       );
     }
@@ -1605,7 +1605,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? (event.description || "").substring(0, 200) || `Event at ${event.organizer || "Salam Y'all"}`
         : "Check out this event on Salam Y'all";
       const imageUrl = event?.imageUrl || "";
-      const host = req.get("host") || "muslim-life-hub.replit.app";
+      const host = req.get("host") || "salamyall.net";
       const pageUrl = `https://${host}/share/event/${id}`;
       const deepLink = `salamyall://event/${id}`;
 
@@ -1656,7 +1656,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const description = restaurant
         ? (restaurant.halal_comment || restaurant.formatted_address || `${restaurant.is_halal === "IS_HALAL" ? "Halal" : "Halal restaurant"} on Salam Y'all`)
         : "Check out this restaurant on Salam Y'all";
-      const host = req.get("host") || "muslim-life-hub.replit.app";
+      const host = req.get("host") || "salamyall.net";
       const pageUrl = `https://${host}/share/restaurant/${id}`;
       const deepLink = `salamyall://restaurant/${id}`;
 
@@ -1705,7 +1705,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const description = business
         ? (business.description || `${business.category} business in ${business.address || "the Triangle area"}`)
         : "Check out this business on Salam Y'all";
-      const host = req.get("host") || "muslim-life-hub.replit.app";
+      const host = req.get("host") || "salamyall.net";
       const pageUrl = `https://${host}/share/business/${id}`;
       const deepLink = `salamyall://business/${id}`;
 
