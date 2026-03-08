@@ -127,9 +127,7 @@ function EventDetailModal({ event, visible, onClose }: { event: CalendarEvent | 
 
         <ScrollView style={styles.modalScroll} contentContainerStyle={{ paddingBottom: insets.bottom + 40 }} bounces={false} showsVerticalScrollIndicator={false}>
           {event.imageUrl ? (
-            <View style={[styles.modalImageWrap, { backgroundColor: isDark ? "rgba(0,0,0,0.3)" : "rgba(0,0,0,0.04)" }]}>
-              <Image source={{ uri: event.imageUrl }} style={styles.modalImage} resizeMode="contain" />
-            </View>
+            <Image source={{ uri: event.imageUrl }} style={styles.modalImage} resizeMode="cover" />
           ) : (
             <View style={[styles.modalImagePlaceholder, { backgroundColor: colors.prayerIconBg }]}>
               <Ionicons name="calendar" size={48} color={colors.emerald} />
@@ -320,54 +318,52 @@ export default function EventsScreen() {
                         },
                       ]}
                     >
-                      {event.imageUrl ? (
-                        <View style={styles.eventImageWrap}>
+                      <View style={styles.eventCardRow}>
+                        {event.imageUrl ? (
                           <Image
                             source={{ uri: event.imageUrl }}
-                            style={styles.eventImage}
-                            resizeMode="contain"
+                            style={styles.eventThumb}
+                            resizeMode="cover"
                           />
-                        </View>
-                      ) : null}
-
-                      <View style={styles.eventBody}>
-                        <View style={styles.eventRow}>
-                          <View style={[styles.timeColumn, { borderRightColor: colors.borderLight }]}>
-                            <Text style={[styles.timeText, { color: colors.emerald }]} numberOfLines={1}>
-                              {dateInfo.time}
-                            </Text>
+                        ) : (
+                          <View style={[styles.eventThumbPlaceholder, { backgroundColor: colors.prayerIconBg }]}>
+                            <Ionicons name="calendar" size={24} color={colors.emerald} />
                           </View>
+                        )}
 
-                          <View style={styles.eventContent}>
-                            <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={2}>
-                              {event.title}
-                            </Text>
+                        <View style={styles.eventCardBody}>
+                          <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={2}>
+                            {event.title}
+                          </Text>
 
-                            {event.organizer ? (
-                              <View style={styles.organizerRow}>
-                                <MaterialCommunityIcons
-                                  name={isMasjid(event.organizer) ? "mosque" : "office-building-outline"}
-                                  size={14}
-                                  color={colors.gold}
-                                />
-                                <Text style={[styles.organizerText, { color: colors.textSecondary }]} numberOfLines={1}>
-                                  {event.organizer}
-                                </Text>
-                              </View>
-                            ) : null}
+                          <Text style={[styles.eventTimeText, { color: colors.emerald }]} numberOfLines={1}>
+                            {dateInfo.time}
+                          </Text>
 
-                            {event.location ? (
-                              <View style={styles.locationRow}>
-                                <Ionicons name="location-outline" size={13} color={colors.textSecondary} />
-                                <Text style={[styles.locationText, { color: colors.textSecondary }]} numberOfLines={1}>
-                                  {event.location}
-                                </Text>
-                              </View>
-                            ) : null}
-                          </View>
+                          {event.organizer ? (
+                            <View style={styles.organizerRow}>
+                              <MaterialCommunityIcons
+                                name={isMasjid(event.organizer) ? "mosque" : "office-building-outline"}
+                                size={13}
+                                color={colors.gold}
+                              />
+                              <Text style={[styles.organizerText, { color: colors.textSecondary }]} numberOfLines={1}>
+                                {event.organizer}
+                              </Text>
+                            </View>
+                          ) : null}
 
-                          <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                          {event.location ? (
+                            <View style={styles.locationRow}>
+                              <Ionicons name="location-outline" size={12} color={colors.textTertiary} />
+                              <Text style={[styles.locationText, { color: colors.textTertiary }]} numberOfLines={1}>
+                                {event.location}
+                              </Text>
+                            </View>
+                          ) : null}
                         </View>
+
+                        <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} style={{ marginRight: 4 }} />
                       </View>
                     </Pressable>
                   );
@@ -453,37 +449,33 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  eventImageWrap: {
-    width: "100%",
-    aspectRatio: 16 / 9,
-    overflow: "hidden",
-  },
-  eventImage: {
-    width: "100%",
-    height: "100%",
-  },
-  eventBody: {
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-  },
-  eventRow: {
+  eventCardRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
   },
-  timeColumn: {
-    minWidth: 72,
-    borderRightWidth: 1,
-    paddingRight: 10,
-    alignItems: "flex-end",
+  eventThumb: {
+    width: 85,
+    height: 85,
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
   },
-  timeText: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
+  eventThumbPlaceholder: {
+    width: 85,
+    height: 85,
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  eventContent: {
+  eventCardBody: {
     flex: 1,
-    gap: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    gap: 3,
+  },
+  eventTimeText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
   },
   eventTitle: {
     fontSize: 15,
@@ -537,14 +529,9 @@ const styles = StyleSheet.create({
   modalScroll: {
     flex: 1,
   },
-  modalImageWrap: {
+  modalImage: {
     width: SCREEN_WIDTH,
     aspectRatio: 1,
-    overflow: "hidden",
-  },
-  modalImage: {
-    width: "100%",
-    height: "100%",
   },
   modalImagePlaceholder: {
     width: SCREEN_WIDTH,
