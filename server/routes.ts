@@ -667,6 +667,10 @@ async function ensureBusinessesTable(pool: pg.Pool) {
   await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS photo_url TEXT DEFAULT ''`);
   await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS booking_url TEXT DEFAULT ''`);
 
+  await pool.query(`UPDATE businesses SET specialty = 'Optometry' WHERE category = 'Healthcare' AND (specialty IS NULL OR specialty = '') AND (name ILIKE '%OD%' OR name ILIKE '%MyEyeDr%')`);
+  await pool.query(`UPDATE businesses SET specialty = 'Dermatology' WHERE category = 'Healthcare' AND (specialty IS NULL OR specialty = '') AND name ILIKE '%Dermatology%'`);
+  await pool.query(`UPDATE businesses SET specialty = 'Dentistry' WHERE category = 'Healthcare' AND (specialty IS NULL OR specialty = '') AND name ILIKE '%Dentistry%'`);
+
   await pool.query(`ALTER TABLE halal_restaurants ADD COLUMN IF NOT EXISTS photo_reference TEXT`);
   await pool.query(`ALTER TABLE halal_restaurants ADD COLUMN IF NOT EXISTS place_id VARCHAR(255)`);
 
@@ -1148,7 +1152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const missingWebsites = await pool.query(
-        "SELECT id, name, place_id FROM halal_restaurants WHERE place_id IS NOT NULL AND place_id != 'none' AND (website IS NULL OR website = '') LIMIT 50"
+        "SELECT id, name, place_id FROM halal_restaurants WHERE place_id IS NOT NULL AND place_id != 'none' AND (website IS NULL OR website = '') LIMIT 300"
       );
       if (missingWebsites.rows.length > 0) {
         console.log(`[Halal Enrich] Backfilling websites for ${missingWebsites.rows.length} restaurants`);
