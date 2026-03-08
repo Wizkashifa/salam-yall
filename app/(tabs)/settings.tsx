@@ -26,7 +26,7 @@ import {
   type CalcMethodKey,
   type Masjid,
 } from "@/lib/prayer-utils";
-import { getMonthLogs, type DayLog, type PrayerName } from "@/lib/prayer-tracker";
+import { getMonthLogs, cyclePrayerStatus, type DayLog, type PrayerName } from "@/lib/prayer-tracker";
 
 interface CalendarEvent {
   id: string;
@@ -641,16 +641,29 @@ export default function SettingsScreen() {
             <Text style={[styles.dayDetailTitle, { color: colors.text }]}>
               {new Date(trackerYear, trackerMonth - 1, parseInt(selectedDay.split("-")[2])).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
             </Text>
+            <Text style={[styles.dayDetailHint, { color: colors.textTertiary }]}>Tap a prayer to update its status</Text>
             {PRAYER_NAMES.map(p => {
               const status = selectedLog ? selectedLog[p] : 0;
               const statusLabel = status === 0 ? "Not tracked" : status === 1 ? "Completed" : "At masjid";
               const statusColor = status === 0 ? colors.textTertiary : status === 1 ? colors.gold : colors.emerald;
               return (
-                <View key={p} style={styles.dayDetailRow}>
+                <Pressable
+                  key={p}
+                  style={({ pressed }) => [styles.dayDetailRow, pressed && { opacity: 0.6 }]}
+                  onPress={async () => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    const parts = selectedDay.split("-");
+                    const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                    await cyclePrayerStatus(date, p);
+                    const updated = await getMonthLogs(trackerYear, trackerMonth);
+                    setMonthLogs(updated);
+                  }}
+                >
                   <View style={[styles.dayDetailDot, { backgroundColor: status === 0 ? colors.border : statusColor }]} />
                   <Text style={[styles.dayDetailPrayer, { color: colors.text }]}>{PRAYER_LABELS[p]}</Text>
                   <Text style={[styles.dayDetailStatus, { color: statusColor }]}>{statusLabel}</Text>
-                </View>
+                  <Ionicons name="chevron-forward" size={14} color={colors.textTertiary} />
+                </Pressable>
               );
             })}
           </View>
@@ -1061,6 +1074,11 @@ const styles = StyleSheet.create({
   dayDetailTitle: {
     fontSize: 15,
     fontFamily: "Inter_700Bold",
+    marginBottom: 4,
+  },
+  dayDetailHint: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
     marginBottom: 12,
   },
   dayDetailRow: {

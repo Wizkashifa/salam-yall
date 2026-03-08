@@ -773,9 +773,7 @@ export default function PrayerScreen() {
                 ? (isDark ? colors.gold + "20" : colors.gold + "15")
                 : isGreen
                   ? (isDark ? colors.emerald + "25" : colors.emerald + "12")
-                  : isNext
-                    ? (isDark ? colors.emerald + "25" : colors.emerald + "12")
-                    : undefined;
+                  : undefined;
               const iqamaTime = activeIqama?.iqama?.[prayer.name as keyof typeof activeIqama.iqama];
               return (
                 <Pressable
@@ -789,15 +787,15 @@ export default function PrayerScreen() {
                 >
                   <Text style={[
                     styles.prayerPillName,
-                    { color: isNext ? colors.emerald : isPast ? colors.textTertiary : colors.textSecondary },
-                    isNext && { fontFamily: "Inter_700Bold" },
+                    { color: isGold ? colors.gold : isGreen ? colors.emerald : isPast ? colors.textTertiary : colors.textSecondary },
+                    (isGold || isGreen) && { fontFamily: "Inter_700Bold" },
                   ]}>
                     {prayer.label}
                   </Text>
                   <Text style={[
                     styles.prayerPillTime,
-                    { color: isNext ? colors.emerald : isPast ? colors.textTertiary : colors.text },
-                    isNext && { fontFamily: "Inter_700Bold" },
+                    { color: isGold ? colors.gold : isGreen ? colors.emerald : isPast ? colors.textTertiary : colors.text },
+                    (isGold || isGreen) && { fontFamily: "Inter_700Bold" },
                   ]}>
                     {formatTime(prayer.time)}
                   </Text>
@@ -805,9 +803,6 @@ export default function PrayerScreen() {
                     <Text style={[styles.prayerIqamaTime, { color: isDark ? colors.gold : "#9A7B2A" }]}>
                       {iqamaTime}
                     </Text>
-                  ) : null}
-                  {status > 0 ? (
-                    <View style={[styles.prayerStatusDot, { backgroundColor: isGold ? colors.gold : colors.emerald }]} />
                   ) : null}
                 </Pressable>
               );
