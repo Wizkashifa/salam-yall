@@ -246,13 +246,15 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
                   <Text style={styles.detailActionText}>Call</Text>
                 </Pressable>
               ) : null}
-              <Pressable
-                style={({ pressed }) => [styles.detailActionBtn, { backgroundColor: colors.gold, opacity: pressed ? 0.8 : 1 }]}
-                onPress={openMaps}
-              >
-                <Ionicons name="navigate" size={18} color="#fff" />
-                <Text style={styles.detailActionText}>Directions</Text>
-              </Pressable>
+              {business.address && /\d/.test(business.address) ? (
+                <Pressable
+                  style={({ pressed }) => [styles.detailActionBtn, { backgroundColor: colors.gold, opacity: pressed ? 0.8 : 1 }]}
+                  onPress={openMaps}
+                >
+                  <Ionicons name="navigate" size={18} color="#fff" />
+                  <Text style={styles.detailActionText}>Directions</Text>
+                </Pressable>
+              ) : null}
               {business.website ? (
                 <Pressable
                   style={({ pressed }) => [styles.detailActionBtn, { backgroundColor: isDark ? "#4B5563" : "#374151", opacity: pressed ? 0.8 : 1 }]}
