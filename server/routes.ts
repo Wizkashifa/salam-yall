@@ -287,14 +287,30 @@ const LOCATION_ADDRESS_MAP: Record<string, string> = {
   "Light House Project": "1127 Kildaire Farm Rd, Cary, NC 27511",
   "The Light House Project": "1127 Kildaire Farm Rd, Cary, NC 27511",
   "The McKimmon Center": "1101 Gorman St, Raleigh, NC 27606",
-  "IAR Masjid Gym, 808 Atwater St, Raleigh": "808 Atwater St, Raleigh, NC 27607",
 };
+
+const LOCATION_STRIP_PREFIXES = [
+  /^islamic association of raleigh\s*[|,]\s*/i,
+  /^iar masjid[^,]*,\s*/i,
+  /^islamic center of morrisville\s*[|,]\s*/i,
+  /^banquet hall of islamic center of morrisville\s*[|,]\s*/i,
+  /^madinah quran and youth center\s*[|,]\s*/i,
+  /^madinah quran & youth center\s*[|,]\s*/i,
+  /^mycc\s*[|,]\s*/i,
+  /^method park community hall\s*[|,]\s*/i,
+  /^north raleigh masjid\s*[|,]\s*/i,
+];
 
 function resolveLocation(location: string): string {
   if (!location) return "";
   if (LOCATION_ADDRESS_MAP[location]) return LOCATION_ADDRESS_MAP[location];
   for (const [key, addr] of Object.entries(LOCATION_ADDRESS_MAP)) {
     if (location.toLowerCase().includes(key.toLowerCase())) return addr;
+  }
+  for (const pattern of LOCATION_STRIP_PREFIXES) {
+    if (pattern.test(location)) {
+      return location.replace(pattern, "");
+    }
   }
   return location;
 }
