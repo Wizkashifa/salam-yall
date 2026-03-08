@@ -25,9 +25,12 @@ const NAME_MATCHES: [string, string][] = [
   ["apex mosque", "Apex Masjid"],
   ["chapel hill islamic", "Chapel Hill Islamic Society"],
   ["ar-razzaq", "Ar-Razzaq Islamic Center"],
-  ["jamaat ibad", "Jamaat Ibad Ar-Rahman"],
-  ["jiar", "Jamaat Ibad Ar-Rahman"],
-  ["parkwood masjid", "Parkwood Masjid (JIAR)"],
+  ["jamaat ibad", "Jamaat Ibad Ar-Rahman (Parkwood)"],
+  ["jamaat ibad parkwood", "Jamaat Ibad Ar-Rahman (Parkwood)"],
+  ["jiar", "Jamaat Ibad Ar-Rahman (Parkwood)"],
+  ["parkwood masjid", "Jamaat Ibad Ar-Rahman (Parkwood)"],
+  ["jamaat ibad fayetteville", "Jamaat Ibad Ar-Rahman (Fayetteville)"],
+  ["fayetteville masjid", "Jamaat Ibad Ar-Rahman (Fayetteville)"],
   ["rumman room", "Rumman Room"],
   ["light house project", "Light House Project"],
   ["lighthouse project", "Light House Project"],
@@ -460,8 +463,8 @@ async function ensureJumuahTable(pool: pg.Pool) {
         ('As-Salaam Islamic Center', '1:15 PM', '1:45 PM', 5),
         ('Chapel Hill Islamic Society', '1:00 PM', '1:30 PM', 6),
         ('Ar-Razzaq Islamic Center', '1:15 PM', '1:45 PM', 7),
-        ('JIAR (Fayetteville St)', '1:00 PM', '1:30 PM', 8),
-        ('JIAR Parkwood (3 shifts)', '12:10 PM', '1:10 / 2:10 PM', 9);
+        ('Jamaat Ibad Ar-Rahman (Fayetteville)', '1:00 PM', '1:30 PM', 8),
+        ('Jamaat Ibad Ar-Rahman (Parkwood)', '12:10 PM, 1:10 PM, 2:10 PM', '12:40 PM, 1:40 PM, 2:40 PM', 9);
     `);
     console.log("[DB] Seeded default Jumuah schedules");
   }
