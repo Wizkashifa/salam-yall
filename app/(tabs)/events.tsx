@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -158,12 +158,6 @@ function EventDetailModal({ event, visible, onClose }: { event: CalendarEvent | 
                 <Ionicons name="time-outline" size={18} color={colors.emerald} />
                 <Text style={[styles.modalInfoText, { color: colors.text }]}>{timeRange}</Text>
               </View>
-              {event.speaker ? (
-                <View style={styles.modalInfoRow}>
-                  <Ionicons name="mic-outline" size={18} color={colors.emerald} />
-                  <Text style={[styles.modalInfoText, { color: colors.text, fontFamily: "Inter_700Bold" }]}>{event.speaker}</Text>
-                </View>
-              ) : null}
               {event.location ? (
                 <Pressable style={styles.modalInfoRow} onPress={openMaps}>
                   <Ionicons name="location-outline" size={18} color={colors.emerald} />
@@ -176,7 +170,20 @@ function EventDetailModal({ event, visible, onClose }: { event: CalendarEvent | 
             {cleanDescription ? (
               <View style={[styles.modalDescriptionSection, { borderTopColor: colors.divider }]}>
                 <Text style={[styles.modalSectionLabel, { color: colors.textSecondary }]}>Details</Text>
-                <Text style={[styles.modalDescription, { color: colors.text }]}>{cleanDescription}</Text>
+                <Text style={[styles.modalDescription, { color: colors.text }]}>
+                  {event.speaker && cleanDescription.includes(event.speaker) ? (
+                    <>
+                      {cleanDescription.split(event.speaker).map((part, i, arr) => (
+                        <React.Fragment key={i}>
+                          {part}
+                          {i < arr.length - 1 && (
+                            <Text style={{ fontFamily: "Inter_700Bold" }}>{event.speaker}</Text>
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </>
+                  ) : cleanDescription}
+                </Text>
               </View>
             ) : null}
 
@@ -360,15 +367,6 @@ export default function EventsScreen() {
                             </View>
                           ) : null}
 
-                          {event.speaker ? (
-                            <View style={styles.organizerRow}>
-                              <Ionicons name="mic-outline" size={13} color={colors.emerald} />
-                              <Text style={[styles.speakerText, { color: colors.text }]} numberOfLines={1}>
-                                {event.speaker}
-                              </Text>
-                            </View>
-                          ) : null}
-
                           {event.location ? (
                             <View style={styles.locationRow}>
                               <Ionicons name="location-outline" size={12} color={colors.textTertiary} />
@@ -506,11 +504,6 @@ const styles = StyleSheet.create({
   organizerText: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
-    flex: 1,
-  },
-  speakerText: {
-    fontSize: 12,
-    fontFamily: "Inter_700Bold",
     flex: 1,
   },
   locationRow: {
