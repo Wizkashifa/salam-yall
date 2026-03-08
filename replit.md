@@ -31,13 +31,15 @@ The application follows a client-server architecture:
 
 **Database (PostgreSQL):**
 - Stores `ticker_messages`, `push_tokens`, `halal_restaurants`, `businesses`, `jumuah_schedules`, and `iqama_schedules`.
-- `iqama_schedules` table: UNIQUE(masjid, date) with columns for fajr, dhuhr, asr, maghrib, isha times. Supports 4 masjids: `"IAR"`, `"ICMNC"`, `"JIAR (Parkwood)"`, `"JIAR (Fayetteville)"`.
+- `iqama_schedules` table: UNIQUE(masjid, date) with columns for fajr, dhuhr, asr, maghrib, isha times. Supports 5 masjids: `"IAR"`, `"ICMNC"`, `"JIAR (Parkwood)"`, `"JIAR (Fayetteville)"`, `"Al Noor"`.
 
 **Iqama Times System:**
 - JIAR data is seeded from `server/jiar-iqama-data.ts` (range-based compact format, Mar-Dec 2026). Asr times differ between Parkwood (5:30 PM) and Fayetteville (5:00 PM) campuses.
 - IAR times are synced from their API every 6 hours via `server/iqama-scraper.ts`.
 - ICMNC times are scraped daily from their website.
+- Al Noor times are scraped from `https://alnooric.org/monthly-prayer-times/` (HTML table parsing, deduplicated). Syncs full current month every 6 hours. DB masjid identifier: `"Al Noor"`.
 - Frontend fetches 7 days of iqama data via `/api/iqama-times?days=7` and caches in AsyncStorage (`"iqama_cache"` key) for offline access.
+- Frontend masjid mapping: preferred masjid containing "al-noor"/"alnoor"/"al noor" → `"Al Noor"` DB identifier.
 - Admin CRUD available at `/api/admin/iqama` (GET/POST), `/api/admin/iqama/bulk` (POST), `/api/admin/iqama/:id` (DELETE).
 
 **Key Features:**

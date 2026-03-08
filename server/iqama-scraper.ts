@@ -3,6 +3,7 @@ import { generateJIARSchedule } from "./jiar-iqama-data";
 
 const IAR_API_URL = "https://raleighmasjid.org/API/prayer/month/";
 const ICMNC_API_URL = "https://www.icmnc.org/wp-json/dpt/v1/prayertime";
+const ALNOOR_URL = "https://alnooric.org/monthly-prayer-times/";
 
 export interface DayIqama {
   fajr: string;
@@ -169,11 +170,95 @@ async function fetchAndStoreICMNC(pool: pg.Pool): Promise<void> {
   }
 }
 
+const MONTH_ABBRS: Record<string, number> = {
+  Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6,
+  Jul: 7, Aug: 8, Sep: 9, Oct: 10, Nov: 11, Dec: 12,
+};
+
+async function fetchAndStoreAlNoor(pool: pg.Pool): Promise<void> {
+  try {
+    const resp = await fetch(ALNOOR_URL);
+    if (!resp.ok) {
+      console.error(`[Iqama] Al Noor page returned ${resp.status}`);
+      return;
+    }
+    const html = await resp.text();
+
+    const tdRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
+    const trRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+    const rows: string[][] = [];
+    let trMatch;
+    while ((trMatch = trRegex.exec(html)) !== null) {
+      const cells: string[] = [];
+      let tdMatch;
+      const tdRe = /<td[^>]*>([\s\S]*?)<\/td>/gi;
+      while ((tdMatch = tdRe.exec(trMatch[1])) !== null) {
+        cells.push(tdMatch[1].replace(/<[^>]*>/g, "").trim());
+      }
+      if (cells.length >= 13) rows.push(cells);
+    }
+
+    if (rows.length === 0) {
+      console.error("[Iqama] Al Noor: no table rows found");
+      return;
+    }
+
+    const now = new Date();
+    const raleighNow = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
+    const currentYear = raleighNow.getFullYear();
+
+    const seen = new Map<string, { fajr: string; dhuhr: string; asr: string; maghrib: string; isha: string }>();
+
+    for (const cells of rows) {
+      const dateParts = cells[0].split(" ");
+      if (dateParts.length < 2) continue;
+      const dayNum = parseInt(dateParts[0]);
+      const monthAbbr = dateParts[1];
+      const monthNum = MONTH_ABBRS[monthAbbr];
+      if (!monthNum || isNaN(dayNum)) continue;
+
+      const dateKey = `${currentYear}-${String(monthNum).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
+
+      const fajrIqamah = cells[3];
+      const dhuhrIqamah = cells[6];
+      const asrIqamah = cells[8];
+      const maghribIqamah = cells[10];
+      const ishaIqamah = cells[12];
+
+      if (!fajrIqamah || !ishaIqamah) continue;
+      if (!seen.has(dateKey)) {
+        seen.set(dateKey, { fajr: fajrIqamah, dhuhr: dhuhrIqamah, asr: asrIqamah, maghrib: maghribIqamah, isha: ishaIqamah });
+      }
+    }
+
+    const values: any[] = [];
+    const placeholders: string[] = [];
+    let idx = 1;
+    for (const [dateKey, times] of seen) {
+      placeholders.push(`($${idx}, $${idx + 1}, $${idx + 2}, $${idx + 3}, $${idx + 4}, $${idx + 5}, $${idx + 6})`);
+      values.push("Al Noor", dateKey, times.fajr, times.dhuhr, times.asr, times.maghrib, times.isha);
+      idx += 7;
+    }
+
+    if (placeholders.length > 0) {
+      await pool.query(
+        `INSERT INTO iqama_schedules (masjid, date, fajr, dhuhr, asr, maghrib, isha) VALUES ${placeholders.join(", ")}
+         ON CONFLICT (masjid, date) DO UPDATE SET fajr=EXCLUDED.fajr, dhuhr=EXCLUDED.dhuhr, asr=EXCLUDED.asr, maghrib=EXCLUDED.maghrib, isha=EXCLUDED.isha, updated_at=NOW()`,
+        values
+      );
+      console.log(`[Iqama] Synced ${placeholders.length} Al Noor days for current month`);
+    }
+  } catch (err: any) {
+    console.error("[Iqama] Error syncing Al Noor:", err.message);
+  }
+}
+
 export async function syncExternalIqama(pool: pg.Pool): Promise<void> {
   const { year, month } = getRaleighDateRange(1);
   await Promise.all([
     fetchAndStoreIAR(pool, year, month),
     fetchAndStoreICMNC(pool),
+    fetchAndStoreAlNoor(pool),
   ]);
 
   const nextMonthDate = new Date(year, month, 1);

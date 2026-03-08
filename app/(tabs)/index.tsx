@@ -463,6 +463,8 @@ export default function PrayerScreen() {
         targetMasjid = "JIAR (Fayetteville)";
       } else if (pref.includes("morrisville") || pref.includes("icm")) {
         targetMasjid = "ICMNC";
+      } else if (pref.includes("al-noor") || pref.includes("alnoor") || pref.includes("al noor")) {
+        targetMasjid = "Al Noor";
       }
     }
 
@@ -991,7 +993,7 @@ export default function PrayerScreen() {
           </View>
           {activeIqama ? (
             <Text style={[styles.iqamaSource, { color: colors.textTertiary }]}>
-              Iqama times from {activeIqama.masjid === "IAR" ? "Islamic Assoc. of Raleigh" : activeIqama.masjid === "ICMNC" ? "Islamic Center of Morrisville" : activeIqama.masjid === "JIAR (Parkwood)" ? "JIAR (Parkwood)" : activeIqama.masjid === "JIAR (Fayetteville)" ? "JIAR (Fayetteville St)" : activeIqama.masjid}
+              Iqama times from {activeIqama.masjid === "IAR" ? "Islamic Assoc. of Raleigh" : activeIqama.masjid === "ICMNC" ? "Islamic Center of Morrisville" : activeIqama.masjid === "JIAR (Parkwood)" ? "JIAR (Parkwood)" : activeIqama.masjid === "JIAR (Fayetteville)" ? "JIAR (Fayetteville St)" : activeIqama.masjid === "Al Noor" ? "Al-Noor Islamic Center" : activeIqama.masjid}
             </Text>
           ) : null}
         </View>
