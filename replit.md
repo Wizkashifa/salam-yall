@@ -30,7 +30,15 @@ The application follows a client-server architecture:
 - **Share Pages:** Generates shareable HTML pages with Open Graph meta tags for rich link previews of app content.
 
 **Database (PostgreSQL):**
-- Stores `ticker_messages`, `push_tokens`, `halal_restaurants`, `businesses`, and `jumuah_schedules`.
+- Stores `ticker_messages`, `push_tokens`, `halal_restaurants`, `businesses`, `jumuah_schedules`, and `iqama_schedules`.
+- `iqama_schedules` table: UNIQUE(masjid, date) with columns for fajr, dhuhr, asr, maghrib, isha times. Supports 4 masjids: `"IAR"`, `"ICMNC"`, `"JIAR (Parkwood)"`, `"JIAR (Fayetteville)"`.
+
+**Iqama Times System:**
+- JIAR data is seeded from `server/jiar-iqama-data.ts` (range-based compact format, Mar-Dec 2026). Asr times differ between Parkwood (5:30 PM) and Fayetteville (5:00 PM) campuses.
+- IAR times are synced from their API every 6 hours via `server/iqama-scraper.ts`.
+- ICMNC times are scraped daily from their website.
+- Frontend fetches 7 days of iqama data via `/api/iqama-times?days=7` and caches in AsyncStorage (`"iqama_cache"` key) for offline access.
+- Admin CRUD available at `/api/admin/iqama` (GET/POST), `/api/admin/iqama/bulk` (POST), `/api/admin/iqama/:id` (DELETE).
 
 **Key Features:**
 - **Home Screen:** Displays prayer times, Qibla direction, weather, daily Quran/Hadith, and "Tonight in the Community" events. Includes an interactive prayer tracker and a search bar.

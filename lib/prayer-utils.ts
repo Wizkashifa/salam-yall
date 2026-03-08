@@ -121,8 +121,8 @@ export const NEARBY_MASJIDS: Masjid[] = [
   { name: "Apex Masjid", latitude: 35.7327, longitude: -78.8502, address: "733 Center St, Apex, NC 27502", matchTerms: ["apex masjid", "center st, apex"] },
   { name: "Chapel Hill Islamic Society", latitude: 35.8841, longitude: -79.0328, address: "1717 Legion Rd, Chapel Hill, NC 27517", website: "https://www.chapelhillmasjid.org", matchTerms: ["chapel hill islamic", "legion rd"] },
   { name: "Ar-Razzaq Islamic Center", latitude: 35.9728, longitude: -78.9327, address: "1920 Chapel Hill Rd, Durham, NC 27707", matchTerms: ["ar-razzaq", "arrazzaq", "chapel hill rd, durham"] },
-  { name: "Jamaat Ibad Ar-Rahman", latitude: 35.9615, longitude: -78.8872, address: "3034 Fayetteville St, Durham, NC 27707", website: "https://www.jiar.org", matchTerms: ["jamaat ibad", "jiar", "fayetteville st"] },
-  { name: "Parkwood Masjid (JIAR)", latitude: 35.9194, longitude: -78.9227, address: "5122 Revere Rd, Durham, NC 27713", website: "https://www.jiar.org", matchTerms: ["parkwood", "revere rd"] },
+  { name: "Jamaat Ibad Ar-Rahman (Fayetteville)", latitude: 35.9615, longitude: -78.8872, address: "3034 Fayetteville St, Durham, NC 27707", website: "https://www.jiar.org", matchTerms: ["jamaat ibad", "jiar", "fayetteville st"] },
+  { name: "Jamaat Ibad Ar-Rahman (Parkwood)", latitude: 35.9194, longitude: -78.9227, address: "5122 Revere Rd, Durham, NC 27713", website: "https://www.jiar.org", matchTerms: ["parkwood", "revere rd"] },
 ];
 
 export function matchEventsToMasjid(masjid: Masjid, events: { title: string; location: string; organizer: string }[]): number[] {

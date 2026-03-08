@@ -47,6 +47,7 @@ import {
   type PrayerTimeEntry,
   type Masjid,
 } from "@/lib/prayer-utils";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { cyclePrayerStatus, getPrayerLog, type DayLog, type PrayerName as TrackerPrayerName } from "@/lib/prayer-tracker";
 import { getDailyContent, isFriday } from "@/lib/daily-content";
 
@@ -408,13 +409,33 @@ export default function PrayerScreen() {
 
   interface IqamaSchedule {
     masjid: string;
+    date: string;
     iqama: { fajr: string; dhuhr: string; asr: string; maghrib: string; isha: string };
   }
 
-  const { data: iqamaData } = useQuery<IqamaSchedule[]>({
-    queryKey: ["/api/iqama-times"],
+  const [cachedIqama, setCachedIqama] = useState<IqamaSchedule[] | null>(null);
+
+  useEffect(() => {
+    AsyncStorage.getItem("iqama_cache").then(raw => {
+      if (raw) {
+        try { setCachedIqama(JSON.parse(raw)); } catch {}
+      }
+    });
+  }, []);
+
+  const { data: fetchedIqama } = useQuery<IqamaSchedule[]>({
+    queryKey: ["/api/iqama-times?days=7"],
     staleTime: 60 * 60 * 1000,
   });
+
+  useEffect(() => {
+    if (fetchedIqama && fetchedIqama.length > 0) {
+      setCachedIqama(fetchedIqama);
+      AsyncStorage.setItem("iqama_cache", JSON.stringify(fetchedIqama)).catch(() => {});
+    }
+  }, [fetchedIqama]);
+
+  const iqamaData = fetchedIqama || cachedIqama;
 
   const { data: weatherData } = useQuery<{ temperature: number; weatherCode: number; isDay: boolean }>({
     queryKey: [`/api/weather?lat=${userCoords.lat.toFixed(2)}&lon=${userCoords.lon.toFixed(2)}`],
@@ -425,17 +446,36 @@ export default function PrayerScreen() {
     return getAllMasjidsByDistance(userCoords.lat, userCoords.lon).slice(0, 5);
   }, [userCoords]);
 
+  const todayDateStr = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }, []);
+
   const activeIqama = useMemo(() => {
     if (!iqamaData || iqamaData.length === 0) return null;
+
+    let targetMasjid = "IAR";
     if (preferredMasjid) {
       const pref = preferredMasjid.toLowerCase();
-      if (pref.includes("morrisville") || pref.includes("icm")) {
-        const icmnc = iqamaData.find(s => s.masjid === "ICMNC");
-        if (icmnc) return icmnc;
+      if (pref.includes("parkwood")) {
+        targetMasjid = "JIAR (Parkwood)";
+      } else if (pref.includes("fayetteville") && pref.includes("jamaat")) {
+        targetMasjid = "JIAR (Fayetteville)";
+      } else if (pref.includes("morrisville") || pref.includes("icm")) {
+        targetMasjid = "ICMNC";
       }
     }
-    return iqamaData.find(s => s.masjid === "IAR") || iqamaData[0];
-  }, [iqamaData, preferredMasjid]);
+
+    const todayEntry = iqamaData.find(s => s.masjid === targetMasjid && s.date === todayDateStr);
+    if (todayEntry) return todayEntry;
+
+    const anyEntry = iqamaData.find(s => s.masjid === targetMasjid);
+    if (anyEntry) return anyEntry;
+
+    return iqamaData.find(s => s.masjid === "IAR" && s.date === todayDateStr)
+      || iqamaData.find(s => s.masjid === "IAR")
+      || iqamaData[0];
+  }, [iqamaData, preferredMasjid, todayDateStr]);
 
   const isBeforeFivePM = useMemo(() => new Date().getHours() < 17, []);
 
@@ -951,7 +991,7 @@ export default function PrayerScreen() {
           </View>
           {activeIqama ? (
             <Text style={[styles.iqamaSource, { color: colors.textTertiary }]}>
-              Iqama times from {activeIqama.masjid === "IAR" ? "Islamic Assoc. of Raleigh" : activeIqama.masjid === "ICMNC" ? "Islamic Center of Morrisville" : activeIqama.masjid}
+              Iqama times from {activeIqama.masjid === "IAR" ? "Islamic Assoc. of Raleigh" : activeIqama.masjid === "ICMNC" ? "Islamic Center of Morrisville" : activeIqama.masjid === "JIAR (Parkwood)" ? "JIAR (Parkwood)" : activeIqama.masjid === "JIAR (Fayetteville)" ? "JIAR (Fayetteville St)" : activeIqama.masjid}
             </Text>
           ) : null}
         </View>

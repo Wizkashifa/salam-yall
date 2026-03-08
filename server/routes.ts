@@ -5,7 +5,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { getUncachableGoogleCalendarClient } from "./google-calendar";
 import halalSeedData from "./halal-seed-data.json";
-import { getTodayIqamaTimes } from "./iqama-scraper";
+import { ensureIqamaTable, seedJIARData, startIqamaSync, getIqamaSchedules } from "./iqama-scraper";
 
 const CALENDAR_ID = "5c6138b3c670e90f28b9ec65a6650268569a070eff5ae0ae919129f763d216af@group.calendar.google.com";
 
@@ -698,8 +698,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await ensurePushTokensTable(pool).catch(err => console.error("[DB] Push tokens table init error:", err.message));
   await ensureHalalRestaurantsTable(pool).catch(err => console.error("[DB] Halal restaurants table init error:", err.message));
   await ensureBusinessesTable(pool).catch(err => console.error("[DB] Init error:", err.message));
+  await ensureIqamaTable(pool).catch(err => console.error("[DB] Iqama table init error:", err.message));
+  await seedJIARData(pool).catch(err => console.error("[DB] JIAR seed error:", err.message));
 
   startHalalAutoSync(pool);
+  startIqamaSync(pool);
 
   app.get("/api/events", async (_req, res) => {
     try {
@@ -739,7 +742,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const ADMIN_KEY = "password";
+  const ADMIN_KEY = process.env.ADMIN_KEY || process.env.SESSION_SECRET || "change-me-in-production";
 
   app.post("/api/ticker", async (req, res) => {
     try {
@@ -1389,7 +1392,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/iqama-times", async (_req, res) => {
     try {
-      const schedules = await getTodayIqamaTimes();
+      const rawDays = parseInt((_req.query.days as string) || "7");
+      const days = isNaN(rawDays) || rawDays < 1 ? 7 : Math.min(rawDays, 30);
+      const schedules = await getIqamaSchedules(pool, days);
       res.json(schedules);
     } catch (error: any) {
       console.error("Error fetching iqama times:", error.message);
@@ -1482,6 +1487,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await pool.query("DELETE FROM jumuah_schedules WHERE id = $1", [req.params.id]);
       res.json({ success: true });
       pool.end();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/admin/iqama", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const masjid = req.query.masjid as string;
+      const startDate = req.query.start as string;
+      const endDate = req.query.end as string;
+      let query = "SELECT id, masjid, date::text, fajr, dhuhr, asr, maghrib, isha, updated_at FROM iqama_schedules";
+      const params: any[] = [];
+      const conditions: string[] = [];
+      if (masjid) { conditions.push(`masjid = $${params.length + 1}`); params.push(masjid); }
+      if (startDate) { conditions.push(`date >= $${params.length + 1}`); params.push(startDate); }
+      if (endDate) { conditions.push(`date <= $${params.length + 1}`); params.push(endDate); }
+      if (conditions.length > 0) query += " WHERE " + conditions.join(" AND ");
+      query += " ORDER BY masjid, date LIMIT 500";
+      const result = await pool.query(query, params);
+      res.json(result.rows);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/admin/iqama", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { masjid, date, fajr, dhuhr, asr, maghrib, isha } = req.body;
+      if (!masjid || !date || !fajr || !dhuhr || !asr || !maghrib || !isha) {
+        return res.status(400).json({ error: "All fields are required" });
+      }
+      const result = await pool.query(
+        `INSERT INTO iqama_schedules (masjid, date, fajr, dhuhr, asr, maghrib, isha)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT (masjid, date) DO UPDATE SET fajr=EXCLUDED.fajr, dhuhr=EXCLUDED.dhuhr, asr=EXCLUDED.asr, maghrib=EXCLUDED.maghrib, isha=EXCLUDED.isha, updated_at=NOW()
+         RETURNING *`,
+        [masjid, date, fajr, dhuhr, asr, maghrib, isha]
+      );
+      res.json(result.rows[0]);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/admin/iqama/bulk", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { entries } = req.body;
+      if (!Array.isArray(entries) || entries.length === 0) {
+        return res.status(400).json({ error: "entries array is required" });
+      }
+      let inserted = 0;
+      for (const entry of entries) {
+        const { masjid, date, fajr, dhuhr, asr, maghrib, isha } = entry;
+        if (!masjid || !date || !fajr || !dhuhr || !asr || !maghrib || !isha) continue;
+        await pool.query(
+          `INSERT INTO iqama_schedules (masjid, date, fajr, dhuhr, asr, maghrib, isha)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           ON CONFLICT (masjid, date) DO UPDATE SET fajr=EXCLUDED.fajr, dhuhr=EXCLUDED.dhuhr, asr=EXCLUDED.asr, maghrib=EXCLUDED.maghrib, isha=EXCLUDED.isha, updated_at=NOW()`,
+          [masjid, date, fajr, dhuhr, asr, maghrib, isha]
+        );
+        inserted++;
+      }
+      res.json({ success: true, inserted });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/admin/iqama/:id", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      await pool.query("DELETE FROM iqama_schedules WHERE id = $1", [req.params.id]);
+      res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

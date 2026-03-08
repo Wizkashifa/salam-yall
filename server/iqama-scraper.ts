@@ -1,3 +1,6 @@
+import pg from "pg";
+import { generateJIARSchedule } from "./jiar-iqama-data";
+
 const IAR_API_URL = "https://raleighmasjid.org/API/prayer/month/";
 const ICMNC_API_URL = "https://www.icmnc.org/wp-json/dpt/v1/prayertime";
 
@@ -11,6 +14,7 @@ export interface DayIqama {
 
 export interface MasjidIqamaSchedule {
   masjid: string;
+  date: string;
   iqama: DayIqama;
 }
 
@@ -20,15 +24,6 @@ interface IARDayData {
   iqamah: { Fajr: string; Dhuhr: string; Asr: string; Maghrib: string; Isha: string };
 }
 
-interface CacheEntry<T> {
-  data: T;
-  fetchedAt: number;
-}
-
-const iarCache: Record<string, CacheEntry<Record<string, DayIqama>>> = {};
-let icmncCache: (CacheEntry<DayIqama> & { dateKey: string }) | null = null;
-const CACHE_TTL = 24 * 60 * 60 * 1000;
-
 function to12h(time24: string): string {
   const [hh, mm] = time24.split(":").map(Number);
   if (isNaN(hh) || isNaN(mm)) return time24;
@@ -37,115 +32,188 @@ function to12h(time24: string): string {
   return `${h12}:${String(mm).padStart(2, "0")} ${suffix}`;
 }
 
-function getRaleighDate(): { year: number; month: number; day: number; dateKey: string } {
+function getRaleighDateRange(days: number): { dates: string[]; year: number; month: number } {
+  const results: string[] = [];
   const now = new Date();
-  const raleigh = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/New_York",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(now);
-  const year = parseInt(raleigh.find(p => p.type === "year")!.value);
-  const month = parseInt(raleigh.find(p => p.type === "month")!.value);
-  const day = parseInt(raleigh.find(p => p.type === "day")!.value);
-  const dateKey = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-  return { year, month, day, dateKey };
-}
+  const raleighNow = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
 
-async function fetchIARToday(): Promise<DayIqama | null> {
-  const { year, month, dateKey } = getRaleighDate();
-  const cacheKey = `${year}-${month}`;
-  const cached = iarCache[cacheKey];
-  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL && cached.data[dateKey]) {
-    return cached.data[dateKey];
+  for (let i = 0; i < days; i++) {
+    const d = new Date(raleighNow);
+    d.setDate(d.getDate() + i);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    results.push(`${y}-${m}-${day}`);
   }
 
+  return { dates: results, year: raleighNow.getFullYear(), month: raleighNow.getMonth() + 1 };
+}
+
+export async function ensureIqamaTable(pool: pg.Pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS iqama_schedules (
+      id SERIAL PRIMARY KEY,
+      masjid TEXT NOT NULL,
+      date DATE NOT NULL,
+      fajr TEXT NOT NULL,
+      dhuhr TEXT NOT NULL,
+      asr TEXT NOT NULL,
+      maghrib TEXT NOT NULL,
+      isha TEXT NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(masjid, date)
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_iqama_masjid_date ON iqama_schedules(masjid, date);`);
+}
+
+export async function seedJIARData(pool: pg.Pool) {
+  const { rows } = await pool.query(
+    "SELECT COUNT(*) as count FROM iqama_schedules WHERE masjid LIKE 'JIAR%'"
+  );
+  if (parseInt(rows[0].count) > 0) return;
+
+  const schedule = generateJIARSchedule();
+  console.log(`[Iqama] Seeding ${schedule.length} days of JIAR schedule data...`);
+
+  const batchSize = 50;
+  for (let i = 0; i < schedule.length; i += batchSize) {
+    const batch = schedule.slice(i, i + batchSize);
+    const values: any[] = [];
+    const placeholders: string[] = [];
+    let idx = 1;
+
+    for (const day of batch) {
+      placeholders.push(`($${idx}, $${idx + 1}, $${idx + 2}, $${idx + 3}, $${idx + 4}, $${idx + 5}, $${idx + 6})`);
+      values.push("JIAR (Fayetteville)", day.date, day.fajr, day.dhuhr, day.asrFV, day.maghrib, day.isha);
+      idx += 7;
+
+      placeholders.push(`($${idx}, $${idx + 1}, $${idx + 2}, $${idx + 3}, $${idx + 4}, $${idx + 5}, $${idx + 6})`);
+      values.push("JIAR (Parkwood)", day.date, day.fajr, day.dhuhr, day.asrPK, day.maghrib, day.isha);
+      idx += 7;
+    }
+
+    await pool.query(
+      `INSERT INTO iqama_schedules (masjid, date, fajr, dhuhr, asr, maghrib, isha) VALUES ${placeholders.join(", ")}
+       ON CONFLICT (masjid, date) DO NOTHING`,
+      values
+    );
+  }
+
+  console.log(`[Iqama] Seeded JIAR Parkwood + Fayetteville schedules (${schedule.length} days each)`);
+}
+
+async function fetchAndStoreIAR(pool: pg.Pool, year: number, month: number): Promise<void> {
   try {
     const url = `${IAR_API_URL}?year=${year}&month=${month}`;
     const resp = await fetch(url);
     if (!resp.ok) {
       console.error(`[Iqama] IAR API returned ${resp.status}`);
-      return cached?.data?.[dateKey] || null;
+      return;
     }
 
     const json = await resp.json() as Record<string, IARDayData>;
-    const result: Record<string, DayIqama> = {};
+    const values: any[] = [];
+    const placeholders: string[] = [];
+    let idx = 1;
 
-    for (const [dk, dayData] of Object.entries(json)) {
+    for (const [dateKey, dayData] of Object.entries(json)) {
       if (!dayData?.iqamah?.Fajr || !dayData?.iqamah?.Isha) continue;
-      result[dk] = {
-        fajr: dayData.iqamah.Fajr,
-        dhuhr: dayData.iqamah.Dhuhr,
-        asr: dayData.iqamah.Asr,
-        maghrib: dayData.iqamah.Maghrib,
-        isha: dayData.iqamah.Isha,
-      };
+      placeholders.push(`($${idx}, $${idx + 1}, $${idx + 2}, $${idx + 3}, $${idx + 4}, $${idx + 5}, $${idx + 6})`);
+      values.push("IAR", dateKey, dayData.iqamah.Fajr, dayData.iqamah.Dhuhr, dayData.iqamah.Asr, dayData.iqamah.Maghrib, dayData.iqamah.Isha);
+      idx += 7;
     }
 
-    if (Object.keys(result).length > 0) {
-      iarCache[cacheKey] = { data: result, fetchedAt: Date.now() };
-      console.log(`[Iqama] Cached ${Object.keys(result).length} days for IAR ${month}/${year}`);
+    if (placeholders.length > 0) {
+      await pool.query(
+        `INSERT INTO iqama_schedules (masjid, date, fajr, dhuhr, asr, maghrib, isha) VALUES ${placeholders.join(", ")}
+         ON CONFLICT (masjid, date) DO UPDATE SET fajr=EXCLUDED.fajr, dhuhr=EXCLUDED.dhuhr, asr=EXCLUDED.asr, maghrib=EXCLUDED.maghrib, isha=EXCLUDED.isha, updated_at=NOW()`,
+        values
+      );
+      console.log(`[Iqama] Synced ${placeholders.length} IAR days for ${month}/${year}`);
     }
-
-    return result[dateKey] || null;
   } catch (err: any) {
-    console.error("[Iqama] Error fetching IAR schedule:", err.message);
-    return cached?.data?.[dateKey] || null;
+    console.error("[Iqama] Error syncing IAR:", err.message);
   }
 }
 
-async function fetchICMNCToday(): Promise<DayIqama | null> {
-  const { dateKey } = getRaleighDate();
-  if (icmncCache && icmncCache.dateKey === dateKey && Date.now() - icmncCache.fetchedAt < CACHE_TTL) {
-    return icmncCache.data;
-  }
-
+async function fetchAndStoreICMNC(pool: pg.Pool): Promise<void> {
   try {
     const resp = await fetch(`${ICMNC_API_URL}?filter=today`);
     if (!resp.ok) {
       console.error(`[Iqama] ICMNC API returned ${resp.status}`);
-      return icmncCache?.data || null;
+      return;
     }
 
     const json = await resp.json() as any[];
-    if (!json || json.length === 0) return icmncCache?.data || null;
+    if (!json || json.length === 0) return;
 
     const today = json[0];
-    if (!today.fajr_jamah || !today.isha_jamah) return icmncCache?.data || null;
+    if (!today.fajr_jamah || !today.isha_jamah) return;
 
-    const iqama: DayIqama = {
-      fajr: to12h(today.fajr_jamah),
-      dhuhr: to12h(today.zuhr_jamah),
-      asr: to12h(today.asr_jamah),
-      maghrib: to12h(today.maghrib_jamah),
-      isha: to12h(today.isha_jamah),
-    };
+    const now = new Date();
+    const raleigh = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);
+    const year = raleigh.find(p => p.type === "year")!.value;
+    const month = raleigh.find(p => p.type === "month")!.value;
+    const day = raleigh.find(p => p.type === "day")!.value;
+    const dateKey = `${year}-${month}-${day}`;
 
-    icmncCache = { data: iqama, fetchedAt: Date.now(), dateKey };
-    console.log(`[Iqama] Cached ICMNC iqama times for today`);
-
-    return iqama;
+    await pool.query(
+      `INSERT INTO iqama_schedules (masjid, date, fajr, dhuhr, asr, maghrib, isha) VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (masjid, date) DO UPDATE SET fajr=EXCLUDED.fajr, dhuhr=EXCLUDED.dhuhr, asr=EXCLUDED.asr, maghrib=EXCLUDED.maghrib, isha=EXCLUDED.isha, updated_at=NOW()`,
+      ["ICMNC", dateKey, to12h(today.fajr_jamah), to12h(today.zuhr_jamah), to12h(today.asr_jamah), to12h(today.maghrib_jamah), to12h(today.isha_jamah)]
+    );
+    console.log(`[Iqama] Synced ICMNC for ${dateKey}`);
   } catch (err: any) {
-    console.error("[Iqama] Error fetching ICMNC schedule:", err.message);
-    return icmncCache?.data || null;
+    console.error("[Iqama] Error syncing ICMNC:", err.message);
   }
 }
 
-export async function getTodayIqamaTimes(): Promise<MasjidIqamaSchedule[]> {
-  const [iarIqama, icmncIqama] = await Promise.all([
-    fetchIARToday(),
-    fetchICMNCToday(),
+export async function syncExternalIqama(pool: pg.Pool): Promise<void> {
+  const { year, month } = getRaleighDateRange(1);
+  await Promise.all([
+    fetchAndStoreIAR(pool, year, month),
+    fetchAndStoreICMNC(pool),
   ]);
 
-  const results: MasjidIqamaSchedule[] = [];
-
-  if (iarIqama) {
-    results.push({ masjid: "IAR", iqama: iarIqama });
+  const nextMonthDate = new Date(year, month, 1);
+  const now = new Date();
+  const raleighNow = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
+  const daysLeft = new Date(year, month, 0).getDate() - raleighNow.getDate();
+  if (daysLeft <= 7) {
+    await fetchAndStoreIAR(pool, nextMonthDate.getFullYear(), nextMonthDate.getMonth() + 1);
   }
+}
 
-  if (icmncIqama) {
-    results.push({ masjid: "ICMNC", iqama: icmncIqama });
-  }
+export async function getIqamaSchedules(pool: pg.Pool, days: number = 7): Promise<MasjidIqamaSchedule[]> {
+  const { dates } = getRaleighDateRange(days);
+  const result = await pool.query(
+    `SELECT masjid, date::text, fajr, dhuhr, asr, maghrib, isha 
+     FROM iqama_schedules 
+     WHERE date >= $1 AND date <= $2
+     ORDER BY masjid, date`,
+    [dates[0], dates[dates.length - 1]]
+  );
 
-  return results;
+  return result.rows.map((row: any) => ({
+    masjid: row.masjid,
+    date: row.date,
+    iqama: {
+      fajr: row.fajr,
+      dhuhr: row.dhuhr,
+      asr: row.asr,
+      maghrib: row.maghrib,
+      isha: row.isha,
+    },
+  }));
+}
+
+let syncInterval: ReturnType<typeof setInterval> | null = null;
+
+export function startIqamaSync(pool: pg.Pool) {
+  syncExternalIqama(pool).catch(err => console.error("[Iqama] Initial sync error:", err.message));
+
+  syncInterval = setInterval(() => {
+    syncExternalIqama(pool).catch(err => console.error("[Iqama] Sync error:", err.message));
+  }, 6 * 60 * 60 * 1000);
 }
