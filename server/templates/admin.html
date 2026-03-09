@@ -197,8 +197,8 @@
         <input type="text" id="editWebsite" style="margin-bottom:14px;">
         <label>Specialty (optional)</label>
         <input type="text" id="editSpecialty" style="margin-bottom:14px;">
-        <label>Keywords (comma-separated, optional)</label>
-        <input type="text" id="editKeywords" style="margin-bottom:14px;">
+        <label>Tags</label>
+        <div id="editKeywordsChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;"></div>
         <label>Affiliation (optional)</label>
         <input type="text" id="editHospital" style="margin-bottom:14px;">
         <label>Member Note (optional)</label>
@@ -221,6 +221,58 @@
 
   <script>
     let adminToken = '';
+    let editSelectedKeywords = [];
+    const BUSINESS_KEYWORDS = {
+      Healthcare: [
+        "Muslim-owned", "Female provider", "Male provider",
+        "Accepts insurance", "Cash / self-pay", "Sliding scale",
+        "Telehealth available", "Walk-ins welcome", "By appointment only",
+        "Family-friendly", "Pediatric", "Halal medications",
+        "Mental health", "Women's health", "Sports medicine",
+        "Arabic-speaking", "Urdu-speaking", "Spanish-speaking"
+      ],
+      Restaurant: [
+        "Muslim-owned", "Halal-certified", "Zabiha", "Dine-in", "Takeout",
+        "Delivery", "Catering", "Family-friendly", "Late night"
+      ],
+      Grocery: [
+        "Muslim-owned", "Halal meat", "Zabiha", "Imported goods",
+        "Middle Eastern", "South Asian", "African", "Bakery"
+      ],
+      Finance: [
+        "Muslim-owned", "Islamic finance", "Halal investing",
+        "No-interest loans", "Financial planning", "Tax services"
+      ],
+      _default: [
+        "Muslim-owned", "Family-friendly", "Women-owned",
+        "Veteran-owned", "By appointment only", "Walk-ins welcome",
+        "Arabic-speaking", "Urdu-speaking", "Spanish-speaking"
+      ]
+    };
+
+    function renderKeywordChips(category, selected) {
+      const keywords = BUSINESS_KEYWORDS[category] || BUSINESS_KEYWORDS._default;
+      const container = document.getElementById('editKeywordsChips');
+      container.innerHTML = keywords.map(kw => {
+        const isSelected = selected.includes(kw);
+        return '<button type="button" onclick="toggleEditKeyword(\'' + escHtml(kw).replace(/'/g, "\\'") + '\')" style="' +
+          'padding:6px 12px;border-radius:14px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid ' +
+          (isSelected ? '#1B6B4A' : '#333') + ';background:' +
+          (isSelected ? '#1B6B4A' : '#1E1E1E') + ';color:' +
+          (isSelected ? '#fff' : '#9CA3AF') + ';">' +
+          (isSelected ? '✓ ' : '') + escHtml(kw) + '</button>';
+      }).join('');
+    }
+
+    function toggleEditKeyword(kw) {
+      if (editSelectedKeywords.includes(kw)) {
+        editSelectedKeywords = editSelectedKeywords.filter(k => k !== kw);
+      } else {
+        editSelectedKeywords.push(kw);
+      }
+      const cat = document.getElementById('editCategory').value;
+      renderKeywordChips(cat, editSelectedKeywords);
+    }
 
     function switchTab(tab) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -480,12 +532,17 @@
         document.getElementById('editPhone').value = business.phone || '';
         document.getElementById('editWebsite').value = business.website || '';
         document.getElementById('editSpecialty').value = business.specialty || '';
-        document.getElementById('editKeywords').value = (Array.isArray(business.keywords) ? business.keywords.join(', ') : '') || '';
+        editSelectedKeywords = Array.isArray(business.keywords) ? business.keywords.slice() : [];
+        renderKeywordChips(business.category || '_default', editSelectedKeywords);
         document.getElementById('editHospital').value = business.hospital_affiliation || '';
         document.getElementById('editMemberNote').value = business.member_note || '';
         document.getElementById('editSearchTags').value = (Array.isArray(business.search_tags) ? business.search_tags.join(', ') : '') || '';
         document.getElementById('editDisableEnrichment').checked = business.place_id === 'none';
         document.getElementById('editBusinessModal').style.display = 'block';
+        document.getElementById('editCategory').onchange = function() {
+          editSelectedKeywords = [];
+          renderKeywordChips(this.value, editSelectedKeywords);
+        };
       } catch { showToast('Failed to load business', true); }
     }
 
@@ -503,8 +560,7 @@
       const phone = document.getElementById('editPhone').value.trim();
       const website = document.getElementById('editWebsite').value.trim();
       const specialty = document.getElementById('editSpecialty').value.trim();
-      const keywordsStr = document.getElementById('editKeywords').value.trim();
-      const keywords = keywordsStr ? keywordsStr.split(',').map(k => k.trim()).filter(k => k) : [];
+      const keywords = editSelectedKeywords.slice();
       const hospital_affiliation = document.getElementById('editHospital').value.trim();
       const member_note = document.getElementById('editMemberNote').value.trim();
       const tagsStr = document.getElementById('editSearchTags').value.trim();
