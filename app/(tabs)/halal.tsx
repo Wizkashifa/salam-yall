@@ -129,16 +129,7 @@ function getRaleighNow(): { dayName: string; dayIndex: number; minutes: number }
       minutes: (hour === 24 ? 0 : hour) * 60 + minute,
     };
   } catch {
-    const raleighStr = now.toLocaleString("en-US", { timeZone: "America/New_York" });
-    const raleighDate = new Date(raleighStr);
-    if (isNaN(raleighDate.getTime())) {
-      return { dayName: dayNames[now.getDay()], dayIndex: now.getDay(), minutes: now.getHours() * 60 + now.getMinutes() };
-    }
-    return {
-      dayName: dayNames[raleighDate.getDay()],
-      dayIndex: raleighDate.getDay(),
-      minutes: raleighDate.getHours() * 60 + raleighDate.getMinutes(),
-    };
+    return { dayName: dayNames[now.getDay()], dayIndex: now.getDay(), minutes: now.getHours() * 60 + now.getMinutes() };
   }
 }
 
