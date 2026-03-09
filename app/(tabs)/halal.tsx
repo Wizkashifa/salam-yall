@@ -157,8 +157,10 @@ function isCurrentlyOpen(hours: HalalRestaurant["opening_hours"]): boolean | nul
   }
 
   if (!hours.periods || hours.periods.length === 0) return null;
-  const todayPeriod = hours.periods.find((p) => p.open.day === dayName);
+  const todayPeriod = hours.periods.find((p) => p.open?.day === dayName);
   if (!todayPeriod) return false;
+  if (!todayPeriod.open?.time || todayPeriod.open.time.length < 2) return null;
+  if (!todayPeriod.close?.time || todayPeriod.close.time.length < 2) return true;
 
   const openMinutes = todayPeriod.open.time[0] * 60 + todayPeriod.open.time[1];
   const closeMinutes = todayPeriod.close.time[0] * 60 + todayPeriod.close.time[1];
