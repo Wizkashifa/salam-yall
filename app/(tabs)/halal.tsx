@@ -127,48 +127,53 @@ function parseTimeString(timeStr: string): number | null {
 }
 
 function isCurrentlyOpen(hours: HalalRestaurant["opening_hours"]): boolean | null {
-  if (!hours) return null;
-  const { dayName, dayIndex, minutes: currentMinutes } = getRaleighNow();
+  try {
+    if (!hours) return null;
+    const { dayName, dayIndex, minutes: currentMinutes } = getRaleighNow();
 
-  const weekdayDescs = hours.weekdayDescriptions;
-  if (weekdayDescs && weekdayDescs.length > 0) {
-    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const todayName = dayNames[dayIndex];
-    const todayLine = weekdayDescs.find((l) => l && l.toLowerCase().startsWith(todayName.toLowerCase()));
-    if (!todayLine) return null;
-    if (/closed/i.test(todayLine)) return false;
-    const colonIdx = todayLine.indexOf(":");
-    if (colonIdx < 0) return null;
-    const timePart = todayLine.slice(colonIdx + 1).trim();
-    const ranges = timePart.split(",").map((s) => s.trim());
-    for (const range of ranges) {
-      const parts = range.split(/\s*[–—-]\s*/);
-      if (parts.length !== 2) continue;
-      const openMin = parseTimeString(parts[0]);
-      const closeMin = parseTimeString(parts[1]);
-      if (openMin === null || closeMin === null) continue;
-      if (closeMin < openMin) {
-        if (currentMinutes >= openMin || currentMinutes < closeMin) return true;
-      } else {
-        if (currentMinutes >= openMin && currentMinutes < closeMin) return true;
+    const weekdayDescs = hours.weekdayDescriptions;
+    if (weekdayDescs && Array.isArray(weekdayDescs) && weekdayDescs.length > 0) {
+      const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      const todayName = dayNames[dayIndex];
+      if (!todayName) return null;
+      const todayLine = weekdayDescs.find((l) => typeof l === "string" && l.toLowerCase().startsWith(todayName.toLowerCase()));
+      if (!todayLine) return null;
+      if (/closed/i.test(todayLine)) return false;
+      const colonIdx = todayLine.indexOf(":");
+      if (colonIdx < 0) return null;
+      const timePart = todayLine.slice(colonIdx + 1).trim();
+      const ranges = timePart.split(",").map((s) => s.trim());
+      for (const range of ranges) {
+        const parts = range.split(/\s*[–—-]\s*/);
+        if (parts.length !== 2) continue;
+        const openMin = parseTimeString(parts[0]);
+        const closeMin = parseTimeString(parts[1]);
+        if (openMin === null || closeMin === null) continue;
+        if (closeMin < openMin) {
+          if (currentMinutes >= openMin || currentMinutes < closeMin) return true;
+        } else {
+          if (currentMinutes >= openMin && currentMinutes < closeMin) return true;
+        }
       }
+      return false;
     }
-    return false;
+
+    if (!hours.periods || !Array.isArray(hours.periods) || hours.periods.length === 0) return null;
+    const todayPeriod = hours.periods.find((p) => p && p.open && typeof p.open.day === "string" && p.open.day === dayName);
+    if (!todayPeriod) return false;
+    if (!todayPeriod.open?.time || !Array.isArray(todayPeriod.open.time) || todayPeriod.open.time.length < 2) return null;
+    if (!todayPeriod.close?.time || !Array.isArray(todayPeriod.close.time) || todayPeriod.close.time.length < 2) return true;
+
+    const openMinutes = todayPeriod.open.time[0] * 60 + todayPeriod.open.time[1];
+    const closeMinutes = todayPeriod.close.time[0] * 60 + todayPeriod.close.time[1];
+
+    if (closeMinutes < openMinutes) {
+      return currentMinutes >= openMinutes || currentMinutes < closeMinutes;
+    }
+    return currentMinutes >= openMinutes && currentMinutes < closeMinutes;
+  } catch {
+    return null;
   }
-
-  if (!hours.periods || hours.periods.length === 0) return null;
-  const todayPeriod = hours.periods.find((p) => p.open?.day === dayName);
-  if (!todayPeriod) return false;
-  if (!todayPeriod.open?.time || todayPeriod.open.time.length < 2) return null;
-  if (!todayPeriod.close?.time || todayPeriod.close.time.length < 2) return true;
-
-  const openMinutes = todayPeriod.open.time[0] * 60 + todayPeriod.open.time[1];
-  const closeMinutes = todayPeriod.close.time[0] * 60 + todayPeriod.close.time[1];
-
-  if (closeMinutes < openMinutes) {
-    return currentMinutes >= openMinutes || currentMinutes < closeMinutes;
-  }
-  return currentMinutes >= openMinutes && currentMinutes < closeMinutes;
 }
 
 function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
