@@ -147,6 +147,62 @@ function NotificationScreen() {
   );
 }
 
+function TrackerScreen() {
+  return (
+    <View style={screenStyles.container}>
+      <View style={screenStyles.iconWrap}>
+        <Ionicons name="checkmark-done" size={48} color={richGold} />
+      </View>
+      <Text style={screenStyles.title}>Prayer Tracker</Text>
+      <Text style={screenStyles.body}>
+        Tap any prayer on the home screen to track your salah. Each tap cycles through three states:
+      </Text>
+      <View style={trackerStyles.statesWrap}>
+        <View style={trackerStyles.stateRow}>
+          <View style={[trackerStyles.dot, { backgroundColor: "rgba(255,255,255,0.15)" }]} />
+          <Text style={trackerStyles.stateLabel}>Not tracked</Text>
+        </View>
+        <View style={trackerStyles.stateRow}>
+          <View style={[trackerStyles.dot, { backgroundColor: richGold }]} />
+          <Text style={trackerStyles.stateLabel}>Prayed</Text>
+        </View>
+        <View style={trackerStyles.stateRow}>
+          <View style={[trackerStyles.dot, { backgroundColor: emerald }]} />
+          <Text style={trackerStyles.stateLabel}>Prayed at the Masjid</Text>
+        </View>
+      </View>
+      <Text style={[screenStyles.body, { marginBottom: 0, marginTop: 8, fontSize: 14, opacity: 0.6 }]}>
+        View your monthly history anytime in the More tab.
+      </Text>
+    </View>
+  );
+}
+
+const trackerStyles = StyleSheet.create({
+  statesWrap: {
+    gap: 14,
+    marginBottom: 20,
+    alignItems: "flex-start" as const,
+    width: "100%" as const,
+    maxWidth: 260,
+  },
+  stateRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 12,
+  },
+  dot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+  },
+  stateLabel: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 15,
+    color: "rgba(255,255,255,0.8)",
+  },
+});
+
 function MasjidScreen({ onSelect }: { onSelect: (name: string | null) => void }) {
   const [selected, setSelected] = useState<string | null>(null);
 
@@ -215,7 +271,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const { setPreferredMasjid } = useSettings();
   const selectedMasjidRef = useRef<string | null>(null);
 
-  const totalPages = 4;
+  const totalPages = 5;
 
   const handleMasjidSelect = useCallback((name: string | null) => {
     selectedMasjidRef.current = name;
@@ -249,7 +305,8 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       case 0: return <WelcomeScreen />;
       case 1: return <LocationScreen />;
       case 2: return <NotificationScreen />;
-      case 3: return <MasjidScreen onSelect={handleMasjidSelect} />;
+      case 3: return <TrackerScreen />;
+      case 4: return <MasjidScreen onSelect={handleMasjidSelect} />;
       default: return null;
     }
   }, [handleMasjidSelect]);
@@ -279,7 +336,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
       <FlatList
         ref={flatListRef}
-        data={[0, 1, 2, 3]}
+        data={[0, 1, 2, 3, 4]}
         renderItem={renderPage}
         keyExtractor={(item) => item.toString()}
         horizontal

@@ -45,7 +45,7 @@ type SettingsSection = "main" | "calcMethod" | "masjids" | "masjidDetail" | "fee
 
 export default function SettingsScreen() {
   const { colors, isDark, themeMode, setThemeMode, ramadanMode, setRamadanMode } = useTheme();
-  const { calcMethod, setCalcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid, setPreferredMasjid } = useSettings();
+  const { calcMethod, setCalcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid, setPreferredMasjid, travelMode, setTravelMode } = useSettings();
   const [section, setSection] = useState<SettingsSection>("main");
   const [selectedMasjid, setSelectedMasjid] = useState<Masjid | null>(null);
   const [feedbackType, setFeedbackType] = useState<"bug" | "feature">("feature");
@@ -184,6 +184,22 @@ export default function SettingsScreen() {
         </View>
         <View style={[styles.toggle, notificationsEnabled ? { backgroundColor: colors.emerald } : { backgroundColor: colors.border }]}>
           <View style={[styles.toggleKnob, notificationsEnabled ? { transform: [{ translateX: 16 }] } : {}]} />
+        </View>
+      </Pressable>
+
+      <Pressable
+        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
+        onPress={() => { setTravelMode(!travelMode); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); }}
+      >
+        <View style={[styles.menuIcon, { backgroundColor: travelMode ? colors.gold + "20" : colors.prayerIconBg }]}>
+          <Ionicons name="airplane" size={20} color={travelMode ? colors.gold : colors.emerald} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.menuLabel, { color: colors.text }]}>Travel Mode</Text>
+          <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>Hide iqama times, show adhan only</Text>
+        </View>
+        <View style={[styles.toggleTrack, travelMode && styles.toggleTrackActive]}>
+          <View style={[styles.toggleThumb, travelMode && styles.toggleThumbActive]} />
         </View>
       </Pressable>
 

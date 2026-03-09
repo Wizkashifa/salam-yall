@@ -19,7 +19,8 @@ The application follows a client-server architecture:
 - **Settings:** A `SettingsProvider` context manages global settings like prayer calculation methods, notification preferences, and drawer state.
 - **UI/UX:** Features glass-effect cards, skeleton loading for improved user experience, and a consistent gradient header design across screens.
 - **Components:** Includes a dynamic `TickerBanner` for community announcements and an `AppDrawer` for settings, masjid directory, and feedback.
-- **Onboarding:** A 4-screen onboarding flow guides new users through initial setup (location, notifications, preferred masjid).
+- **Onboarding:** A 5-screen onboarding flow guides new users through initial setup (location, notifications, prayer tracker intro, preferred masjid).
+- **Travel Mode:** A toggle in settings that hides iqama times and shows only adhan times. Persisted in AsyncStorage (`travel_mode` key). When active, the home screen prayer card shows "Travel Mode — adhan times only" instead of the iqama source.
 
 **Backend (Express.js):**
 - **API:** Serves various APIs for events, businesses, halal restaurants, weather, and administrative functions.
