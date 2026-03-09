@@ -92,27 +92,27 @@ const HEALTHCARE_SPECIALTIES = [
 
 const BUSINESS_KEYWORDS: Record<string, string[]> = {
   Healthcare: [
-    "Muslim-owned", "Female provider", "Male provider",
+    "Female provider", "Male provider",
     "Accepts insurance", "Cash / self-pay", "Sliding scale",
     "Telehealth available", "Walk-ins welcome", "By appointment only",
-    "Family-friendly", "Pediatric", "Halal medications",
+    "Pediatric", "Halal medications",
     "Mental health", "Women's health", "Sports medicine",
     "Arabic-speaking", "Urdu-speaking", "Spanish-speaking",
   ],
   Restaurant: [
-    "Muslim-owned", "Halal-certified", "Zabiha", "Dine-in", "Takeout",
-    "Delivery", "Catering", "Family-friendly", "Late night",
+    "Halal-certified", "Zabiha", "Dine-in", "Takeout",
+    "Delivery", "Catering", "Late night",
   ],
   Grocery: [
-    "Muslim-owned", "Halal meat", "Zabiha", "Imported goods",
+    "Halal meat", "Zabiha", "Imported goods",
     "Middle Eastern", "South Asian", "African", "Bakery",
   ],
   Finance: [
-    "Muslim-owned", "Islamic finance", "Halal investing",
+    "Islamic finance", "Halal investing",
     "No-interest loans", "Financial planning", "Tax services",
   ],
   _default: [
-    "Muslim-owned", "Family-friendly", "Women-owned",
+    "Women-owned",
     "Veteran-owned", "By appointment only", "Walk-ins welcome",
     "Arabic-speaking", "Urdu-speaking", "Spanish-speaking",
   ],
@@ -249,6 +249,16 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
               <View style={[styles.specialtyRow, { backgroundColor: colors.prayerIconBg }]}>
                 <Ionicons name="business-outline" size={14} color={colors.emerald} />
                 <Text style={[styles.specialtyText, { color: colors.text }]}>{business.hospital_affiliation}</Text>
+              </View>
+            ) : null}
+
+            {business.keywords && business.keywords.length > 0 ? (
+              <View style={styles.keywordDisplayGrid}>
+                {business.keywords.map((kw: string) => (
+                  <View key={kw} style={[styles.keywordDisplayChip, { backgroundColor: colors.prayerIconBg }]}>
+                    <Text style={[styles.keywordDisplayText, { color: colors.text }]}>{kw}</Text>
+                  </View>
+                ))}
               </View>
             ) : null}
 
