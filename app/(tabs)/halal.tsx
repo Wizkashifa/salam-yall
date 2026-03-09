@@ -103,22 +103,61 @@ function getHalalBadge(status: string): { label: string; color: string; bg: stri
   }
 }
 
-function getRaleighTime(): { day: string; minutes: number } {
+function getRaleighNow(): { dayName: string; dayIndex: number; minutes: number } {
   const now = new Date();
   const raleighStr = now.toLocaleString("en-US", { timeZone: "America/New_York" });
   const raleighDate = new Date(raleighStr);
   const days = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
   return {
-    day: days[raleighDate.getDay()],
+    dayName: days[raleighDate.getDay()],
+    dayIndex: raleighDate.getDay(),
     minutes: raleighDate.getHours() * 60 + raleighDate.getMinutes(),
   };
 }
 
-function isCurrentlyOpen(hours: HalalRestaurant["opening_hours"]): boolean | null {
-  if (!hours || !hours.periods || hours.periods.length === 0) return null;
-  const { day, minutes: currentMinutes } = getRaleighTime();
+function parseTimeString(timeStr: string): number | null {
+  const match = timeStr.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return null;
+  let h = parseInt(match[1], 10);
+  const m = parseInt(match[2], 10);
+  const ampm = match[3].toUpperCase();
+  if (ampm === "PM" && h !== 12) h += 12;
+  if (ampm === "AM" && h === 12) h = 0;
+  return h * 60 + m;
+}
 
-  const todayPeriod = hours.periods.find((p) => p.open.day === day);
+function isCurrentlyOpen(hours: HalalRestaurant["opening_hours"]): boolean | null {
+  if (!hours) return null;
+  const { dayName, dayIndex, minutes: currentMinutes } = getRaleighNow();
+
+  const weekdayDescs = hours.weekdayDescriptions;
+  if (weekdayDescs && weekdayDescs.length > 0) {
+    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const todayName = dayNames[dayIndex];
+    const todayLine = weekdayDescs.find((l) => l.toLowerCase().startsWith(todayName.toLowerCase()));
+    if (!todayLine) return null;
+    if (/closed/i.test(todayLine)) return false;
+    const colonIdx = todayLine.indexOf(":");
+    if (colonIdx < 0) return null;
+    const timePart = todayLine.slice(colonIdx + 1).trim();
+    const ranges = timePart.split(",").map((s) => s.trim());
+    for (const range of ranges) {
+      const parts = range.split(/\s*[–—-]\s*/);
+      if (parts.length !== 2) continue;
+      const openMin = parseTimeString(parts[0]);
+      const closeMin = parseTimeString(parts[1]);
+      if (openMin === null || closeMin === null) continue;
+      if (closeMin < openMin) {
+        if (currentMinutes >= openMin || currentMinutes < closeMin) return true;
+      } else {
+        if (currentMinutes >= openMin && currentMinutes < closeMin) return true;
+      }
+    }
+    return false;
+  }
+
+  if (!hours.periods || hours.periods.length === 0) return null;
+  const todayPeriod = hours.periods.find((p) => p.open.day === dayName);
   if (!todayPeriod) return false;
 
   const openMinutes = todayPeriod.open.time[0] * 60 + todayPeriod.open.time[1];

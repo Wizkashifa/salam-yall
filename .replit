@@ -79,3 +79,4 @@ ensurePreviewReachable = "/status"
 [userenv.shared]
 GOOGLE_PLACES_API_KEY = "AIzaSyB2yLu46yXAX67_26P4seERWK94z7qzysU"
 APPLE_TEAM_ID = "Z6J4227VXQ"
+ADMIN_KEY = "password"
