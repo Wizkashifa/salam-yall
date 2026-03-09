@@ -1012,11 +1012,6 @@ export default function PrayerScreen() {
               );
             })}
           </ScrollView>
-          {!preferredMasjid ? null : activeIqama ? (
-            <Text style={[styles.iqamaSource, { color: colors.textTertiary }]}>
-              Iqama times from {activeIqama.masjid === "IAR" ? "Islamic Assoc. of Raleigh" : activeIqama.masjid === "ICMNC" ? "Islamic Center of Morrisville" : activeIqama.masjid === "JIAR (Parkwood)" ? "JIAR (Parkwood)" : activeIqama.masjid === "JIAR (Fayetteville)" ? "JIAR (Fayetteville St)" : activeIqama.masjid === "Al Noor" ? "Al-Noor Islamic Center" : activeIqama.masjid}
-            </Text>
-          ) : null}
         </View>
 
         <Pressable
