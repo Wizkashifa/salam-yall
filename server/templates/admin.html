@@ -511,7 +511,7 @@
       const search_tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(t => t) : [];
       const disable_enrichment = document.getElementById('editDisableEnrichment').checked;
       if (!name || !category || !address) { showToast('Name, category, and address are required', true); return; }
-      const body: any = { name, category, description, address, phone, website, disable_enrichment };
+      const body = { name, category, description, address, phone, website, disable_enrichment };
       if (specialty) body.specialty = specialty;
       if (keywords.length > 0) body.keywords = keywords;
       if (hospital_affiliation) body.hospital_affiliation = hospital_affiliation;
