@@ -1176,13 +1176,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
       const photoRef = place.photos?.[0]?.name || null;
-      const hours = place.regularOpeningHours?.weekdayDescriptions || null;
       const placeWebsite = place.websiteUri || null;
-      const existingHours = restaurant.opening_hours || {};
-      const mergedHours = hours ? { ...existingHours, weekdayDescriptions: hours } : existingHours;
+      const googleHours = place.regularOpeningHours || {};
+      const replacedHours = {
+        type: googleHours.type || null,
+        openNow: googleHours.openNow || false,
+        periods: googleHours.periods || [],
+        weekdayDescriptions: googleHours.weekdayDescriptions || [],
+        specialDays: googleHours.specialDays || null
+      };
       await pool.query(
         `UPDATE halal_restaurants SET place_id = $1, rating = COALESCE($2, rating), user_ratings_total = COALESCE($3, user_ratings_total), photo_reference = $4, opening_hours = $5::jsonb, lat = COALESCE($6, lat), lng = COALESCE($7, lng), website = COALESCE($9, website) WHERE id = $8`,
-        [place.id, place.rating || null, place.userRatingCount || null, photoRef, JSON.stringify(mergedHours), place.location?.latitude || null, place.location?.longitude || null, restaurantId, placeWebsite]
+        [place.id, place.rating || null, place.userRatingCount || null, photoRef, JSON.stringify(replacedHours), place.location?.latitude || null, place.location?.longitude || null, restaurantId, placeWebsite]
       );
       console.log(`[Halal Enrich] Enriched #${restaurantId} "${restaurant.name}" with Places data`);
     } catch (err: any) {
