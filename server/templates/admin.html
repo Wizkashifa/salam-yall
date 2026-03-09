@@ -182,6 +182,16 @@
         <input type="text" id="editEventOrganizer" style="margin-bottom:14px;">
         <label>Image URL (optional)</label>
         <input type="text" id="editEventImageUrl" style="margin-bottom:14px;">
+        <div class="row">
+          <div>
+            <label>Start Date & Time</label>
+            <input type="datetime-local" id="editEventStart" style="margin-bottom:14px;">
+          </div>
+          <div>
+            <label>End Date & Time</label>
+            <input type="datetime-local" id="editEventEnd" style="margin-bottom:14px;">
+          </div>
+        </div>
         <label>Registration URL (optional)</label>
         <input type="text" id="editEventRegUrl" style="margin-bottom:14px;">
         <div style="display:flex;gap:8px;">
@@ -720,6 +730,8 @@
       document.getElementById('editEventLocation').value = event.location || '';
       document.getElementById('editEventOrganizer').value = event.organizer || '';
       document.getElementById('editEventImageUrl').value = event.imageUrl || '';
+      document.getElementById('editEventStart').value = event.start ? toLocalDatetimeStr(event.start) : '';
+      document.getElementById('editEventEnd').value = event.end ? toLocalDatetimeStr(event.end) : '';
       document.getElementById('editEventRegUrl').value = event.registrationUrl || '';
       document.getElementById('editEventModal').style.display = 'block';
     }
@@ -731,12 +743,16 @@
     async function saveEvent() {
       const eventId = document.getElementById('editingEventId').value;
       if (!eventId) return;
+      var startVal = document.getElementById('editEventStart').value;
+      var endVal = document.getElementById('editEventEnd').value;
       const body = {
         title: document.getElementById('editEventTitle').value.trim(),
         description: document.getElementById('editEventDescription').value.trim(),
         location: document.getElementById('editEventLocation').value.trim(),
         organizer: document.getElementById('editEventOrganizer').value.trim(),
         image_url: document.getElementById('editEventImageUrl').value.trim(),
+        start_time: startVal ? new Date(startVal).toISOString() : undefined,
+        end_time: endVal ? new Date(endVal).toISOString() : undefined,
         registration_url: document.getElementById('editEventRegUrl').value.trim(),
       };
       try {
@@ -1260,6 +1276,19 @@
       const d = document.createElement('div');
       d.textContent = s;
       return d.innerHTML;
+    }
+
+    function toLocalDatetimeStr(isoStr) {
+      try {
+        var d = new Date(isoStr);
+        if (isNaN(d.getTime())) return '';
+        var year = d.getFullYear();
+        var month = String(d.getMonth() + 1).padStart(2, '0');
+        var day = String(d.getDate()).padStart(2, '0');
+        var hours = String(d.getHours()).padStart(2, '0');
+        var mins = String(d.getMinutes()).padStart(2, '0');
+        return year + '-' + month + '-' + day + 'T' + hours + ':' + mins;
+      } catch(e) { return ''; }
     }
 
     document.getElementById('passwordInput').addEventListener('keydown', (e) => {
