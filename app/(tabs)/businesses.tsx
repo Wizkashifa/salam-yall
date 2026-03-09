@@ -47,6 +47,9 @@ interface Business {
   keywords?: string[];
   photo_url?: string;
   booking_url?: string;
+  search_tags?: string[];
+  member_note?: string;
+  hospital_affiliation?: string;
 }
 
 interface PlacesDetails {
@@ -212,7 +215,7 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
 
             <Text style={[styles.detailName, { color: colors.text }]}>{business.name}</Text>
 
-            {rating != null && !isNaN(rating) && rating > 0 ? (
+            {business.category !== "Services" && business.category !== "Healthcare" && rating != null && !isNaN(rating) && rating > 0 ? (
               <View style={styles.ratingRow}>
                 <Text style={[styles.ratingScore, { color: colors.gold }]}>{Number(rating).toFixed(1)}</Text>
                 <Text style={styles.ratingStars}>{renderStars(Number(rating))}</Text>
@@ -220,8 +223,15 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
                   <Text style={[styles.ratingCount, { color: colors.textTertiary }]}>({(reviewCount || 0).toLocaleString()} reviews)</Text>
                 ) : null}
               </View>
-            ) : loadingDetails ? (
+            ) : business.category !== "Services" && business.category !== "Healthcare" && loadingDetails ? (
               <ActivityIndicator size="small" color={colors.gold} style={{ marginVertical: 4 }} />
+            ) : null}
+
+            {business.member_note ? (
+              <View style={[styles.specialtyRow, { backgroundColor: colors.prayerIconBg }]}>
+                <Ionicons name="ribbon-outline" size={14} color={colors.emerald} />
+                <Text style={[styles.specialtyText, { color: colors.emerald }]}>{business.member_note}</Text>
+              </View>
             ) : null}
 
             {business.description ? (
@@ -235,13 +245,10 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
               </View>
             ) : null}
 
-            {business.keywords && business.keywords.length > 0 ? (
-              <View style={styles.keywordDisplayGrid}>
-                {business.keywords.map((kw) => (
-                  <View key={kw} style={[styles.keywordDisplayChip, { backgroundColor: colors.prayerIconBg }]}>
-                    <Text style={[styles.keywordDisplayText, { color: colors.textSecondary }]}>{kw}</Text>
-                  </View>
-                ))}
+            {business.hospital_affiliation ? (
+              <View style={[styles.specialtyRow, { backgroundColor: colors.prayerIconBg }]}>
+                <Ionicons name="business-outline" size={14} color={colors.emerald} />
+                <Text style={[styles.specialtyText, { color: colors.text }]}>Affiliated with {business.hospital_affiliation}</Text>
               </View>
             ) : null}
 
@@ -370,6 +377,7 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [photoUrl, setPhotoUrl] = useState("");
   const [bookingUrl, setBookingUrl] = useState("");
+  const [hospitalAffiliation, setHospitalAffiliation] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
   const availableKeywords = BUSINESS_KEYWORDS[category] || BUSINESS_KEYWORDS._default;
@@ -384,7 +392,7 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/businesses/submit", {
         name, category, description, address, phone, website, email, google_url: googleUrl,
-        specialty, keywords: selectedKeywords, photo_url: photoUrl, booking_url: bookingUrl,
+        specialty, keywords: selectedKeywords, photo_url: photoUrl, booking_url: bookingUrl, hospital_affiliation: hospitalAffiliation,
       });
       return res.json();
     },
@@ -635,6 +643,38 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
               </>
             ) : null}
 
+            {category === "Healthcare" ? (
+              <>
+                <Text style={[styles.fieldLabel, { color: colors.text }]}>Hospital / Clinic Affiliation</Text>
+                <View style={styles.categoryGrid}>
+                  {["UNC-Rex", "Duke", "WakeMed", "MyEyeDr"].map((hosp) => {
+                    const isSelected = hospitalAffiliation === hosp;
+                    return (
+                      <Pressable
+                        key={hosp}
+                        style={[
+                          styles.categoryOption,
+                          { backgroundColor: colors.surface, borderColor: isSelected ? colors.emerald : colors.border },
+                          isSelected && { borderWidth: 2 },
+                        ]}
+                        onPress={() => {
+                          setHospitalAffiliation(isSelected ? "" : hosp);
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        }}
+                      >
+                        <Text style={[styles.categoryOptionText, { color: isSelected ? colors.emerald : colors.text }]}>
+                          {hosp}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <Text style={[styles.fieldHint, { color: colors.textTertiary }]}>
+                  If your practice is not affiliated with these, leave blank or add your Google Maps listing above
+                </Text>
+              </>
+            ) : null}
+
             {category ? (
               <>
                 <Text style={[styles.fieldLabel, { color: colors.text }]}>Tags</Text>
@@ -745,7 +785,8 @@ export default function BusinessesScreen() {
         const matchesSearch = !searchTrimmed || 
           b.name.toLowerCase().includes(searchTrimmed) ||
           (b.description && b.description.toLowerCase().includes(searchTrimmed)) ||
-          (b.address && b.address.toLowerCase().includes(searchTrimmed));
+          (b.address && b.address.toLowerCase().includes(searchTrimmed)) ||
+          (b.search_tags && b.search_tags.some(t => t.toLowerCase().includes(searchTrimmed)));
         return matchesCategory && matchesSearch;
       })
     : [];
@@ -779,7 +820,7 @@ export default function BusinessesScreen() {
               <Text style={[styles.businessName, { color: colors.text }]}>{item.name}</Text>
               <View style={styles.cardSubRow}>
                 <Text style={[styles.categoryLabel, { color: catInfo.color }]}>{item.category}</Text>
-                {rating && rating > 0 ? (
+                {item.category !== "Services" && item.category !== "Healthcare" && rating && rating > 0 ? (
                   <View style={styles.cardRatingRow}>
                     <Text style={[styles.cardRatingScore, { color: colors.gold }]}>{rating.toFixed(1)}</Text>
                     <Text style={styles.cardRatingStars}>{renderStars(rating)}</Text>

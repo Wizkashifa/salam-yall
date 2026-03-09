@@ -1279,7 +1279,7 @@ export default function PrayerScreen() {
               };
               const eventResults = (calendarEvents || []).filter((e: any) => fuzzyMatch(e.title, q) || fuzzyMatch(e.description, q) || fuzzyMatch(e.organizer, q)).slice(0, 5);
               const restaurantResults = (halalRestaurants || []).filter((r: HalalRestaurant) => fuzzyMatch(r.name, q) || (r.cuisine_types || []).some(c => fuzzyMatch(c, q)) || fuzzyMatch(r.formatted_address, q)).slice(0, 5);
-              const businessResults = (businessesData || []).filter((b: any) => fuzzyMatch(b.name, q) || fuzzyMatch(b.category, q) || fuzzyMatch(b.description, q)).slice(0, 5);
+              const businessResults = (businessesData || []).filter((b: any) => fuzzyMatch(b.name, q) || fuzzyMatch(b.category, q) || fuzzyMatch(b.description, q) || (b.search_tags && b.search_tags.some((t: string) => fuzzyMatch(t, q)))).slice(0, 5);
               const totalResults = eventResults.length + restaurantResults.length + businessResults.length;
               if (totalResults === 0) return (
                 <Text style={{ textAlign: "center", marginTop: 40, color: colors.textTertiary, fontFamily: "Inter_400Regular", fontSize: 14 }}>No results found</Text>

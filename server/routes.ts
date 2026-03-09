@@ -666,6 +666,9 @@ async function ensureBusinessesTable(pool: pg.Pool) {
   await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS keywords TEXT[] DEFAULT '{}'`);
   await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS photo_url TEXT DEFAULT ''`);
   await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS booking_url TEXT DEFAULT ''`);
+  await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS search_tags TEXT[] DEFAULT '{}'`);
+  await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS member_note TEXT DEFAULT ''`);
+  await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS hospital_affiliation TEXT DEFAULT ''`);
 
   await pool.query(`UPDATE businesses SET specialty = 'Optometry' WHERE category = 'Healthcare' AND (specialty IS NULL OR specialty = '') AND (name ILIKE '%OD%' OR name ILIKE '%MyEyeDr%')`);
   await pool.query(`UPDATE businesses SET specialty = 'Dermatology' WHERE category = 'Healthcare' AND (specialty IS NULL OR specialty = '') AND name ILIKE '%Dermatology%'`);
@@ -683,16 +686,20 @@ async function ensureBusinessesTable(pool: pg.Pool) {
     { name: "Omar Baloch - The Law Offices of Omar Baloch, PLLC", desc: "Practice Areas: Immigration. The initial consultation is $200. If hired, the $200 will be applied as a credit towards the legal fees. Consultations are by appointment only.", addr: "8801 Fast Park Drive, Suite 313, Raleigh, NC 27617", phone: "(919) 834-3535", web: "https://www.balochlaw.com" },
     { name: "Nigel Edwards - The Law Offices of Omar Baloch, PLLC", desc: "Practice Areas: Immigration, excluding business immigration. The initial consultation is $200. If hired, the $200 will be applied as a credit towards the legal fees. Consultations are by appointment only.", addr: "8801 Fast Park Drive, Suite 313, Raleigh, NC 27617", phone: "(919) 834-3535", web: "https://www.balochlaw.com" },
     { name: "Pooyan Ordoubadi - Law Office of Pooyan Ordoubadi", desc: "Practice Areas: Immigration (Primarily Removal Defense and Federal Appeals), Criminal Defense, and Family Law. Consultations are $150. Attorneys speak Spanish, French, and Farsi. Consultations are by appointment only.", addr: "33 Hillsboro Street, Pittsboro, NC 27312", phone: "(919) 351-1101", web: "https://pordolaw.com" },
+    { name: "Sammy Naji - Triangle Legal", desc: "Practice Areas: Personal Injury, Wills, Trusts, Litigation, Business Law. Please contact him via phone or email (sammy@triangle.legal).", addr: "2500 Regency Parkway, Cary, NC 27518", phone: "(919) 590-3647", web: "https://www.triangle.legal/" },
+    { name: "Nada Mohamed - Law Office of Nada Mohamed, PLLC", desc: "Practice Areas: Estate Planning and Real Estate Transactions. Please call to set up an appointment or email (nada@nrmlawoffice.com).", addr: "64 Forest View Place, Durham, NC 27713", phone: "(919) 808-0067", web: "https://nrmlawoffice.com" },
+    { name: "Hay'ralah Alghorazi - Triangle Legal", desc: "Practice Areas: Estate Planning. Please contact him via phone or email (hayralah@triangle.legal).", addr: "2500 Regency Parkway, Cary, NC 27518", phone: "(919) 590-3647", web: "https://www.triangle.legal/" },
   ];
   for (const a of attorneySeeds) {
     const exists = await pool.query("SELECT id FROM businesses WHERE name = $1", [a.name]);
     if (exists.rows.length === 0) {
       await pool.query(
-        "INSERT INTO businesses (name, category, description, address, phone, website, submitted_by_email, status) VALUES ($1, 'Services', $2, $3, $4, $5, 'admin@salamyall.net', 'approved')",
+        "INSERT INTO businesses (name, category, description, address, phone, website, submitted_by_email, status, member_note, search_tags, place_id) VALUES ($1, 'Services', $2, $3, $4, $5, 'admin@salamyall.net', 'approved', 'Member of NC Muslim Bar', '{lawyer,attorney,legal}', 'none')",
         [a.name, a.desc, a.addr, a.phone, a.web]
       );
     }
   }
+  await pool.query(`UPDATE businesses SET member_note = 'Member of NC Muslim Bar', search_tags = '{lawyer,attorney,legal}', place_id = 'none' WHERE name IN (${attorneySeeds.map((_, i) => `$${i+1}`).join(',')})`, attorneySeeds.map(a => a.name));
 
   await pool.query(`ALTER TABLE halal_restaurants ADD COLUMN IF NOT EXISTS photo_reference TEXT`);
   await pool.query(`ALTER TABLE halal_restaurants ADD COLUMN IF NOT EXISTS place_id VARCHAR(255)`);
@@ -857,7 +864,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/businesses", async (_req, res) => {
     try {
       const result = await pool.query(
-        "SELECT id, name, category, description, address, phone, website, place_id, rating, user_ratings_total, photo_reference, business_hours, lat, lng, specialty, keywords, photo_url, booking_url FROM businesses WHERE status = 'approved' AND category != 'Restaurant' ORDER BY name"
+        "SELECT id, name, category, description, address, phone, website, place_id, rating, user_ratings_total, photo_reference, business_hours, lat, lng, specialty, keywords, photo_url, booking_url, search_tags, member_note, hospital_affiliation FROM businesses WHERE status = 'approved' AND category != 'Restaurant' ORDER BY name"
       );
       res.json(result.rows);
     } catch (error: any) {
@@ -976,7 +983,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/businesses/submit", async (req, res) => {
     try {
-      const { name, category, description, address, phone, website, email, google_url, specialty, keywords, photo_url, booking_url } = req.body;
+      const { name, category, description, address, phone, website, email, google_url, specialty, keywords, photo_url, booking_url, hospital_affiliation } = req.body;
 
       if (!name || !category || !email) {
         return res.status(400).json({ error: "Name, category, and email are required" });
@@ -1003,10 +1010,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const keywordsArray = Array.isArray(keywords) ? keywords : [];
 
       const result = await pool.query(
-        `INSERT INTO businesses (name, category, description, address, phone, website, submitted_by_email, google_url, specialty, keywords, photo_url, booking_url, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'pending')
+        `INSERT INTO businesses (name, category, description, address, phone, website, submitted_by_email, google_url, specialty, keywords, photo_url, booking_url, hospital_affiliation, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'pending')
          RETURNING id`,
-        [name, category, description || "", address || "", phone || "", website || "", email, google_url || "", specialty || "", keywordsArray, photo_url || "", booking_url || ""]
+        [name, category, description || "", address || "", phone || "", website || "", email, google_url || "", specialty || "", keywordsArray, photo_url || "", booking_url || "", hospital_affiliation || ""]
       );
 
       res.status(201).json({
