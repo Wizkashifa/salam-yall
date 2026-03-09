@@ -131,7 +131,7 @@ function EventDetailModal({ event, visible, onClose }: { event: CalendarEvent | 
           <Pressable onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             const shareUrl = `${getApiUrl()}share/event/${encodeURIComponent(event.id)}`;
-            Share.share({ message: `${event.title} — check it out on Salam Y'all! ${shareUrl}` });
+            Share.share({ message: `Salam Y'all check out this event - "${event.title}" - ${shareUrl}` });
           }} hitSlop={8} style={[styles.modalCloseBtn, { backgroundColor: isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.85)" }]}>
             <Ionicons name="share-outline" size={18} color={isDark ? "#fff" : "#374151"} />
           </Pressable>

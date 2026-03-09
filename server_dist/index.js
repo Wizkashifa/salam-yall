@@ -2682,6 +2682,55 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: error.message });
     }
   });
+  const sharePageStyles = `
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;min-height:100vh;background:#0A1F16;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+    .brand{display:flex;align-items:center;gap:10px;margin-bottom:24px}
+    .brand svg{width:32px;height:32px}
+    .brand-name{font-size:20px;font-weight:700;color:#D4A843;letter-spacing:0.5px}
+    .card{max-width:420px;width:100%;background:linear-gradient(145deg,#142E22 0%,#0F2A1E 100%);border-radius:20px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.4),0 0 0 1px rgba(27,107,74,0.2)}
+    .card-image{width:100%;height:200px;object-fit:cover}
+    .card-image-placeholder{width:100%;height:120px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1B6B4A 0%,#0F3D2B 100%);font-size:48px}
+    .card-body{padding:24px}
+    .badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px}
+    .badge-event{background:rgba(27,107,74,0.25);color:#34D399;border:1px solid rgba(27,107,74,0.4)}
+    .badge-restaurant{background:rgba(212,168,67,0.15);color:#D4A843;border:1px solid rgba(212,168,67,0.3)}
+    .badge-business{background:rgba(99,102,241,0.15);color:#A5B4FC;border:1px solid rgba(99,102,241,0.3)}
+    .badge-halal{background:rgba(34,197,94,0.15);color:#4ADE80;border:1px solid rgba(34,197,94,0.3);margin-left:6px}
+    h1{font-size:22px;font-weight:700;line-height:1.3;margin-bottom:8px;color:#F5F5F5}
+    .meta{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+    .meta-row{display:flex;align-items:center;gap:8px;font-size:13px;color:#9CA3AF}
+    .meta-row svg{width:14px;height:14px;flex-shrink:0;fill:#6B7280}
+    .desc{font-size:14px;color:#9CA3AF;line-height:1.6;margin-bottom:20px}
+    .rating{display:flex;align-items:center;gap:4px;font-size:13px;color:#D4A843;margin-bottom:12px}
+    .cta{display:block;text-align:center;background:linear-gradient(135deg,#1B6B4A 0%,#15573D 100%);color:#fff;text-decoration:none;padding:14px 32px;border-radius:12px;font-weight:600;font-size:16px;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 12px rgba(27,107,74,0.3)}
+    .cta:active{transform:scale(0.98)}
+    .get-app{display:block;text-align:center;margin-top:12px;font-size:13px;color:#6B7280;text-decoration:none}
+    .get-app:hover{color:#9CA3AF}
+    .footer{margin-top:24px;font-size:11px;color:#4B5563;text-align:center}
+  `;
+  const crescentSvg = `<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 2C8.268 2 2 8.268 2 16s6.268 14 14 14 14-6.268 14-14S23.732 2 16 2z" fill="#1B6B4A"/><path d="M18.5 6C13.806 6 10 9.806 10 14.5S13.806 23 18.5 23c1.908 0 3.666-.63 5.084-1.693A10.96 10.96 0 0116 24C10.477 24 6 19.523 6 14S10.477 4 16 4c2.761 0 5.262 1.143 7.044 2.98A8.45 8.45 0 0018.5 6z" fill="#D4A843"/><circle cx="22" cy="8" r="1.5" fill="#D4A843"/></svg>`;
+  const calendarSvg = `<svg viewBox="0 0 14 14"><rect x="1" y="2.5" width="12" height="10" rx="1.5" stroke="#6B7280" stroke-width="1.2" fill="none"/><path d="M1 5.5h12" stroke="#6B7280" stroke-width="1.2"/><path d="M4.5 1v3M9.5 1v3" stroke="#6B7280" stroke-width="1.2" stroke-linecap="round"/></svg>`;
+  const pinSvg = `<svg viewBox="0 0 14 14"><path d="M7 1.5C4.79 1.5 3 3.29 3 5.5 3 8.75 7 12.5 7 12.5s4-3.75 4-7c0-2.21-1.79-4-4-4zm0 5.25a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5z" fill="#6B7280"/></svg>`;
+  const clockSvg = `<svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" stroke="#6B7280" stroke-width="1.2" fill="none"/><path d="M7 4v3.5l2.5 1.5" stroke="#6B7280" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const personSvg = `<svg viewBox="0 0 14 14"><circle cx="7" cy="4.5" r="2.5" stroke="#6B7280" stroke-width="1.2" fill="none"/><path d="M2.5 12.5c0-2.485 2.015-4.5 4.5-4.5s4.5 2.015 4.5 4.5" stroke="#6B7280" stroke-width="1.2" stroke-linecap="round" fill="none"/></svg>`;
+  const starSvg = `<svg viewBox="0 0 14 14" width="14" height="14"><path d="M7 1l1.76 3.57 3.94.57-2.85 2.78.67 3.93L7 10.07l-3.52 1.78.67-3.93L1.3 5.14l3.94-.57L7 1z" fill="#D4A843"/></svg>`;
+  function formatShareDate(dateStr) {
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+    } catch {
+      return "";
+    }
+  }
+  function formatShareTime(dateStr) {
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+    } catch {
+      return "";
+    }
+  }
   app2.get("/share/event/:id", async (req, res) => {
     try {
       const { id } = req.params;
@@ -2689,9 +2738,14 @@ async function registerRoutes(app2) {
       const title = event ? event.title : "Community Event";
       const description = event ? (event.description || "").substring(0, 200) || `Event at ${event.organizer || "Salam Y'all"}` : "Check out this event on Salam Y'all";
       const imageUrl = event?.imageUrl || "";
-      const host = req.get("host") || "salamyall.net";
-      const pageUrl = `https://${host}/share/event/${id}`;
-      const deepLink = `salamyall://event/${id}`;
+      const host = (req.get("host") || "salamyall.net").replace(/[^a-zA-Z0-9._:-]/g, "");
+      const safeId = encodeURIComponent(id);
+      const pageUrl = `https://${host}/share/event/${safeId}`;
+      const deepLink = `salamyall://event/${safeId}`;
+      const dateStr = event ? formatShareDate(event.start) : "";
+      const timeStr = event ? `${formatShareTime(event.start)}${event.end ? " \u2013 " + formatShareTime(event.end) : ""}` : "";
+      const location = event?.location || "";
+      const organizer = event?.organizer || "";
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(`<!DOCTYPE html>
 <html>
@@ -2703,26 +2757,33 @@ async function registerRoutes(app2) {
   <meta property="og:description" content="${escapeHtml(description)}">
   <meta property="og:type" content="website">
   <meta property="og:url" content="${pageUrl}">
+  <meta property="og:site_name" content="Salam Y'all">
   ${imageUrl ? `<meta property="og:image" content="${escapeHtml(imageUrl)}">` : ""}
-  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:card" content="${imageUrl ? "summary_large_image" : "summary"}">
   <meta name="twitter:title" content="${escapeHtml(title)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
   ${imageUrl ? `<meta name="twitter:image" content="${escapeHtml(imageUrl)}">` : ""}
-  <style>body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#0A1F16;color:#fff;text-align:center;padding:20px}
-  .card{max-width:400px;background:#142E22;border-radius:16px;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,0.3)}
-  h1{font-size:24px;margin:0 0 8px}p{color:#9CA3AF;font-size:14px;margin:0 0 24px;line-height:1.5}
-  a{display:inline-block;background:#10B981;color:#fff;text-decoration:none;padding:12px 32px;border-radius:10px;font-weight:600;font-size:16px}</style>
+  <style>${sharePageStyles}</style>
 </head>
 <body>
+  <div class="brand">${crescentSvg}<span class="brand-name">Salam Y'all</span></div>
   <div class="card">
-    <h1>${escapeHtml(title)}</h1>
-    <p>${escapeHtml(description.substring(0, 150))}${description.length > 150 ? "..." : ""}</p>
-    <a href="${deepLink}" id="open">Open in App</a>
+    ${imageUrl ? `<img class="card-image" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}">` : `<div class="card-image-placeholder">\u{1F4C5}</div>`}
+    <div class="card-body">
+      <span class="badge badge-event">Event</span>
+      <h1>${escapeHtml(title)}</h1>
+      <div class="meta">
+        ${dateStr ? `<div class="meta-row">${calendarSvg}<span>${escapeHtml(dateStr)}</span></div>` : ""}
+        ${timeStr ? `<div class="meta-row">${clockSvg}<span>${escapeHtml(timeStr)}</span></div>` : ""}
+        ${location ? `<div class="meta-row">${pinSvg}<span>${escapeHtml(location)}</span></div>` : ""}
+        ${organizer ? `<div class="meta-row">${personSvg}<span>${escapeHtml(organizer)}</span></div>` : ""}
+      </div>
+      ${description ? `<p class="desc">${escapeHtml(description.substring(0, 180))}${description.length > 180 ? "..." : ""}</p>` : ""}
+      <a href="${deepLink}" class="cta" id="open">Open in Salam Y'all</a>
+      <a href="${deepLink}" class="get-app">Don't have the app? Get Salam Y'all</a>
+    </div>
   </div>
-  <script>
-    setTimeout(function(){window.location.href="${deepLink}"},500);
-    setTimeout(function(){document.getElementById("open").textContent="Download Salam Y'all"},3000);
-  </script>
+  <div class="footer">Salam Y'all \u2014 Your Triangle Muslim Community App</div>
 </body>
 </html>`);
     } catch (error) {
@@ -2732,13 +2793,21 @@ async function registerRoutes(app2) {
   app2.get("/share/restaurant/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const result = await pool.query("SELECT id, name, formatted_address, halal_comment, is_halal FROM halal_restaurants WHERE id = $1", [id]);
+      const result = await pool.query("SELECT id, name, formatted_address, halal_comment, is_halal, rating, user_ratings_total, cuisine_types, emoji FROM halal_restaurants WHERE id = $1", [id]);
       const restaurant = result.rows[0];
       const title = restaurant ? restaurant.name : "Halal Restaurant";
       const description = restaurant ? restaurant.halal_comment || restaurant.formatted_address || `${restaurant.is_halal === "IS_HALAL" ? "Halal" : "Halal restaurant"} on Salam Y'all` : "Check out this restaurant on Salam Y'all";
-      const host = req.get("host") || "salamyall.net";
-      const pageUrl = `https://${host}/share/restaurant/${id}`;
-      const deepLink = `salamyall://restaurant/${id}`;
+      const host = (req.get("host") || "salamyall.net").replace(/[^a-zA-Z0-9._:-]/g, "");
+      const safeId = encodeURIComponent(id);
+      const pageUrl = `https://${host}/share/restaurant/${safeId}`;
+      const deepLink = `salamyall://restaurant/${safeId}`;
+      const address = restaurant?.formatted_address || "";
+      const rating = restaurant?.rating ? parseFloat(restaurant.rating) : 0;
+      const totalRatings = restaurant?.user_ratings_total || 0;
+      const emoji = restaurant?.emoji || "\u{1F37D}\uFE0F";
+      const isHalal = restaurant?.is_halal === "IS_HALAL";
+      const cuisines = restaurant?.cuisine_types || [];
+      const cuisineLabel = cuisines.length > 0 ? cuisines[0].replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()) : "";
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(`<!DOCTYPE html>
 <html>
@@ -2750,24 +2819,32 @@ async function registerRoutes(app2) {
   <meta property="og:description" content="${escapeHtml(description)}">
   <meta property="og:type" content="website">
   <meta property="og:url" content="${pageUrl}">
+  <meta property="og:site_name" content="Salam Y'all">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="${escapeHtml(title)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
-  <style>body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#0A1F16;color:#fff;text-align:center;padding:20px}
-  .card{max-width:400px;background:#142E22;border-radius:16px;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,0.3)}
-  h1{font-size:24px;margin:0 0 8px}p{color:#9CA3AF;font-size:14px;margin:0 0 24px;line-height:1.5}
-  a{display:inline-block;background:#10B981;color:#fff;text-decoration:none;padding:12px 32px;border-radius:10px;font-weight:600;font-size:16px}</style>
+  <style>${sharePageStyles}</style>
 </head>
 <body>
+  <div class="brand">${crescentSvg}<span class="brand-name">Salam Y'all</span></div>
   <div class="card">
-    <h1>${escapeHtml(title)}</h1>
-    <p>${escapeHtml(description.substring(0, 150))}${description.length > 150 ? "..." : ""}</p>
-    <a href="${deepLink}" id="open">Open in App</a>
+    <div class="card-image-placeholder">${escapeHtml(emoji)}</div>
+    <div class="card-body">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <span class="badge badge-restaurant">${escapeHtml(cuisineLabel || "Restaurant")}</span>
+        ${isHalal ? `<span class="badge badge-halal">Halal</span>` : ""}
+      </div>
+      <h1>${escapeHtml(title)}</h1>
+      ${rating > 0 ? `<div class="rating">${starSvg}<span>${rating.toFixed(1)}</span><span style="color:#6B7280">(${totalRatings})</span></div>` : ""}
+      <div class="meta">
+        ${address ? `<div class="meta-row">${pinSvg}<span>${escapeHtml(address)}</span></div>` : ""}
+      </div>
+      ${description ? `<p class="desc">${escapeHtml(description.substring(0, 180))}${description.length > 180 ? "..." : ""}</p>` : ""}
+      <a href="${deepLink}" class="cta" id="open">Open in Salam Y'all</a>
+      <a href="${deepLink}" class="get-app">Don't have the app? Get Salam Y'all</a>
+    </div>
   </div>
-  <script>
-    setTimeout(function(){window.location.href="${deepLink}"},500);
-    setTimeout(function(){document.getElementById("open").textContent="Download Salam Y'all"},3000);
-  </script>
+  <div class="footer">Salam Y'all \u2014 Your Triangle Muslim Community App</div>
 </body>
 </html>`);
     } catch (error) {
@@ -2777,13 +2854,16 @@ async function registerRoutes(app2) {
   app2.get("/share/business/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const result = await pool.query("SELECT id, name, category, description, address FROM businesses WHERE id = $1 AND status = 'approved'", [id]);
+      const result = await pool.query("SELECT id, name, category, description, address, phone, website FROM businesses WHERE id = $1 AND status = 'approved'", [id]);
       const business = result.rows[0];
       const title = business ? business.name : "Local Business";
       const description = business ? business.description || `${business.category} business in ${business.address || "the Triangle area"}` : "Check out this business on Salam Y'all";
-      const host = req.get("host") || "salamyall.net";
-      const pageUrl = `https://${host}/share/business/${id}`;
-      const deepLink = `salamyall://business/${id}`;
+      const host = (req.get("host") || "salamyall.net").replace(/[^a-zA-Z0-9._:-]/g, "");
+      const safeId = encodeURIComponent(id);
+      const pageUrl = `https://${host}/share/business/${safeId}`;
+      const deepLink = `salamyall://business/${safeId}`;
+      const category = business?.category || "Business";
+      const address = business?.address || "";
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(`<!DOCTYPE html>
 <html>
@@ -2795,24 +2875,28 @@ async function registerRoutes(app2) {
   <meta property="og:description" content="${escapeHtml(description)}">
   <meta property="og:type" content="website">
   <meta property="og:url" content="${pageUrl}">
+  <meta property="og:site_name" content="Salam Y'all">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="${escapeHtml(title)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
-  <style>body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#0A1F16;color:#fff;text-align:center;padding:20px}
-  .card{max-width:400px;background:#142E22;border-radius:16px;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,0.3)}
-  h1{font-size:24px;margin:0 0 8px}p{color:#9CA3AF;font-size:14px;margin:0 0 24px;line-height:1.5}
-  a{display:inline-block;background:#10B981;color:#fff;text-decoration:none;padding:12px 32px;border-radius:10px;font-weight:600;font-size:16px}</style>
+  <style>${sharePageStyles}</style>
 </head>
 <body>
+  <div class="brand">${crescentSvg}<span class="brand-name">Salam Y'all</span></div>
   <div class="card">
-    <h1>${escapeHtml(title)}</h1>
-    <p>${escapeHtml(description.substring(0, 150))}${description.length > 150 ? "..." : ""}</p>
-    <a href="${deepLink}" id="open">Open in App</a>
+    <div class="card-image-placeholder">\u{1F3E2}</div>
+    <div class="card-body">
+      <span class="badge badge-business">${escapeHtml(category)}</span>
+      <h1>${escapeHtml(title)}</h1>
+      <div class="meta">
+        ${address ? `<div class="meta-row">${pinSvg}<span>${escapeHtml(address)}</span></div>` : ""}
+      </div>
+      ${description ? `<p class="desc">${escapeHtml(description.substring(0, 180))}${description.length > 180 ? "..." : ""}</p>` : ""}
+      <a href="${deepLink}" class="cta" id="open">Open in Salam Y'all</a>
+      <a href="${deepLink}" class="get-app">Don't have the app? Get Salam Y'all</a>
+    </div>
   </div>
-  <script>
-    setTimeout(function(){window.location.href="${deepLink}"},500);
-    setTimeout(function(){document.getElementById("open").textContent="Download Salam Y'all"},3000);
-  </script>
+  <div class="footer">Salam Y'all \u2014 Your Triangle Muslim Community App</div>
 </body>
 </html>`);
     } catch (error) {
