@@ -673,6 +673,27 @@ async function ensureBusinessesTable(pool: pg.Pool) {
 
   await pool.query(`UPDATE businesses SET website = 'https://curatestudioevents.com/' WHERE name ILIKE '%Curate Studio%' AND (website IS NULL OR website = '')`);
 
+  const attorneySeeds = [
+    { name: "Mousa Alshanteer, Associate Attorney - Brooks Pierce", desc: "Practice Areas: Healthcare, Business, Corporate, Mergers & Acquisitions, and Transactional. Please call and ask to be directed to his office. He will try to return your call if he feels that he or his firm may be of any help. He may also provide a referral for a firm that is better suited for the case. This attorney bills by the hour.", addr: "230 North Elm Street, 2000 Renaissance Plaza, Greensboro, NC 27401", phone: "(336) 373-8850", web: "https://www.brookspierce.com/people-mousa-alshanteer" },
+    { name: "The Law Office of Neubia L. Harris, PLLC", desc: "Practice Areas: Education Law and Civil Rights. Please contact the firm by phone or on the Contact Us form on the website to see if we can assist you with your case.", addr: "312 W. Millbrook Road, Ste. 141, Raleigh, NC 27609", phone: "(919) 526-0500", web: "https://www.neubiaharrislaw.com" },
+    { name: "Patterson Harkavy LLP", desc: "Practice Areas: Civil Rights, Employment, Workers Compensation, Labor, Police Misconduct. Please contact the firm by phone or email (office@pathlaw.com) to see if they can help you with your case.", addr: "100 Europa Drive, Suite 420, Chapel Hill, NC 27517", phone: "(919) 942-5200", web: "https://www.pathlaw.com" },
+    { name: "Ayeshinaye Smith, Esq. - Smith Dominguez, PLLC", desc: "Practice Areas: Family Law and Estates (Planning, Administration, and Guardianship). Family law initial consultations are $300. Couples estate planning initial consultations are $350 for 90 minutes. All other initial consultations are $200. If hired within 48 hours, the fee will be applied as a credit towards legal fees.", addr: "4816 Six Forks Road, Suite 202, Raleigh, NC 27609", phone: "(919) 390-3512", web: "https://www.smithdominguez.com" },
+    { name: "The Law Office of Derrick J. Hensley, PLLC", desc: "Practice Areas: Child Welfare/Adoptions, Immigration, and International Family Law. Please call to schedule a consultation (fee $250). We can arrange for a phone interpreter.", addr: "401 Meadowlands Dr. Ste. 201, Hillsborough, NC 27278", phone: "(919) 480-1999", web: "https://www.LODJH.com" },
+    { name: "Safwan Ali - Ali Law Firm PLLC", desc: "Practice Areas: Immigration and Traffic. The initial consultation is $150. Consultations are by appointment only. Please call to schedule.", addr: "PO Box 1046, Henderson, NC 27536", phone: "(919) 213-1945", web: "https://www.alilawfirm.net" },
+    { name: "Omar Baloch - The Law Offices of Omar Baloch, PLLC", desc: "Practice Areas: Immigration. The initial consultation is $200. If hired, the $200 will be applied as a credit towards the legal fees. Consultations are by appointment only.", addr: "8801 Fast Park Drive, Suite 313, Raleigh, NC 27617", phone: "(919) 834-3535", web: "https://www.balochlaw.com" },
+    { name: "Nigel Edwards - The Law Offices of Omar Baloch, PLLC", desc: "Practice Areas: Immigration, excluding business immigration. The initial consultation is $200. If hired, the $200 will be applied as a credit towards the legal fees. Consultations are by appointment only.", addr: "8801 Fast Park Drive, Suite 313, Raleigh, NC 27617", phone: "(919) 834-3535", web: "https://www.balochlaw.com" },
+    { name: "Pooyan Ordoubadi - Law Office of Pooyan Ordoubadi", desc: "Practice Areas: Immigration (Primarily Removal Defense and Federal Appeals), Criminal Defense, and Family Law. Consultations are $150. Attorneys speak Spanish, French, and Farsi. Consultations are by appointment only.", addr: "33 Hillsboro Street, Pittsboro, NC 27312", phone: "(919) 351-1101", web: "https://pordolaw.com" },
+  ];
+  for (const a of attorneySeeds) {
+    const exists = await pool.query("SELECT id FROM businesses WHERE name = $1", [a.name]);
+    if (exists.rows.length === 0) {
+      await pool.query(
+        "INSERT INTO businesses (name, category, description, address, phone, website, submitted_by_email, status) VALUES ($1, 'Services', $2, $3, $4, $5, 'admin@salamyall.net', 'approved')",
+        [a.name, a.desc, a.addr, a.phone, a.web]
+      );
+    }
+  }
+
   await pool.query(`ALTER TABLE halal_restaurants ADD COLUMN IF NOT EXISTS photo_reference TEXT`);
   await pool.query(`ALTER TABLE halal_restaurants ADD COLUMN IF NOT EXISTS place_id VARCHAR(255)`);
 
