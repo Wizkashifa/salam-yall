@@ -46,6 +46,429 @@ var halal_seed_data_default = [{ id: 215, external_id: 155, name: "9 Spices Indi
 
 Confirmed by email on Sep 2022 and again on May 10th 2023: We still currently use Creekstone Farms as our sole steak provider. Please read: "The only issues they (Creekstone/Sycamore) do face sometimes is the availability of their Tenderloins. With that said we can guarantee that all ribeyes, and strips are definitely Creekstone. As far as tenderloins I would ask upon arrival if that is what you are interested in. ... the sauce on the beef is made from beef bones... we do not carry any other bottled sauces but have basil aoili or fig royale sauce that is an alternative...We also aren't against you bringing in your own alternative sauce since it is for a very important reason."`, cuisine_types: ["AMERICAN"], emoji: "\u{1F969}", evidence: null, considerations: ["SERVES_ALCOHOL"], opening_hours: { type: null, openNow: false, periods: [{ open: { day: "WEDNESDAY", time: [17, 0] }, close: { day: "WEDNESDAY", time: [21, 0] } }, { open: { day: "THURSDAY", time: [17, 0] }, close: { day: "THURSDAY", time: [21, 0] } }, { open: { day: "FRIDAY", time: [17, 0] }, close: { day: "FRIDAY", time: [21, 0] } }, { open: { day: "SATURDAY", time: [17, 0] }, close: { day: "SATURDAY", time: [21, 0] } }], specialDays: null, weekdayText: ["Monday: Closed", "Tuesday: Closed", "Wednesday: 5:00\u2009\u2013\u20099:00\u202FPM", "Thursday: 5:00\u2009\u2013\u20099:00\u202FPM", "Friday: 5:00\u2009\u2013\u20099:00\u202FPM", "Saturday: 5:00\u2009\u2013\u20099:00\u202FPM", "Sunday: Closed"] } }, { id: 152, external_id: 36, name: "Tribeca Tavern", formatted_address: "500 Ledgestone Way, Cary, NC 27519, USA", formatted_phone: "(919) 465-3055", url: "https://maps.google.com/?cid=2131572253576910880", lat: 35.7921383, lng: -78.84773100000001, is_halal: "PARTIALLY_HALAL", halal_comment: "All beef is Halal & sourced from Chatham Meat Co. All  chicken is also Halal. However, the the fried products use a common fryer with pork and other non-Halal products so there is cross contamination and fried products are not Halal.", cuisine_types: ["AMERICAN"], emoji: "\u{1F354}", evidence: ["MANAGEMENT_CONFIRMED"], considerations: ["SERVES_PORK", "SERVES_ALCOHOL"], opening_hours: { type: null, openNow: true, periods: [{ open: { day: "SUNDAY", time: [11, 0] }, close: { day: "SUNDAY", time: [22, 0] } }, { open: { day: "MONDAY", time: [11, 0] }, close: { day: "MONDAY", time: [22, 0] } }, { open: { day: "TUESDAY", time: [11, 0] }, close: { day: "TUESDAY", time: [22, 0] } }, { open: { day: "WEDNESDAY", time: [11, 0] }, close: { day: "WEDNESDAY", time: [22, 0] } }, { open: { day: "THURSDAY", time: [11, 0] }, close: { day: "THURSDAY", time: [22, 0] } }, { open: { day: "FRIDAY", time: [11, 0] }, close: { day: "FRIDAY", time: [22, 0] } }, { open: { day: "SATURDAY", time: [11, 0] }, close: { day: "SATURDAY", time: [22, 0] } }], specialDays: null, weekdayText: ["Monday: 11:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Tuesday: 11:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Wednesday: 11:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Thursday: 11:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Friday: 11:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Saturday: 11:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Sunday: 11:00\u202FAM\u2009\u2013\u200910:00\u202FPM"] } }, { id: 314, external_id: 264, name: "Truva Turkish Kitchen Charlotte", formatted_address: "9213 Baybrook Ln, Charlotte, NC 28277, USA", formatted_phone: "(980) 207-4372", url: "https://maps.google.com/?cid=10904757427269254337", lat: 35.0795164, lng: -80.8289673, is_halal: "IS_HALAL", halal_comment: "Owner confirmed full halal menu", cuisine_types: ["TURKISH"], emoji: null, evidence: null, considerations: null, opening_hours: { type: null, openNow: true, periods: [{ open: { day: "SUNDAY", time: [12, 0] }, close: { day: "SUNDAY", time: [21, 0] } }, { open: { day: "MONDAY", time: [11, 0] }, close: { day: "MONDAY", time: [21, 0] } }, { open: { day: "TUESDAY", time: [11, 0] }, close: { day: "TUESDAY", time: [21, 0] } }, { open: { day: "WEDNESDAY", time: [11, 0] }, close: { day: "WEDNESDAY", time: [21, 0] } }, { open: { day: "THURSDAY", time: [11, 0] }, close: { day: "THURSDAY", time: [21, 0] } }, { open: { day: "FRIDAY", time: [11, 0] }, close: { day: "FRIDAY", time: [22, 0] } }, { open: { day: "SATURDAY", time: [12, 0] }, close: { day: "SATURDAY", time: [22, 0] } }], specialDays: null, weekdayText: ["Monday: 11:00\u202FAM\u2009\u2013\u20099:00\u202FPM", "Tuesday: 11:00\u202FAM\u2009\u2013\u20099:00\u202FPM", "Wednesday: 11:00\u202FAM\u2009\u2013\u20099:00\u202FPM", "Thursday: 11:00\u202FAM\u2009\u2013\u20099:00\u202FPM", "Friday: 11:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Saturday: 12:00\u2009\u2013\u200910:00\u202FPM", "Sunday: 12:00\u2009\u2013\u20099:00\u202FPM"] } }, { id: 127, external_id: 73, name: "US Fried Chicken", formatted_address: "2823 W Sugar Creek Rd, Charlotte, NC 28262, USA", formatted_phone: "(704) 921-2420", url: "https://maps.google.com/?cid=5805633365118930735", lat: 35.3006566, lng: -80.8021987, is_halal: "IS_HALAL", halal_comment: "Nationwide Chain and it is Halal as clearly advertised on the website", cuisine_types: ["AMERICAN"], emoji: "\u{1F357}", evidence: ["MANAGEMENT_CONFIRMED"], considerations: null, opening_hours: { type: null, openNow: false, periods: [{ open: { day: "SUNDAY", time: [11, 0] }, close: { day: "SUNDAY", time: [21, 0] } }, { open: { day: "MONDAY", time: [11, 0] }, close: { day: "MONDAY", time: [21, 0] } }, { open: { day: "TUESDAY", time: [11, 0] }, close: { day: "TUESDAY", time: [21, 0] } }, { open: { day: "WEDNESDAY", time: [11, 0] }, close: { day: "WEDNESDAY", time: [21, 0] } }, { open: { day: "THURSDAY", time: [11, 0] }, close: { day: "THURSDAY", time: [21, 0] } }, { open: { day: "FRIDAY", time: [11, 0] }, close: { day: "FRIDAY", time: [22, 0] } }, { open: { day: "SATURDAY", time: [11, 0] }, close: { day: "SATURDAY", time: [22, 0] } }], specialDays: null, weekdayText: ["Monday: 11:00\u202FAM\u2009\u2013\u20099:00\u202FPM", "Tuesday: 11:00\u202FAM\u2009\u2013\u20099:00\u202FPM", "Wednesday: 11:00\u202FAM\u2009\u2013\u20099:00\u202FPM", "Thursday: 11:00\u202FAM\u2009\u2013\u20099:00\u202FPM", "Friday: 11:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Saturday: 11:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Sunday: 11:00\u202FAM\u2009\u2013\u20099:00\u202FPM"] } }, { id: 142, external_id: 74, name: "US Fried Chicken", formatted_address: "5600 Albemarle Rd Suite 800, Charlotte, NC 28212, USA", formatted_phone: "(704) 417-0741", url: "https://maps.google.com/?cid=11565127364290583097", lat: 35.2029023, lng: -80.7531827, is_halal: "IS_HALAL", halal_comment: "Nationwide chain and it is Halal as clearly advertised on the website", cuisine_types: ["AMERICAN"], emoji: "\u{1F357}", evidence: ["MANAGEMENT_CONFIRMED"], considerations: null, opening_hours: { type: null, openNow: false, periods: [{ open: { day: "SUNDAY", time: [11, 0] }, close: { day: "SUNDAY", time: [21, 0] } }, { open: { day: "MONDAY", time: [11, 0] }, close: { day: "MONDAY", time: [21, 0] } }, { open: { day: "TUESDAY", time: [11, 0] }, close: { day: "TUESDAY", time: [21, 0] } }, { open: { day: "WEDNESDAY", time: [11, 0] }, close: { day: "WEDNESDAY", time: [21, 0] } }, { open: { day: "THURSDAY", time: [11, 0] }, close: { day: "THURSDAY", time: [21, 0] } }, { open: { day: "FRIDAY", time: [11, 0] }, close: { day: "FRIDAY", time: [22, 0] } }, { open: { day: "SATURDAY", time: [11, 0] }, close: { day: "SATURDAY", time: [22, 0] } }], specialDays: null, weekdayText: ["Monday: 11:00\u202FAM\u2009\u2013\u20099:00\u202FPM", "Tuesday: 11:00\u202FAM\u2009\u2013\u20099:00\u202FPM", "Wednesday: 11:00\u202FAM\u2009\u2013\u20099:00\u202FPM", "Thursday: 11:00\u202FAM\u2009\u2013\u20099:00\u202FPM", "Friday: 11:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Saturday: 11:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Sunday: 11:00\u202FAM\u2009\u2013\u20099:00\u202FPM"] } }, { id: 126, external_id: 72, name: "US Fried Chicken", formatted_address: "9605 N Tryon St Z, Charlotte, NC 28262, USA", formatted_phone: "(704) 900-8127", url: "https://maps.google.com/?cid=2121291056715228118", lat: 35.3174749, lng: -80.7397002, is_halal: "IS_HALAL", halal_comment: "Nationwide Chain and it is Halal as clearly advertised on the website", cuisine_types: ["AMERICAN"], emoji: "\u{1F357}", evidence: ["MANAGEMENT_CONFIRMED"], considerations: null, opening_hours: { type: null, openNow: false, periods: [{ open: { day: "SUNDAY", time: [11, 0] }, close: { day: "SUNDAY", time: [20, 45] } }, { open: { day: "TUESDAY", time: [11, 0] }, close: { day: "TUESDAY", time: [20, 45] } }, { open: { day: "WEDNESDAY", time: [11, 0] }, close: { day: "WEDNESDAY", time: [20, 45] } }, { open: { day: "THURSDAY", time: [11, 0] }, close: { day: "THURSDAY", time: [20, 45] } }, { open: { day: "FRIDAY", time: [11, 0] }, close: { day: "FRIDAY", time: [21, 45] } }, { open: { day: "SATURDAY", time: [11, 0] }, close: { day: "SATURDAY", time: [21, 45] } }], specialDays: null, weekdayText: ["Monday: Closed", "Tuesday: 11:00\u202FAM\u2009\u2013\u20098:45\u202FPM", "Wednesday: 11:00\u202FAM\u2009\u2013\u20098:45\u202FPM", "Thursday: 11:00\u202FAM\u2009\u2013\u20098:45\u202FPM", "Friday: 11:00\u202FAM\u2009\u2013\u20099:45\u202FPM", "Saturday: 11:00\u202FAM\u2009\u2013\u20099:45\u202FPM", "Sunday: 11:00\u202FAM\u2009\u2013\u20098:45\u202FPM"] } }, { id: 143, external_id: 75, name: "US Fried Chicken", formatted_address: "310 E Trade St Suite A150, Charlotte, NC 28202, USA", formatted_phone: null, url: "https://maps.google.com/?cid=14856208274260275535", lat: 35.22431979999999, lng: -80.84120209999999, is_halal: "IS_HALAL", halal_comment: "Nationwide chain and it is Halal as clearly advertised on the website", cuisine_types: ["AMERICAN"], emoji: "\u{1F357}", evidence: ["MANAGEMENT_CONFIRMED"], considerations: null, opening_hours: { type: null, openNow: false, periods: [{ open: { day: "MONDAY", time: [8, 0] }, close: { day: "MONDAY", time: [18, 0] } }, { open: { day: "TUESDAY", time: [8, 0] }, close: { day: "TUESDAY", time: [18, 0] } }, { open: { day: "WEDNESDAY", time: [8, 0] }, close: { day: "WEDNESDAY", time: [18, 0] } }, { open: { day: "THURSDAY", time: [8, 0] }, close: { day: "THURSDAY", time: [18, 0] } }, { open: { day: "FRIDAY", time: [8, 0] }, close: { day: "FRIDAY", time: [18, 0] } }, { open: { day: "SATURDAY", time: [10, 0] }, close: { day: "SATURDAY", time: [16, 0] } }], specialDays: null, weekdayText: ["Monday: 8:00\u202FAM\u2009\u2013\u20096:00\u202FPM", "Tuesday: 8:00\u202FAM\u2009\u2013\u20096:00\u202FPM", "Wednesday: 8:00\u202FAM\u2009\u2013\u20096:00\u202FPM", "Thursday: 8:00\u202FAM\u2009\u2013\u20096:00\u202FPM", "Friday: 8:00\u202FAM\u2009\u2013\u20096:00\u202FPM", "Saturday: 10:00\u202FAM\u2009\u2013\u20094:00\u202FPM", "Sunday: Closed"] } }, { id: 279, external_id: 225, name: "Uncle Phil\u2019s Cheesesteaks", formatted_address: "1120 Corbett Ave N, Wilson, NC 27893, USA", formatted_phone: null, url: "https://maps.google.com/?cid=17366078912139904469", lat: 35.7425797, lng: -77.9110133, is_halal: "PARTIALLY_HALAL", halal_comment: "Everything is halal except for the hot dogs and chili for hotdogs", cuisine_types: ["AMERICAN"], emoji: "\u{1F354}", evidence: null, considerations: ["PARTIALLY_HALAL"], opening_hours: { type: null, openNow: true, periods: [{ open: { day: "SUNDAY", time: [11, 0] }, close: { day: "SUNDAY", time: [20, 0] } }, { open: { day: "MONDAY", time: [11, 0] }, close: { day: "MONDAY", time: [20, 0] } }, { open: { day: "TUESDAY", time: [11, 0] }, close: { day: "TUESDAY", time: [20, 0] } }, { open: { day: "WEDNESDAY", time: [11, 0] }, close: { day: "WEDNESDAY", time: [20, 0] } }, { open: { day: "THURSDAY", time: [11, 0] }, close: { day: "THURSDAY", time: [20, 0] } }, { open: { day: "FRIDAY", time: [11, 0] }, close: { day: "FRIDAY", time: [20, 0] } }, { open: { day: "SATURDAY", time: [11, 0] }, close: { day: "SATURDAY", time: [20, 0] } }], specialDays: null, weekdayText: ["Monday: 11:00\u202FAM\u2009\u2013\u20098:00\u202FPM", "Tuesday: 11:00\u202FAM\u2009\u2013\u20098:00\u202FPM", "Wednesday: 11:00\u202FAM\u2009\u2013\u20098:00\u202FPM", "Thursday: 11:00\u202FAM\u2009\u2013\u20098:00\u202FPM", "Friday: 11:00\u202FAM\u2009\u2013\u20098:00\u202FPM", "Saturday: 11:00\u202FAM\u2009\u2013\u20098:00\u202FPM", "Sunday: 11:00\u202FAM\u2009\u2013\u20098:00\u202FPM"] } }, { id: 231, external_id: 148, name: "Unreal Curry", formatted_address: "2206 S Main St, Wake Forest, NC 27587, USA", formatted_phone: "(336) 312-5531", url: "https://maps.google.com/?cid=9565977760902929861", lat: 35.9471247, lng: -78.5371667, is_halal: "IS_HALAL", halal_comment: "Owner states that all menu items are halal.", cuisine_types: ["INDIAN_PAKISTANI", "NEPALI"], emoji: "\u{1F958}", evidence: null, considerations: null, opening_hours: { type: null, openNow: true, periods: [{ open: { day: "SUNDAY", time: [8, 0] }, close: { day: "SUNDAY", time: [21, 30] } }, { open: { day: "MONDAY", time: [8, 0] }, close: { day: "MONDAY", time: [21, 30] } }, { open: { day: "WEDNESDAY", time: [8, 0] }, close: { day: "WEDNESDAY", time: [21, 30] } }, { open: { day: "THURSDAY", time: [8, 0] }, close: { day: "THURSDAY", time: [21, 30] } }, { open: { day: "FRIDAY", time: [9, 0] }, close: { day: "FRIDAY", time: [17, 0] } }, { open: { day: "SATURDAY", time: [8, 0] }, close: { day: "SATURDAY", time: [21, 30] } }], specialDays: null, weekdayText: ["Monday: 8:00\u202FAM\u2009\u2013\u20099:30\u202FPM", "Tuesday: Closed", "Wednesday: 8:00\u202FAM\u2009\u2013\u20099:30\u202FPM", "Thursday: 8:00\u202FAM\u2009\u2013\u20099:30\u202FPM", "Friday: 9:00\u202FAM\u2009\u2013\u20095:00\u202FPM", "Saturday: 8:00\u202FAM\u2009\u2013\u20099:30\u202FPM", "Sunday: 8:00\u202FAM\u2009\u2013\u20099:30\u202FPM"] } }, { id: 254, external_id: 198, name: "Urban Turban Indian Grill and Bar", formatted_address: "1125 NC-54 #301, Durham, NC 27707, USA", formatted_phone: "(984) 666-5216", url: "https://maps.google.com/?cid=12129090614842971877", lat: 35.9181608, lng: -78.9577034, is_halal: "IS_HALAL", halal_comment: "According to users that personally know owner, they only sell halal.", cuisine_types: ["INDIAN_PAKISTANI"], emoji: "\u{1F357}", evidence: null, considerations: ["SERVES_ALCOHOL"], opening_hours: { type: null, openNow: true, periods: [{ open: { day: "SUNDAY", time: [11, 0] }, close: { day: "SUNDAY", time: [21, 30] } }, { open: { day: "MONDAY", time: [11, 0] }, close: { day: "MONDAY", time: [21, 30] } }, { open: { day: "TUESDAY", time: [11, 0] }, close: { day: "TUESDAY", time: [21, 30] } }, { open: { day: "WEDNESDAY", time: [11, 0] }, close: { day: "WEDNESDAY", time: [21, 30] } }, { open: { day: "THURSDAY", time: [11, 0] }, close: { day: "THURSDAY", time: [21, 30] } }, { open: { day: "FRIDAY", time: [11, 0] }, close: { day: "FRIDAY", time: [21, 30] } }, { open: { day: "SATURDAY", time: [11, 0] }, close: { day: "SATURDAY", time: [21, 30] } }], specialDays: null, weekdayText: ["Monday: 11:00\u202FAM\u2009\u2013\u20099:30\u202FPM", "Tuesday: 11:00\u202FAM\u2009\u2013\u20099:30\u202FPM", "Wednesday: 11:00\u202FAM\u2009\u2013\u20099:30\u202FPM", "Thursday: 11:00\u202FAM\u2009\u2013\u20099:30\u202FPM", "Friday: 11:00\u202FAM\u2009\u2013\u20099:30\u202FPM", "Saturday: 11:00\u202FAM\u2009\u2013\u20099:30\u202FPM", "Sunday: 11:00\u202FAM\u2009\u2013\u20099:30\u202FPM"] } }, { id: 295, external_id: 203, name: "Vera Pizza and Grill", formatted_address: "6091 Capital Blvd, Raleigh, NC 27616, USA", formatted_phone: "(919) 301-8198", url: "https://maps.google.com/?cid=16176355544068008547", lat: 35.8683785, lng: -78.5833399, is_halal: "PARTIALLY_HALAL", halal_comment: "You have to specify halal toppings, there are some pork products on the menu", cuisine_types: ["AMERICAN"], emoji: "\u{1F355}", evidence: null, considerations: null, opening_hours: { type: null, openNow: false, periods: [{ open: { day: "SUNDAY", time: [12, 0] }, close: { day: "SUNDAY", time: [19, 0] } }, { open: { day: "MONDAY", time: [11, 0] }, close: { day: "MONDAY", time: [21, 0] } }, { open: { day: "TUESDAY", time: [11, 0] }, close: { day: "TUESDAY", time: [21, 0] } }, { open: { day: "WEDNESDAY", time: [11, 0] }, close: { day: "WEDNESDAY", time: [21, 0] } }, { open: { day: "THURSDAY", time: [11, 0] }, close: { day: "THURSDAY", time: [21, 0] } }, { open: { day: "FRIDAY", time: [11, 0] }, close: { day: "FRIDAY", time: [22, 0] } }, { open: { day: "SATURDAY", time: [11, 0] }, close: { day: "SATURDAY", time: [22, 0] } }], specialDays: null, weekdayText: ["Monday: 11:00\u202FAM\u2009\u2013\u20099:00\u202FPM", "Tuesday: 11:00\u202FAM\u2009\u2013\u20099:00\u202FPM", "Wednesday: 11:00\u202FAM\u2009\u2013\u20099:00\u202FPM", "Thursday: 11:00\u202FAM\u2009\u2013\u20099:00\u202FPM", "Friday: 11:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Saturday: 11:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Sunday: 12:00\u2009\u2013\u20097:00\u202FPM"] } }, { id: 261, external_id: 202, name: "Viceroy", formatted_address: "335 W Main St, Durham, NC 27701, USA", formatted_phone: "(919) 797-0413", url: "https://maps.google.com/?cid=8175680794227386222", lat: 35.99653929999999, lng: -78.9036861, is_halal: "PARTIALLY_HALAL", halal_comment: "@Raleating (Instagram) stated all items are Halal except Sausage Rolls and Shepards Pie", cuisine_types: ["INDIAN_PAKISTANI"], emoji: "\u{1F958}", evidence: null, considerations: ["SERVES_ALCOHOL"], opening_hours: { type: null, openNow: false, periods: [{ open: { day: "SUNDAY", time: [17, 0] }, close: { day: "SUNDAY", time: [22, 0] } }, { open: { day: "MONDAY", time: [17, 0] }, close: { day: "MONDAY", time: [22, 0] } }, { open: { day: "WEDNESDAY", time: [17, 0] }, close: { day: "WEDNESDAY", time: [22, 0] } }, { open: { day: "THURSDAY", time: [17, 0] }, close: { day: "THURSDAY", time: [22, 0] } }, { open: { day: "FRIDAY", time: [17, 0] }, close: { day: "FRIDAY", time: [22, 30] } }, { open: { day: "SATURDAY", time: [17, 0] }, close: { day: "SATURDAY", time: [22, 30] } }], specialDays: null, weekdayText: ["Monday: 5:00\u2009\u2013\u200910:00\u202FPM", "Tuesday: Closed", "Wednesday: 5:00\u2009\u2013\u200910:00\u202FPM", "Thursday: 5:00\u2009\u2013\u200910:00\u202FPM", "Friday: 5:00\u2009\u2013\u200910:30\u202FPM", "Saturday: 5:00\u2009\u2013\u200910:30\u202FPM", "Sunday: 5:00\u2009\u2013\u200910:00\u202FPM"] } }, { id: 76, external_id: 967, name: "Vidrio", formatted_address: "500 Glenwood Ave #100, Raleigh, NC 27603, USA", formatted_phone: "(919) 803-6033", url: "https://maps.google.com/?cid=7061463311951023731", lat: 35.7866228, lng: -78.64712039999999, is_halal: "PARTIALLY_HALAL", halal_comment: "Only the Lamb is Halal, and please double check before ordering, sometimes they dont have it.", cuisine_types: ["MEDITERRANEAN", "MIDDLE_EASTERN"], emoji: "\u{1F958}", evidence: null, considerations: ["SERVES_ALCOHOL"], opening_hours: { type: null, openNow: false, periods: [{ open: { day: "SUNDAY", time: [16, 0] }, close: { day: "SUNDAY", time: [22, 0] } }, { open: { day: "MONDAY", time: [16, 0] }, close: { day: "MONDAY", time: [22, 0] } }, { open: { day: "TUESDAY", time: [16, 0] }, close: { day: "TUESDAY", time: [22, 0] } }, { open: { day: "WEDNESDAY", time: [16, 0] }, close: { day: "WEDNESDAY", time: [22, 0] } }, { open: { day: "THURSDAY", time: [16, 0] }, close: { day: "THURSDAY", time: [22, 0] } }, { open: { day: "FRIDAY", time: [16, 0] }, close: { day: "FRIDAY", time: [23, 0] } }, { open: { day: "SATURDAY", time: [16, 0] }, close: { day: "SATURDAY", time: [23, 0] } }], specialDays: null, weekdayText: ["Monday: 4:00\u2009\u2013\u200910:00\u202FPM", "Tuesday: 4:00\u2009\u2013\u200910:00\u202FPM", "Wednesday: 4:00\u2009\u2013\u200910:00\u202FPM", "Thursday: 4:00\u2009\u2013\u200910:00\u202FPM", "Friday: 4:00\u2009\u2013\u200911:00\u202FPM", "Saturday: 4:00\u2009\u2013\u200911:00\u202FPM", "Sunday: 4:00\u2009\u2013\u200910:00\u202FPM"] } }, { id: 183, external_id: 103, name: "Vimala's Curryblossom Cafe", formatted_address: "431 W Franklin St #415, Chapel Hill, NC 27516, USA", formatted_phone: "(919) 929-3833", url: "https://maps.google.com/?cid=17452176777907392990", lat: 35.90999019999999, lng: -79.0628641, is_halal: "PARTIALLY_HALAL", halal_comment: "Owner confirmed that everything except is Zabiha Halal and meat is procured from Chaudhry Halal Meats. Pork is served at the premises but cooked and handled separately to Halal meat", cuisine_types: ["INDIAN_PAKISTANI"], emoji: "\u{1F35B}", evidence: ["MANAGEMENT_CONFIRMED"], considerations: ["SERVES_PORK", "SERVES_ALCOHOL"], opening_hours: { type: null, openNow: false, periods: [{ open: { day: "MONDAY", time: [11, 30] }, close: { day: "MONDAY", time: [20, 0] } }, { open: { day: "TUESDAY", time: [11, 30] }, close: { day: "TUESDAY", time: [20, 0] } }, { open: { day: "WEDNESDAY", time: [11, 30] }, close: { day: "WEDNESDAY", time: [20, 0] } }, { open: { day: "THURSDAY", time: [11, 30] }, close: { day: "THURSDAY", time: [21, 0] } }, { open: { day: "FRIDAY", time: [11, 30] }, close: { day: "FRIDAY", time: [21, 0] } }, { open: { day: "SATURDAY", time: [11, 30] }, close: { day: "SATURDAY", time: [21, 0] } }], specialDays: null, weekdayText: ["Monday: 11:30\u202FAM\u2009\u2013\u20098:00\u202FPM", "Tuesday: 11:30\u202FAM\u2009\u2013\u20098:00\u202FPM", "Wednesday: 11:30\u202FAM\u2009\u2013\u20098:00\u202FPM", "Thursday: 11:30\u202FAM\u2009\u2013\u20099:00\u202FPM", "Friday: 11:30\u202FAM\u2009\u2013\u20099:00\u202FPM", "Saturday: 11:30\u202FAM\u2009\u2013\u20099:00\u202FPM", "Sunday: Closed"] } }, { id: 245, external_id: 186, name: "Vin Rouge", formatted_address: "2010 Hillsborough Rd, Durham, NC 27705, USA", formatted_phone: "(919) 416-0466", url: "https://maps.google.com/?cid=8063797018049466480", lat: 36.0106604, lng: -78.9223349, is_halal: "PARTIALLY_HALAL", halal_comment: "The chef confirmed on the phone that chicken is certified halal. Please inquire upon your visit.", cuisine_types: null, emoji: "\u{1F357}", evidence: null, considerations: ["SERVES_ALCOHOL"], opening_hours: { type: null, openNow: true, periods: [{ open: { day: "SUNDAY", time: [10, 30] }, close: { day: "SUNDAY", time: [14, 0] } }, { open: { day: "SUNDAY", time: [17, 0] }, close: { day: "SUNDAY", time: [21, 0] } }, { open: { day: "TUESDAY", time: [17, 0] }, close: { day: "TUESDAY", time: [21, 0] } }, { open: { day: "WEDNESDAY", time: [17, 0] }, close: { day: "WEDNESDAY", time: [21, 0] } }, { open: { day: "THURSDAY", time: [17, 0] }, close: { day: "THURSDAY", time: [21, 0] } }, { open: { day: "FRIDAY", time: [17, 0] }, close: { day: "FRIDAY", time: [21, 0] } }, { open: { day: "SATURDAY", time: [17, 0] }, close: { day: "SATURDAY", time: [21, 0] } }], specialDays: null, weekdayText: ["Monday: Closed", "Tuesday: 5:00\u2009\u2013\u20099:00\u202FPM", "Wednesday: 5:00\u2009\u2013\u20099:00\u202FPM", "Thursday: 5:00\u2009\u2013\u20099:00\u202FPM", "Friday: 5:00\u2009\u2013\u20099:00\u202FPM", "Saturday: 5:00\u2009\u2013\u20099:00\u202FPM", "Sunday: 10:30\u202FAM\u2009\u2013\u20092:00\u202FPM, 5:00\u2009\u2013\u20099:00\u202FPM"] } }, { id: 175, external_id: 112, name: "Wayback Burgers", formatted_address: "1550 Aviation Pkwy, Morrisville, NC 27560, USA", formatted_phone: "(984) 263-0300", url: "https://maps.google.com/?cid=7162726856500886633", lat: 35.8533194, lng: -78.79582769999999, is_halal: "PARTIALLY_HALAL", halal_comment: "Management states that all chicken is certified Halal but Beef Cheeseburger is not Halal. Soyabean oil is used for all frying. Bacon is fried on a separate grill. There is no cross contamination of all Halal items with non-Halal items and they are handled separately. Management advises that Muslims should ask the staff to change gloves when serving their Halal food to absolutely confirm that gloves did not touch Bacon (in previous orders) to avoid any possible cross contamination while serving. This entry is specific to the location.", cuisine_types: ["AMERICAN"], emoji: "\u{1F354}", evidence: null, considerations: null, opening_hours: { type: null, openNow: true, periods: [{ open: { day: "SUNDAY", time: [10, 30] }, close: { day: "SUNDAY", time: [21, 0] } }, { open: { day: "MONDAY", time: [10, 30] }, close: { day: "MONDAY", time: [21, 0] } }, { open: { day: "TUESDAY", time: [10, 30] }, close: { day: "TUESDAY", time: [21, 0] } }, { open: { day: "WEDNESDAY", time: [10, 30] }, close: { day: "WEDNESDAY", time: [21, 0] } }, { open: { day: "THURSDAY", time: [10, 30] }, close: { day: "THURSDAY", time: [21, 0] } }, { open: { day: "FRIDAY", time: [10, 30] }, close: { day: "FRIDAY", time: [21, 0] } }, { open: { day: "SATURDAY", time: [10, 30] }, close: { day: "SATURDAY", time: [21, 0] } }], specialDays: null, weekdayText: ["Monday: 10:30\u202FAM\u2009\u2013\u20099:00\u202FPM", "Tuesday: 10:30\u202FAM\u2009\u2013\u20099:00\u202FPM", "Wednesday: 10:30\u202FAM\u2009\u2013\u20099:00\u202FPM", "Thursday: 10:30\u202FAM\u2009\u2013\u20099:00\u202FPM", "Friday: 10:30\u202FAM\u2009\u2013\u20099:00\u202FPM", "Saturday: 10:30\u202FAM\u2009\u2013\u20099:00\u202FPM", "Sunday: 10:30\u202FAM\u2009\u2013\u20099:00\u202FPM"] } }, { id: 177, external_id: 115, name: "Wayback Burgers", formatted_address: "6320 Capital Blvd Unit 116, Raleigh, NC 27616, USA", formatted_phone: "(919) 977-4444", url: "https://maps.google.com/?cid=1358339928386553555", lat: 35.870759, lng: -78.5780965, is_halal: "PARTIALLY_HALAL", halal_comment: "Management states that all chicken is certified Halal but Beef Cheeseburger is not Halal. Soyabean oil is used for all frying. Bacon is fried on a separate grill. There is no cross contamination of all Halal items with non-Halal items and they are handled separately. Management advises that Muslims should ask the staff to change gloves when serving their Halal food to absolutely confirm that gloves did not touch Bacon (in previous orders) to avoid any possible cross contamination while serving. This entry is specific to the location.", cuisine_types: ["AMERICAN"], emoji: "\u{1F354}", evidence: null, considerations: null, opening_hours: { type: null, openNow: true, periods: [{ open: { day: "SUNDAY", time: [11, 0] }, close: { day: "SUNDAY", time: [20, 0] } }, { open: { day: "MONDAY", time: [10, 30] }, close: { day: "MONDAY", time: [20, 0] } }, { open: { day: "TUESDAY", time: [10, 30] }, close: { day: "TUESDAY", time: [20, 0] } }, { open: { day: "WEDNESDAY", time: [10, 30] }, close: { day: "WEDNESDAY", time: [20, 0] } }, { open: { day: "THURSDAY", time: [10, 30] }, close: { day: "THURSDAY", time: [20, 0] } }, { open: { day: "FRIDAY", time: [10, 30] }, close: { day: "FRIDAY", time: [20, 0] } }, { open: { day: "SATURDAY", time: [10, 30] }, close: { day: "SATURDAY", time: [20, 0] } }], specialDays: null, weekdayText: ["Monday: 10:30\u202FAM\u2009\u2013\u20098:00\u202FPM", "Tuesday: 10:30\u202FAM\u2009\u2013\u20098:00\u202FPM", "Wednesday: 10:30\u202FAM\u2009\u2013\u20098:00\u202FPM", "Thursday: 10:30\u202FAM\u2009\u2013\u20098:00\u202FPM", "Friday: 10:30\u202FAM\u2009\u2013\u20098:00\u202FPM", "Saturday: 10:30\u202FAM\u2009\u2013\u20098:00\u202FPM", "Sunday: 11:00\u202FAM\u2009\u2013\u20098:00\u202FPM"] } }, { id: 190, external_id: 136, name: "Wayback Burgers", formatted_address: "3600 Rogers Branch Rd suite 101, Wake Forest, NC 27587, USA", formatted_phone: "(919) 263-9073", url: "https://maps.google.com/?cid=17554866734028368341", lat: 35.94285130000001, lng: -78.5066204, is_halal: "PARTIALLY_HALAL", halal_comment: "Management states that all chicken is certified Halal but Beef Cheeseburger is not Halal. Management also stated that the Beef Hotdog is Halal and so is the Cheesesteak. Soyabean oil is used for all frying. Bacon is fried on a separate grill. There is no cross contamination of all Halal items with non-Halal items and they are handled separately. Management advises that Muslims should ask the staff to change gloves when serving their Halal food to absolutely confirm that gloves did not touch Bacon (in previous orders) to avoid any possible cross contamination while serving. This entry is specific to the location.", cuisine_types: ["AMERICAN"], emoji: "\u{1F354}", evidence: null, considerations: null, opening_hours: { type: null, openNow: true, periods: [{ open: { day: "SUNDAY", time: [10, 30] }, close: { day: "SUNDAY", time: [21, 0] } }, { open: { day: "MONDAY", time: [10, 30] }, close: { day: "MONDAY", time: [21, 0] } }, { open: { day: "TUESDAY", time: [10, 30] }, close: { day: "TUESDAY", time: [21, 0] } }, { open: { day: "WEDNESDAY", time: [10, 30] }, close: { day: "WEDNESDAY", time: [21, 0] } }, { open: { day: "THURSDAY", time: [10, 30] }, close: { day: "THURSDAY", time: [21, 0] } }, { open: { day: "FRIDAY", time: [10, 30] }, close: { day: "FRIDAY", time: [21, 0] } }, { open: { day: "SATURDAY", time: [10, 30] }, close: { day: "SATURDAY", time: [21, 0] } }], specialDays: null, weekdayText: ["Monday: 10:30\u202FAM\u2009\u2013\u20099:00\u202FPM", "Tuesday: 10:30\u202FAM\u2009\u2013\u20099:00\u202FPM", "Wednesday: 10:30\u202FAM\u2009\u2013\u20099:00\u202FPM", "Thursday: 10:30\u202FAM\u2009\u2013\u20099:00\u202FPM", "Friday: 10:30\u202FAM\u2009\u2013\u20099:00\u202FPM", "Saturday: 10:30\u202FAM\u2009\u2013\u20099:00\u202FPM", "Sunday: 10:30\u202FAM\u2009\u2013\u20099:00\u202FPM"] } }, { id: 176, external_id: 116, name: "Wayback Burgers", formatted_address: "4104 Surles Ct UNIT 2, Durham, NC 27703, USA", formatted_phone: "(919) 294-4044", url: "https://maps.google.com/?cid=18272855033719561916", lat: 35.8676028, lng: -78.8493075, is_halal: "PARTIALLY_HALAL", halal_comment: "Management states that all chicken is certified Halal but Beef Cheeseburger is not Halal. Soyabean oil is used for all frying. Bacon is fried on a separate grill. There is no cross contamination of all Halal items with non-Halal items and they are handled separately. Management advises that Muslims should ask the staff to change gloves when serving their Halal food to absolutely confirm that gloves did not touch Bacon (in previous orders) to avoid any possible cross contamination while serving. This entry is specific to the location.", cuisine_types: ["AMERICAN"], emoji: "\u{1F354}", evidence: null, considerations: null, opening_hours: { type: null, openNow: true, periods: [{ open: { day: "SUNDAY", time: [10, 30] }, close: { day: "SUNDAY", time: [21, 0] } }, { open: { day: "MONDAY", time: [10, 30] }, close: { day: "MONDAY", time: [21, 0] } }, { open: { day: "TUESDAY", time: [10, 30] }, close: { day: "TUESDAY", time: [21, 0] } }, { open: { day: "WEDNESDAY", time: [10, 30] }, close: { day: "WEDNESDAY", time: [21, 0] } }, { open: { day: "THURSDAY", time: [10, 30] }, close: { day: "THURSDAY", time: [21, 0] } }, { open: { day: "FRIDAY", time: [10, 30] }, close: { day: "FRIDAY", time: [21, 0] } }, { open: { day: "SATURDAY", time: [10, 30] }, close: { day: "SATURDAY", time: [21, 0] } }], specialDays: null, weekdayText: ["Monday: 10:30\u202FAM\u2009\u2013\u20099:00\u202FPM", "Tuesday: 10:30\u202FAM\u2009\u2013\u20099:00\u202FPM", "Wednesday: 10:30\u202FAM\u2009\u2013\u20099:00\u202FPM", "Thursday: 10:30\u202FAM\u2009\u2013\u20099:00\u202FPM", "Friday: 10:30\u202FAM\u2009\u2013\u20099:00\u202FPM", "Saturday: 10:30\u202FAM\u2009\u2013\u20099:00\u202FPM", "Sunday: 10:30\u202FAM\u2009\u2013\u20099:00\u202FPM"] } }, { id: 48, external_id: 969, name: "Wok On Fire", formatted_address: "1216 Parkside Main St, Cary, NC 27519, USA", formatted_phone: "(919) 466-0888", url: "https://maps.google.com/?cid=18011530742167168906", lat: 35.84869989999999, lng: -78.89054949999999, is_halal: "IS_HALAL", halal_comment: "Management confirms that everything on the menu is Dhabihah Halal and sourced certified Halal from US Foods.", cuisine_types: ["INDO_CHINESE", "INDIAN_PAKISTANI"], emoji: "\u{1F372}", evidence: null, considerations: ["SERVES_ALCOHOL"], opening_hours: { type: null, openNow: false, periods: [{ open: { day: "SUNDAY", time: [12, 0] }, close: { day: "SUNDAY", time: [15, 0] } }, { open: { day: "SUNDAY", time: [17, 0] }, close: { day: "SUNDAY", time: [21, 0] } }, { open: { day: "MONDAY", time: [11, 30] }, close: { day: "MONDAY", time: [14, 30] } }, { open: { day: "MONDAY", time: [17, 0] }, close: { day: "MONDAY", time: [21, 30] } }, { open: { day: "TUESDAY", time: [11, 30] }, close: { day: "TUESDAY", time: [14, 30] } }, { open: { day: "TUESDAY", time: [17, 0] }, close: { day: "TUESDAY", time: [21, 30] } }, { open: { day: "WEDNESDAY", time: [11, 30] }, close: { day: "WEDNESDAY", time: [14, 30] } }, { open: { day: "WEDNESDAY", time: [17, 0] }, close: { day: "WEDNESDAY", time: [21, 30] } }, { open: { day: "THURSDAY", time: [11, 30] }, close: { day: "THURSDAY", time: [14, 30] } }, { open: { day: "THURSDAY", time: [17, 0] }, close: { day: "THURSDAY", time: [21, 30] } }, { open: { day: "FRIDAY", time: [11, 30] }, close: { day: "FRIDAY", time: [14, 30] } }, { open: { day: "FRIDAY", time: [17, 0] }, close: { day: "FRIDAY", time: [22, 0] } }, { open: { day: "SATURDAY", time: [12, 0] }, close: { day: "SATURDAY", time: [15, 0] } }, { open: { day: "SATURDAY", time: [17, 0] }, close: { day: "SATURDAY", time: [22, 0] } }], specialDays: null, weekdayText: ["Monday: 11:30\u202FAM\u2009\u2013\u20092:30\u202FPM, 5:00\u2009\u2013\u20099:30\u202FPM", "Tuesday: 11:30\u202FAM\u2009\u2013\u20092:30\u202FPM, 5:00\u2009\u2013\u20099:30\u202FPM", "Wednesday: 11:30\u202FAM\u2009\u2013\u20092:30\u202FPM, 5:00\u2009\u2013\u20099:30\u202FPM", "Thursday: 11:30\u202FAM\u2009\u2013\u20092:30\u202FPM, 5:00\u2009\u2013\u20099:30\u202FPM", "Friday: 11:30\u202FAM\u2009\u2013\u20092:30\u202FPM, 5:00\u2009\u2013\u200910:00\u202FPM", "Saturday: 12:00\u2009\u2013\u20093:00\u202FPM, 5:00\u2009\u2013\u200910:00\u202FPM", "Sunday: 12:00\u2009\u2013\u20093:00\u202FPM, 5:00\u2009\u2013\u20099:00\u202FPM"] } }, { id: 128, external_id: 76, name: "Wrapway", formatted_address: "10221 University City Blvd, Charlotte, NC 28213, USA", formatted_phone: "(844) 972-7929", url: "https://maps.google.com/?cid=5413534710170741762", lat: 35.3120813, lng: -80.71356639999999, is_halal: "IS_HALAL", halal_comment: "Everything is Halal as advertised on the website", cuisine_types: ["MIDDLE_EASTERN"], emoji: "\u{1F959}", evidence: ["MANAGEMENT_CONFIRMED"], considerations: null, opening_hours: { type: null, openNow: false, periods: [{ open: { day: "SUNDAY", time: [11, 0] }, close: { day: "SUNDAY", time: [22, 0] } }, { open: { day: "MONDAY", time: [11, 0] }, close: { day: "MONDAY", time: [22, 0] } }, { open: { day: "TUESDAY", time: [11, 0] }, close: { day: "TUESDAY", time: [22, 0] } }, { open: { day: "WEDNESDAY", time: [11, 0] }, close: { day: "WEDNESDAY", time: [22, 0] } }, { open: { day: "THURSDAY", time: [11, 0] }, close: { day: "THURSDAY", time: [22, 0] } }, { open: { day: "FRIDAY", time: [11, 0] }, close: { day: "FRIDAY", time: [22, 0] } }, { open: { day: "SATURDAY", time: [11, 0] }, close: { day: "SATURDAY", time: [22, 0] } }], specialDays: null, weekdayText: ["Monday: 11:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Tuesday: 11:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Wednesday: 11:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Thursday: 11:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Friday: 11:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Saturday: 11:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Sunday: 11:00\u202FAM\u2009\u2013\u200910:00\u202FPM"] } }, { id: 57, external_id: 971, name: "Yaba Mediterranean Grill", formatted_address: "9424 Falls of Neuse Rd, 9201 Litchford Rd, Raleigh, NC 27615, USA", formatted_phone: "(919) 322-2807", url: "https://maps.google.com/?cid=10310858703746818463", lat: 35.901794, lng: -78.6025452, is_halal: "IS_HALAL", halal_comment: "Confirmed in April 2023 that under the new establishment, it is is still Halal", cuisine_types: ["MIDDLE_EASTERN", "MEDITERRANEAN"], emoji: "\u{1F959}", evidence: null, considerations: null, opening_hours: { type: null, openNow: false, periods: [{ open: { day: "SUNDAY", time: [11, 0] }, close: { day: "SUNDAY", time: [20, 0] } }, { open: { day: "MONDAY", time: [11, 0] }, close: { day: "MONDAY", time: [20, 0] } }, { open: { day: "TUESDAY", time: [11, 0] }, close: { day: "TUESDAY", time: [20, 0] } }, { open: { day: "WEDNESDAY", time: [11, 0] }, close: { day: "WEDNESDAY", time: [20, 0] } }, { open: { day: "THURSDAY", time: [11, 0] }, close: { day: "THURSDAY", time: [20, 0] } }, { open: { day: "FRIDAY", time: [11, 0] }, close: { day: "FRIDAY", time: [20, 0] } }, { open: { day: "SATURDAY", time: [11, 0] }, close: { day: "SATURDAY", time: [20, 0] } }], specialDays: null, weekdayText: ["Monday: 11:00\u202FAM\u2009\u2013\u20098:00\u202FPM", "Tuesday: 11:00\u202FAM\u2009\u2013\u20098:00\u202FPM", "Wednesday: 11:00\u202FAM\u2009\u2013\u20098:00\u202FPM", "Thursday: 11:00\u202FAM\u2009\u2013\u20098:00\u202FPM", "Friday: 11:00\u202FAM\u2009\u2013\u20098:00\u202FPM", "Saturday: 11:00\u202FAM\u2009\u2013\u20098:00\u202FPM", "Sunday: 11:00\u202FAM\u2009\u2013\u20098:00\u202FPM"] } }, { id: 93, external_id: 8, name: "Yaba Mediterranean Grill", formatted_address: "1201 Charles Blvd, Greenville, NC 27858, USA", formatted_phone: "(252) 689-1227", url: "https://maps.google.com/?cid=16509555977315261287", lat: 35.6028543, lng: -77.3706419, is_halal: "IS_HALAL", halal_comment: "Halal chain", cuisine_types: ["MEDITERRANEAN"], emoji: "\u{1F959}", evidence: ["MANAGEMENT_CONFIRMED"], considerations: null, opening_hours: { type: null, openNow: false, periods: [{ open: { day: "SUNDAY", time: [11, 0] }, close: { day: "SUNDAY", time: [19, 30] } }, { open: { day: "MONDAY", time: [11, 0] }, close: { day: "MONDAY", time: [19, 30] } }, { open: { day: "TUESDAY", time: [11, 0] }, close: { day: "TUESDAY", time: [19, 30] } }, { open: { day: "WEDNESDAY", time: [11, 0] }, close: { day: "WEDNESDAY", time: [19, 30] } }, { open: { day: "THURSDAY", time: [11, 0] }, close: { day: "THURSDAY", time: [19, 30] } }, { open: { day: "FRIDAY", time: [11, 0] }, close: { day: "FRIDAY", time: [19, 30] } }, { open: { day: "SATURDAY", time: [11, 0] }, close: { day: "SATURDAY", time: [19, 30] } }], specialDays: null, weekdayText: ["Monday: 11:00\u202FAM\u2009\u2013\u20097:30\u202FPM", "Tuesday: 11:00\u202FAM\u2009\u2013\u20097:30\u202FPM", "Wednesday: 11:00\u202FAM\u2009\u2013\u20097:30\u202FPM", "Thursday: 11:00\u202FAM\u2009\u2013\u20097:30\u202FPM", "Friday: 11:00\u202FAM\u2009\u2013\u20097:30\u202FPM", "Saturday: 11:00\u202FAM\u2009\u2013\u20097:30\u202FPM", "Sunday: 11:00\u202FAM\u2009\u2013\u20097:30\u202FPM"] } }, { id: 118, external_id: 32, name: "Yagg Sii Tenn Authentic African Cuisine", formatted_address: "1440 Chapel Ridge Rd ste 170, Apex, NC 27502, USA", formatted_phone: "(919) 629-4047", url: "https://maps.google.com/?cid=16214685301323325731", lat: 35.7376979, lng: -78.8882558, is_halal: "IS_HALAL", halal_comment: "Whole menu is Halal and everything apart from chicken is slaughtered by the owner and chicken is obtained from reputable Halal source.", cuisine_types: ["SENEGALESE"], emoji: "\u{1F357}", evidence: ["MANAGEMENT_CONFIRMED"], considerations: null, opening_hours: { type: null, openNow: true, periods: [{ open: { day: "SUNDAY", time: [13, 0] }, close: { day: "SUNDAY", time: [18, 0] } }, { open: { day: "WEDNESDAY", time: [11, 30] }, close: { day: "WEDNESDAY", time: [20, 30] } }, { open: { day: "THURSDAY", time: [11, 30] }, close: { day: "THURSDAY", time: [20, 30] } }, { open: { day: "FRIDAY", time: [11, 30] }, close: { day: "FRIDAY", time: [21, 0] } }, { open: { day: "SATURDAY", time: [15, 0] }, close: { day: "SATURDAY", time: [21, 0] } }], specialDays: null, weekdayText: ["Monday: Closed", "Tuesday: Closed", "Wednesday: 11:30\u202FAM\u2009\u2013\u20098:30\u202FPM", "Thursday: 11:30\u202FAM\u2009\u2013\u20098:30\u202FPM", "Friday: 11:30\u202FAM\u2009\u2013\u20099:00\u202FPM", "Saturday: 3:00\u2009\u2013\u20099:00\u202FPM", "Sunday: 1:00\u2009\u2013\u20096:00\u202FPM"] } }, { id: 294, external_id: 240, name: "Yemen Arabic Restaurant", formatted_address: "4929 W Market St STE 2108, Greensboro, NC 27407, USA", formatted_phone: "(336) 897-0376", url: "https://maps.google.com/?cid=7005347813703551744", lat: 36.0679984, lng: -79.8757352, is_halal: "IS_HALAL", halal_comment: "All Halal", cuisine_types: ["MIDDLE_EASTERN"], emoji: "\u{1F356}", evidence: null, considerations: null, opening_hours: { type: null, openNow: false, periods: [{ open: { day: "SUNDAY", time: [11, 0] }, close: { day: "SUNDAY", time: [22, 0] } }, { open: { day: "MONDAY", time: [10, 0] }, close: { day: "MONDAY", time: [22, 0] } }, { open: { day: "TUESDAY", time: [10, 0] }, close: { day: "TUESDAY", time: [22, 0] } }, { open: { day: "WEDNESDAY", time: [10, 0] }, close: { day: "WEDNESDAY", time: [22, 0] } }, { open: { day: "THURSDAY", time: [10, 0] }, close: { day: "THURSDAY", time: [22, 0] } }, { open: { day: "FRIDAY", time: [10, 0] }, close: { day: "FRIDAY", time: [22, 0] } }, { open: { day: "SATURDAY", time: [11, 0] }, close: { day: "SATURDAY", time: [22, 0] } }], specialDays: null, weekdayText: ["Monday: 10:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Tuesday: 10:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Wednesday: 10:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Thursday: 10:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Friday: 10:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Saturday: 11:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Sunday: 11:00\u202FAM\u2009\u2013\u200910:00\u202FPM"] } }, { id: 293, external_id: 239, name: "Yemen Arabic Restaurant \u0645\u0637\u0639\u0645 \u0627\u0644\u064A\u0645\u0646 \u0627\u0644\u0639\u0631\u0628\u064A", formatted_address: "3933 Western Blvd, Raleigh, NC 27606, USA", formatted_phone: "(919) 322-0621", url: "https://maps.google.com/?cid=1603404695007773359", lat: 35.7840015, lng: -78.69264319999999, is_halal: "IS_HALAL", halal_comment: "All Halal", cuisine_types: ["MIDDLE_EASTERN"], emoji: "\u{1F356}", evidence: null, considerations: null, opening_hours: { type: null, openNow: false, periods: [{ open: { day: "SUNDAY", time: [10, 0] }, close: { day: "SUNDAY", time: [23, 0] } }, { open: { day: "MONDAY", time: [10, 0] }, close: { day: "MONDAY", time: [23, 0] } }, { open: { day: "TUESDAY", time: [10, 0] }, close: { day: "TUESDAY", time: [23, 0] } }, { open: { day: "WEDNESDAY", time: [10, 0] }, close: { day: "WEDNESDAY", time: [23, 0] } }, { open: { day: "THURSDAY", time: [10, 0] }, close: { day: "THURSDAY", time: [23, 0] } }, { open: { day: "FRIDAY", time: [10, 0] }, close: { day: "FRIDAY", time: [23, 0] } }, { open: { day: "SATURDAY", time: [10, 0] }, close: { day: "SATURDAY", time: [23, 0] } }], specialDays: null, weekdayText: ["Monday: 10:00\u202FAM\u2009\u2013\u200911:00\u202FPM", "Tuesday: 10:00\u202FAM\u2009\u2013\u200911:00\u202FPM", "Wednesday: 10:00\u202FAM\u2009\u2013\u200911:00\u202FPM", "Thursday: 10:00\u202FAM\u2009\u2013\u200911:00\u202FPM", "Friday: 10:00\u202FAM\u2009\u2013\u200911:00\u202FPM", "Saturday: 10:00\u202FAM\u2009\u2013\u200911:00\u202FPM", "Sunday: 10:00\u202FAM\u2009\u2013\u200911:00\u202FPM"] } }, { id: 265, external_id: 194, name: "Yemeni Cuisine Restaurant & Cafe \u0627\u0644\u0645\u0637\u0639\u0645 \u0627\u0644\u064A\u0645\u0646\u064A", formatted_address: "1431 Garner Station Blvd, Raleigh, NC 27603, USA", formatted_phone: "(984) 200-0008", url: "https://maps.google.com/?cid=2309203033259354899", lat: 35.7228268, lng: -78.6548997, is_halal: "IS_HALAL", halal_comment: "Muslim Owned, everything is halal", cuisine_types: ["MIDDLE_EASTERN"], emoji: "\u{1F356}", evidence: null, considerations: null, opening_hours: { type: null, openNow: false, periods: [{ open: { day: "SUNDAY", time: [10, 0] }, close: { day: "SUNDAY", time: [22, 0] } }, { open: { day: "MONDAY", time: [10, 0] }, close: { day: "MONDAY", time: [22, 0] } }, { open: { day: "TUESDAY", time: [10, 0] }, close: { day: "TUESDAY", time: [22, 0] } }, { open: { day: "WEDNESDAY", time: [10, 0] }, close: { day: "WEDNESDAY", time: [22, 0] } }, { open: { day: "THURSDAY", time: [10, 0] }, close: { day: "THURSDAY", time: [22, 0] } }, { open: { day: "FRIDAY", time: [10, 0] }, close: { day: "FRIDAY", time: [22, 0] } }, { open: { day: "SATURDAY", time: [10, 0] }, close: { day: "SATURDAY", time: [22, 0] } }], specialDays: null, weekdayText: ["Monday: 10:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Tuesday: 10:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Wednesday: 10:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Thursday: 10:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Friday: 10:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Saturday: 10:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Sunday: 10:00\u202FAM\u2009\u2013\u200910:00\u202FPM"] } }, { id: 129, external_id: 77, name: "Zafran Kabab Palace", formatted_address: "230 E W.T. Harris Blvd, Charlotte, NC 28262, USA", formatted_phone: "(980) 258-0651", url: "https://maps.google.com/?cid=15308277103960845065", lat: 35.3038084, lng: -80.74947519999999, is_halal: "IS_HALAL", halal_comment: "Well known establishment within the Muslim community and known to be Halal.", cuisine_types: ["INDIAN_PAKISTANI"], emoji: "\u{1F35B}", evidence: ["MANAGEMENT_CONFIRMED"], considerations: null, opening_hours: { type: null, openNow: false, periods: [{ open: { day: "SUNDAY", time: [11, 0] }, close: { day: "SUNDAY", time: [21, 30] } }, { open: { day: "TUESDAY", time: [11, 0] }, close: { day: "TUESDAY", time: [21, 30] } }, { open: { day: "WEDNESDAY", time: [11, 0] }, close: { day: "WEDNESDAY", time: [21, 30] } }, { open: { day: "THURSDAY", time: [11, 0] }, close: { day: "THURSDAY", time: [21, 30] } }, { open: { day: "FRIDAY", time: [11, 0] }, close: { day: "FRIDAY", time: [21, 30] } }, { open: { day: "SATURDAY", time: [11, 0] }, close: { day: "SATURDAY", time: [21, 30] } }], specialDays: null, weekdayText: ["Monday: Closed", "Tuesday: 11:00\u202FAM\u2009\u2013\u20099:30\u202FPM", "Wednesday: 11:00\u202FAM\u2009\u2013\u20099:30\u202FPM", "Thursday: 11:00\u202FAM\u2009\u2013\u20099:30\u202FPM", "Friday: 11:00\u202FAM\u2009\u2013\u20099:30\u202FPM", "Saturday: 11:00\u202FAM\u2009\u2013\u20099:30\u202FPM", "Sunday: 11:00\u202FAM\u2009\u2013\u20099:30\u202FPM"] } }, { id: 63, external_id: 977, name: "Zayka Indian Cuisine", formatted_address: "10410 Moncreiffe Rd suite 103, Raleigh, NC 27617, USA", formatted_phone: "(919) 361-5370", url: "https://maps.google.com/?cid=8550773935844073700", lat: 35.9004011, lng: -78.7927823, is_halal: "IS_HALAL", halal_comment: null, cuisine_types: ["INDIAN_PAKISTANI"], emoji: "\u{1F958}", evidence: null, considerations: ["SERVES_ALCOHOL"], opening_hours: { type: null, openNow: false, periods: [{ open: { day: "SUNDAY", time: [12, 0] }, close: { day: "SUNDAY", time: [15, 0] } }, { open: { day: "SUNDAY", time: [17, 0] }, close: { day: "SUNDAY", time: [22, 0] } }, { open: { day: "MONDAY", time: [11, 0] }, close: { day: "MONDAY", time: [14, 30] } }, { open: { day: "MONDAY", time: [17, 0] }, close: { day: "MONDAY", time: [22, 0] } }, { open: { day: "WEDNESDAY", time: [11, 0] }, close: { day: "WEDNESDAY", time: [14, 30] } }, { open: { day: "WEDNESDAY", time: [17, 0] }, close: { day: "WEDNESDAY", time: [22, 0] } }, { open: { day: "THURSDAY", time: [11, 0] }, close: { day: "THURSDAY", time: [14, 30] } }, { open: { day: "THURSDAY", time: [17, 0] }, close: { day: "THURSDAY", time: [22, 0] } }, { open: { day: "FRIDAY", time: [11, 0] }, close: { day: "FRIDAY", time: [14, 30] } }, { open: { day: "FRIDAY", time: [17, 0] }, close: { day: "FRIDAY", time: [22, 30] } }, { open: { day: "SATURDAY", time: [12, 0] }, close: { day: "SATURDAY", time: [15, 0] } }, { open: { day: "SATURDAY", time: [17, 0] }, close: { day: "SATURDAY", time: [22, 30] } }], specialDays: null, weekdayText: ["Monday: 11:00\u202FAM\u2009\u2013\u20092:30\u202FPM, 5:00\u2009\u2013\u200910:00\u202FPM", "Tuesday: Closed", "Wednesday: 11:00\u202FAM\u2009\u2013\u20092:30\u202FPM, 5:00\u2009\u2013\u200910:00\u202FPM", "Thursday: 11:00\u202FAM\u2009\u2013\u20092:30\u202FPM, 5:00\u2009\u2013\u200910:00\u202FPM", "Friday: 11:00\u202FAM\u2009\u2013\u20092:30\u202FPM, 5:00\u2009\u2013\u200910:30\u202FPM", "Saturday: 12:00\u2009\u2013\u20093:00\u202FPM, 5:00\u2009\u2013\u200910:30\u202FPM", "Sunday: 12:00\u2009\u2013\u20093:00\u202FPM, 5:00\u2009\u2013\u200910:00\u202FPM"] } }, { id: 166, external_id: 93, name: "Zaytoon Mediterranean Grill (ZMG)", formatted_address: "114 N Elm St Suite 102, Greensboro, NC 27401, USA", formatted_phone: "(336) 907-8451", url: "https://maps.google.com/?cid=10395587164223155659", lat: 36.0730514, lng: -79.7899386, is_halal: "PARTIALLY_HALAL", halal_comment: "Only the Gyro is Halal and rest of the meat items are not Halal", cuisine_types: ["MEDITERRANEAN"], emoji: "\u{1F959}", evidence: ["MANAGEMENT_CONFIRMED"], considerations: null, opening_hours: { type: null, openNow: false, periods: [{ open: { day: "MONDAY", time: [11, 0] }, close: { day: "MONDAY", time: [15, 0] } }, { open: { day: "TUESDAY", time: [11, 0] }, close: { day: "TUESDAY", time: [15, 0] } }, { open: { day: "WEDNESDAY", time: [11, 0] }, close: { day: "WEDNESDAY", time: [15, 0] } }, { open: { day: "THURSDAY", time: [11, 0] }, close: { day: "THURSDAY", time: [15, 0] } }, { open: { day: "FRIDAY", time: [11, 0] }, close: { day: "FRIDAY", time: [15, 0] } }], specialDays: null, weekdayText: ["Monday: 11:00\u202FAM\u2009\u2013\u20093:00\u202FPM", "Tuesday: 11:00\u202FAM\u2009\u2013\u20093:00\u202FPM", "Wednesday: 11:00\u202FAM\u2009\u2013\u20093:00\u202FPM", "Thursday: 11:00\u202FAM\u2009\u2013\u20093:00\u202FPM", "Friday: 11:00\u202FAM\u2009\u2013\u20093:00\u202FPM", "Saturday: Closed", "Sunday: Closed"] } }, { id: 53, external_id: 979, name: "Zeera Indian Restaurant", formatted_address: "1311 E Broad St, Fuquay-Varina, NC 27526, USA", formatted_phone: "(919) 762-6215", url: "https://maps.google.com/?cid=166084622224504149", lat: 35.59559399999999, lng: -78.77714, is_halal: "PARTIALLY_HALAL", halal_comment: "Vendor confirmed that chicken is Halal and sourced from US Foods & Concept Foods, many vegetarian options available", cuisine_types: ["INDIAN_PAKISTANI"], emoji: "\u{1F958}", evidence: null, considerations: ["SERVES_ALCOHOL"], opening_hours: { type: null, openNow: false, periods: [{ open: { day: "SUNDAY", time: [11, 30] }, close: { day: "SUNDAY", time: [14, 30] } }, { open: { day: "SUNDAY", time: [17, 0] }, close: { day: "SUNDAY", time: [21, 0] } }, { open: { day: "TUESDAY", time: [11, 30] }, close: { day: "TUESDAY", time: [14, 30] } }, { open: { day: "TUESDAY", time: [17, 0] }, close: { day: "TUESDAY", time: [21, 0] } }, { open: { day: "WEDNESDAY", time: [11, 30] }, close: { day: "WEDNESDAY", time: [14, 30] } }, { open: { day: "WEDNESDAY", time: [17, 0] }, close: { day: "WEDNESDAY", time: [21, 0] } }, { open: { day: "THURSDAY", time: [11, 30] }, close: { day: "THURSDAY", time: [14, 30] } }, { open: { day: "THURSDAY", time: [17, 0] }, close: { day: "THURSDAY", time: [21, 0] } }, { open: { day: "FRIDAY", time: [11, 30] }, close: { day: "FRIDAY", time: [14, 30] } }, { open: { day: "FRIDAY", time: [17, 0] }, close: { day: "FRIDAY", time: [21, 0] } }, { open: { day: "SATURDAY", time: [11, 30] }, close: { day: "SATURDAY", time: [14, 30] } }, { open: { day: "SATURDAY", time: [17, 0] }, close: { day: "SATURDAY", time: [21, 0] } }], specialDays: null, weekdayText: ["Monday: Closed", "Tuesday: 11:30\u202FAM\u2009\u2013\u20092:30\u202FPM, 5:00\u2009\u2013\u20099:00\u202FPM", "Wednesday: 11:30\u202FAM\u2009\u2013\u20092:30\u202FPM, 5:00\u2009\u2013\u20099:00\u202FPM", "Thursday: 11:30\u202FAM\u2009\u2013\u20092:30\u202FPM, 5:00\u2009\u2013\u20099:00\u202FPM", "Friday: 11:30\u202FAM\u2009\u2013\u20092:30\u202FPM, 5:00\u2009\u2013\u20099:00\u202FPM", "Saturday: 11:30\u202FAM\u2009\u2013\u20092:30\u202FPM, 5:00\u2009\u2013\u20099:00\u202FPM", "Sunday: 11:30\u202FAM\u2009\u2013\u20092:30\u202FPM, 5:00\u2009\u2013\u20099:00\u202FPM"] } }, { id: 257, external_id: 200, name: "Zeeyum Kitchen", formatted_address: "601 Milner Dr, Greensboro, NC 27410, USA", formatted_phone: "(336) 740-5985", url: "https://maps.google.com/?cid=10361936380667087039", lat: 36.08692869999999, lng: -79.8873461, is_halal: "IS_HALAL", halal_comment: "Asked and owner said everything is halal", cuisine_types: ["TURKISH"], emoji: null, evidence: null, considerations: null, opening_hours: { type: null, openNow: true, periods: [{ open: { day: "SUNDAY", time: [11, 0] }, close: { day: "SUNDAY", time: [20, 0] } }, { open: { day: "THURSDAY", time: [11, 0] }, close: { day: "THURSDAY", time: [21, 0] } }, { open: { day: "FRIDAY", time: [11, 0] }, close: { day: "FRIDAY", time: [21, 0] } }, { open: { day: "SATURDAY", time: [11, 0] }, close: { day: "SATURDAY", time: [21, 0] } }], specialDays: null, weekdayText: ["Monday: Closed", "Tuesday: Closed", "Wednesday: Closed", "Thursday: 11:00\u202FAM\u2009\u2013\u20099:00\u202FPM", "Friday: 11:00\u202FAM\u2009\u2013\u20099:00\u202FPM", "Saturday: 11:00\u202FAM\u2009\u2013\u20099:00\u202FPM", "Sunday: 11:00\u202FAM\u2009\u2013\u20098:00\u202FPM"] } }, { id: 217, external_id: 173, name: "bb.q Chicken Cary", formatted_address: "14220 Bradford Green Square, Cary, NC 27519, USA", formatted_phone: "(919) 234-0244", url: "https://maps.google.com/?cid=530843313686251969", lat: 35.79388009999999, lng: -78.84595360000002, is_halal: "PARTIALLY_HALAL", halal_comment: "Management states Whole Chickens are halal, but not the wings or boneless chicken.", cuisine_types: ["EAST_ASIAN"], emoji: "\u{1F357}", evidence: null, considerations: ["PARTIALLY_HALAL", "SERVES_ALCOHOL"], opening_hours: { type: null, openNow: true, periods: [{ open: { day: "SUNDAY", time: [11, 0] }, close: { day: "SUNDAY", time: [21, 0] } }, { open: { day: "MONDAY", time: [11, 0] }, close: { day: "MONDAY", time: [21, 0] } }, { open: { day: "TUESDAY", time: [11, 0] }, close: { day: "TUESDAY", time: [21, 0] } }, { open: { day: "WEDNESDAY", time: [11, 0] }, close: { day: "WEDNESDAY", time: [21, 0] } }, { open: { day: "THURSDAY", time: [11, 0] }, close: { day: "THURSDAY", time: [21, 0] } }, { open: { day: "FRIDAY", time: [11, 0] }, close: { day: "FRIDAY", time: [22, 0] } }, { open: { day: "SATURDAY", time: [11, 0] }, close: { day: "SATURDAY", time: [22, 0] } }], specialDays: null, weekdayText: ["Monday: 11:00\u202FAM\u2009\u2013\u20099:00\u202FPM", "Tuesday: 11:00\u202FAM\u2009\u2013\u20099:00\u202FPM", "Wednesday: 11:00\u202FAM\u2009\u2013\u20099:00\u202FPM", "Thursday: 11:00\u202FAM\u2009\u2013\u20099:00\u202FPM", "Friday: 11:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Saturday: 11:00\u202FAM\u2009\u2013\u200910:00\u202FPM", "Sunday: 11:00\u202FAM\u2009\u2013\u20099:00\u202FPM"] } }, { id: 309, external_id: 261, name: "no pork on my fork-Raleigh NC", formatted_address: "3805 S Wilmington St, Raleigh, NC 27603, USA", formatted_phone: "(919) 235-7686", url: "https://maps.google.com/?cid=6291520859030198451", lat: 35.7274039, lng: -78.6487887, is_halal: "IS_HALAL", halal_comment: "The owner is Muslim. He confirmed that all items on the menu are halal", cuisine_types: ["AMERICAN"], emoji: null, evidence: null, considerations: null, opening_hours: { type: null, openNow: true, periods: [{ open: { day: "TUESDAY", time: [14, 0] }, close: { day: "WEDNESDAY", time: [2, 0] } }, { open: { day: "WEDNESDAY", time: [14, 0] }, close: { day: "THURSDAY", time: [2, 0] } }, { open: { day: "THURSDAY", time: [14, 0] }, close: { day: "FRIDAY", time: [3, 0] } }, { open: { day: "FRIDAY", time: [14, 0] }, close: { day: "SATURDAY", time: [3, 0] } }, { open: { day: "SATURDAY", time: [14, 0] }, close: { day: "SUNDAY", time: [3, 0] } }], specialDays: null, weekdayText: ["Monday: Closed", "Tuesday: 2:00\u202FPM\u2009\u2013\u20092:00\u202FAM", "Wednesday: 2:00\u202FPM\u2009\u2013\u20092:00\u202FAM", "Thursday: 2:00\u202FPM\u2009\u2013\u20093:00\u202FAM", "Friday: 2:00\u202FPM\u2009\u2013\u20093:00\u202FAM", "Saturday: 2:00\u202FPM\u2009\u2013\u20093:00\u202FAM", "Sunday: Closed"] } }, { id: 284, external_id: 226, name: "oak city pizza & grill", formatted_address: "2811 Hillsborough St, Raleigh, NC 27607, USA", formatted_phone: "(919) 307-3421", url: "https://maps.google.com/?cid=10996250019400017226", lat: 35.7889755, lng: -78.6748807, is_halal: "NOT_HALAL", halal_comment: "State halal status on website and instagram", cuisine_types: ["AMERICAN"], emoji: "\u{1F355}", evidence: null, considerations: null, opening_hours: { type: null, openNow: true, periods: [{ open: { day: "SUNDAY", time: [15, 0] }, close: { day: "MONDAY", time: [2, 0] } }, { open: { day: "TUESDAY", time: [15, 0] }, close: { day: "WEDNESDAY", time: [2, 0] } }, { open: { day: "WEDNESDAY", time: [15, 0] }, close: { day: "THURSDAY", time: [2, 0] } }, { open: { day: "THURSDAY", time: [15, 0] }, close: { day: "FRIDAY", time: [3, 0] } }, { open: { day: "FRIDAY", time: [15, 0] }, close: { day: "SATURDAY", time: [3, 0] } }, { open: { day: "SATURDAY", time: [15, 0] }, close: { day: "SUNDAY", time: [3, 0] } }], specialDays: null, weekdayText: ["Monday: Closed", "Tuesday: 3:00\u202FPM\u2009\u2013\u20092:00\u202FAM", "Wednesday: 3:00\u202FPM\u2009\u2013\u20092:00\u202FAM", "Thursday: 3:00\u202FPM\u2009\u2013\u20093:00\u202FAM", "Friday: 3:00\u202FPM\u2009\u2013\u20093:00\u202FAM", "Saturday: 3:00\u202FPM\u2009\u2013\u20093:00\u202FAM", "Sunday: 3:00\u202FPM\u2009\u2013\u20092:00\u202FAM"] } }];
 
+// server/jiar-iqama-data.ts
+var MONTHS_2026 = [
+  {
+    month: 3,
+    daysInMonth: 31,
+    maghrib: [
+      { startDay: 1, endDay: 7, startMin: 1091, endMin: 1096 },
+      { startDay: 8, endDay: 31, startMin: 1157, endMin: 1177 }
+    ],
+    ranges: [
+      { startDay: 1, endDay: 7, fajr: "6:00 AM", dhuhr: "1:35 PM", asrFV: "4:00 PM", asrPK: "4:30 PM", isha: "7:45 PM" },
+      { startDay: 8, endDay: 14, fajr: "6:30 AM", dhuhr: "1:35 PM", asrFV: "5:00 PM", asrPK: "5:30 PM", isha: "8:45 PM" },
+      { startDay: 15, endDay: 21, fajr: "6:30 AM", dhuhr: "1:35 PM", asrFV: "5:00 PM", asrPK: "5:30 PM", isha: "9:00 PM" },
+      { startDay: 22, endDay: 31, fajr: "6:15 AM", dhuhr: "1:35 PM", asrFV: "5:30 PM", asrPK: "6:00 PM", isha: "9:00 PM" }
+    ]
+  },
+  {
+    month: 4,
+    daysInMonth: 30,
+    maghrib: [
+      { startDay: 1, endDay: 30, startMin: 1178, endMin: 1202 }
+    ],
+    ranges: [
+      { startDay: 1, endDay: 4, fajr: "6:15 AM", dhuhr: "1:35 PM", asrFV: "5:30 PM", asrPK: "6:00 PM", isha: "9:00 PM" },
+      { startDay: 5, endDay: 11, fajr: "6:00 AM", dhuhr: "1:35 PM", asrFV: "5:30 PM", asrPK: "6:00 PM", isha: "9:15 PM" },
+      { startDay: 12, endDay: 24, fajr: "5:45 AM", dhuhr: "1:35 PM", asrFV: "5:30 PM", asrPK: "6:00 PM", isha: "9:30 PM" },
+      { startDay: 25, endDay: 30, fajr: "5:30 AM", dhuhr: "1:35 PM", asrFV: "5:30 PM", asrPK: "6:00 PM", isha: "9:30 PM" }
+    ]
+  },
+  {
+    month: 5,
+    daysInMonth: 31,
+    maghrib: [
+      { startDay: 1, endDay: 31, startMin: 1203, endMin: 1226 }
+    ],
+    ranges: [
+      { startDay: 1, endDay: 2, fajr: "5:30 AM", dhuhr: "1:35 PM", asrFV: "5:30 PM", asrPK: "6:00 PM", isha: "9:30 PM" },
+      { startDay: 3, endDay: 3, fajr: "5:30 AM", dhuhr: "1:35 PM", asrFV: "5:30 PM", asrPK: "6:00 PM", isha: "9:45 PM" },
+      { startDay: 4, endDay: 8, fajr: "5:30 AM", dhuhr: "1:35 PM", asrFV: "5:30 PM", asrPK: "6:30 PM", isha: "9:45 PM" },
+      { startDay: 9, endDay: 16, fajr: "5:15 AM", dhuhr: "1:35 PM", asrFV: "5:30 PM", asrPK: "6:30 PM", isha: "9:45 PM" },
+      { startDay: 17, endDay: 23, fajr: "5:15 AM", dhuhr: "1:35 PM", asrFV: "5:30 PM", asrPK: "6:30 PM", isha: "10:00 PM" },
+      { startDay: 24, endDay: 30, fajr: "5:00 AM", dhuhr: "1:35 PM", asrFV: "5:30 PM", asrPK: "6:30 PM", isha: "10:00 PM" },
+      { startDay: 31, endDay: 31, fajr: "5:00 AM", dhuhr: "1:35 PM", asrFV: "5:30 PM", asrPK: "6:30 PM", isha: "10:15 PM" }
+    ]
+  },
+  {
+    month: 6,
+    daysInMonth: 30,
+    maghrib: [
+      { startDay: 1, endDay: 30, startMin: 1227, endMin: 1236 }
+    ],
+    ranges: [
+      { startDay: 1, endDay: 30, fajr: "5:00 AM", dhuhr: "1:35 PM", asrFV: "5:30 PM", asrPK: "6:30 PM", isha: "10:15 PM" }
+    ]
+  },
+  {
+    month: 7,
+    daysInMonth: 31,
+    maghrib: [
+      { startDay: 1, endDay: 31, startMin: 1236, endMin: 1221 }
+    ],
+    ranges: [
+      { startDay: 1, endDay: 11, fajr: "5:00 AM", dhuhr: "1:35 PM", asrFV: "5:30 PM", asrPK: "6:30 PM", isha: "10:15 PM" },
+      { startDay: 12, endDay: 18, fajr: "5:15 AM", dhuhr: "1:35 PM", asrFV: "5:45 PM", asrPK: "6:30 PM", isha: "10:15 PM" },
+      { startDay: 19, endDay: 25, fajr: "5:15 AM", dhuhr: "1:35 PM", asrFV: "5:45 PM", asrPK: "6:30 PM", isha: "10:00 PM" },
+      { startDay: 26, endDay: 31, fajr: "5:30 AM", dhuhr: "1:35 PM", asrFV: "5:45 PM", asrPK: "6:30 PM", isha: "10:00 PM" }
+    ]
+  },
+  {
+    month: 8,
+    daysInMonth: 31,
+    maghrib: [
+      { startDay: 1, endDay: 31, startMin: 1220, endMin: 1184 }
+    ],
+    ranges: [
+      { startDay: 1, endDay: 8, fajr: "5:30 AM", dhuhr: "1:35 PM", asrFV: "5:45 PM", asrPK: "6:30 PM", isha: "10:00 PM" },
+      { startDay: 9, endDay: 15, fajr: "5:45 AM", dhuhr: "1:35 PM", asrFV: "5:30 PM", asrPK: "6:30 PM", isha: "9:45 PM" },
+      { startDay: 16, endDay: 22, fajr: "5:45 AM", dhuhr: "1:35 PM", asrFV: "5:30 PM", asrPK: "6:30 PM", isha: "9:30 PM" },
+      { startDay: 23, endDay: 29, fajr: "6:00 AM", dhuhr: "1:35 PM", asrFV: "5:30 PM", asrPK: "6:30 PM", isha: "9:30 PM" },
+      { startDay: 30, endDay: 31, fajr: "6:00 AM", dhuhr: "1:35 PM", asrFV: "5:30 PM", asrPK: "6:00 PM", isha: "9:15 PM" }
+    ]
+  },
+  {
+    month: 9,
+    daysInMonth: 30,
+    maghrib: [
+      { startDay: 1, endDay: 30, startMin: 1183, endMin: 1141 }
+    ],
+    ranges: [
+      { startDay: 1, endDay: 5, fajr: "6:00 AM", dhuhr: "1:35 PM", asrFV: "5:30 PM", asrPK: "6:00 PM", isha: "9:15 PM" },
+      { startDay: 6, endDay: 12, fajr: "6:00 AM", dhuhr: "1:35 PM", asrFV: "5:30 PM", asrPK: "6:00 PM", isha: "9:00 PM" },
+      { startDay: 13, endDay: 19, fajr: "6:15 AM", dhuhr: "1:35 PM", asrFV: "5:30 PM", asrPK: "6:00 PM", isha: "9:00 PM" },
+      { startDay: 20, endDay: 26, fajr: "6:15 AM", dhuhr: "1:35 PM", asrFV: "5:30 PM", asrPK: "6:00 PM", isha: "8:45 PM" },
+      { startDay: 27, endDay: 30, fajr: "6:15 AM", dhuhr: "1:35 PM", asrFV: "5:00 PM", asrPK: "5:45 PM", isha: "8:30 PM" }
+    ]
+  },
+  {
+    month: 10,
+    daysInMonth: 31,
+    maghrib: [
+      { startDay: 1, endDay: 31, startMin: 1139, endMin: 1101 }
+    ],
+    ranges: [
+      { startDay: 1, endDay: 3, fajr: "6:15 AM", dhuhr: "1:35 PM", asrFV: "5:00 PM", asrPK: "5:45 PM", isha: "8:30 PM" },
+      { startDay: 4, endDay: 10, fajr: "6:30 AM", dhuhr: "1:35 PM", asrFV: "5:00 PM", asrPK: "5:45 PM", isha: "8:30 PM" },
+      { startDay: 11, endDay: 18, fajr: "6:30 AM", dhuhr: "1:35 PM", asrFV: "4:30 PM", asrPK: "5:15 PM", isha: "8:15 PM" },
+      { startDay: 19, endDay: 31, fajr: "6:30 AM", dhuhr: "1:35 PM", asrFV: "4:30 PM", asrPK: "5:15 PM", isha: "8:00 PM" }
+    ]
+  },
+  {
+    month: 11,
+    daysInMonth: 30,
+    maghrib: [
+      { startDay: 1, endDay: 30, startMin: 1040, endMin: 1022 }
+    ],
+    ranges: [
+      { startDay: 1, endDay: 21, fajr: "6:00 AM", dhuhr: "1:35 PM", asrFV: "3:30 PM", asrPK: "4:00 PM", isha: "7:00 PM" },
+      { startDay: 22, endDay: 30, fajr: "6:15 AM", dhuhr: "1:35 PM", asrFV: "3:30 PM", asrPK: "4:00 PM", isha: "7:00 PM" }
+    ]
+  },
+  {
+    month: 12,
+    daysInMonth: 31,
+    maghrib: [
+      { startDay: 1, endDay: 31, startMin: 1022, endMin: 1032 }
+    ],
+    ranges: [
+      { startDay: 1, endDay: 5, fajr: "6:15 AM", dhuhr: "1:35 PM", asrFV: "3:30 PM", asrPK: "4:00 PM", isha: "7:00 PM" },
+      { startDay: 6, endDay: 31, fajr: "6:30 AM", dhuhr: "1:35 PM", asrFV: "3:30 PM", asrPK: "4:00 PM", isha: "7:00 PM" }
+    ]
+  }
+];
+function minutesToTime(totalMin) {
+  const h24 = Math.floor(totalMin / 60);
+  const m = Math.round(totalMin % 60);
+  const h12 = h24 === 0 ? 12 : h24 > 12 ? h24 - 12 : h24;
+  const suffix = h24 >= 12 ? "PM" : "AM";
+  return `${h12}:${String(m).padStart(2, "0")} ${suffix}`;
+}
+function interpolateMaghrib(seg, day) {
+  const span = seg.endDay - seg.startDay;
+  if (span === 0) return minutesToTime(seg.startMin + 10);
+  const frac = (day - seg.startDay) / span;
+  const adhanMin = seg.startMin + frac * (seg.endMin - seg.startMin);
+  return minutesToTime(adhanMin + 10);
+}
+function generateJIARSchedule() {
+  const records = [];
+  for (const mc of MONTHS_2026) {
+    for (let day = 1; day <= mc.daysInMonth; day++) {
+      const dateStr = `2026-${String(mc.month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      const range = mc.ranges.find((r) => day >= r.startDay && day <= r.endDay);
+      if (!range) continue;
+      const seg = mc.maghrib.find((s) => day >= s.startDay && day <= s.endDay);
+      if (!seg) continue;
+      const maghribIq = interpolateMaghrib(seg, day);
+      records.push({
+        date: dateStr,
+        fajr: range.fajr,
+        dhuhr: range.dhuhr,
+        asrFV: range.asrFV,
+        asrPK: range.asrPK,
+        maghrib: maghribIq,
+        isha: range.isha
+      });
+    }
+  }
+  return records;
+}
+
+// server/iqama-scraper.ts
+var IAR_API_URL = "https://raleighmasjid.org/API/prayer/month/";
+var ICMNC_API_URL = "https://www.icmnc.org/wp-json/dpt/v1/prayertime";
+var ALNOOR_URL = "https://alnooric.org/monthly-prayer-times/";
+function to12h(time24) {
+  const [hh, mm] = time24.split(":").map(Number);
+  if (isNaN(hh) || isNaN(mm)) return time24;
+  const h12 = hh === 0 ? 12 : hh > 12 ? hh - 12 : hh;
+  const suffix = hh >= 12 ? "PM" : "AM";
+  return `${h12}:${String(mm).padStart(2, "0")} ${suffix}`;
+}
+function getRaleighDateRange(days) {
+  const results = [];
+  const now = /* @__PURE__ */ new Date();
+  const raleighNow = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
+  for (let i = 0; i < days; i++) {
+    const d = new Date(raleighNow);
+    d.setDate(d.getDate() + i);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    results.push(`${y}-${m}-${day}`);
+  }
+  return { dates: results, year: raleighNow.getFullYear(), month: raleighNow.getMonth() + 1 };
+}
+async function ensureIqamaTable(pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS iqama_schedules (
+      id SERIAL PRIMARY KEY,
+      masjid TEXT NOT NULL,
+      date DATE NOT NULL,
+      fajr TEXT NOT NULL,
+      dhuhr TEXT NOT NULL,
+      asr TEXT NOT NULL,
+      maghrib TEXT NOT NULL,
+      isha TEXT NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(masjid, date)
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_iqama_masjid_date ON iqama_schedules(masjid, date);`);
+}
+async function seedJIARData(pool) {
+  const { rows } = await pool.query(
+    "SELECT COUNT(*) as count FROM iqama_schedules WHERE masjid LIKE 'JIAR%'"
+  );
+  if (parseInt(rows[0].count) > 0) return;
+  const schedule = generateJIARSchedule();
+  console.log(`[Iqama] Seeding ${schedule.length} days of JIAR schedule data...`);
+  const batchSize = 50;
+  for (let i = 0; i < schedule.length; i += batchSize) {
+    const batch = schedule.slice(i, i + batchSize);
+    const values = [];
+    const placeholders = [];
+    let idx = 1;
+    for (const day of batch) {
+      placeholders.push(`($${idx}, $${idx + 1}, $${idx + 2}, $${idx + 3}, $${idx + 4}, $${idx + 5}, $${idx + 6})`);
+      values.push("JIAR (Fayetteville)", day.date, day.fajr, day.dhuhr, day.asrFV, day.maghrib, day.isha);
+      idx += 7;
+      placeholders.push(`($${idx}, $${idx + 1}, $${idx + 2}, $${idx + 3}, $${idx + 4}, $${idx + 5}, $${idx + 6})`);
+      values.push("JIAR (Parkwood)", day.date, day.fajr, day.dhuhr, day.asrPK, day.maghrib, day.isha);
+      idx += 7;
+    }
+    await pool.query(
+      `INSERT INTO iqama_schedules (masjid, date, fajr, dhuhr, asr, maghrib, isha) VALUES ${placeholders.join(", ")}
+       ON CONFLICT (masjid, date) DO NOTHING`,
+      values
+    );
+  }
+  console.log(`[Iqama] Seeded JIAR Parkwood + Fayetteville schedules (${schedule.length} days each)`);
+}
+async function fetchAndStoreIAR(pool, year, month) {
+  try {
+    const url = `${IAR_API_URL}?year=${year}&month=${month}`;
+    const resp = await fetch(url);
+    if (!resp.ok) {
+      console.error(`[Iqama] IAR API returned ${resp.status}`);
+      return;
+    }
+    const json = await resp.json();
+    const values = [];
+    const placeholders = [];
+    let idx = 1;
+    for (const [dateKey, dayData] of Object.entries(json)) {
+      if (!dayData?.iqamah?.Fajr || !dayData?.iqamah?.Isha) continue;
+      placeholders.push(`($${idx}, $${idx + 1}, $${idx + 2}, $${idx + 3}, $${idx + 4}, $${idx + 5}, $${idx + 6})`);
+      values.push("IAR", dateKey, dayData.iqamah.Fajr, dayData.iqamah.Dhuhr, dayData.iqamah.Asr, dayData.iqamah.Maghrib, dayData.iqamah.Isha);
+      idx += 7;
+    }
+    if (placeholders.length > 0) {
+      await pool.query(
+        `INSERT INTO iqama_schedules (masjid, date, fajr, dhuhr, asr, maghrib, isha) VALUES ${placeholders.join(", ")}
+         ON CONFLICT (masjid, date) DO UPDATE SET fajr=EXCLUDED.fajr, dhuhr=EXCLUDED.dhuhr, asr=EXCLUDED.asr, maghrib=EXCLUDED.maghrib, isha=EXCLUDED.isha, updated_at=NOW()`,
+        values
+      );
+      console.log(`[Iqama] Synced ${placeholders.length} IAR days for ${month}/${year}`);
+    }
+  } catch (err) {
+    console.error("[Iqama] Error syncing IAR:", err.message);
+  }
+}
+async function fetchAndStoreICMNC(pool) {
+  try {
+    const resp = await fetch(`${ICMNC_API_URL}?filter=today`);
+    if (!resp.ok) {
+      console.error(`[Iqama] ICMNC API returned ${resp.status}`);
+      return;
+    }
+    const json = await resp.json();
+    if (!json || json.length === 0) return;
+    const today = json[0];
+    if (!today.fajr_jamah || !today.isha_jamah) return;
+    const now = /* @__PURE__ */ new Date();
+    const raleigh = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);
+    const year = raleigh.find((p) => p.type === "year").value;
+    const month = raleigh.find((p) => p.type === "month").value;
+    const day = raleigh.find((p) => p.type === "day").value;
+    const dateKey = `${year}-${month}-${day}`;
+    await pool.query(
+      `INSERT INTO iqama_schedules (masjid, date, fajr, dhuhr, asr, maghrib, isha) VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (masjid, date) DO UPDATE SET fajr=EXCLUDED.fajr, dhuhr=EXCLUDED.dhuhr, asr=EXCLUDED.asr, maghrib=EXCLUDED.maghrib, isha=EXCLUDED.isha, updated_at=NOW()`,
+      ["ICMNC", dateKey, to12h(today.fajr_jamah), to12h(today.zuhr_jamah), to12h(today.asr_jamah), to12h(today.maghrib_jamah), to12h(today.isha_jamah)]
+    );
+    console.log(`[Iqama] Synced ICMNC for ${dateKey}`);
+  } catch (err) {
+    console.error("[Iqama] Error syncing ICMNC:", err.message);
+  }
+}
+var MONTH_ABBRS = {
+  Jan: 1,
+  Feb: 2,
+  Mar: 3,
+  Apr: 4,
+  May: 5,
+  Jun: 6,
+  Jul: 7,
+  Aug: 8,
+  Sep: 9,
+  Oct: 10,
+  Nov: 11,
+  Dec: 12
+};
+async function fetchAndStoreAlNoor(pool) {
+  try {
+    const resp = await fetch(ALNOOR_URL);
+    if (!resp.ok) {
+      console.error(`[Iqama] Al Noor page returned ${resp.status}`);
+      return;
+    }
+    const html = await resp.text();
+    const tdRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
+    const trRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+    const rows = [];
+    let trMatch;
+    while ((trMatch = trRegex.exec(html)) !== null) {
+      const cells = [];
+      let tdMatch;
+      const tdRe = /<td[^>]*>([\s\S]*?)<\/td>/gi;
+      while ((tdMatch = tdRe.exec(trMatch[1])) !== null) {
+        cells.push(tdMatch[1].replace(/<[^>]*>/g, "").trim());
+      }
+      if (cells.length >= 13) rows.push(cells);
+    }
+    if (rows.length === 0) {
+      console.error("[Iqama] Al Noor: no table rows found");
+      return;
+    }
+    const now = /* @__PURE__ */ new Date();
+    const raleighNow = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
+    const currentYear = raleighNow.getFullYear();
+    const seen = /* @__PURE__ */ new Map();
+    for (const cells of rows) {
+      const dateParts = cells[0].split(" ");
+      if (dateParts.length < 2) continue;
+      const dayNum = parseInt(dateParts[0]);
+      const monthAbbr = dateParts[1];
+      const monthNum = MONTH_ABBRS[monthAbbr];
+      if (!monthNum || isNaN(dayNum)) continue;
+      const dateKey = `${currentYear}-${String(monthNum).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
+      const fajrIqamah = cells[3];
+      const dhuhrIqamah = cells[6];
+      const asrIqamah = cells[8];
+      const maghribIqamah = cells[10];
+      const ishaIqamah = cells[12];
+      if (!fajrIqamah || !ishaIqamah) continue;
+      if (!seen.has(dateKey)) {
+        seen.set(dateKey, { fajr: fajrIqamah, dhuhr: dhuhrIqamah, asr: asrIqamah, maghrib: maghribIqamah, isha: ishaIqamah });
+      }
+    }
+    const values = [];
+    const placeholders = [];
+    let idx = 1;
+    for (const [dateKey, times] of seen) {
+      placeholders.push(`($${idx}, $${idx + 1}, $${idx + 2}, $${idx + 3}, $${idx + 4}, $${idx + 5}, $${idx + 6})`);
+      values.push("Al Noor", dateKey, times.fajr, times.dhuhr, times.asr, times.maghrib, times.isha);
+      idx += 7;
+    }
+    if (placeholders.length > 0) {
+      await pool.query(
+        `INSERT INTO iqama_schedules (masjid, date, fajr, dhuhr, asr, maghrib, isha) VALUES ${placeholders.join(", ")}
+         ON CONFLICT (masjid, date) DO UPDATE SET fajr=EXCLUDED.fajr, dhuhr=EXCLUDED.dhuhr, asr=EXCLUDED.asr, maghrib=EXCLUDED.maghrib, isha=EXCLUDED.isha, updated_at=NOW()`,
+        values
+      );
+      console.log(`[Iqama] Synced ${placeholders.length} Al Noor days for current month`);
+    }
+  } catch (err) {
+    console.error("[Iqama] Error syncing Al Noor:", err.message);
+  }
+}
+async function syncExternalIqama(pool) {
+  const { year, month } = getRaleighDateRange(1);
+  await Promise.all([
+    fetchAndStoreIAR(pool, year, month),
+    fetchAndStoreICMNC(pool),
+    fetchAndStoreAlNoor(pool)
+  ]);
+  const nextMonthDate = new Date(year, month, 1);
+  const now = /* @__PURE__ */ new Date();
+  const raleighNow = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
+  const daysLeft = new Date(year, month, 0).getDate() - raleighNow.getDate();
+  if (daysLeft <= 7) {
+    await fetchAndStoreIAR(pool, nextMonthDate.getFullYear(), nextMonthDate.getMonth() + 1);
+  }
+}
+async function getIqamaSchedules(pool, days = 7) {
+  const { dates } = getRaleighDateRange(days);
+  const result = await pool.query(
+    `SELECT masjid, date::text, fajr, dhuhr, asr, maghrib, isha 
+     FROM iqama_schedules 
+     WHERE date >= $1 AND date <= $2
+     ORDER BY masjid, date`,
+    [dates[0], dates[dates.length - 1]]
+  );
+  return result.rows.map((row) => ({
+    masjid: row.masjid,
+    date: row.date,
+    iqama: {
+      fajr: row.fajr,
+      dhuhr: row.dhuhr,
+      asr: row.asr,
+      maghrib: row.maghrib,
+      isha: row.isha
+    }
+  }));
+}
+var syncInterval = null;
+function startIqamaSync(pool) {
+  syncExternalIqama(pool).catch((err) => console.error("[Iqama] Initial sync error:", err.message));
+  syncInterval = setInterval(() => {
+    syncExternalIqama(pool).catch((err) => console.error("[Iqama] Sync error:", err.message));
+  }, 6 * 60 * 60 * 1e3);
+}
+
 // server/routes.ts
 var CALENDAR_ID = "5c6138b3c670e90f28b9ec65a6650268569a070eff5ae0ae919129f763d216af@group.calendar.google.com";
 var NAME_MATCHES = [
@@ -54,6 +477,7 @@ var NAME_MATCHES = [
   ["islamic center of morrisville", "Islamic Center of Morrisville"],
   ["icm,", "Islamic Center of Morrisville"],
   ["islamic center of cary", "Islamic Center of Cary"],
+  ["cary mosque", "Cary Mosque"],
   ["masjid king khalid", "Masjid King Khalid"],
   ["shaw university mosque", "Masjid King Khalid"],
   ["as-salaam islamic", "As-Salaam Islamic Center"],
@@ -63,12 +487,15 @@ var NAME_MATCHES = [
   ["apex mosque", "Apex Masjid"],
   ["chapel hill islamic", "Chapel Hill Islamic Society"],
   ["ar-razzaq", "Ar-Razzaq Islamic Center"],
-  ["jamaat ibad", "Jamaat Ibad Ar-Rahman"],
-  ["jiar", "Jamaat Ibad Ar-Rahman"],
-  ["parkwood masjid", "Parkwood Masjid (JIAR)"],
+  ["jamaat ibad", "Jamaat Ibad Ar-Rahman (Parkwood)"],
+  ["jamaat ibad parkwood", "Jamaat Ibad Ar-Rahman (Parkwood)"],
+  ["jiar", "Jamaat Ibad Ar-Rahman (Parkwood)"],
+  ["parkwood masjid", "Jamaat Ibad Ar-Rahman (Parkwood)"],
+  ["jamaat ibad fayetteville", "Jamaat Ibad Ar-Rahman (Fayetteville)"],
+  ["fayetteville masjid", "Jamaat Ibad Ar-Rahman (Fayetteville)"],
   ["rumman room", "Rumman Room"],
-  ["light house project", "Lighthouse Project"],
-  ["lighthouse project", "Lighthouse Project"],
+  ["light house project", "Light House Project"],
+  ["lighthouse project", "Light House Project"],
   ["muslim american society", "Muslim American Society (MAS Raleigh)"],
   ["mas raleigh", "Muslim American Society (MAS Raleigh)"],
   ["raleigh islamic institute", "Raleigh Islamic Institute"],
@@ -104,8 +531,8 @@ var STREET_MATCHES = [
   ["chapel hill rd", "Ar-Razzaq Islamic Center"],
   ["fayetteville st", "Jamaat Ibad Ar-Rahman"],
   ["revere rd", "Parkwood Masjid (JIAR)"],
-  ["nw maynard", "Lighthouse Project"],
-  ["kildaire farm", "Lighthouse Project"],
+  ["nw maynard", "Light House Project"],
+  ["kildaire farm", "Light House Project"],
   ["jones franklin", "Muslim American Society (MAS Raleigh)"],
   ["rock quarry", "Raleigh Islamic Institute"],
   ["new hope rd", "Madinah Quran & Youth Center"],
@@ -281,6 +708,60 @@ function cleanDescription(rawDesc) {
   if (text.length < 10) return "";
   return text;
 }
+var LOCATION_ADDRESS_MAP = {
+  "Cary Mosque": "1155 W Chatham St, Cary, NC 27511",
+  "Light House Project": "1127 Kildaire Farm Rd, Cary, NC 27511",
+  "The Light House Project": "1127 Kildaire Farm Rd, Cary, NC 27511",
+  "The McKimmon Center": "1101 Gorman St, Raleigh, NC 27606"
+};
+var LOCATION_STRIP_PREFIXES = [
+  /^islamic association of raleigh\s*[|,]\s*/i,
+  /^iar masjid[^,]*,\s*/i,
+  /^islamic center of morrisville\s*[|,]\s*/i,
+  /^banquet hall of islamic center of morrisville\s*[|,]\s*/i,
+  /^madinah quran and youth center\s*[|,]\s*/i,
+  /^madinah quran & youth center\s*[|,]\s*/i,
+  /^mycc\s*[|,]\s*/i,
+  /^method park community hall\s*[|,]\s*/i,
+  /^north raleigh masjid\s*[|,]\s*/i
+];
+function resolveLocation(location) {
+  if (!location) return "";
+  if (LOCATION_ADDRESS_MAP[location]) return LOCATION_ADDRESS_MAP[location];
+  for (const [key, addr] of Object.entries(LOCATION_ADDRESS_MAP)) {
+    if (location.toLowerCase().includes(key.toLowerCase())) return addr;
+  }
+  for (const pattern of LOCATION_STRIP_PREFIXES) {
+    if (pattern.test(location)) {
+      return location.replace(pattern, "");
+    }
+  }
+  return location;
+}
+var SPEAKER_PATTERNS = [
+  /(?:with|featuring|by|speaker[:\s]*)\s+(?:Sheikh|Shaykh|Imam|Ustadh|Ustadha|Dr\.?|Mufti|Hafiz|Qari)\s+([A-Z][a-zA-Z'-]+(?:\s+[A-Z][a-zA-Z'-]+){0,3})/i,
+  /(?:Sheikh|Shaykh|Imam|Ustadh|Ustadha|Dr\.?|Mufti|Hafiz|Qari)\s+([A-Z][a-zA-Z'-]+(?:\s+[A-Z][a-zA-Z'-]+){0,3})/
+];
+function extractSpeaker(text) {
+  if (!text) return "";
+  const clean = text.replace(/<[^>]*>/g, " ").replace(/&[^;]+;/g, " ");
+  for (const pattern of SPEAKER_PATTERNS) {
+    const match = clean.match(pattern);
+    if (match && match[1]) {
+      let name = match[1].trim();
+      name = name.replace(/\s+(?:and|&|with|for|in|at|on|who|will|is)\s+.*/i, "").trim();
+      name = name.replace(/[.,!?;:✨]+$/, "").trim();
+      if (name.length >= 3 && name.length <= 50) {
+        const titleMatch = clean.match(new RegExp(`(Sheikh|Shaykh|Imam|Ustadh|Ustadha|Dr\\.?|Mufti|Hafiz|Qari)\\s+${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "i"));
+        if (titleMatch) {
+          return `${titleMatch[1]} ${name}`;
+        }
+        return name;
+      }
+    }
+  }
+  return "";
+}
 function processEvent(event) {
   const desc = event.description || "";
   const imgMatch = desc.match(/src="([^"]+)"/);
@@ -295,24 +776,26 @@ function processEvent(event) {
     id: event.id,
     title: event.summary || "Untitled Event",
     description: cleanDescription(desc),
-    location: event.location || "",
+    location: resolveLocation(event.location || ""),
     start: event.start?.dateTime || event.start?.date || "",
     end: event.end?.dateTime || event.end?.date || "",
     isAllDay: !event.start?.dateTime,
     organizer: resolveOrganizer(event),
     imageUrl,
-    registrationUrl
+    registrationUrl,
+    speaker: extractSpeaker(desc)
   };
 }
 async function fetchAndCacheEvents() {
   try {
     const calendar = await getUncachableGoogleCalendarClient();
     const now = /* @__PURE__ */ new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const threeMonthsLater = /* @__PURE__ */ new Date();
     threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
     const response = await calendar.events.list({
       calendarId: CALENDAR_ID,
-      timeMin: now.toISOString(),
+      timeMin: startOfToday.toISOString(),
       timeMax: threeMonthsLater.toISOString(),
       singleEvents: true,
       orderBy: "startTime",
@@ -347,6 +830,65 @@ function getDbPool() {
   return new pg.Pool({
     connectionString: process.env.DATABASE_URL
   });
+}
+async function ensureJumuahTable(pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS jumuah_schedules (
+      id SERIAL PRIMARY KEY,
+      masjid VARCHAR(255) NOT NULL,
+      khutbah_time VARCHAR(20) NOT NULL,
+      iqama_time VARCHAR(50) NOT NULL,
+      speaker VARCHAR(255),
+      topic VARCHAR(500),
+      active BOOLEAN DEFAULT true,
+      sort_order INT DEFAULT 0,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  const { rows } = await pool.query("SELECT COUNT(*) as count FROM jumuah_schedules");
+  if (parseInt(rows[0].count) === 0) {
+    await pool.query(`
+      INSERT INTO jumuah_schedules (masjid, khutbah_time, iqama_time, sort_order) VALUES
+        ('IAR (Atwater)', '1:00 PM', '1:30 PM', 1),
+        ('IAR (Page Rd)', '1:00 PM', '1:30 PM', 2),
+        ('Islamic Center of Morrisville', '12:30 PM', '1:00 PM', 3),
+        ('Islamic Center of Cary', '1:00 PM', '1:30 PM', 4),
+        ('As-Salaam Islamic Center', '1:15 PM', '1:45 PM', 5),
+        ('Chapel Hill Islamic Society', '1:00 PM', '1:30 PM', 6),
+        ('Ar-Razzaq Islamic Center', '1:15 PM', '1:45 PM', 7),
+        ('Jamaat Ibad Ar-Rahman (Fayetteville)', '1:00 PM', '1:30 PM', 8),
+        ('Jamaat Ibad Ar-Rahman (Parkwood)', '12:10 PM, 1:10 PM, 2:10 PM', '12:40 PM, 1:40 PM, 2:40 PM', 9);
+    `);
+    console.log("[DB] Seeded default Jumuah schedules");
+  }
+}
+async function ensureEventOverridesTable(pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS event_overrides (
+      id SERIAL PRIMARY KEY,
+      event_id VARCHAR(500) UNIQUE NOT NULL,
+      title VARCHAR(500),
+      description TEXT,
+      location VARCHAR(500),
+      start_time VARCHAR(100),
+      end_time VARCHAR(100),
+      organizer VARCHAR(255),
+      image_url TEXT,
+      registration_url TEXT,
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+}
+async function ensureRestaurantOverridesTable(pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS restaurant_overrides (
+      id SERIAL PRIMARY KEY,
+      restaurant_id INTEGER UNIQUE NOT NULL,
+      override_periods JSONB,
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
 }
 async function ensureTickerTable(pool) {
   await pool.query(`
@@ -435,6 +977,75 @@ async function ensureHalalRestaurantsTable(pool) {
     }
   }
 }
+var HALAL_SYNC_INTERVAL = 6 * 60 * 60 * 1e3;
+var HALAL_API_URL = "https://halaleatsnc.com/api/restaurants";
+async function syncHalalRestaurants(pool) {
+  try {
+    console.log("[Halal Sync] Checking for new restaurants from halaleatsnc.com...");
+    const response = await fetch(HALAL_API_URL);
+    if (!response.ok) {
+      console.log(`[Halal Sync] API returned ${response.status}, skipping sync`);
+      return;
+    }
+    const data = await response.json();
+    const restaurants = Array.isArray(data) ? data : data.restaurants || data.data || [];
+    if (!Array.isArray(restaurants) || restaurants.length === 0) {
+      console.log("[Halal Sync] No restaurants in API response, skipping");
+      return;
+    }
+    const existingResult = await pool.query("SELECT external_id FROM halal_restaurants WHERE external_id IS NOT NULL");
+    const existingIds = new Set(existingResult.rows.map((r) => r.external_id));
+    let newCount = 0;
+    for (const r of restaurants) {
+      const externalId = r.id || r.external_id;
+      if (externalId && existingIds.has(externalId)) continue;
+      const name = r.name || r.restaurantName;
+      if (!name) continue;
+      const nameCheck = await pool.query("SELECT id FROM halal_restaurants WHERE LOWER(name) = LOWER($1)", [name]);
+      if (nameCheck.rows.length > 0) continue;
+      await pool.query(
+        `INSERT INTO halal_restaurants (external_id, name, formatted_address, formatted_phone, url, lat, lng, is_halal, halal_comment, cuisine_types, emoji, evidence, considerations, opening_hours)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+        [
+          externalId || null,
+          name,
+          r.formattedAddress || r.formatted_address || null,
+          r.formattedPhone || r.formatted_phone || null,
+          r.url || null,
+          r.lat || r.latitude || null,
+          r.lng || r.longitude || null,
+          r.isHalal || r.is_halal || "UNKNOWN",
+          r.halalComment || r.halal_comment || null,
+          r.cuisineTypes || r.cuisine_types || null,
+          r.emoji || null,
+          r.evidence || null,
+          r.considerations || null,
+          r.openingHours || r.opening_hours ? JSON.stringify(r.openingHours || r.opening_hours) : null
+        ]
+      );
+      newCount++;
+    }
+    if (newCount > 0) {
+      console.log(`[Halal Sync] Added ${newCount} new restaurants`);
+    } else {
+      console.log(`[Halal Sync] No new restaurants found (${restaurants.length} checked, ${existingIds.size} existing)`);
+    }
+  } catch (err) {
+    console.log(`[Halal Sync] Sync skipped: ${err.message}`);
+  }
+}
+function startHalalAutoSync(pool) {
+  setTimeout(() => {
+    syncHalalRestaurants(pool).catch(
+      (err) => console.error("[Halal Sync] Error:", err.message)
+    );
+  }, 3e4);
+  setInterval(() => {
+    syncHalalRestaurants(pool).catch(
+      (err) => console.error("[Halal Sync] Scheduled sync error:", err.message)
+    );
+  }, HALAL_SYNC_INTERVAL);
+}
 async function ensureBusinessesTable(pool) {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS businesses (
@@ -451,6 +1062,57 @@ async function ensureBusinessesTable(pool) {
     );
   `);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_businesses_status ON businesses(status);`);
+  const colCheck = await pool.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'businesses' AND column_name = 'place_id'`);
+  if (colCheck.rows.length === 0) {
+    await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS place_id VARCHAR(255)`);
+    await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS rating DECIMAL(2,1)`);
+    await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS user_ratings_total INTEGER`);
+    await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS photo_reference TEXT`);
+    await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS business_hours JSONB`);
+    await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION`);
+    await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION`);
+    console.log("[DB] Added Google Places columns to businesses table");
+  }
+  await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS google_url TEXT DEFAULT ''`);
+  await pool.query(`ALTER TABLE businesses ALTER COLUMN address DROP NOT NULL`);
+  await pool.query(`ALTER TABLE businesses ALTER COLUMN address SET DEFAULT ''`);
+  await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS specialty VARCHAR(255) DEFAULT ''`);
+  await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS keywords TEXT[] DEFAULT '{}'`);
+  await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS photo_url TEXT DEFAULT ''`);
+  await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS booking_url TEXT DEFAULT ''`);
+  await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS search_tags TEXT[] DEFAULT '{}'`);
+  await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS member_note TEXT DEFAULT ''`);
+  await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS hospital_affiliation TEXT DEFAULT ''`);
+  await pool.query(`UPDATE businesses SET specialty = 'Optometry' WHERE category = 'Healthcare' AND (specialty IS NULL OR specialty = '') AND (name ILIKE '%OD%' OR name ILIKE '%MyEyeDr%')`);
+  await pool.query(`UPDATE businesses SET specialty = 'Dermatology' WHERE category = 'Healthcare' AND (specialty IS NULL OR specialty = '') AND name ILIKE '%Dermatology%'`);
+  await pool.query(`UPDATE businesses SET specialty = 'Dentistry' WHERE category = 'Healthcare' AND (specialty IS NULL OR specialty = '') AND name ILIKE '%Dentistry%'`);
+  await pool.query(`UPDATE businesses SET website = 'https://curatestudioevents.com/' WHERE name ILIKE '%Curate Studio%' AND (website IS NULL OR website = '')`);
+  const attorneySeeds = [
+    { name: "Mousa Alshanteer, Associate Attorney - Brooks Pierce", desc: "Healthcare, Business, Corporate, Mergers & Acquisitions, Transactional", addr: "230 North Elm Street, 2000 Renaissance Plaza, Greensboro, NC 27401", phone: "(336) 373-8850", web: "https://www.brookspierce.com/people-mousa-alshanteer" },
+    { name: "The Law Office of Neubia L. Harris, PLLC", desc: "Education Law, Civil Rights", addr: "312 W. Millbrook Road, Ste. 141, Raleigh, NC 27609", phone: "(919) 526-0500", web: "https://www.neubiaharrislaw.com" },
+    { name: "Patterson Harkavy LLP", desc: "Civil Rights, Employment, Workers' Compensation, Labor, Police Misconduct", addr: "100 Europa Drive, Suite 420, Chapel Hill, NC 27517", phone: "(919) 942-5200", web: "https://www.pathlaw.com" },
+    { name: "Ayeshinaye Smith, Esq. - Smith Dominguez, PLLC", desc: "Family Law, Estates (Planning, Administration, and Guardianship)", addr: "4816 Six Forks Road, Suite 202, Raleigh, NC 27609", phone: "(919) 390-3512", web: "https://www.smithdominguez.com" },
+    { name: "The Law Office of Derrick J. Hensley, PLLC", desc: "Child Welfare/Adoptions, Immigration, International Family Law", addr: "401 Meadowlands Dr. Ste. 201, Hillsborough, NC 27278", phone: "(919) 480-1999", web: "https://www.LODJH.com" },
+    { name: "Safwan Ali - Ali Law Firm PLLC", desc: "Immigration, Traffic", addr: "PO Box 1046, Henderson, NC 27536", phone: "(919) 213-1945", web: "https://www.alilawfirm.net" },
+    { name: "Omar Baloch - The Law Offices of Omar Baloch, PLLC", desc: "Immigration", addr: "8801 Fast Park Drive, Suite 313, Raleigh, NC 27617", phone: "(919) 834-3535", web: "https://www.balochlaw.com" },
+    { name: "Nigel Edwards - The Law Offices of Omar Baloch, PLLC", desc: "Immigration (excluding business immigration)", addr: "8801 Fast Park Drive, Suite 313, Raleigh, NC 27617", phone: "(919) 834-3535", web: "https://www.balochlaw.com" },
+    { name: "Pooyan Ordoubadi - Law Office of Pooyan Ordoubadi", desc: "Immigration (Removal Defense and Federal Appeals), Criminal Defense, Family Law", addr: "33 Hillsboro Street, Pittsboro, NC 27312", phone: "(919) 351-1101", web: "https://pordolaw.com" },
+    { name: "Sammy Naji - Triangle Legal", desc: "Personal Injury, Wills, Trusts, Litigation, Business Law", addr: "2500 Regency Parkway, Cary, NC 27518", phone: "(919) 590-3647", web: "https://www.triangle.legal/" },
+    { name: "Nada Mohamed - Law Office of Nada Mohamed, PLLC", desc: "Estate Planning, Real Estate Transactions", addr: "64 Forest View Place, Durham, NC 27713", phone: "(919) 808-0067", web: "https://nrmlawoffice.com" },
+    { name: "Hay'ralah Alghorazi - Triangle Legal", desc: "Estate Planning", addr: "2500 Regency Parkway, Cary, NC 27518", phone: "(919) 590-3647", web: "https://www.triangle.legal/" }
+  ];
+  for (const a of attorneySeeds) {
+    const exists = await pool.query("SELECT id FROM businesses WHERE name = $1", [a.name]);
+    if (exists.rows.length === 0) {
+      await pool.query(
+        "INSERT INTO businesses (name, category, description, address, phone, website, submitted_by_email, status, member_note, search_tags, place_id) VALUES ($1, 'Services', $2, $3, $4, $5, 'admin@salamyall.net', 'approved', 'Member of NC Muslim Bar', '{lawyer,attorney,legal}', 'none')",
+        [a.name, a.desc, a.addr, a.phone, a.web]
+      );
+    }
+  }
+  await pool.query(`UPDATE businesses SET member_note = 'Member of NC Muslim Bar', search_tags = '{lawyer,attorney,legal}', place_id = 'none' WHERE name IN (${attorneySeeds.map((_, i) => `$${i + 1}`).join(",")})`, attorneySeeds.map((a) => a.name));
+  await pool.query(`ALTER TABLE halal_restaurants ADD COLUMN IF NOT EXISTS photo_reference TEXT`);
+  await pool.query(`ALTER TABLE halal_restaurants ADD COLUMN IF NOT EXISTS place_id VARCHAR(255)`);
   const { rows } = await pool.query("SELECT COUNT(*) as count FROM businesses");
   if (parseInt(rows[0].count) === 0) {
     const seed = [
@@ -467,7 +1129,7 @@ async function ensureBusinessesTable(pool) {
     ];
     for (const b of seed) {
       await pool.query(
-        `INSERT INTO businesses (name, category, description, address, phone, website, submitted_by_email, status) VALUES ($1, $2, $3, $4, $5, $6, 'admin@ummahconnect.app', 'approved')`,
+        `INSERT INTO businesses (name, category, description, address, phone, website, submitted_by_email, status) VALUES ($1, $2, $3, $4, $5, $6, 'admin@salamyall.net', 'approved')`,
         [b.name, b.category, b.description, b.address, b.phone, b.website]
       );
     }
@@ -477,18 +1139,53 @@ async function ensureBusinessesTable(pool) {
 async function registerRoutes(app2) {
   startAutoRefresh();
   const pool = getDbPool();
+  await ensureJumuahTable(pool).catch((err) => console.error("[DB] Jumuah table init error:", err.message));
+  await ensureEventOverridesTable(pool).catch((err) => console.error("[DB] Event overrides table init error:", err.message));
+  await ensureRestaurantOverridesTable(pool).catch((err) => console.error("[DB] Restaurant overrides table init error:", err.message));
   await ensureTickerTable(pool).catch((err) => console.error("[DB] Ticker table init error:", err.message));
   await ensurePushTokensTable(pool).catch((err) => console.error("[DB] Push tokens table init error:", err.message));
   await ensureHalalRestaurantsTable(pool).catch((err) => console.error("[DB] Halal restaurants table init error:", err.message));
   await ensureBusinessesTable(pool).catch((err) => console.error("[DB] Init error:", err.message));
+  await ensureIqamaTable(pool).catch((err) => console.error("[DB] Iqama table init error:", err.message));
+  await seedJIARData(pool).catch((err) => console.error("[DB] JIAR seed error:", err.message));
+  startHalalAutoSync(pool);
+  startIqamaSync(pool);
+  async function applyEventOverrides(events) {
+    try {
+      const { rows: overrides } = await pool.query("SELECT * FROM event_overrides");
+      if (overrides.length === 0) return events;
+      const overrideMap = new Map(overrides.map((o) => [o.event_id, o]));
+      return events.map((e) => {
+        const o = overrideMap.get(e.id);
+        if (!o) return e;
+        return {
+          ...e,
+          title: o.title || e.title,
+          description: o.description !== null && o.description !== void 0 ? o.description : e.description,
+          location: o.location !== null && o.location !== void 0 ? o.location : e.location,
+          start: o.start_time || e.start,
+          end: o.end_time || e.end,
+          organizer: o.organizer !== null && o.organizer !== void 0 ? o.organizer : e.organizer,
+          imageUrl: o.image_url !== null && o.image_url !== void 0 ? o.image_url : e.imageUrl,
+          registrationUrl: o.registration_url !== null && o.registration_url !== void 0 ? o.registration_url : e.registrationUrl
+        };
+      });
+    } catch (err) {
+      console.error("[Events] Error applying overrides:", err.message);
+      return events;
+    }
+  }
   app2.get("/api/events", async (_req, res) => {
     try {
       const now = Date.now();
+      let events;
       if (cachedEvents.length > 0 && now - lastFetchTime < CACHE_TTL) {
-        return res.json(cachedEvents);
+        events = cachedEvents;
+      } else {
+        events = await fetchAndCacheEvents();
       }
-      const events = await fetchAndCacheEvents();
-      res.json(events);
+      const withOverrides = await applyEventOverrides(events);
+      res.json(withOverrides);
     } catch (error) {
       console.error("Error fetching calendar events:", error.message);
       res.status(500).json({ error: "Failed to fetch events" });
@@ -497,7 +1194,8 @@ async function registerRoutes(app2) {
   app2.post("/api/events/refresh", async (_req, res) => {
     try {
       const events = await fetchAndCacheEvents();
-      res.json({ refreshed: true, count: events.length });
+      const withOverrides = await applyEventOverrides(events);
+      res.json({ refreshed: true, count: withOverrides.length });
     } catch (error) {
       console.error("Error refreshing events:", error.message);
       res.status(500).json({ error: "Failed to refresh events" });
@@ -516,7 +1214,7 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: "Failed to fetch ticker messages" });
     }
   });
-  const ADMIN_KEY = process.env.SESSION_SECRET || "";
+  const ADMIN_KEY = process.env.ADMIN_KEY || process.env.SESSION_SECRET || "change-me-in-production";
   app2.post("/api/ticker", async (req, res) => {
     try {
       if (!isAdminAuthorized(req)) {
@@ -561,7 +1259,7 @@ async function registerRoutes(app2) {
   app2.get("/api/halal-restaurants", async (req, res) => {
     try {
       const { cuisine, status, search } = req.query;
-      let query = "SELECT id, external_id, name, formatted_address, formatted_phone, url, lat, lng, is_halal, halal_comment, cuisine_types, emoji, evidence, considerations, opening_hours, rating, user_ratings_total, website FROM halal_restaurants";
+      let query = "SELECT id, external_id, name, formatted_address, formatted_phone, url, lat, lng, is_halal, halal_comment, cuisine_types, emoji, evidence, considerations, opening_hours, rating, user_ratings_total, website, photo_reference, place_id FROM halal_restaurants";
       const conditions = [];
       const params = [];
       if (status && typeof status === "string" && ["IS_HALAL", "PARTIALLY_HALAL", "NOT_HALAL", "UNKNOWN"].includes(status)) {
@@ -581,6 +1279,28 @@ async function registerRoutes(app2) {
       }
       query += " ORDER BY name";
       const result = await pool.query(query, params);
+      try {
+        const { rows: overrides } = await pool.query("SELECT restaurant_id, override_periods FROM restaurant_overrides");
+        if (overrides.length > 0) {
+          const overrideMap = new Map(overrides.map((o) => [o.restaurant_id, o.override_periods]));
+          for (const row of result.rows) {
+            const op = overrideMap.get(row.id);
+            if (op) {
+              let hours = row.opening_hours;
+              if (typeof hours === "string") try {
+                hours = JSON.parse(hours);
+              } catch {
+                hours = {};
+              }
+              if (!hours) hours = {};
+              hours.periods = op;
+              row.opening_hours = hours;
+            }
+          }
+        }
+      } catch (overrideErr) {
+        console.error("[Halal] Error applying restaurant overrides:", overrideErr.message);
+      }
       res.json(result.rows);
     } catch (error) {
       console.error("Error fetching halal restaurants:", error.message);
@@ -590,7 +1310,7 @@ async function registerRoutes(app2) {
   app2.get("/api/businesses", async (_req, res) => {
     try {
       const result = await pool.query(
-        "SELECT id, name, category, description, address, phone, website FROM businesses WHERE status = 'approved' ORDER BY name"
+        "SELECT id, name, category, description, address, phone, website, place_id, rating, user_ratings_total, photo_reference, business_hours, lat, lng, specialty, keywords, photo_url, booking_url, search_tags, member_note, hospital_affiliation FROM businesses WHERE status = 'approved' AND category != 'Restaurant' ORDER BY name"
       );
       res.json(result.rows);
     } catch (error) {
@@ -598,11 +1318,109 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: "Failed to fetch businesses" });
     }
   });
+  app2.get("/api/businesses/:id/places-details", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const biz = await pool.query("SELECT * FROM businesses WHERE id = $1", [id]);
+      if (biz.rows.length === 0) return res.status(404).json({ error: "Business not found" });
+      const business = biz.rows[0];
+      if (business.place_id) {
+        return res.json({
+          place_id: business.place_id,
+          rating: business.rating,
+          user_ratings_total: business.user_ratings_total,
+          has_photo: !!business.photo_reference,
+          business_hours: business.business_hours,
+          lat: business.lat,
+          lng: business.lng
+        });
+      }
+      const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+      if (!apiKey) return res.json({ error: "No API key configured" });
+      const searchResp = await fetch(
+        `https://places.googleapis.com/v1/places:searchText`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": "places.id,places.rating,places.userRatingCount,places.photos,places.regularOpeningHours,places.location" },
+          body: JSON.stringify({ textQuery: `${business.name} ${business.address}` })
+        }
+      );
+      const searchData = await searchResp.json();
+      const place = searchData.places?.[0];
+      if (!place) {
+        await pool.query(`UPDATE businesses SET place_id = 'none' WHERE id = $1`, [id]);
+        return res.json({});
+      }
+      const photoRef = place.photos?.[0]?.name || null;
+      const hours = place.regularOpeningHours?.weekdayDescriptions || null;
+      await pool.query(
+        `UPDATE businesses SET place_id = $1, rating = $2, user_ratings_total = $3, photo_reference = $4, business_hours = $5, lat = $6, lng = $7 WHERE id = $8`,
+        [place.id, place.rating || null, place.userRatingCount || null, photoRef, hours ? JSON.stringify(hours) : null, place.location?.latitude || null, place.location?.longitude || null, id]
+      );
+      res.json({
+        place_id: place.id,
+        rating: place.rating,
+        user_ratings_total: place.userRatingCount,
+        has_photo: !!photoRef,
+        business_hours: hours,
+        lat: place.location?.latitude,
+        lng: place.location?.longitude
+      });
+    } catch (error) {
+      console.error("Error fetching places details:", error.message);
+      res.status(500).json({ error: "Failed to fetch details" });
+    }
+  });
+  app2.get("/api/businesses/:id/photo", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const biz = await pool.query("SELECT photo_reference FROM businesses WHERE id = $1", [id]);
+      if (biz.rows.length === 0 || !biz.rows[0].photo_reference) {
+        return res.status(404).json({ error: "No photo available" });
+      }
+      const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+      if (!apiKey) return res.status(500).json({ error: "No API key" });
+      const photoUrl = `https://places.googleapis.com/v1/${biz.rows[0].photo_reference}/media?maxWidthPx=800&key=${apiKey}`;
+      const photoResp = await fetch(photoUrl);
+      if (!photoResp.ok) return res.status(404).json({ error: "Photo not found" });
+      res.set("Content-Type", photoResp.headers.get("content-type") || "image/jpeg");
+      res.set("Cache-Control", "public, max-age=86400");
+      const buffer = Buffer.from(await photoResp.arrayBuffer());
+      res.send(buffer);
+    } catch (error) {
+      console.error("Error proxying photo:", error.message);
+      res.status(500).json({ error: "Failed to load photo" });
+    }
+  });
+  app2.get("/api/halal-restaurants/:id/photo", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = await pool.query("SELECT photo_reference FROM halal_restaurants WHERE id = $1", [id]);
+      if (result.rows.length === 0 || !result.rows[0].photo_reference) {
+        return res.status(404).json({ error: "No photo available" });
+      }
+      const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+      if (!apiKey) return res.status(500).json({ error: "No API key" });
+      const photoUrl = `https://places.googleapis.com/v1/${result.rows[0].photo_reference}/media?maxWidthPx=800&key=${apiKey}`;
+      const photoResp = await fetch(photoUrl);
+      if (!photoResp.ok) return res.status(404).json({ error: "Photo not found" });
+      res.set("Content-Type", photoResp.headers.get("content-type") || "image/jpeg");
+      res.set("Cache-Control", "public, max-age=86400");
+      const buffer = Buffer.from(await photoResp.arrayBuffer());
+      res.send(buffer);
+    } catch (error) {
+      console.error("Error proxying halal photo:", error.message);
+      res.status(500).json({ error: "Failed to load photo" });
+    }
+  });
   app2.post("/api/businesses/submit", async (req, res) => {
     try {
-      const { name, category, description, address, phone, website, email } = req.body;
-      if (!name || !category || !address || !email) {
-        return res.status(400).json({ error: "Name, category, address, and email are required" });
+      const { name, category, description, address, phone, website, email, google_url, specialty, keywords, photo_url, booking_url, hospital_affiliation } = req.body;
+      if (!name || !category || !email) {
+        return res.status(400).json({ error: "Name, category, and email are required" });
+      }
+      if (!address && !google_url) {
+        return res.status(400).json({ error: "Please provide either an address or a Google Maps URL" });
       }
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
@@ -612,11 +1430,15 @@ async function registerRoutes(app2) {
       if (!validCategories.includes(category)) {
         return res.status(400).json({ error: "Invalid category" });
       }
+      if (category === "Healthcare" && !specialty) {
+        return res.status(400).json({ error: "Specialty is required for healthcare providers" });
+      }
+      const keywordsArray = Array.isArray(keywords) ? keywords : [];
       const result = await pool.query(
-        `INSERT INTO businesses (name, category, description, address, phone, website, submitted_by_email, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
+        `INSERT INTO businesses (name, category, description, address, phone, website, submitted_by_email, google_url, specialty, keywords, photo_url, booking_url, hospital_affiliation, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'pending')
          RETURNING id`,
-        [name, category, description || "", address, phone || "", website || "", email]
+        [name, category, description || "", address || "", phone || "", website || "", email, google_url || "", specialty || "", keywordsArray, photo_url || "", booking_url || "", hospital_affiliation || ""]
       );
       res.status(201).json({
         message: "Business submitted successfully! It will be reviewed before appearing in the directory.",
@@ -638,7 +1460,7 @@ async function registerRoutes(app2) {
         return res.status(400).json({ error: "Invalid status filter" });
       }
       const result = await pool.query(
-        "SELECT id, name, category, description, address, phone, website, submitted_by_email, status, created_at FROM businesses WHERE status = $1 ORDER BY created_at DESC",
+        "SELECT id, name, category, description, address, phone, website, submitted_by_email, status, created_at, specialty, keywords, photo_url, booking_url, hospital_affiliation, member_note, search_tags, place_id, google_url FROM businesses WHERE status = $1 ORDER BY created_at DESC",
         [status]
       );
       res.json(result.rows);
@@ -647,6 +1469,263 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: "Failed to fetch businesses" });
     }
   });
+  async function enrichBusinessWithPlaces(businessId) {
+    try {
+      const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+      if (!apiKey) return;
+      const biz = await pool.query("SELECT * FROM businesses WHERE id = $1", [businessId]);
+      if (biz.rows.length === 0) return;
+      const business = biz.rows[0];
+      if (business.place_id) return;
+      const searchResp = await fetch(
+        `https://places.googleapis.com/v1/places:searchText`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": "places.id,places.rating,places.userRatingCount,places.photos,places.regularOpeningHours,places.location,places.websiteUri,places.googleMapsUri,places.nationalPhoneNumber,places.formattedAddress" },
+          body: JSON.stringify({ textQuery: `${business.name} ${business.address}` })
+        }
+      );
+      const searchData = await searchResp.json();
+      const place = searchData.places?.[0];
+      if (!place) {
+        await pool.query(`UPDATE businesses SET place_id = 'none' WHERE id = $1`, [businessId]);
+        return;
+      }
+      const photoRef = place.photos?.[0]?.name || null;
+      const hours = place.regularOpeningHours?.weekdayDescriptions || null;
+      const placeWebsite = place.websiteUri || null;
+      const googleUrl = place.googleMapsUri || null;
+      const placePhone = place.nationalPhoneNumber || null;
+      const placeAddress = place.formattedAddress || null;
+      await pool.query(
+        `UPDATE businesses SET place_id = $1, rating = $2, user_ratings_total = $3, photo_reference = $4, business_hours = $5, lat = $6, lng = $7, website = COALESCE(NULLIF($9, ''), website), google_url = COALESCE(NULLIF($10, ''), google_url), phone = COALESCE(NULLIF($11, ''), phone), address = COALESCE(NULLIF($12, ''), address) WHERE id = $8`,
+        [place.id, place.rating || null, place.userRatingCount || null, photoRef, hours ? JSON.stringify(hours) : null, place.location?.latitude || null, place.location?.longitude || null, businessId, placeWebsite || "", googleUrl || "", placePhone || "", placeAddress || ""]
+      );
+      console.log(`[Business Enrich] Enriched business #${businessId} "${business.name}" with Places data`);
+    } catch (err) {
+      console.error(`[Business Enrich] Error enriching business #${businessId}:`, err.message);
+    }
+  }
+  async function dailyBusinessEnrichment() {
+    try {
+      const result = await pool.query(
+        "SELECT id, name FROM businesses WHERE status = 'approved' AND place_id IS NULL"
+      );
+      if (result.rows.length > 0) {
+        console.log(`[Business Enrich] Found ${result.rows.length} approved businesses to enrich`);
+        for (const biz of result.rows) {
+          await enrichBusinessWithPlaces(biz.id);
+          await new Promise((r) => setTimeout(r, 500));
+        }
+      }
+      const missingBizData = await pool.query(
+        "SELECT id, name, place_id FROM businesses WHERE status = 'approved' AND place_id IS NOT NULL AND place_id != 'none' AND ((website IS NULL OR website = '') OR (google_url IS NULL OR google_url = '') OR (phone IS NULL OR phone = '')) LIMIT 100"
+      );
+      if (missingBizData.rows.length > 0) {
+        console.log(`[Business Enrich] Backfilling data for ${missingBizData.rows.length} businesses`);
+        const bApiKey = process.env.GOOGLE_PLACES_API_KEY;
+        if (bApiKey) {
+          for (const biz of missingBizData.rows) {
+            try {
+              const detailResp = await fetch(
+                `https://places.googleapis.com/v1/places/${biz.place_id}`,
+                { headers: { "X-Goog-Api-Key": bApiKey, "X-Goog-FieldMask": "websiteUri,googleMapsUri,nationalPhoneNumber" } }
+              );
+              const detailData = await detailResp.json();
+              const updates = [];
+              const vals = [];
+              let idx = 1;
+              if (detailData.websiteUri) {
+                updates.push(`website = COALESCE(NULLIF(website, ''), $${idx++})`);
+                vals.push(detailData.websiteUri);
+              }
+              if (detailData.googleMapsUri) {
+                updates.push(`google_url = COALESCE(NULLIF(google_url, ''), $${idx++})`);
+                vals.push(detailData.googleMapsUri);
+              }
+              if (detailData.nationalPhoneNumber) {
+                updates.push(`phone = COALESCE(NULLIF(phone, ''), $${idx++})`);
+                vals.push(detailData.nationalPhoneNumber);
+              }
+              if (updates.length > 0) {
+                vals.push(biz.id);
+                await pool.query(`UPDATE businesses SET ${updates.join(", ")} WHERE id = $${idx}`, vals);
+              }
+              await new Promise((r) => setTimeout(r, 200));
+            } catch {
+            }
+          }
+        }
+      }
+      console.log("[Business Enrich] Daily enrichment complete");
+    } catch (err) {
+      console.error("[Business Enrich] Daily enrichment error:", err.message);
+    }
+  }
+  async function enrichHalalWithPlaces(restaurantId, forcePhoto = false) {
+    try {
+      const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+      if (!apiKey) return;
+      const res = await pool.query("SELECT * FROM halal_restaurants WHERE id = $1", [restaurantId]);
+      if (res.rows.length === 0) return;
+      const restaurant = res.rows[0];
+      if (restaurant.place_id && !forcePhoto) return;
+      if (forcePhoto && restaurant.photo_reference) return;
+      if (forcePhoto && restaurant.place_id && restaurant.place_id !== "none") {
+        const detailResp = await fetch(
+          `https://places.googleapis.com/v1/places/${restaurant.place_id}`,
+          {
+            headers: { "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": "photos" }
+          }
+        );
+        const detailData = await detailResp.json();
+        const photoRef2 = detailData.photos?.[0]?.name || null;
+        if (photoRef2) {
+          await pool.query(`UPDATE halal_restaurants SET photo_reference = $1 WHERE id = $2`, [photoRef2, restaurantId]);
+          console.log(`[Halal Enrich] Photo added for #${restaurantId} "${restaurant.name}"`);
+        }
+        return;
+      }
+      const searchResp = await fetch(
+        `https://places.googleapis.com/v1/places:searchText`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": "places.id,places.rating,places.userRatingCount,places.photos,places.regularOpeningHours,places.location,places.websiteUri" },
+          body: JSON.stringify({ textQuery: `${restaurant.name} ${restaurant.formatted_address || ""}` })
+        }
+      );
+      const searchData = await searchResp.json();
+      const place = searchData.places?.[0];
+      if (!place) {
+        await pool.query(`UPDATE halal_restaurants SET place_id = 'none' WHERE id = $1`, [restaurantId]);
+        return;
+      }
+      const photoRef = place.photos?.[0]?.name || null;
+      const placeWebsite = place.websiteUri || null;
+      const googleHours = place.regularOpeningHours || {};
+      const replacedHours = {
+        type: googleHours.type || null,
+        openNow: googleHours.openNow || false,
+        periods: googleHours.periods || [],
+        weekdayDescriptions: googleHours.weekdayDescriptions || [],
+        specialDays: googleHours.specialDays || null
+      };
+      await pool.query(
+        `UPDATE halal_restaurants SET place_id = $1, rating = COALESCE($2, rating), user_ratings_total = COALESCE($3, user_ratings_total), photo_reference = $4, opening_hours = $5::jsonb, lat = COALESCE($6, lat), lng = COALESCE($7, lng), website = COALESCE($9, website) WHERE id = $8`,
+        [place.id, place.rating || null, place.userRatingCount || null, photoRef, JSON.stringify(replacedHours), place.location?.latitude || null, place.location?.longitude || null, restaurantId, placeWebsite]
+      );
+      console.log(`[Halal Enrich] Enriched #${restaurantId} "${restaurant.name}" with Places data`);
+    } catch (err) {
+      console.error(`[Halal Enrich] Error enriching #${restaurantId}:`, err.message);
+    }
+  }
+  async function dailyHalalEnrichment() {
+    try {
+      const result = await pool.query(
+        "SELECT id, name FROM halal_restaurants WHERE place_id IS NULL LIMIT 50"
+      );
+      if (result.rows.length > 0) {
+        console.log(`[Halal Enrich] Found ${result.rows.length} restaurants to enrich`);
+        for (const r of result.rows) {
+          await enrichHalalWithPlaces(r.id);
+          await new Promise((resolve3) => setTimeout(resolve3, 500));
+        }
+      }
+      const missingPhotos = await pool.query(
+        "SELECT id, name FROM halal_restaurants WHERE place_id IS NOT NULL AND place_id != 'none' AND (photo_reference IS NULL OR photo_reference = '') LIMIT 100"
+      );
+      if (missingPhotos.rows.length > 0) {
+        console.log(`[Halal Enrich] Fetching photos for ${missingPhotos.rows.length} restaurants`);
+        for (const r of missingPhotos.rows) {
+          await enrichHalalWithPlaces(r.id, true);
+          await new Promise((resolve3) => setTimeout(resolve3, 300));
+        }
+      }
+      await pool.query(`ALTER TABLE halal_restaurants ADD COLUMN IF NOT EXISTS hours_last_updated TIMESTAMPTZ`);
+      const missingHours = await pool.query(
+        "SELECT id, name, place_id FROM halal_restaurants WHERE place_id IS NOT NULL AND place_id != 'none' AND opening_hours IS NULL LIMIT 50"
+      );
+      const staleHours = await pool.query(
+        "SELECT id, name, place_id FROM halal_restaurants WHERE place_id IS NOT NULL AND place_id != 'none' AND opening_hours IS NOT NULL AND (hours_last_updated IS NULL OR hours_last_updated < NOW() - INTERVAL '30 days') LIMIT 50"
+      );
+      const hoursToFetch = [...missingHours.rows, ...staleHours.rows];
+      if (hoursToFetch.length > 0) {
+        console.log(`[Halal Enrich] Fetching hours for ${hoursToFetch.length} restaurants (${missingHours.rows.length} missing, ${staleHours.rows.length} stale)`);
+        const hApiKey = process.env.GOOGLE_PLACES_API_KEY;
+        if (hApiKey) {
+          const dayMap = { 0: "SUNDAY", 1: "MONDAY", 2: "TUESDAY", 3: "WEDNESDAY", 4: "THURSDAY", 5: "FRIDAY", 6: "SATURDAY" };
+          for (const r of hoursToFetch) {
+            try {
+              const detailResp = await fetch(
+                `https://places.googleapis.com/v1/places/${r.place_id}`,
+                { headers: { "X-Goog-Api-Key": hApiKey, "X-Goog-FieldMask": "regularOpeningHours" } }
+              );
+              if (!detailResp.ok) {
+                console.log(`[Halal Enrich] API error ${detailResp.status} for #${r.id} "${r.name}", will retry later`);
+                continue;
+              }
+              const detailData = await detailResp.json();
+              const roh = detailData.regularOpeningHours;
+              if (roh && roh.periods) {
+                const periods = roh.periods.map((p) => ({
+                  open: { day: dayMap[p.open.day] || "MONDAY", time: [p.open.hour, p.open.minute] },
+                  close: { day: dayMap[p.close.day] || "MONDAY", time: [p.close.hour, p.close.minute] }
+                }));
+                const hoursObj = { periods };
+                if (roh.weekdayDescriptions) hoursObj.weekdayDescriptions = roh.weekdayDescriptions;
+                await pool.query("UPDATE halal_restaurants SET opening_hours = $1::jsonb, hours_last_updated = NOW() WHERE id = $2", [JSON.stringify(hoursObj), r.id]);
+                console.log(`[Halal Enrich] Hours updated for #${r.id} "${r.name}"`);
+              } else {
+                await pool.query("UPDATE halal_restaurants SET hours_last_updated = NOW() WHERE id = $1", [r.id]);
+              }
+              await new Promise((resolve3) => setTimeout(resolve3, 200));
+            } catch {
+            }
+          }
+        }
+      }
+      const missingWebsites = await pool.query(
+        "SELECT id, name, place_id FROM halal_restaurants WHERE place_id IS NOT NULL AND place_id != 'none' AND (website IS NULL OR website = '') LIMIT 300"
+      );
+      if (missingWebsites.rows.length > 0) {
+        console.log(`[Halal Enrich] Backfilling websites for ${missingWebsites.rows.length} restaurants`);
+        const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+        if (apiKey) {
+          for (const r of missingWebsites.rows) {
+            try {
+              const detailResp = await fetch(
+                `https://places.googleapis.com/v1/places/${r.place_id}`,
+                { headers: { "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": "websiteUri" } }
+              );
+              const detailData = await detailResp.json();
+              if (detailData.websiteUri) {
+                await pool.query("UPDATE halal_restaurants SET website = $1 WHERE id = $2", [detailData.websiteUri, r.id]);
+              }
+              await new Promise((resolve3) => setTimeout(resolve3, 200));
+            } catch {
+            }
+          }
+        }
+      }
+      if (result.rows.length === 0 && missingPhotos.rows.length === 0 && missingWebsites.rows.length === 0) {
+        console.log("[Halal Enrich] All halal restaurants fully enriched");
+      } else {
+        console.log("[Halal Enrich] Enrichment complete");
+      }
+    } catch (err) {
+      console.error("[Halal Enrich] Error:", err.message);
+    }
+  }
+  app2.post("/api/admin/enrich-halal", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    dailyHalalEnrichment().catch(() => {
+    });
+    res.json({ message: "Halal enrichment started" });
+  });
+  setTimeout(() => dailyBusinessEnrichment(), 15e3);
+  setTimeout(() => dailyHalalEnrichment(), 3e4);
+  setInterval(() => dailyBusinessEnrichment(), 24 * 60 * 60 * 1e3);
+  setInterval(() => dailyHalalEnrichment(), 24 * 60 * 60 * 1e3);
   app2.patch("/api/admin/businesses/:id", async (req, res) => {
     try {
       if (!isAdminAuthorized(req)) {
@@ -667,9 +1746,107 @@ async function registerRoutes(app2) {
       if (result.rows.length === 0) {
         return res.status(404).json({ error: "Business not found" });
       }
+      if (status === "approved") {
+        enrichBusinessWithPlaces(id).catch(() => {
+        });
+      }
       res.json(result.rows[0]);
     } catch (error) {
       console.error("Error updating business status:", error.message);
+      res.status(500).json({ error: "Failed to update business" });
+    }
+  });
+  app2.put("/api/admin/businesses/:id", async (req, res) => {
+    try {
+      if (!isAdminAuthorized(req)) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid business ID" });
+      }
+      const { name, category, description, address, phone, website, google_url, specialty, keywords, photo_url, booking_url, hospital_affiliation, member_note, search_tags, disable_enrichment } = req.body;
+      const validCats = ["Restaurant", "Grocery", "Finance", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Technology"];
+      if (category !== void 0 && !validCats.includes(category)) {
+        return res.status(400).json({ error: "Invalid category" });
+      }
+      const fields = [];
+      const values = [];
+      let idx = 1;
+      if (name !== void 0) {
+        fields.push(`name = $${idx++}`);
+        values.push(String(name).substring(0, 255));
+      }
+      if (category !== void 0) {
+        fields.push(`category = $${idx++}`);
+        values.push(category);
+      }
+      if (description !== void 0) {
+        fields.push(`description = $${idx++}`);
+        values.push(String(description).substring(0, 1e3));
+      }
+      if (address !== void 0) {
+        fields.push(`address = $${idx++}`);
+        values.push(String(address).substring(0, 500));
+      }
+      if (phone !== void 0) {
+        fields.push(`phone = $${idx++}`);
+        values.push(String(phone).substring(0, 50));
+      }
+      if (website !== void 0) {
+        fields.push(`website = $${idx++}`);
+        values.push(String(website).substring(0, 500));
+      }
+      if (google_url !== void 0) {
+        fields.push(`google_url = $${idx++}`);
+        values.push(String(google_url).substring(0, 500));
+      }
+      if (specialty !== void 0) {
+        fields.push(`specialty = $${idx++}`);
+        values.push(String(specialty).substring(0, 255));
+      }
+      if (keywords !== void 0) {
+        fields.push(`keywords = $${idx++}`);
+        values.push(Array.isArray(keywords) ? keywords : []);
+      }
+      if (photo_url !== void 0) {
+        fields.push(`photo_url = $${idx++}`);
+        values.push(String(photo_url).substring(0, 500));
+      }
+      if (booking_url !== void 0) {
+        fields.push(`booking_url = $${idx++}`);
+        values.push(String(booking_url).substring(0, 500));
+      }
+      if (hospital_affiliation !== void 0) {
+        fields.push(`hospital_affiliation = $${idx++}`);
+        values.push(String(hospital_affiliation).substring(0, 255));
+      }
+      if (member_note !== void 0) {
+        fields.push(`member_note = $${idx++}`);
+        values.push(String(member_note).substring(0, 255));
+      }
+      if (search_tags !== void 0) {
+        fields.push(`search_tags = $${idx++}`);
+        values.push(Array.isArray(search_tags) ? search_tags : []);
+      }
+      if (disable_enrichment !== void 0) {
+        fields.push(`place_id = $${idx++}`);
+        values.push(disable_enrichment === true ? "none" : null);
+      }
+      if (fields.length === 0) {
+        return res.status(400).json({ error: "No fields to update" });
+      }
+      values.push(id);
+      const result = await pool.query(
+        `UPDATE businesses SET ${fields.join(", ")} WHERE id = $${idx} RETURNING *`,
+        values
+      );
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: "Business not found" });
+      }
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error("Error updating business:", error.message);
       res.status(500).json({ error: "Failed to update business" });
     }
   });
@@ -699,9 +1876,186 @@ async function registerRoutes(app2) {
     path.resolve(process.cwd(), "server", "templates", "admin.html"),
     "utf-8"
   );
+  const privacyHtml = fs.readFileSync(
+    path.resolve(process.cwd(), "server", "templates", "privacy-policy.html"),
+    "utf-8"
+  );
+  const supportHtml = fs.readFileSync(
+    path.resolve(process.cwd(), "server", "templates", "support.html"),
+    "utf-8"
+  );
+  app2.get("/api/admin/events", async (req, res) => {
+    try {
+      if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+      const now = Date.now();
+      let events;
+      if (cachedEvents.length > 0 && now - lastFetchTime < CACHE_TTL) {
+        events = cachedEvents;
+      } else {
+        events = await fetchAndCacheEvents();
+      }
+      const withOverrides = await applyEventOverrides(events);
+      const { rows: overrides } = await pool.query("SELECT event_id FROM event_overrides");
+      const overrideSet = new Set(overrides.map((o) => o.event_id));
+      const enriched = withOverrides.map((e) => ({ ...e, hasOverride: overrideSet.has(e.id) }));
+      res.json(enriched);
+    } catch (error) {
+      console.error("Error fetching admin events:", error.message);
+      res.status(500).json({ error: "Failed to fetch events" });
+    }
+  });
+  app2.put("/api/admin/events/:eventId", async (req, res) => {
+    try {
+      if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+      const eventId = req.params.eventId;
+      const { title, description, location, start_time, end_time, organizer, image_url, registration_url } = req.body;
+      const fields = ["event_id"];
+      const values = [eventId];
+      let idx = 2;
+      const updates = [];
+      if (title !== void 0) {
+        fields.push("title");
+        values.push(title);
+        updates.push(`title = $${idx++}`);
+      }
+      if (description !== void 0) {
+        fields.push("description");
+        values.push(description);
+        updates.push(`description = $${idx++}`);
+      }
+      if (location !== void 0) {
+        fields.push("location");
+        values.push(location);
+        updates.push(`location = $${idx++}`);
+      }
+      if (start_time !== void 0) {
+        fields.push("start_time");
+        values.push(start_time);
+        updates.push(`start_time = $${idx++}`);
+      }
+      if (end_time !== void 0) {
+        fields.push("end_time");
+        values.push(end_time);
+        updates.push(`end_time = $${idx++}`);
+      }
+      if (organizer !== void 0) {
+        fields.push("organizer");
+        values.push(organizer);
+        updates.push(`organizer = $${idx++}`);
+      }
+      if (image_url !== void 0) {
+        fields.push("image_url");
+        values.push(image_url);
+        updates.push(`image_url = $${idx++}`);
+      }
+      if (registration_url !== void 0) {
+        fields.push("registration_url");
+        values.push(registration_url);
+        updates.push(`registration_url = $${idx++}`);
+      }
+      updates.push(`updated_at = NOW()`);
+      if (fields.length <= 1) return res.status(400).json({ error: "No fields to update" });
+      const placeholders = fields.map((_, i) => `$${i + 1}`).join(", ");
+      const result = await pool.query(
+        `INSERT INTO event_overrides (${fields.join(", ")}) VALUES (${placeholders})
+         ON CONFLICT (event_id) DO UPDATE SET ${updates.join(", ")}
+         RETURNING *`,
+        values
+      );
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error("Error saving event override:", error.message);
+      res.status(500).json({ error: "Failed to save event override" });
+    }
+  });
+  app2.delete("/api/admin/events/:eventId", async (req, res) => {
+    try {
+      if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+      const eventId = req.params.eventId;
+      await pool.query("DELETE FROM event_overrides WHERE event_id = $1", [eventId]);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error removing event override:", error.message);
+      res.status(500).json({ error: "Failed to remove override" });
+    }
+  });
+  app2.get("/api/admin/restaurants", async (req, res) => {
+    try {
+      if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+      const search = req.query.search;
+      let query = "SELECT id, name, formatted_address, opening_hours, is_halal FROM halal_restaurants";
+      const params = [];
+      if (search && search.trim()) {
+        params.push(`%${search.trim()}%`);
+        query += ` WHERE (name ILIKE $1 OR formatted_address ILIKE $1)`;
+      }
+      query += " ORDER BY name";
+      const result = await pool.query(query, params);
+      const { rows: overrides } = await pool.query("SELECT restaurant_id, override_periods FROM restaurant_overrides");
+      const overrideMap = new Map(overrides.map((o) => [o.restaurant_id, o.override_periods]));
+      const enriched = result.rows.map((r) => {
+        const op = overrideMap.get(r.id);
+        if (op) {
+          let hours = r.opening_hours;
+          if (typeof hours === "string") try {
+            hours = JSON.parse(hours);
+          } catch {
+            hours = {};
+          }
+          if (!hours) hours = {};
+          hours.periods = op;
+          r.opening_hours = hours;
+        }
+        return { ...r, hasOverride: overrideMap.has(r.id) };
+      });
+      res.json(enriched);
+    } catch (error) {
+      console.error("Error fetching admin restaurants:", error.message);
+      res.status(500).json({ error: "Failed to fetch restaurants" });
+    }
+  });
+  app2.put("/api/admin/restaurants/:id", async (req, res) => {
+    try {
+      if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+      const restaurantId = parseInt(req.params.id);
+      if (isNaN(restaurantId)) return res.status(400).json({ error: "Invalid restaurant ID" });
+      const { periods } = req.body;
+      if (!periods || !Array.isArray(periods)) return res.status(400).json({ error: "periods must be an array" });
+      const result = await pool.query(
+        `INSERT INTO restaurant_overrides (restaurant_id, override_periods) VALUES ($1, $2)
+         ON CONFLICT (restaurant_id) DO UPDATE SET override_periods = $2, updated_at = NOW()
+         RETURNING *`,
+        [restaurantId, JSON.stringify(periods)]
+      );
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error("Error saving restaurant override:", error.message);
+      res.status(500).json({ error: "Failed to save restaurant override" });
+    }
+  });
+  app2.delete("/api/admin/restaurants/:id", async (req, res) => {
+    try {
+      if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+      const restaurantId = parseInt(req.params.id);
+      if (isNaN(restaurantId)) return res.status(400).json({ error: "Invalid restaurant ID" });
+      await pool.query("DELETE FROM restaurant_overrides WHERE restaurant_id = $1", [restaurantId]);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error removing restaurant override:", error.message);
+      res.status(500).json({ error: "Failed to remove override" });
+    }
+  });
   app2.get("/admin", (_req, res) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.send(adminHtml);
+  });
+  app2.get("/privacy", (_req, res) => {
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.send(privacyHtml);
+  });
+  app2.get("/support", (_req, res) => {
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.send(supportHtml);
   });
   const crypto = await import("crypto");
   const adminSessions = /* @__PURE__ */ new Set();
@@ -804,8 +2158,372 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: "Failed to send notifications" });
     }
   });
+  app2.get("/api/iqama-times", async (_req, res) => {
+    try {
+      const rawDays = parseInt(_req.query.days || "7");
+      const days = isNaN(rawDays) || rawDays < 1 ? 7 : Math.min(rawDays, 30);
+      const schedules = await getIqamaSchedules(pool, days);
+      res.json(schedules);
+    } catch (error) {
+      console.error("Error fetching iqama times:", error.message);
+      res.status(500).json({ error: "Failed to fetch iqama times" });
+    }
+  });
+  app2.get("/api/jumuah-schedules", async (_req, res) => {
+    try {
+      const pool2 = getDbPool();
+      const result = await pool2.query(
+        "SELECT id, masjid, khutbah_time, iqama_time, speaker, topic FROM jumuah_schedules WHERE active = true ORDER BY sort_order ASC"
+      );
+      res.json(result.rows);
+      pool2.end();
+    } catch (error) {
+      console.error("Error fetching jumuah schedules:", error.message);
+      res.status(500).json({ error: "Failed to fetch jumuah schedules" });
+    }
+  });
+  app2.get("/api/admin/jumuah", async (req, res) => {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (!token || !adminSessions.has(token)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const pool2 = getDbPool();
+      const result = await pool2.query("SELECT * FROM jumuah_schedules ORDER BY sort_order ASC");
+      res.json(result.rows);
+      pool2.end();
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  app2.post("/api/admin/jumuah", async (req, res) => {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (!token || !adminSessions.has(token)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { masjid, khutbah_time, iqama_time, speaker, topic, sort_order } = req.body;
+      if (!masjid || !khutbah_time || !iqama_time) {
+        return res.status(400).json({ error: "masjid, khutbah_time, and iqama_time are required" });
+      }
+      const pool2 = getDbPool();
+      const result = await pool2.query(
+        "INSERT INTO jumuah_schedules (masjid, khutbah_time, iqama_time, speaker, topic, sort_order) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+        [masjid, khutbah_time, iqama_time, speaker || null, topic || null, sort_order || 0]
+      );
+      res.json(result.rows[0]);
+      pool2.end();
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  app2.patch("/api/admin/jumuah/:id", async (req, res) => {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (!token || !adminSessions.has(token)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { id } = req.params;
+      const { masjid, khutbah_time, iqama_time, speaker, topic, active, sort_order } = req.body;
+      const pool2 = getDbPool();
+      const setClauses = ["updated_at = NOW()"];
+      const params = [];
+      let paramIdx = 1;
+      if (masjid !== void 0) {
+        setClauses.push(`masjid = $${paramIdx++}`);
+        params.push(masjid);
+      }
+      if (khutbah_time !== void 0) {
+        setClauses.push(`khutbah_time = $${paramIdx++}`);
+        params.push(khutbah_time);
+      }
+      if (iqama_time !== void 0) {
+        setClauses.push(`iqama_time = $${paramIdx++}`);
+        params.push(iqama_time);
+      }
+      if (speaker !== void 0) {
+        setClauses.push(`speaker = $${paramIdx++}`);
+        params.push(speaker);
+      }
+      if (topic !== void 0) {
+        setClauses.push(`topic = $${paramIdx++}`);
+        params.push(topic);
+      }
+      if (active !== void 0) {
+        setClauses.push(`active = $${paramIdx++}`);
+        params.push(active);
+      }
+      if (sort_order !== void 0) {
+        setClauses.push(`sort_order = $${paramIdx++}`);
+        params.push(sort_order);
+      }
+      params.push(id);
+      const result = await pool2.query(
+        `UPDATE jumuah_schedules SET ${setClauses.join(", ")} WHERE id = $${paramIdx} RETURNING *`,
+        params
+      );
+      if (result.rows.length === 0) return res.status(404).json({ error: "Not found" });
+      res.json(result.rows[0]);
+      pool2.end();
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  app2.delete("/api/admin/jumuah/:id", async (req, res) => {
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (!token || !adminSessions.has(token)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const pool2 = getDbPool();
+      await pool2.query("DELETE FROM jumuah_schedules WHERE id = $1", [req.params.id]);
+      res.json({ success: true });
+      pool2.end();
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  app2.get("/api/admin/iqama", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const masjid = req.query.masjid;
+      const startDate = req.query.start;
+      const endDate = req.query.end;
+      let query = "SELECT id, masjid, date::text, fajr, dhuhr, asr, maghrib, isha, updated_at FROM iqama_schedules";
+      const params = [];
+      const conditions = [];
+      if (masjid) {
+        conditions.push(`masjid = $${params.length + 1}`);
+        params.push(masjid);
+      }
+      if (startDate) {
+        conditions.push(`date >= $${params.length + 1}`);
+        params.push(startDate);
+      }
+      if (endDate) {
+        conditions.push(`date <= $${params.length + 1}`);
+        params.push(endDate);
+      }
+      if (conditions.length > 0) query += " WHERE " + conditions.join(" AND ");
+      query += " ORDER BY masjid, date LIMIT 500";
+      const result = await pool.query(query, params);
+      res.json(result.rows);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  app2.post("/api/admin/iqama", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { masjid, date, fajr, dhuhr, asr, maghrib, isha } = req.body;
+      if (!masjid || !date || !fajr || !dhuhr || !asr || !maghrib || !isha) {
+        return res.status(400).json({ error: "All fields are required" });
+      }
+      const result = await pool.query(
+        `INSERT INTO iqama_schedules (masjid, date, fajr, dhuhr, asr, maghrib, isha)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT (masjid, date) DO UPDATE SET fajr=EXCLUDED.fajr, dhuhr=EXCLUDED.dhuhr, asr=EXCLUDED.asr, maghrib=EXCLUDED.maghrib, isha=EXCLUDED.isha, updated_at=NOW()
+         RETURNING *`,
+        [masjid, date, fajr, dhuhr, asr, maghrib, isha]
+      );
+      res.json(result.rows[0]);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  app2.post("/api/admin/iqama/bulk", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { entries } = req.body;
+      if (!Array.isArray(entries) || entries.length === 0) {
+        return res.status(400).json({ error: "entries array is required" });
+      }
+      let inserted = 0;
+      for (const entry of entries) {
+        const { masjid, date, fajr, dhuhr, asr, maghrib, isha } = entry;
+        if (!masjid || !date || !fajr || !dhuhr || !asr || !maghrib || !isha) continue;
+        await pool.query(
+          `INSERT INTO iqama_schedules (masjid, date, fajr, dhuhr, asr, maghrib, isha)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           ON CONFLICT (masjid, date) DO UPDATE SET fajr=EXCLUDED.fajr, dhuhr=EXCLUDED.dhuhr, asr=EXCLUDED.asr, maghrib=EXCLUDED.maghrib, isha=EXCLUDED.isha, updated_at=NOW()`,
+          [masjid, date, fajr, dhuhr, asr, maghrib, isha]
+        );
+        inserted++;
+      }
+      res.json({ success: true, inserted });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  app2.delete("/api/admin/iqama/:id", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      await pool.query("DELETE FROM iqama_schedules WHERE id = $1", [req.params.id]);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  let weatherCache = null;
+  const WEATHER_CACHE_MS = 30 * 60 * 1e3;
+  app2.get("/api/weather", async (req, res) => {
+    try {
+      const lat = parseFloat(req.query.lat) || 35.7796;
+      const lon = parseFloat(req.query.lon) || -78.6382;
+      const cacheKey = `${lat.toFixed(2)}_${lon.toFixed(2)}`;
+      if (weatherCache && weatherCache.key === cacheKey && Date.now() - weatherCache.timestamp < WEATHER_CACHE_MS) {
+        return res.json(weatherCache.data);
+      }
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,is_day&temperature_unit=fahrenheit&timezone=auto`;
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error("Weather API error");
+      const json = await resp.json();
+      const current = json.current;
+      const result = {
+        temperature: Math.round(current.temperature_2m),
+        weatherCode: current.weather_code,
+        isDay: current.is_day === 1
+      };
+      weatherCache = { data: result, timestamp: Date.now(), key: cacheKey };
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  app2.get("/share/event/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const event = cachedEvents.find((e) => e.id === id);
+      const title = event ? event.title : "Community Event";
+      const description = event ? (event.description || "").substring(0, 200) || `Event at ${event.organizer || "Salam Y'all"}` : "Check out this event on Salam Y'all";
+      const imageUrl = event?.imageUrl || "";
+      const host = req.get("host") || "salamyall.net";
+      const pageUrl = `https://${host}/share/event/${id}`;
+      const deepLink = `salamyall://event/${id}`;
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.send(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(title)} - Salam Y'all</title>
+  <meta property="og:title" content="${escapeHtml(title)}">
+  <meta property="og:description" content="${escapeHtml(description)}">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="${pageUrl}">
+  ${imageUrl ? `<meta property="og:image" content="${escapeHtml(imageUrl)}">` : ""}
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${escapeHtml(title)}">
+  <meta name="twitter:description" content="${escapeHtml(description)}">
+  ${imageUrl ? `<meta name="twitter:image" content="${escapeHtml(imageUrl)}">` : ""}
+  <style>body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#0A1F16;color:#fff;text-align:center;padding:20px}
+  .card{max-width:400px;background:#142E22;border-radius:16px;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,0.3)}
+  h1{font-size:24px;margin:0 0 8px}p{color:#9CA3AF;font-size:14px;margin:0 0 24px;line-height:1.5}
+  a{display:inline-block;background:#10B981;color:#fff;text-decoration:none;padding:12px 32px;border-radius:10px;font-weight:600;font-size:16px}</style>
+</head>
+<body>
+  <div class="card">
+    <h1>${escapeHtml(title)}</h1>
+    <p>${escapeHtml(description.substring(0, 150))}${description.length > 150 ? "..." : ""}</p>
+    <a href="${deepLink}" id="open">Open in App</a>
+  </div>
+  <script>
+    setTimeout(function(){window.location.href="${deepLink}"},500);
+    setTimeout(function(){document.getElementById("open").textContent="Download Salam Y'all"},3000);
+  </script>
+</body>
+</html>`);
+    } catch (error) {
+      res.status(500).send("Error loading share page");
+    }
+  });
+  app2.get("/share/restaurant/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = await pool.query("SELECT id, name, formatted_address, halal_comment, is_halal FROM halal_restaurants WHERE id = $1", [id]);
+      const restaurant = result.rows[0];
+      const title = restaurant ? restaurant.name : "Halal Restaurant";
+      const description = restaurant ? restaurant.halal_comment || restaurant.formatted_address || `${restaurant.is_halal === "IS_HALAL" ? "Halal" : "Halal restaurant"} on Salam Y'all` : "Check out this restaurant on Salam Y'all";
+      const host = req.get("host") || "salamyall.net";
+      const pageUrl = `https://${host}/share/restaurant/${id}`;
+      const deepLink = `salamyall://restaurant/${id}`;
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.send(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(title)} - Salam Y'all</title>
+  <meta property="og:title" content="${escapeHtml(title)}">
+  <meta property="og:description" content="${escapeHtml(description)}">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="${pageUrl}">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="${escapeHtml(title)}">
+  <meta name="twitter:description" content="${escapeHtml(description)}">
+  <style>body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#0A1F16;color:#fff;text-align:center;padding:20px}
+  .card{max-width:400px;background:#142E22;border-radius:16px;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,0.3)}
+  h1{font-size:24px;margin:0 0 8px}p{color:#9CA3AF;font-size:14px;margin:0 0 24px;line-height:1.5}
+  a{display:inline-block;background:#10B981;color:#fff;text-decoration:none;padding:12px 32px;border-radius:10px;font-weight:600;font-size:16px}</style>
+</head>
+<body>
+  <div class="card">
+    <h1>${escapeHtml(title)}</h1>
+    <p>${escapeHtml(description.substring(0, 150))}${description.length > 150 ? "..." : ""}</p>
+    <a href="${deepLink}" id="open">Open in App</a>
+  </div>
+  <script>
+    setTimeout(function(){window.location.href="${deepLink}"},500);
+    setTimeout(function(){document.getElementById("open").textContent="Download Salam Y'all"},3000);
+  </script>
+</body>
+</html>`);
+    } catch (error) {
+      res.status(500).send("Error loading share page");
+    }
+  });
+  app2.get("/share/business/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = await pool.query("SELECT id, name, category, description, address FROM businesses WHERE id = $1 AND status = 'approved'", [id]);
+      const business = result.rows[0];
+      const title = business ? business.name : "Local Business";
+      const description = business ? business.description || `${business.category} business in ${business.address || "the Triangle area"}` : "Check out this business on Salam Y'all";
+      const host = req.get("host") || "salamyall.net";
+      const pageUrl = `https://${host}/share/business/${id}`;
+      const deepLink = `salamyall://business/${id}`;
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.send(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(title)} - Salam Y'all</title>
+  <meta property="og:title" content="${escapeHtml(title)}">
+  <meta property="og:description" content="${escapeHtml(description)}">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="${pageUrl}">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="${escapeHtml(title)}">
+  <meta name="twitter:description" content="${escapeHtml(description)}">
+  <style>body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#0A1F16;color:#fff;text-align:center;padding:20px}
+  .card{max-width:400px;background:#142E22;border-radius:16px;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,0.3)}
+  h1{font-size:24px;margin:0 0 8px}p{color:#9CA3AF;font-size:14px;margin:0 0 24px;line-height:1.5}
+  a{display:inline-block;background:#10B981;color:#fff;text-decoration:none;padding:12px 32px;border-radius:10px;font-weight:600;font-size:16px}</style>
+</head>
+<body>
+  <div class="card">
+    <h1>${escapeHtml(title)}</h1>
+    <p>${escapeHtml(description.substring(0, 150))}${description.length > 150 ? "..." : ""}</p>
+    <a href="${deepLink}" id="open">Open in App</a>
+  </div>
+  <script>
+    setTimeout(function(){window.location.href="${deepLink}"},500);
+    setTimeout(function(){document.getElementById("open").textContent="Download Salam Y'all"},3000);
+  </script>
+</body>
+</html>`);
+    } catch (error) {
+      res.status(500).send("Error loading share page");
+    }
+  });
   const httpServer = createServer(app2);
   return httpServer;
+}
+function escapeHtml(str) {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
 // server/index.ts
