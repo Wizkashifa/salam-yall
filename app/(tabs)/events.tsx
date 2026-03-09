@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect, useMemo, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -13,6 +13,7 @@ import {
   Dimensions,
   Linking,
   Share,
+  TextInput,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
