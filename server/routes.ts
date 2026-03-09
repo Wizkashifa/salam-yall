@@ -1030,7 +1030,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `https://places.googleapis.com/v1/places:searchText`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json", "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": "places.id,places.rating,places.userRatingCount,places.photos,places.regularOpeningHours,places.location" },
+          headers: { "Content-Type": "application/json", "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": "places.id,places.rating,places.userRatingCount,places.photos,places.regularOpeningHours,places.location,places.websiteUri,places.googleMapsUri" },
           body: JSON.stringify({ textQuery: `${business.name} ${business.address}` }),
         }
       );
@@ -1042,9 +1042,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const photoRef = place.photos?.[0]?.name || null;
       const hours = place.regularOpeningHours?.weekdayDescriptions || null;
+      const placeWebsite = place.websiteUri || null;
+      const googleUrl = place.googleMapsUri || null;
       await pool.query(
-        `UPDATE businesses SET place_id = $1, rating = $2, user_ratings_total = $3, photo_reference = $4, business_hours = $5, lat = $6, lng = $7 WHERE id = $8`,
-        [place.id, place.rating || null, place.userRatingCount || null, photoRef, hours ? JSON.stringify(hours) : null, place.location?.latitude || null, place.location?.longitude || null, businessId]
+        `UPDATE businesses SET place_id = $1, rating = $2, user_ratings_total = $3, photo_reference = $4, business_hours = $5, lat = $6, lng = $7, website = COALESCE(NULLIF($9, ''), website), google_url = COALESCE(NULLIF($10, ''), google_url) WHERE id = $8`,
+        [place.id, place.rating || null, place.userRatingCount || null, photoRef, hours ? JSON.stringify(hours) : null, place.location?.latitude || null, place.location?.longitude || null, businessId, placeWebsite || '', googleUrl || '']
       );
       console.log(`[Business Enrich] Enriched business #${businessId} "${business.name}" with Places data`);
     } catch (err: any) {
@@ -1057,15 +1059,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await pool.query(
         "SELECT id, name FROM businesses WHERE status = 'approved' AND place_id IS NULL"
       );
-      if (result.rows.length === 0) {
-        console.log("[Business Enrich] All approved businesses already enriched");
-        return;
+      if (result.rows.length > 0) {
+        console.log(`[Business Enrich] Found ${result.rows.length} approved businesses to enrich`);
+        for (const biz of result.rows) {
+          await enrichBusinessWithPlaces(biz.id);
+          await new Promise(r => setTimeout(r, 500));
+        }
       }
-      console.log(`[Business Enrich] Found ${result.rows.length} approved businesses to enrich`);
-      for (const biz of result.rows) {
-        await enrichBusinessWithPlaces(biz.id);
-        await new Promise(r => setTimeout(r, 500));
+
+      const missingBizData = await pool.query(
+        "SELECT id, name, place_id FROM businesses WHERE status = 'approved' AND place_id IS NOT NULL AND place_id != 'none' AND (website IS NULL OR website = '') LIMIT 100"
+      );
+      if (missingBizData.rows.length > 0) {
+        console.log(`[Business Enrich] Backfilling website/directions for ${missingBizData.rows.length} businesses`);
+        const bApiKey = process.env.GOOGLE_PLACES_API_KEY;
+        if (bApiKey) {
+          for (const biz of missingBizData.rows) {
+            try {
+              const detailResp = await fetch(
+                `https://places.googleapis.com/v1/places/${biz.place_id}`,
+                { headers: { "X-Goog-Api-Key": bApiKey, "X-Goog-FieldMask": "websiteUri,googleMapsUri" } }
+              );
+              const detailData = await detailResp.json();
+              const updates: string[] = [];
+              const vals: any[] = [];
+              let idx = 1;
+              if (detailData.websiteUri) { updates.push(`website = $${idx++}`); vals.push(detailData.websiteUri); }
+              if (detailData.googleMapsUri) { updates.push(`google_url = $${idx++}`); vals.push(detailData.googleMapsUri); }
+              if (updates.length > 0) {
+                vals.push(biz.id);
+                await pool.query(`UPDATE businesses SET ${updates.join(", ")} WHERE id = $${idx}`, vals);
+              }
+              await new Promise(r => setTimeout(r, 200));
+            } catch {}
+          }
+        }
       }
+
       console.log("[Business Enrich] Daily enrichment complete");
     } catch (err: any) {
       console.error("[Business Enrich] Daily enrichment error:", err.message);
