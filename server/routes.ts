@@ -488,6 +488,21 @@ async function ensureEventOverridesTable(pool: pg.Pool) {
   `);
 }
 
+async function ensureAnalyticsTable(pool: pg.Pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS analytics_events (
+      id SERIAL PRIMARY KEY,
+      event_name VARCHAR(100) NOT NULL,
+      event_data JSONB,
+      device_id VARCHAR(100),
+      platform VARCHAR(20),
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_analytics_event_created ON analytics_events(event_name, created_at);`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_analytics_device ON analytics_events(device_id);`);
+}
+
 async function ensureRestaurantOverridesTable(pool: pg.Pool) {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS restaurant_overrides (
@@ -761,6 +776,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   startAutoRefresh();
 
   const pool = getDbPool();
+  await ensureAnalyticsTable(pool).catch(err => console.error("[DB] Analytics table init error:", err.message));
   await ensureJumuahTable(pool).catch(err => console.error("[DB] Jumuah table init error:", err.message));
   await ensureEventOverridesTable(pool).catch(err => console.error("[DB] Event overrides table init error:", err.message));
   await ensureRestaurantOverridesTable(pool).catch(err => console.error("[DB] Restaurant overrides table init error:", err.message));
@@ -891,10 +907,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { cuisine, status, search } = req.query;
       let query = "SELECT id, external_id, name, formatted_address, formatted_phone, url, lat, lng, is_halal, halal_comment, cuisine_types, emoji, evidence, considerations, opening_hours, rating, user_ratings_total, website, photo_reference, place_id FROM halal_restaurants";
-      const conditions: string[] = [];
+      const conditions: string[] = ["is_halal != 'NOT_HALAL'", "name NOT ILIKE '%IAR Masjid%'"];
       const params: any[] = [];
 
-      if (status && typeof status === "string" && ["IS_HALAL", "PARTIALLY_HALAL", "NOT_HALAL", "UNKNOWN"].includes(status)) {
+      if (status && typeof status === "string" && ["IS_HALAL", "PARTIALLY_HALAL", "UNKNOWN"].includes(status)) {
         params.push(status);
         conditions.push(`is_halal = $${params.length}`);
       }
@@ -1059,6 +1075,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error proxying halal photo:", error.message);
       res.status(500).json({ error: "Failed to load photo" });
+    }
+  });
+
+  app.post("/api/analytics/event", async (req, res) => {
+    try {
+      const { event_name, event_data, device_id, platform } = req.body;
+      if (!event_name || typeof event_name !== "string") {
+        return res.status(400).json({ error: "event_name required" });
+      }
+      await pool.query(
+        "INSERT INTO analytics_events (event_name, event_data, device_id, platform) VALUES ($1, $2, $3, $4)",
+        [event_name.slice(0, 100), event_data || null, device_id?.slice(0, 100) || null, platform?.slice(0, 20) || null]
+      );
+      res.status(201).json({ ok: true });
+    } catch (error: any) {
+      console.error("[Analytics] Error:", error.message);
+      res.status(500).json({ error: "Failed to log event" });
+    }
+  });
+
+  app.post("/api/analytics/batch", async (req, res) => {
+    try {
+      const { events } = req.body;
+      if (!Array.isArray(events) || events.length === 0) {
+        return res.status(400).json({ error: "events array required" });
+      }
+      const limited = events.slice(0, 50);
+      const values: string[] = [];
+      const params: any[] = [];
+      for (const evt of limited) {
+        if (!evt.event_name) continue;
+        const i = params.length;
+        values.push(`($${i + 1}, $${i + 2}, $${i + 3}, $${i + 4})`);
+        params.push(evt.event_name.slice(0, 100), evt.event_data || null, evt.device_id?.slice(0, 100) || null, evt.platform?.slice(0, 20) || null);
+      }
+      if (values.length > 0) {
+        await pool.query(
+          `INSERT INTO analytics_events (event_name, event_data, device_id, platform) VALUES ${values.join(", ")}`,
+          params
+        );
+      }
+      res.status(201).json({ ok: true, count: values.length });
+    } catch (error: any) {
+      console.error("[Analytics] Batch error:", error.message);
+      res.status(500).json({ error: "Failed to log events" });
     }
   });
 
@@ -1634,6 +1695,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error removing restaurant override:", error.message);
       res.status(500).json({ error: "Failed to remove override" });
+    }
+  });
+
+  app.get("/api/admin/analytics/summary", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const from = req.query.from as string || new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+      const to = req.query.to as string || new Date().toISOString().slice(0, 10);
+      const result = await pool.query(
+        `SELECT event_name, COUNT(*)::int as count, COUNT(DISTINCT device_id)::int as unique_devices
+         FROM analytics_events WHERE created_at >= $1::date AND created_at < ($2::date + interval '1 day')
+         GROUP BY event_name ORDER BY count DESC`,
+        [from, to]
+      );
+      const totals = await pool.query(
+        `SELECT COUNT(*)::int as total_events, COUNT(DISTINCT device_id)::int as unique_devices
+         FROM analytics_events WHERE created_at >= $1::date AND created_at < ($2::date + interval '1 day')`,
+        [from, to]
+      );
+      res.json({ summary: result.rows, totals: totals.rows[0], from, to });
+    } catch (error: any) {
+      console.error("[Analytics] Summary error:", error.message);
+      res.status(500).json({ error: "Failed to fetch analytics" });
+    }
+  });
+
+  app.get("/api/admin/analytics/daily", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const eventName = req.query.event as string || "screen_view";
+      const from = req.query.from as string || new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+      const to = req.query.to as string || new Date().toISOString().slice(0, 10);
+      const result = await pool.query(
+        `SELECT created_at::date as date, COUNT(*)::int as count, COUNT(DISTINCT device_id)::int as unique_devices
+         FROM analytics_events WHERE event_name = $1 AND created_at >= $2::date AND created_at < ($3::date + interval '1 day')
+         GROUP BY created_at::date ORDER BY date`,
+        [eventName, from, to]
+      );
+      res.json({ daily: result.rows, event: eventName, from, to });
+    } catch (error: any) {
+      console.error("[Analytics] Daily error:", error.message);
+      res.status(500).json({ error: "Failed to fetch daily analytics" });
+    }
+  });
+
+  app.get("/api/admin/analytics/top", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const from = req.query.from as string || new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+      const to = req.query.to as string || new Date().toISOString().slice(0, 10);
+      const dateClause = "created_at >= $1::date AND created_at < ($2::date + interval '1 day')";
+      const dateParams = [from, to];
+
+      const topRestaurants = await pool.query(
+        `SELECT event_data->>'name' as name, COUNT(*)::int as views
+         FROM analytics_events WHERE event_name = 'restaurant_viewed' AND ${dateClause}
+         AND event_data->>'name' IS NOT NULL
+         GROUP BY event_data->>'name' ORDER BY views DESC LIMIT 10`,
+        dateParams
+      );
+      const topEvents = await pool.query(
+        `SELECT event_data->>'title' as title, COUNT(*)::int as clicks
+         FROM analytics_events WHERE event_name = 'event_viewed' AND ${dateClause}
+         AND event_data->>'title' IS NOT NULL
+         GROUP BY event_data->>'title' ORDER BY clicks DESC LIMIT 10`,
+        dateParams
+      );
+      const topSearches = await pool.query(
+        `SELECT event_data->>'query' as query, COUNT(*)::int as searches
+         FROM analytics_events WHERE event_name = 'search' AND ${dateClause}
+         AND event_data->>'query' IS NOT NULL
+         GROUP BY event_data->>'query' ORDER BY searches DESC LIMIT 10`,
+        dateParams
+      );
+      const prayerStats = await pool.query(
+        `SELECT event_data->>'prayer' as prayer, COUNT(*)::int as tracks
+         FROM analytics_events WHERE event_name = 'prayer_tracked' AND ${dateClause}
+         AND event_data->>'prayer' IS NOT NULL
+         GROUP BY event_data->>'prayer' ORDER BY tracks DESC`,
+        dateParams
+      );
+      const screenViews = await pool.query(
+        `SELECT event_data->>'screen' as screen, COUNT(*)::int as views
+         FROM analytics_events WHERE event_name = 'screen_view' AND ${dateClause}
+         AND event_data->>'screen' IS NOT NULL
+         GROUP BY event_data->>'screen' ORDER BY views DESC`,
+        dateParams
+      );
+      const featureAdoption = await pool.query(
+        `SELECT event_name, COUNT(DISTINCT device_id)::int as devices
+         FROM analytics_events WHERE event_name IN ('masjid_selected', 'notifications_enabled', 'theme_changed', 'calc_method_changed')
+         AND ${dateClause} GROUP BY event_name`,
+        dateParams
+      );
+
+      res.json({
+        topRestaurants: topRestaurants.rows,
+        topEvents: topEvents.rows,
+        topSearches: topSearches.rows,
+        prayerStats: prayerStats.rows,
+        screenViews: screenViews.rows,
+        featureAdoption: featureAdoption.rows,
+        from, to,
+      });
+    } catch (error: any) {
+      console.error("[Analytics] Top error:", error.message);
+      res.status(500).json({ error: "Failed to fetch top analytics" });
     }
   });
 

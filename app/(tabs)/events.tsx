@@ -23,6 +23,7 @@ import { TickerBanner } from "@/components/TickerBanner";
 import { GlassHeader } from "@/components/GlassHeader";
 import { useDeepLink } from "@/lib/deeplink-context";
 import { getApiUrl } from "@/lib/query-client";
+import { trackEvent, trackScreenView } from "@/lib/analytics";
 
 interface CalendarEvent {
   id: string;
@@ -234,6 +235,8 @@ export default function EventsScreen() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const { pendingTarget, consumeTarget } = useDeepLink();
 
+  useEffect(() => { trackScreenView("Events"); }, []);
+
   const { data: events, isLoading, error } = useQuery<CalendarEvent[]>({
     queryKey: ["/api/events"],
     staleTime: 2 * 60 * 1000,
@@ -282,7 +285,7 @@ export default function EventsScreen() {
       <ScrollView
         style={[styles.container, { backgroundColor: colors.background }]}
         contentContainerStyle={{
-          paddingBottom: Platform.OS === "web" ? 34 : 20,
+          paddingBottom: Platform.OS === "web" ? 34 : 100,
           paddingTop: headerHeight + 12,
         }}
         refreshControl={
@@ -344,6 +347,7 @@ export default function EventsScreen() {
                       onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setSelectedEvent(event);
+                        trackEvent("event_viewed", { title: event.title });
                       }}
                       style={({ pressed }) => [
                         styles.eventCard,

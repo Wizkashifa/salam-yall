@@ -29,6 +29,7 @@ import { useDeepLink } from "@/lib/deeplink-context";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
+import { GlassHeader } from "@/components/GlassHeader";
 import { useSettings } from "@/lib/settings-context";
 import { registerPushToken } from "@/lib/push-utils";
 import {
@@ -50,6 +51,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { cyclePrayerStatus, getPrayerLog, type DayLog, type PrayerName as TrackerPrayerName } from "@/lib/prayer-tracker";
 import { getDailyContent, isFriday } from "@/lib/daily-content";
+import { trackEvent, trackScreenView } from "@/lib/analytics";
 
 interface CalendarEvent {
   id: string;
@@ -227,8 +229,6 @@ function getGreeting(): string {
 
 
 function SkeletonHomeScreen({ colors, isDark, insets }: { colors: any; isDark: boolean; insets: any }) {
-  const isWeb = Platform.OS === "web";
-  const headerTopPad = isWeb ? 67 : insets.top;
   const skeletonBg = isDark ? "#252525" : "#E5E5E5";
   const pulseOpacity = useRef(new Animated.Value(0.3)).current;
 
@@ -247,15 +247,12 @@ function SkeletonHomeScreen({ colors, isDark, insets }: { colors: any; isDark: b
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <LinearGradient
-        colors={[colors.gradientStart, colors.gradientEnd]}
-        style={[styles.headerBar, { paddingTop: headerTopPad + 10 }]}
-      >
-        <View style={{ flex: 1 }}>
+      <GlassHeader>
+        <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14 }}>
           <Bone style={{ width: 180, height: 20, borderRadius: 6, backgroundColor: "rgba(255,255,255,0.2)" }} />
           <Bone style={{ width: 120, height: 12, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.12)", marginTop: 6 }} />
         </View>
-      </LinearGradient>
+      </GlassHeader>
       <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
         <View style={[styles.glassCard, { backgroundColor: isDark ? "rgba(22,22,22,0.9)" : "rgba(255,255,255,0.85)", borderColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.8)" }]}>
           <View style={{ alignItems: "center", paddingVertical: 20 }}>
@@ -307,15 +304,19 @@ function getWeatherIcon(code: number, isDay: boolean): { name: string; lib: "ion
   return { name: "thunderstorm", lib: "ionicons" };
 }
 
-function CountdownRing({ colors, isDark, progress, qiblaBearing }: {
-  colors: any; isDark: boolean; progress: number; qiblaBearing: number;
+function CountdownRing({ colors, isDark, progress, qiblaBearing, hasRealLocation, onRequestLocation }: {
+  colors: any; isDark: boolean; progress: number; qiblaBearing: number; hasRealLocation: boolean; onRequestLocation?: () => void;
 }) {
   const size = 72;
   const half = size / 2;
   const strokeWidth = 3;
   const trackColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
-  const fillColor = isDark ? colors.gold : colors.emerald;
-  const bgColor = isDark ? colors.gold + "30" : colors.emerald + "18";
+  const fillColor = hasRealLocation
+    ? (isDark ? colors.gold : colors.emerald)
+    : (isDark ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.2)");
+  const bgColor = hasRealLocation
+    ? (isDark ? colors.gold + "30" : colors.emerald + "18")
+    : (isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)");
   const clampedProgress = Math.min(1, Math.max(0, progress));
   const deg = clampedProgress * 360;
 
@@ -323,7 +324,11 @@ function CountdownRing({ colors, isDark, progress, qiblaBearing }: {
     <Pressable
       onPress={() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        Linking.openURL("https://qiblafinder.withgoogle.com/intl/en/finder/ar");
+        if (!hasRealLocation && onRequestLocation) {
+          onRequestLocation();
+        } else {
+          Linking.openURL("https://qiblafinder.withgoogle.com/intl/en/finder/ar");
+        }
       }}
       style={{ width: size, height: size, justifyContent: "center", alignItems: "center" }}
     >
@@ -359,10 +364,16 @@ function CountdownRing({ colors, isDark, progress, qiblaBearing }: {
           }} />
         </View>
       )}
-      <View style={{ transform: [{ rotate: `${qiblaBearing}deg` }] }}>
-        <Ionicons name="navigate" size={24} color={fillColor} />
-      </View>
-      <Text style={{ fontSize: 7, fontFamily: "Inter_600SemiBold", color: fillColor, marginTop: 1 }}>QIBLA</Text>
+      {hasRealLocation ? (
+        <View style={{ transform: [{ rotate: `${qiblaBearing}deg` }] }}>
+          <Ionicons name="navigate" size={24} color={fillColor} />
+        </View>
+      ) : (
+        <Ionicons name="location-outline" size={22} color={fillColor} />
+      )}
+      <Text style={{ fontSize: 7, fontFamily: "Inter_600SemiBold", color: fillColor, marginTop: 1 }}>
+        {hasRealLocation ? "QIBLA" : "LOCATE"}
+      </Text>
     </Pressable>
   );
 }
@@ -381,6 +392,7 @@ export default function PrayerScreen() {
   const [locationPermission, setLocationPermission] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [userCoords, setUserCoords] = useState({ lat: 35.7796, lon: -78.6382 });
+  const [hasRealLocation, setHasRealLocation] = useState(false);
   const [nearMosque, setNearMosque] = useState<Masjid | null>(null);
   const [silenceAlertDismissed, setSilenceAlertDismissed] = useState(false);
   const [masjidsExpanded, setMasjidsExpanded] = useState(false);
@@ -389,7 +401,10 @@ export default function PrayerScreen() {
   const [ramadanActive, setRamadanActive] = useState(false);
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [headerHeight, setHeaderHeight] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  useEffect(() => { trackScreenView("Home"); }, []);
 
   const { data: calendarEvents } = useQuery<any[]>({
     queryKey: ["/api/events"],
@@ -563,6 +578,7 @@ export default function PrayerScreen() {
       if (Platform.OS === "web") {
         let lat = 35.7796;
         let lon = -78.6382;
+        let gotLocation = false;
         try {
           if (navigator.geolocation) {
             const pos = await Promise.race([
@@ -573,6 +589,7 @@ export default function PrayerScreen() {
             ]);
             lat = pos.coords.latitude;
             lon = pos.coords.longitude;
+            gotLocation = true;
             setLocationPermission(true);
             const nearest = findNearestMasjid(lat, lon);
             setNearestMasjid({ name: nearest.masjid.name, distanceMiles: nearest.distanceMiles, masjid: nearest.masjid });
@@ -582,6 +599,7 @@ export default function PrayerScreen() {
         } catch {
           setLocationPermission(false);
         }
+        setHasRealLocation(gotLocation);
         loadDefaultPrayers(lat, lon);
         setLoading(false);
         return;
@@ -590,6 +608,7 @@ export default function PrayerScreen() {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
         setLocationPermission(false);
+        setHasRealLocation(false);
         loadDefaultPrayers();
         setLoading(false);
         return;
@@ -604,17 +623,21 @@ export default function PrayerScreen() {
       );
       let latitude = 35.7796;
       let longitude = -78.6382;
+      let gotNativeLocation = false;
       try {
         const location = await Promise.race([locationPromise, timeoutPromise]);
         latitude = location.coords.latitude;
         longitude = location.coords.longitude;
+        gotNativeLocation = true;
       } catch {
         const lastKnown = await Location.getLastKnownPositionAsync().catch(() => null);
         if (lastKnown) {
           latitude = lastKnown.coords.latitude;
           longitude = lastKnown.coords.longitude;
+          gotNativeLocation = true;
         }
       }
+      setHasRealLocation(gotNativeLocation);
 
       loadDefaultPrayers(latitude, longitude);
 
@@ -622,6 +645,7 @@ export default function PrayerScreen() {
       setNearestMasjid({ name: nearest.masjid.name, distanceMiles: nearest.distanceMiles, masjid: nearest.masjid });
     } catch (err) {
       console.error("Error loading prayer data:", err);
+      setHasRealLocation(false);
       loadDefaultPrayers();
     } finally {
       setLoading(false);
@@ -642,6 +666,7 @@ export default function PrayerScreen() {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const updated = await cyclePrayerStatus(new Date(), trackerName);
     setTodayLog(updated);
+    trackEvent("prayer_tracked", { prayer: prayerName, status: updated[trackerName] });
   }, []);
 
   const dailyContent = useMemo(() => getDailyContent(), []);
@@ -820,9 +845,6 @@ export default function PrayerScreen() {
 
   const padNum = (n: number) => n.toString().padStart(2, "0");
 
-  const isWeb = Platform.OS === "web";
-  const headerTopPad = isWeb ? 67 : insets.top;
-
   const greeting = getGreeting();
 
   const glassCardBg = isDark ? "rgba(22,22,22,0.9)" : "rgba(255,255,255,0.85)";
@@ -830,38 +852,37 @@ export default function PrayerScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <LinearGradient
-        colors={[colors.gradientStart, colors.gradientEnd]}
-        style={[styles.headerBar, { paddingTop: headerTopPad + 10 }]}
-      >
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>As-salamu alaykum</Text>
-          <Text style={styles.headerSubtitle}>
-            {greeting}{hijriDate ? ` · ${hijriDate}` : ""}
-          </Text>
-          {preferredMasjid ? (
-            <Text style={styles.headerMasjid}>{preferredMasjid}</Text>
-          ) : null}
+      <GlassHeader onHeaderHeight={setHeaderHeight}>
+        <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14, flexDirection: "row", alignItems: "center" }}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.headerTitle}>As-salamu alaykum</Text>
+            <Text style={styles.headerSubtitle}>
+              {greeting}{hijriDate ? ` · ${hijriDate}` : ""}
+            </Text>
+            {preferredMasjid ? (
+              <Text style={styles.headerMasjid}>{preferredMasjid}</Text>
+            ) : null}
+          </View>
+          <Pressable
+            onPress={toggleNotifications}
+            testID="notification-toggle"
+            hitSlop={8}
+            style={styles.headerNotifBtn}
+          >
+            <Ionicons
+              name={notificationsEnabled ? "notifications" : "notifications-outline"}
+              size={20}
+              color={notificationsEnabled ? colors.gold : "rgba(255,255,255,0.7)"}
+            />
+          </Pressable>
         </View>
-        <Pressable
-          onPress={toggleNotifications}
-          testID="notification-toggle"
-          hitSlop={8}
-          style={styles.headerNotifBtn}
-        >
-          <Ionicons
-            name={notificationsEnabled ? "notifications" : "notifications-outline"}
-            size={20}
-            color={notificationsEnabled ? colors.gold : "rgba(255,255,255,0.7)"}
-          />
-        </Pressable>
-      </LinearGradient>
-      <TickerBanner />
+        <TickerBanner />
+      </GlassHeader>
 
       <ScrollView
         ref={scrollViewRef}
         style={styles.scrollContent}
-        contentContainerStyle={{ paddingBottom: Platform.OS === "web" ? 34 : 90 }}
+        contentContainerStyle={{ paddingTop: headerHeight + 12, paddingBottom: Platform.OS === "web" ? 34 : 90 }}
         showsVerticalScrollIndicator={false}
       >
         {nearMosque && !silenceAlertDismissed ? (
@@ -929,7 +950,7 @@ export default function PrayerScreen() {
 
         <View style={[styles.glassCard, styles.prayerCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
           <View style={styles.prayerHero}>
-            <CountdownRing colors={colors} isDark={isDark} progress={countdownProgress} qiblaBearing={qiblaRotation} />
+            <CountdownRing colors={colors} isDark={isDark} progress={countdownProgress} qiblaBearing={qiblaRotation} hasRealLocation={hasRealLocation} onRequestLocation={loadPrayerData} />
             {nextPrayer ? (
               <View style={styles.prayerHeroText}>
                 <Text style={[styles.prayerHeroName, { color: isDark ? "#FFFFFF" : colors.emerald }]} allowFontScaling={false}>{nextPrayer.label}</Text>
@@ -1013,7 +1034,7 @@ export default function PrayerScreen() {
           >
             <Ionicons name="location-outline" size={14} color={colors.bannerText} />
             <Text style={{ color: colors.bannerText, fontSize: 12, flex: 1, marginLeft: 8, fontFamily: "Inter_500Medium" }}>
-              Enable location for accurate prayer times
+              Enable location for accurate prayer times & Qibla direction
             </Text>
           </Pressable>
         ) : null}
@@ -1361,12 +1382,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  headerBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-  },
   headerTitle: {
     color: "#FFFFFF",
     fontSize: 22,
@@ -1387,6 +1402,8 @@ const styles = StyleSheet.create({
   headerNotifBtn: {
     width: 36,
     height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.15)",
     justifyContent: "center",
     alignItems: "center",
   },

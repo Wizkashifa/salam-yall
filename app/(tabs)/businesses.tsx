@@ -27,6 +27,7 @@ import { TickerBanner } from "@/components/TickerBanner";
 import { GlassHeader } from "@/components/GlassHeader";
 import { useDeepLink } from "@/lib/deeplink-context";
 import { apiRequest, getApiUrl } from "@/lib/query-client";
+import { trackEvent, trackScreenView } from "@/lib/analytics";
 
 interface Business {
   id: string;
@@ -765,6 +766,8 @@ export default function BusinessesScreen() {
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const { pendingTarget, consumeTarget } = useDeepLink();
 
+  useEffect(() => { trackScreenView("Directory"); }, []);
+
   const { data: businesses, isLoading } = useQuery<Business[]>({
     queryKey: ["/api/businesses"],
     staleTime: 10 * 60 * 1000,
@@ -818,6 +821,7 @@ export default function BusinessesScreen() {
           style={({ pressed }) => [styles.businessCard, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.95 : 1 }]}
           onPress={() => {
             setSelectedBusiness(item);
+            trackEvent("business_viewed", { name: item.name, id: item.id });
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           }}
           testID={`business-${item.id}`}
@@ -885,14 +889,14 @@ export default function BusinessesScreen() {
             </Text>
           </View>
           <Pressable
-            style={({ pressed }) => [styles.addButton, { backgroundColor: "rgba(255,255,255,0.2)", opacity: pressed ? 0.8 : 1 }]}
+            style={({ pressed }) => [styles.addButton, { backgroundColor: "rgba(255,255,255,0.15)", opacity: pressed ? 0.8 : 1 }]}
             onPress={() => {
               setShowSubmitModal(true);
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             }}
             testID="add-business-button"
           >
-            <Ionicons name="add" size={22} color="#fff" />
+            <Ionicons name="add" size={20} color="#fff" />
           </Pressable>
         </View>
         <TickerBanner />
@@ -1042,12 +1046,11 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 4,
   },
   searchFilterRow: {
     flexDirection: "row" as const,
@@ -1123,7 +1126,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 20,
-    paddingBottom: Platform.OS === "web" ? 34 : 20,
+    paddingBottom: Platform.OS === "web" ? 34 : 100,
   },
   centerContainer: {
     alignItems: "center",

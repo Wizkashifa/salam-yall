@@ -99,6 +99,7 @@
           <button class="tab-btn" data-tab="events" onclick="switchTab('events')">Events</button>
           <button class="tab-btn" data-tab="businesses" onclick="switchTab('businesses')">Business Submissions</button>
           <button class="tab-btn" data-tab="restaurants" onclick="switchTab('restaurants')">Restaurants</button>
+          <button class="tab-btn" data-tab="analytics" onclick="switchTab('analytics')">Analytics</button>
         </div>
       </div>
     </div>
@@ -207,6 +208,64 @@
         <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Search for a restaurant and override its opening hours periods. Overrides persist across Google Places syncs.</p>
         <input type="text" id="restaurantSearch" placeholder="Search by name or address..." style="margin-bottom:14px;" oninput="debounceRestaurantSearch()">
         <div id="restaurantList"><div class="empty-state">Type to search for restaurants</div></div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-analytics">
+      <div class="section">
+        <div class="section-title"><span class="icon">📊</span> Date Range</div>
+        <div class="row">
+          <div>
+            <label>From</label>
+            <input type="date" id="analyticsFrom" onchange="loadAnalytics()" style="width:100%;padding:10px 14px;background:#1E1E1E;border:1px solid #333;border-radius:10px;color:#F5F5F5;font-size:14px;">
+          </div>
+          <div>
+            <label>To</label>
+            <input type="date" id="analyticsTo" onchange="loadAnalytics()" style="width:100%;padding:10px 14px;background:#1E1E1E;border:1px solid #333;border-radius:10px;color:#F5F5F5;font-size:14px;">
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="icon">📈</span> Overview</div>
+        <div id="analyticsOverview" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+          <div class="loading">Loading...</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="icon">📱</span> Screen Views</div>
+        <div id="analyticsScreenViews"><div class="loading">Loading...</div></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="icon">🍽️</span> Top 10 Restaurants Viewed</div>
+        <div id="analyticsTopRestaurants"><div class="loading">Loading...</div></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="icon">📅</span> Top 10 Event Clicks</div>
+        <div id="analyticsTopEvents"><div class="loading">Loading...</div></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="icon">🔍</span> Top Searches</div>
+        <div id="analyticsTopSearches"><div class="loading">Loading...</div></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="icon">🕌</span> Prayer Tracker Stats</div>
+        <div id="analyticsPrayerStats"><div class="loading">Loading...</div></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="icon">⚙️</span> Feature Adoption</div>
+        <div id="analyticsFeatureAdoption"><div class="loading">Loading...</div></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="icon">📊</span> Event Breakdown</div>
+        <div id="analyticsEventBreakdown"><div class="loading">Loading...</div></div>
       </div>
     </div>
 
@@ -335,6 +394,10 @@
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
       document.querySelector('[data-tab="' + tab + '"]').classList.add('active');
       document.getElementById('tab-' + tab).classList.add('active');
+      if (tab === 'analytics') {
+        initAnalyticsDateRange();
+        loadAnalytics();
+      }
     }
 
     function showToast(msg, isError) {
@@ -996,6 +1059,161 @@
           showToast('Failed to remove override', true);
         }
       } catch(e) { showToast('Connection error', true); }
+    }
+
+    function initAnalyticsDateRange() {
+      var to = new Date();
+      var from = new Date(Date.now() - 6 * 86400000);
+      document.getElementById('analyticsFrom').value = from.toISOString().slice(0, 10);
+      document.getElementById('analyticsTo').value = to.toISOString().slice(0, 10);
+    }
+
+    async function loadAnalytics() {
+      var from = document.getElementById('analyticsFrom').value;
+      var to = document.getElementById('analyticsTo').value;
+      if (!from || !to) return;
+      loadAnalyticsSummary(from, to);
+      loadAnalyticsTop(from, to);
+    }
+
+    async function loadAnalyticsSummary(from, to) {
+      try {
+        var res = await fetch('/api/admin/analytics/summary?from=' + from + '&to=' + to, {
+          headers: { 'Authorization': 'Bearer ' + adminToken }
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        var data = await res.json();
+        renderOverview(data);
+        renderEventBreakdown(data.summary);
+      } catch (e) {
+        document.getElementById('analyticsOverview').innerHTML = '<div class="empty-state">Failed to load</div>';
+      }
+    }
+
+    async function loadAnalyticsTop(from, to) {
+      try {
+        var res = await fetch('/api/admin/analytics/top?from=' + from + '&to=' + to, {
+          headers: { 'Authorization': 'Bearer ' + adminToken }
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        var data = await res.json();
+        renderScreenViews(data.screenViews || []);
+        renderTopList('analyticsTopRestaurants', data.topRestaurants || [], 'name', 'views');
+        renderTopList('analyticsTopEvents', data.topEvents || [], 'title', 'clicks');
+        renderTopList('analyticsTopSearches', data.topSearches || [], 'query', 'searches');
+        renderPrayerStats(data.prayerStats || []);
+        renderFeatureAdoption(data.featureAdoption || [], (data.uniqueDevices || 0));
+      } catch (e) {
+        document.getElementById('analyticsScreenViews').innerHTML = '<div class="empty-state">Failed to load</div>';
+      }
+    }
+
+    function renderOverview(data) {
+      var totals = data.totals || { total_events: 0, unique_devices: 0 };
+      var todayStr = new Date().toISOString().slice(0, 10);
+      var weekAgo = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
+      var todayEvents = 0;
+      var todayDevices = 0;
+      var weekEvents = totals.total_events;
+
+      if (data.from <= todayStr && data.to >= todayStr) {
+        todayEvents = totals.total_events;
+        todayDevices = totals.unique_devices;
+      }
+
+      var cardStyle = 'background:#1E1E1E;border:1px solid #333;border-radius:12px;padding:16px;text-align:center;';
+      var numStyle = 'font-size:28px;font-weight:800;color:#D4A843;margin-bottom:4px;';
+      var labelStyle = 'font-size:11px;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;';
+
+      document.getElementById('analyticsOverview').innerHTML =
+        '<div style="' + cardStyle + '"><div style="' + numStyle + '">' + totals.total_events + '</div><div style="' + labelStyle + '">Total Events</div></div>' +
+        '<div style="' + cardStyle + '"><div style="' + numStyle + '">' + totals.unique_devices + '</div><div style="' + labelStyle + '">Unique Devices</div></div>' +
+        '<div style="' + cardStyle + '"><div style="' + numStyle + '">' + (data.summary ? data.summary.length : 0) + '</div><div style="' + labelStyle + '">Event Types</div></div>';
+    }
+
+    function renderScreenViews(views) {
+      var container = document.getElementById('analyticsScreenViews');
+      if (!views.length) { container.innerHTML = '<div class="empty-state">No screen views recorded</div>'; return; }
+      var maxVal = Math.max.apply(null, views.map(function(v) { return v.views; }));
+      container.innerHTML = views.map(function(v) {
+        var pct = maxVal > 0 ? Math.round((v.views / maxVal) * 100) : 0;
+        return '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">' +
+          '<div style="width:80px;font-size:13px;color:#E5E5E5;text-align:right;flex-shrink:0;">' + escHtml(v.screen || 'unknown') + '</div>' +
+          '<div style="flex:1;background:#1E1E1E;border-radius:6px;height:24px;overflow:hidden;">' +
+            '<div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,#1B6B4A,#2D9E6E);border-radius:6px;transition:width 0.5s;min-width:2px;"></div>' +
+          '</div>' +
+          '<div style="width:50px;font-size:13px;color:#D4A843;font-weight:700;">' + v.views + '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function renderTopList(containerId, items, nameKey, countKey) {
+      var container = document.getElementById(containerId);
+      if (!items.length) { container.innerHTML = '<div class="empty-state">No data yet</div>'; return; }
+      container.innerHTML = '<ol style="list-style:none;counter-reset:rank;">' + items.map(function(item, i) {
+        return '<li style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1E1E1E;">' +
+          '<span style="width:24px;height:24px;border-radius:12px;background:' + (i < 3 ? '#2A2318' : '#1E1E1E') + ';color:' + (i < 3 ? '#D4A843' : '#6B7280') + ';font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + (i + 1) + '</span>' +
+          '<span style="flex:1;font-size:13px;color:#E5E5E5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(item[nameKey] || 'unknown') + '</span>' +
+          '<span style="font-size:13px;color:#D4A843;font-weight:700;">' + item[countKey] + '</span>' +
+        '</li>';
+      }).join('') + '</ol>';
+    }
+
+    function renderPrayerStats(stats) {
+      var container = document.getElementById('analyticsPrayerStats');
+      if (!stats.length) { container.innerHTML = '<div class="empty-state">No prayer tracking data</div>'; return; }
+      var total = stats.reduce(function(sum, s) { return sum + s.tracks; }, 0);
+      var maxVal = Math.max.apply(null, stats.map(function(s) { return s.tracks; }));
+      var prayerColors = { Fajr: '#4A90D9', Dhuhr: '#D4A843', Asr: '#E87040', Maghrib: '#C44569', Isha: '#6C5CE7' };
+      container.innerHTML = '<div style="margin-bottom:12px;font-size:13px;color:#9CA3AF;">Total prayers tracked: <span style="color:#D4A843;font-weight:700;">' + total + '</span></div>' +
+        stats.map(function(s) {
+          var pct = maxVal > 0 ? Math.round((s.tracks / maxVal) * 100) : 0;
+          var color = prayerColors[s.prayer] || '#1B6B4A';
+          return '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">' +
+            '<div style="width:70px;font-size:13px;color:#E5E5E5;text-align:right;flex-shrink:0;">' + escHtml(s.prayer || 'unknown') + '</div>' +
+            '<div style="flex:1;background:#1E1E1E;border-radius:6px;height:24px;overflow:hidden;">' +
+              '<div style="height:100%;width:' + pct + '%;background:' + color + ';border-radius:6px;transition:width 0.5s;min-width:2px;"></div>' +
+            '</div>' +
+            '<div style="width:50px;font-size:13px;color:#D4A843;font-weight:700;">' + s.tracks + '</div>' +
+          '</div>';
+        }).join('');
+    }
+
+    function renderFeatureAdoption(adoption, totalDevices) {
+      var container = document.getElementById('analyticsFeatureAdoption');
+      if (!adoption.length) { container.innerHTML = '<div class="empty-state">No feature adoption data</div>'; return; }
+      var featureLabels = {
+        masjid_selected: 'Preferred Masjid Set',
+        notifications_enabled: 'Notifications Enabled',
+        theme_changed: 'Theme Customized',
+        calc_method_changed: 'Calc Method Changed'
+      };
+      container.innerHTML = '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">' +
+        adoption.map(function(f) {
+          var label = featureLabels[f.event_name] || f.event_name;
+          return '<div style="background:#1E1E1E;border:1px solid #333;border-radius:10px;padding:14px;text-align:center;">' +
+            '<div style="font-size:24px;font-weight:800;color:#1B6B4A;">' + f.devices + '</div>' +
+            '<div style="font-size:11px;color:#9CA3AF;margin-top:4px;">' + escHtml(label) + '</div>' +
+          '</div>';
+        }).join('') + '</div>';
+    }
+
+    function renderEventBreakdown(summary) {
+      var container = document.getElementById('analyticsEventBreakdown');
+      if (!summary || !summary.length) { container.innerHTML = '<div class="empty-state">No events recorded</div>'; return; }
+      container.innerHTML = '<table style="width:100%;border-collapse:collapse;">' +
+        '<thead><tr>' +
+          '<th style="text-align:left;padding:8px 4px;font-size:12px;color:#9CA3AF;border-bottom:1px solid #333;">Event</th>' +
+          '<th style="text-align:right;padding:8px 4px;font-size:12px;color:#9CA3AF;border-bottom:1px solid #333;">Count</th>' +
+          '<th style="text-align:right;padding:8px 4px;font-size:12px;color:#9CA3AF;border-bottom:1px solid #333;">Devices</th>' +
+        '</tr></thead><tbody>' +
+        summary.map(function(row) {
+          return '<tr>' +
+            '<td style="padding:8px 4px;font-size:13px;color:#E5E5E5;border-bottom:1px solid #1E1E1E;">' + escHtml(row.event_name) + '</td>' +
+            '<td style="text-align:right;padding:8px 4px;font-size:13px;color:#D4A843;font-weight:600;border-bottom:1px solid #1E1E1E;">' + row.count + '</td>' +
+            '<td style="text-align:right;padding:8px 4px;font-size:13px;color:#6B7280;border-bottom:1px solid #1E1E1E;">' + row.unique_devices + '</td>' +
+          '</tr>';
+        }).join('') + '</tbody></table>';
     }
 
     function escHtml(s) {

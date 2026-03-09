@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -26,6 +26,7 @@ import { TickerBanner } from "@/components/TickerBanner";
 import { GlassHeader } from "@/components/GlassHeader";
 import { useDeepLink } from "@/lib/deeplink-context";
 import { getApiUrl } from "@/lib/query-client";
+import { trackEvent, trackScreenView } from "@/lib/analytics";
 
 interface HalalRestaurant {
   id: number;
@@ -66,6 +67,7 @@ const HALAL_FILTERS = [
 
 const CUISINE_FILTERS = [
   { key: "ALL", label: "All Cuisines" },
+  { key: "CAFE", label: "Cafe" },
   { key: "INDIAN_PAKISTANI", label: "Indian/Pakistani" },
   { key: "MEDITERRANEAN", label: "Mediterranean" },
   { key: "MIDDLE_EASTERN", label: "Middle Eastern" },
@@ -405,6 +407,16 @@ export default function HalalScreen() {
   const { pendingTarget, consumeTarget } = useDeepLink();
   const [headerHeight, setHeaderHeight] = useState(0);
 
+  useEffect(() => { trackScreenView("HalalEats"); }, []);
+
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!searchText || searchText.length < 2) return;
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => { trackEvent("search", { query: searchText, context: "halal" }); }, 1500);
+    return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
+  }, [searchText]);
+
   useEffect(() => {
     (async () => {
       try {
@@ -501,7 +513,7 @@ export default function HalalScreen() {
             styles.card,
             { backgroundColor: colors.surface, opacity: pressed ? 0.95 : 1 },
           ]}
-          onPress={() => { setSelectedRestaurant(item); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+          onPress={() => { setSelectedRestaurant(item); trackEvent("restaurant_viewed", { name: item.name, id: item.id }); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
           testID={`restaurant-${item.id}`}
         >
           <View style={styles.cardRow}>
@@ -580,16 +592,23 @@ export default function HalalScreen() {
           </View>
           <Pressable
             onPress={() => setShowSearch(!showSearch)}
-            style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+            style={({ pressed }) => [{
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: "rgba(255,255,255,0.15)",
+              justifyContent: "center" as const,
+              alignItems: "center" as const,
+              opacity: pressed ? 0.7 : 1,
+            }]}
           >
-            <Ionicons name={showSearch ? "close" : "search"} size={22} color="#FFFFFF" />
+            <Ionicons name={showSearch ? "close" : "search"} size={20} color="#FFFFFF" />
           </Pressable>
         </View>
+        <TickerBanner />
       </GlassHeader>
 
-      <View style={{ paddingTop: headerHeight }}>
-        <TickerBanner />
-      </View>
+      <View style={{ height: headerHeight }} />
 
       {showSearch && (
         <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -740,7 +759,7 @@ export default function HalalScreen() {
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={[
             styles.listContent,
-            { paddingBottom: isWeb ? 34 : 20 },
+            { paddingBottom: isWeb ? 34 : 100 },
           ]}
           showsVerticalScrollIndicator={false}
           scrollEnabled={filtered.length > 0}

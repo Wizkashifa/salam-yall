@@ -13,6 +13,7 @@ import {
 
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/lib/theme-context";
@@ -23,10 +24,12 @@ import {
   NEARBY_MASJIDS,
   CALC_METHOD_LABELS,
   matchEventsToMasjid,
+  getAllMasjidsByDistance,
   type CalcMethodKey,
   type Masjid,
 } from "@/lib/prayer-utils";
 import { getMonthLogs, cyclePrayerStatus, type DayLog, type PrayerName } from "@/lib/prayer-tracker";
+import { trackEvent, trackScreenView } from "@/lib/analytics";
 
 interface CalendarEvent {
   id: string;
@@ -52,11 +55,37 @@ export default function SettingsScreen() {
   const [feedbackText, setFeedbackText] = useState("");
   const [feedbackEmail, setFeedbackEmail] = useState("");
 
+  useEffect(() => { trackScreenView("Settings"); }, []);
+
   const now = new Date();
   const [trackerYear, setTrackerYear] = useState(now.getFullYear());
   const [trackerMonth, setTrackerMonth] = useState(now.getMonth() + 1);
   const [monthLogs, setMonthLogs] = useState<{ [dateKey: string]: DayLog }>({});
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [locationRequested, setLocationRequested] = useState(false);
+
+  useEffect(() => {
+    if (section === "masjids" && !locationRequested) {
+      setLocationRequested(true);
+      (async () => {
+        try {
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status === "granted") {
+            const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+            setUserLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+          }
+        } catch {}
+      })();
+    }
+  }, [section, locationRequested]);
+
+  const sortedMasjids = useMemo(() => {
+    if (userLocation) {
+      return getAllMasjidsByDistance(userLocation.latitude, userLocation.longitude);
+    }
+    return NEARBY_MASJIDS.map((m) => ({ masjid: m, distanceMiles: 0, driveMinutes: 0 }));
+  }, [userLocation]);
 
   useEffect(() => {
     if (section === "prayerTracker") {
@@ -78,6 +107,7 @@ export default function SettingsScreen() {
           return;
         }
         setNotificationsEnabled(true);
+        trackEvent("notifications_enabled", { enabled: true });
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } catch {}
     } else {
@@ -197,7 +227,7 @@ export default function SettingsScreen() {
             <Pressable
               key={mode}
               style={[styles.themeOption, isActive && { backgroundColor: colors.emerald }]}
-              onPress={() => { setThemeMode(mode); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+              onPress={() => { setThemeMode(mode); trackEvent("theme_changed", { theme: mode }); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
             >
               <Ionicons name={icons[mode]} size={16} color={isActive ? "#fff" : colors.textSecondary} />
               <Text style={[styles.themeOptionText, { color: isActive ? "#fff" : colors.text }]}>{labels[mode]}</Text>
@@ -309,7 +339,7 @@ export default function SettingsScreen() {
           <Pressable
             key={key}
             style={[styles.calcRow, { backgroundColor: isActive ? (isDark ? colors.actionButtonBg : colors.prayerIconBg) : colors.surface, borderColor: colors.border }]}
-            onPress={() => { setCalcMethod(key); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSection("main"); }}
+            onPress={() => { setCalcMethod(key); trackEvent("calc_method_changed", { method: key }); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSection("main"); }}
           >
             <Text style={[styles.calcText, { color: isActive ? colors.emerald : colors.text }]}>
               {CALC_METHOD_LABELS[key]}
@@ -331,8 +361,12 @@ export default function SettingsScreen() {
         <Text style={[styles.backLabel, { color: colors.text }]}>Masjid Directory</Text>
       </Pressable>
 
-      {NEARBY_MASJIDS.map((masjid, i) => {
+      {sortedMasjids.map((entry, i) => {
+        const masjid = entry.masjid;
         const isPreferred = preferredMasjid === masjid.name;
+        const distanceLabel = userLocation && entry.distanceMiles > 0
+          ? `${entry.distanceMiles < 10 ? entry.distanceMiles.toFixed(1) : Math.round(entry.distanceMiles)} mi`
+          : null;
         return (
           <Pressable
             key={i}
@@ -346,11 +380,18 @@ export default function SettingsScreen() {
               <Text style={[styles.masjidName, { color: colors.text }]} numberOfLines={1}>{masjid.name}</Text>
               <Text style={[styles.masjidAddr, { color: colors.textSecondary }]} numberOfLines={1}>{masjid.address}</Text>
             </View>
+            {distanceLabel ? (
+              <View style={styles.distanceBadge}>
+                <Ionicons name="location-outline" size={12} color={colors.emerald} />
+                <Text style={[styles.distanceText, { color: colors.emerald }]}>{distanceLabel}</Text>
+              </View>
+            ) : null}
             <Pressable
               onPress={(e) => {
                 e.stopPropagation();
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 setPreferredMasjid(isPreferred ? null : masjid.name);
+                if (!isPreferred) trackEvent("masjid_selected", { masjid: masjid.name });
               }}
               hitSlop={8}
               style={{ padding: 4, marginRight: 4 }}
@@ -699,7 +740,7 @@ export default function SettingsScreen() {
       </GlassHeader>
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 20, paddingTop: headerHeight + 12, paddingBottom: Platform.OS === "web" ? 34 : 20 }}
+        contentContainerStyle={{ padding: 20, paddingTop: headerHeight + 12, paddingBottom: Platform.OS === "web" ? 34 : 100 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -1141,5 +1182,19 @@ const styles = StyleSheet.create({
   },
   toggleThumbActive: {
     alignSelf: "flex-end" as const,
+  },
+  distanceBadge: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 3,
+    marginRight: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    backgroundColor: "rgba(27, 107, 74, 0.1)",
+  },
+  distanceText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
   },
 });
