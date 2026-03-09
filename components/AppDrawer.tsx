@@ -56,6 +56,11 @@ export function AppDrawer() {
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const [visible, setVisible] = useState(false);
   const [selectedMasjid, setSelectedMasjid] = useState<Masjid | null>(null);
+  const { data: fetchedMasjids } = useQuery<Masjid[]>({
+    queryKey: ["/api/masjids"],
+    staleTime: 60 * 60 * 1000,
+  });
+  const masjidList = fetchedMasjids && fetchedMasjids.length > 0 ? fetchedMasjids : NEARBY_MASJIDS;
 
   const [feedbackType, setFeedbackType] = useState<"bug" | "feature">("feature");
   const [feedbackText, setFeedbackText] = useState("");
@@ -274,7 +279,7 @@ export function AppDrawer() {
         <Text style={[styles.backLabel, { color: colors.text }]}>Masjid Directory</Text>
       </Pressable>
 
-      {NEARBY_MASJIDS.map((masjid, i) => (
+      {masjidList.map((masjid, i) => (
         <Pressable
           key={i}
           style={({ pressed }) => [styles.masjidRow, { backgroundColor: pressed ? colors.surfaceSecondary : "transparent" }]}

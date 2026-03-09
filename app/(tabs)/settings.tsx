@@ -28,6 +28,7 @@ import {
   type CalcMethodKey,
   type Masjid,
 } from "@/lib/prayer-utils";
+import { getApiUrl } from "@/lib/query-client";
 import { getMonthLogs, cyclePrayerStatus, type DayLog, type PrayerName } from "@/lib/prayer-tracker";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 import { MasjidMap } from "@/components/MasjidMap";
@@ -81,12 +82,18 @@ export default function SettingsScreen() {
     }
   }, [section, locationRequested]);
 
+  const { data: fetchedMasjids } = useQuery<Masjid[]>({
+    queryKey: ["/api/masjids"],
+    staleTime: 60 * 60 * 1000,
+  });
+  const masjidList = fetchedMasjids && fetchedMasjids.length > 0 ? fetchedMasjids : NEARBY_MASJIDS;
+
   const sortedMasjids = useMemo(() => {
     if (userLocation) {
-      return getAllMasjidsByDistance(userLocation.latitude, userLocation.longitude);
+      return getAllMasjidsByDistance(userLocation.latitude, userLocation.longitude, masjidList);
     }
-    return NEARBY_MASJIDS.map((m) => ({ masjid: m, distanceMiles: 0, driveMinutes: 0 }));
-  }, [userLocation]);
+    return masjidList.map((m) => ({ masjid: m, distanceMiles: 0, driveMinutes: 0 }));
+  }, [userLocation, masjidList]);
 
   useEffect(() => {
     if (section === "prayerTracker") {
@@ -353,8 +360,8 @@ export default function SettingsScreen() {
   );
 
   const mapRegion = useMemo(() => {
-    const lats = NEARBY_MASJIDS.map(m => m.latitude);
-    const lngs = NEARBY_MASJIDS.map(m => m.longitude);
+    const lats = masjidList.map(m => m.latitude);
+    const lngs = masjidList.map(m => m.longitude);
     const minLat = Math.min(...lats);
     const maxLat = Math.max(...lats);
     const minLng = Math.min(...lngs);
@@ -365,7 +372,7 @@ export default function SettingsScreen() {
       latitudeDelta: (maxLat - minLat) * 1.4 + 0.02,
       longitudeDelta: (maxLng - minLng) * 1.4 + 0.02,
     };
-  }, []);
+  }, [masjidList]);
 
   const handleMapSelectMasjid = useCallback((m: Masjid) => {
     setSelectedMasjid(m);

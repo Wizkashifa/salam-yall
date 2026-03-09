@@ -503,6 +503,45 @@ async function ensureAnalyticsTable(pool: pg.Pool) {
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_analytics_device ON analytics_events(device_id);`);
 }
 
+async function ensureMasjidsTable(pool: pg.Pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS masjids (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      latitude DOUBLE PRECISION NOT NULL,
+      longitude DOUBLE PRECISION NOT NULL,
+      address TEXT NOT NULL,
+      website TEXT,
+      match_terms TEXT[],
+      has_iqama BOOLEAN DEFAULT false,
+      active BOOLEAN DEFAULT true,
+      sort_order INT DEFAULT 0,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  const { rows } = await pool.query("SELECT COUNT(*) as count FROM masjids");
+  if (parseInt(rows[0].count) === 0) {
+    await pool.query(`
+      INSERT INTO masjids (name, latitude, longitude, address, website, match_terms, has_iqama, sort_order) VALUES
+        ('Al-Noor Islamic Center', 35.7676, -78.7165, '1501 Buck Jones Rd, Raleigh, NC 27606', NULL, ARRAY['al-noor', 'alnoor'], true, 1),
+        ('Islamic Association of Raleigh (Atwater)', 35.7953, -78.6711, '808 Atwater St, Raleigh, NC 27607', 'https://www.raleighmasjid.org', ARRAY['iar', 'islamic association of raleigh', 'atwater'], true, 2),
+        ('Islamic Association of Raleigh (Page Rd)', 35.8329, -78.8274, '3104 Page Rd, Morrisville, NC 27560', 'https://www.raleighmasjid.org', ARRAY['iar', 'islamic association of raleigh', 'page rd', 'page road'], true, 3),
+        ('Islamic Center of Morrisville', 35.8316, -78.8345, '107 Quail Fields Ct, Morrisville, NC 27560', 'https://www.icmorrisville.org', ARRAY['icm', 'islamic center of morrisville', 'quail fields'], true, 4),
+        ('Jamaat Ibad Ar-Rahman (Fayetteville)', 35.9615, -78.8872, '3034 Fayetteville St, Durham, NC 27707', 'https://www.jiar.org', ARRAY['jamaat ibad', 'jiar', 'fayetteville st'], true, 5),
+        ('Jamaat Ibad Ar-Rahman (Parkwood)', 35.9194, -78.9227, '5122 Revere Rd, Durham, NC 27713', 'https://www.jiar.org', ARRAY['parkwood', 'revere rd'], true, 6),
+        ('Apex Masjid', 35.7327, -78.8502, '733 Center St, Apex, NC 27502', NULL, ARRAY['apex masjid', 'center st, apex'], false, 7),
+        ('Ar-Razzaq Islamic Center', 35.9728, -78.9327, '1920 Chapel Hill Rd, Durham, NC 27707', NULL, ARRAY['ar-razzaq', 'arrazzaq', 'chapel hill rd, durham'], false, 8),
+        ('As-Salaam Islamic Center', 35.7985, -78.6766, '2104 Woods Edge Rd, Raleigh, NC 27607', 'https://www.assalaam.org', ARRAY['as-salaam', 'assalaam', 'woods edge'], false, 9),
+        ('Chapel Hill Islamic Society', 35.8841, -79.0328, '1717 Legion Rd, Chapel Hill, NC 27517', 'https://www.chapelhillmasjid.org', ARRAY['chapel hill islamic', 'legion rd'], false, 10),
+        ('Islamic Center of Cary', 35.7773, -78.7978, '1155 W Chatham St, Cary, NC 27511', 'https://www.icocary.org', ARRAY['islamic center of cary', 'chatham st'], false, 11),
+        ('Masjid King Khalid', 35.7756, -78.6375, '130 Martin Luther King Jr Blvd, Raleigh, NC 27601', NULL, ARRAY['king khalid', 'martin luther king'], false, 12),
+        ('North Raleigh Masjid', 35.7682, -78.7149, '1411 Buck Jones Rd, Raleigh, NC 27606', NULL, ARRAY['north raleigh masjid', 'deah way', 'buck jones'], false, 13);
+    `);
+    console.log("[DB] Seeded default masjids");
+  }
+}
+
 async function ensureRestaurantOverridesTable(pool: pg.Pool) {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS restaurant_overrides (
@@ -777,6 +816,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const pool = getDbPool();
   await ensureAnalyticsTable(pool).catch(err => console.error("[DB] Analytics table init error:", err.message));
+  await ensureMasjidsTable(pool).catch(err => console.error("[DB] Masjids table init error:", err.message));
   await ensureJumuahTable(pool).catch(err => console.error("[DB] Jumuah table init error:", err.message));
   await ensureEventOverridesTable(pool).catch(err => console.error("[DB] Event overrides table init error:", err.message));
   await ensureRestaurantOverridesTable(pool).catch(err => console.error("[DB] Restaurant overrides table init error:", err.message));
@@ -1928,6 +1968,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error sending push:", error.message);
       res.status(500).json({ error: "Failed to send notifications" });
+    }
+  });
+
+  app.get("/api/masjids", async (_req, res) => {
+    try {
+      const { rows } = await pool.query(
+        "SELECT id, name, latitude, longitude, address, website, match_terms, has_iqama FROM masjids WHERE active = true ORDER BY sort_order, name"
+      );
+      const masjids = rows.map((r: any) => ({
+        id: r.id,
+        name: r.name,
+        latitude: parseFloat(r.latitude),
+        longitude: parseFloat(r.longitude),
+        address: r.address,
+        website: r.website || undefined,
+        matchTerms: r.match_terms || [],
+        hasIqama: r.has_iqama || false,
+      }));
+      res.json(masjids);
+    } catch (error: any) {
+      console.error("[Masjids] Fetch error:", error.message);
+      res.status(500).json({ error: "Failed to fetch masjids" });
+    }
+  });
+
+  app.get("/api/admin/masjids", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { rows } = await pool.query("SELECT * FROM masjids ORDER BY sort_order, name");
+      res.json(rows);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch masjids" });
+    }
+  });
+
+  app.post("/api/admin/masjids", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { name, latitude, longitude, address, website, match_terms, has_iqama, sort_order } = req.body;
+      if (!name || !latitude || !longitude || !address) {
+        return res.status(400).json({ error: "name, latitude, longitude, and address are required" });
+      }
+      const { rows } = await pool.query(
+        `INSERT INTO masjids (name, latitude, longitude, address, website, match_terms, has_iqama, sort_order)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+        [name, latitude, longitude, address, website || null, match_terms || [], has_iqama || false, sort_order || 0]
+      );
+      res.status(201).json(rows[0]);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to create masjid" });
+    }
+  });
+
+  app.put("/api/admin/masjids/:id", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { id } = req.params;
+      const { name, latitude, longitude, address, website, match_terms, has_iqama, active, sort_order } = req.body;
+      const { rows } = await pool.query(
+        `UPDATE masjids SET name = COALESCE($1, name), latitude = COALESCE($2, latitude), longitude = COALESCE($3, longitude),
+         address = COALESCE($4, address), website = CASE WHEN $5::boolean THEN $6 ELSE website END, match_terms = COALESCE($7, match_terms),
+         has_iqama = COALESCE($8, has_iqama), active = COALESCE($9, active), sort_order = COALESCE($10, sort_order),
+         updated_at = NOW() WHERE id = $11 RETURNING *`,
+        [name, latitude, longitude, address, website !== undefined, website !== undefined ? (website || null) : null, match_terms, has_iqama, active, sort_order, id]
+      );
+      if (rows.length === 0) return res.status(404).json({ error: "Masjid not found" });
+      res.json(rows[0]);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to update masjid" });
+    }
+  });
+
+  app.delete("/api/admin/masjids/:id", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { id } = req.params;
+      const { rowCount } = await pool.query("DELETE FROM masjids WHERE id = $1", [id]);
+      if (rowCount === 0) return res.status(404).json({ error: "Masjid not found" });
+      res.json({ ok: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to delete masjid" });
     }
   });
 

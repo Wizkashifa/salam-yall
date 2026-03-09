@@ -17,6 +17,7 @@ import * as Notifications from "expo-notifications";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { NEARBY_MASJIDS, type Masjid } from "@/lib/prayer-utils";
 import { useSettings } from "@/lib/settings-context";
+import { useQuery } from "@tanstack/react-query";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -205,6 +206,11 @@ const trackerStyles = StyleSheet.create({
 
 function MasjidScreen({ onSelect }: { onSelect: (name: string | null) => void }) {
   const [selected, setSelected] = useState<string | null>(null);
+  const { data: fetchedMasjids } = useQuery<Masjid[]>({
+    queryKey: ["/api/masjids"],
+    staleTime: 60 * 60 * 1000,
+  });
+  const masjidList = fetchedMasjids && fetchedMasjids.length > 0 ? fetchedMasjids : NEARBY_MASJIDS;
 
   const handleSelect = useCallback((name: string) => {
     const newVal = selected === name ? null : name;
@@ -222,7 +228,7 @@ function MasjidScreen({ onSelect }: { onSelect: (name: string | null) => void })
         Select your preferred masjid to see its iqama times on the home screen. You can change this anytime in settings.
       </Text>
       <FlatList
-        data={NEARBY_MASJIDS}
+        data={masjidList}
         keyExtractor={(item) => item.name}
         scrollEnabled={true}
         style={screenStyles.masjidList}

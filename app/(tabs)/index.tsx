@@ -457,9 +457,15 @@ export default function PrayerScreen() {
     staleTime: 30 * 60 * 1000,
   });
 
+  const { data: fetchedMasjids } = useQuery<Masjid[]>({
+    queryKey: ["/api/masjids"],
+    staleTime: 60 * 60 * 1000,
+  });
+  const masjidList = fetchedMasjids && fetchedMasjids.length > 0 ? fetchedMasjids : NEARBY_MASJIDS;
+
   const nearbyMasjids = useMemo(() => {
-    return getAllMasjidsByDistance(userCoords.lat, userCoords.lon).slice(0, 5);
-  }, [userCoords]);
+    return getAllMasjidsByDistance(userCoords.lat, userCoords.lon, masjidList).slice(0, 5);
+  }, [userCoords, masjidList]);
 
   const todayDateStr = useMemo(() => {
     const d = new Date();
@@ -506,7 +512,7 @@ export default function PrayerScreen() {
     const fivePM = new Date(now);
     fivePM.setHours(17, 0, 0, 0);
 
-    const allNearby = getAllMasjidsByDistance(userCoords.lat, userCoords.lon).slice(0, 8);
+    const allNearby = getAllMasjidsByDistance(userCoords.lat, userCoords.lon, masjidList).slice(0, 8);
 
     return calendarEvents
       .filter((ev: any) => {

@@ -172,11 +172,12 @@ export function kmToMiles(km: number): number {
   return km * 0.621371;
 }
 
-export function findNearestMasjid(latitude: number, longitude: number): { masjid: Masjid; distanceMiles: number } {
-  let nearest = NEARBY_MASJIDS[0];
+export function findNearestMasjid(latitude: number, longitude: number, masjidList?: Masjid[]): { masjid: Masjid; distanceMiles: number } {
+  const list = masjidList || NEARBY_MASJIDS;
+  let nearest = list[0];
   let minDist = Infinity;
 
-  for (const m of NEARBY_MASJIDS) {
+  for (const m of list) {
     const d = getDistanceKm(latitude, longitude, m.latitude, m.longitude);
     if (d < minDist) {
       minDist = d;
@@ -187,8 +188,9 @@ export function findNearestMasjid(latitude: number, longitude: number): { masjid
   return { masjid: nearest, distanceMiles: kmToMiles(minDist) };
 }
 
-export function getAllMasjidsByDistance(latitude: number, longitude: number): { masjid: Masjid; distanceMiles: number; driveMinutes: number }[] {
-  return NEARBY_MASJIDS.map((m) => {
+export function getAllMasjidsByDistance(latitude: number, longitude: number, masjidList?: Masjid[]): { masjid: Masjid; distanceMiles: number; driveMinutes: number }[] {
+  const list = masjidList || NEARBY_MASJIDS;
+  return list.map((m) => {
     const km = getDistanceKm(latitude, longitude, m.latitude, m.longitude);
     const miles = kmToMiles(km);
     const driveMinutes = Math.round(miles * 2.5 + 2);
@@ -226,8 +228,9 @@ export function isRamadan(): boolean {
 
 const MOSQUE_PROXIMITY_THRESHOLD_KM = 0.1;
 
-export function checkNearMosque(latitude: number, longitude: number): Masjid | null {
-  for (const m of NEARBY_MASJIDS) {
+export function checkNearMosque(latitude: number, longitude: number, masjidList?: Masjid[]): Masjid | null {
+  const list = masjidList || NEARBY_MASJIDS;
+  for (const m of list) {
     const dist = getDistanceKm(latitude, longitude, m.latitude, m.longitude);
     if (dist <= MOSQUE_PROXIMITY_THRESHOLD_KM) {
       return m;

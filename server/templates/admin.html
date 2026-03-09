@@ -100,6 +100,7 @@
           <button class="tab-btn" data-tab="businesses" onclick="switchTab('businesses')">Business Submissions</button>
           <button class="tab-btn" data-tab="restaurants" onclick="switchTab('restaurants')">Restaurants</button>
           <button class="tab-btn" data-tab="analytics" onclick="switchTab('analytics')">Analytics</button>
+          <button class="tab-btn" data-tab="masjids" onclick="switchTab('masjids')">Masjids</button>
         </div>
       </div>
     </div>
@@ -269,6 +270,42 @@
       </div>
     </div>
 
+    <div class="tab-content" id="tab-masjids">
+      <div class="section">
+        <div class="section-title"><span class="icon">🕌</span> Masjid Directory</div>
+        <button class="btn btn-sm" style="background:#2A2318;color:#D4A843;margin-bottom:16px;" onclick="showAddMasjidForm()">+ Add Masjid</button>
+        <div id="masjidList"><div class="loading">Loading...</div></div>
+      </div>
+    </div>
+
+    <div id="editMasjidModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:1000;overflow:auto;padding:20px;">
+      <div style="background:#161616;border:1px solid #252525;border-radius:14px;max-width:600px;margin:40px auto;padding:20px;">
+        <div id="masjidModalTitle" style="font-size:18px;font-weight:700;color:#D4A843;margin-bottom:16px;">Add Masjid</div>
+        <input type="hidden" id="editingMasjidId">
+        <div class="row">
+          <div style="flex:2"><label>Name</label><input type="text" id="masjidName" placeholder="Masjid name"></div>
+          <div style="flex:1"><label>Sort Order</label><input type="number" id="masjidSortOrder" value="0"></div>
+        </div>
+        <div><label>Address</label><input type="text" id="masjidAddress" placeholder="Full address"></div>
+        <div class="row">
+          <div><label>Latitude</label><input type="text" id="masjidLat" placeholder="35.7796"></div>
+          <div><label>Longitude</label><input type="text" id="masjidLon" placeholder="-78.6382"></div>
+        </div>
+        <div><label>Website (optional)</label><input type="text" id="masjidWebsite" placeholder="https://"></div>
+        <div><label>Match Terms (comma separated, optional)</label><input type="text" id="masjidMatchTerms" placeholder="IAR, Islamic Association"></div>
+        <div class="row" style="align-items:center;margin:12px 0;">
+          <label style="margin:0;flex:none;">Has Iqama Times</label>
+          <input type="checkbox" id="masjidHasIqama" style="width:auto;margin-left:8px;">
+          <label style="margin:0 0 0 16px;flex:none;">Active</label>
+          <input type="checkbox" id="masjidActive" checked style="width:auto;margin-left:8px;">
+        </div>
+        <div style="display:flex;gap:8px;margin-top:16px;">
+          <button class="btn" style="flex:1;" onclick="saveMasjid()">Save</button>
+          <button class="btn btn-sm" style="flex:1;background:#333;color:#ccc;" onclick="closeMasjidModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
     <div id="editRestaurantModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:1000;overflow:auto;padding:20px;">
       <div style="background:#161616;border:1px solid #252525;border-radius:14px;max-width:600px;margin:40px auto;padding:20px;">
         <div style="font-size:18px;font-weight:700;color:#D4A843;margin-bottom:4px;">Edit Restaurant Hours</div>
@@ -397,6 +434,9 @@
       if (tab === 'analytics') {
         initAnalyticsDateRange();
         loadAnalytics();
+      }
+      if (tab === 'masjids') {
+        loadMasjids();
       }
     }
 
@@ -1251,6 +1291,149 @@
           }
         })
         .catch(() => handleUnauthorized());
+    }
+
+    async function loadMasjids() {
+      try {
+        var res = await fetch('/api/admin/masjids', { headers: { 'Authorization': 'Bearer ' + adminToken }, credentials: 'include' });
+        if (!res.ok) { handleUnauthorized(); return; }
+        var masjids = await res.json();
+        var container = document.getElementById('masjidList');
+        if (!masjids.length) {
+          container.innerHTML = '<div class="empty-state">No masjids found</div>';
+          return;
+        }
+        container.innerHTML = masjids.map(function(m) {
+          var statusBadge = m.active
+            ? '<span style="color:#34D399;font-size:11px;font-weight:600;">● Active</span>'
+            : '<span style="color:#EF4444;font-size:11px;font-weight:600;">● Inactive</span>';
+          var iqamaBadge = m.has_iqama
+            ? '<span style="background:#1B6B4A;color:#fff;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:600;margin-left:6px;">IQAMA</span>'
+            : '';
+          return '<div class="message-card" style="cursor:pointer;" onclick="editMasjid(' + m.id + ')">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+              '<div>' +
+                '<div style="font-weight:700;color:#F5F5F5;font-size:14px;">' + escHtml(m.name) + iqamaBadge + '</div>' +
+                '<div style="color:#9CA3AF;font-size:12px;margin-top:2px;">' + escHtml(m.address) + '</div>' +
+                '<div style="color:#666;font-size:11px;margin-top:2px;">' + m.latitude.toFixed(4) + ', ' + m.longitude.toFixed(4) + ' · Sort: ' + m.sort_order + '</div>' +
+              '</div>' +
+              '<div style="display:flex;align-items:center;gap:8px;">' +
+                statusBadge +
+                '<button class="btn btn-sm" style="background:#7F1D1D;color:#FCA5A5;font-size:11px;padding:4px 10px;" onclick="event.stopPropagation();deleteMasjid(' + m.id + ',\'' + escHtml(m.name).replace(/'/g, "\\'") + '\')">Delete</button>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+      } catch(e) {
+        showToast('Failed to load masjids', true);
+      }
+    }
+
+    function showAddMasjidForm() {
+      document.getElementById('masjidModalTitle').textContent = 'Add Masjid';
+      document.getElementById('editingMasjidId').value = '';
+      document.getElementById('masjidName').value = '';
+      document.getElementById('masjidAddress').value = '';
+      document.getElementById('masjidLat').value = '';
+      document.getElementById('masjidLon').value = '';
+      document.getElementById('masjidWebsite').value = '';
+      document.getElementById('masjidMatchTerms').value = '';
+      document.getElementById('masjidHasIqama').checked = false;
+      document.getElementById('masjidActive').checked = true;
+      document.getElementById('masjidSortOrder').value = '0';
+      document.getElementById('editMasjidModal').style.display = 'block';
+    }
+
+    async function editMasjid(id) {
+      try {
+        var res = await fetch('/api/admin/masjids', { headers: { 'Authorization': 'Bearer ' + adminToken }, credentials: 'include' });
+        if (!res.ok) return;
+        var masjids = await res.json();
+        var m = masjids.find(function(x) { return x.id === id; });
+        if (!m) return;
+        document.getElementById('masjidModalTitle').textContent = 'Edit Masjid';
+        document.getElementById('editingMasjidId').value = m.id;
+        document.getElementById('masjidName').value = m.name;
+        document.getElementById('masjidAddress').value = m.address;
+        document.getElementById('masjidLat').value = m.latitude;
+        document.getElementById('masjidLon').value = m.longitude;
+        document.getElementById('masjidWebsite').value = m.website || '';
+        document.getElementById('masjidMatchTerms').value = (m.match_terms || []).join(', ');
+        document.getElementById('masjidHasIqama').checked = !!m.has_iqama;
+        document.getElementById('masjidActive').checked = m.active !== false;
+        document.getElementById('masjidSortOrder').value = m.sort_order || 0;
+        document.getElementById('editMasjidModal').style.display = 'block';
+      } catch(e) {
+        showToast('Failed to load masjid details', true);
+      }
+    }
+
+    function closeMasjidModal() {
+      document.getElementById('editMasjidModal').style.display = 'none';
+    }
+
+    async function saveMasjid() {
+      var id = document.getElementById('editingMasjidId').value;
+      var name = document.getElementById('masjidName').value.trim();
+      var address = document.getElementById('masjidAddress').value.trim();
+      var lat = document.getElementById('masjidLat').value.trim();
+      var lon = document.getElementById('masjidLon').value.trim();
+      var website = document.getElementById('masjidWebsite').value.trim();
+      var matchTermsStr = document.getElementById('masjidMatchTerms').value.trim();
+      var hasIqama = document.getElementById('masjidHasIqama').checked;
+      var active = document.getElementById('masjidActive').checked;
+      var sortOrder = parseInt(document.getElementById('masjidSortOrder').value) || 0;
+
+      if (!name || !address || !lat || !lon) {
+        showToast('Name, address, latitude, and longitude are required', true);
+        return;
+      }
+
+      var matchTerms = matchTermsStr ? matchTermsStr.split(',').map(function(t) { return t.trim(); }).filter(Boolean) : [];
+      var body = {
+        name: name,
+        address: address,
+        latitude: parseFloat(lat),
+        longitude: parseFloat(lon),
+        website: website || null,
+        match_terms: matchTerms,
+        has_iqama: hasIqama,
+        active: active,
+        sort_order: sortOrder
+      };
+
+      try {
+        var url = id ? '/api/admin/masjids/' + id : '/api/admin/masjids';
+        var method = id ? 'PUT' : 'POST';
+        var res = await fetch(url, {
+          method: method,
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          credentials: 'include',
+          body: JSON.stringify(body)
+        });
+        if (!res.ok) throw new Error('Failed');
+        showToast(id ? 'Masjid updated' : 'Masjid added');
+        closeMasjidModal();
+        loadMasjids();
+      } catch(e) {
+        showToast('Failed to save masjid', true);
+      }
+    }
+
+    async function deleteMasjid(id, name) {
+      if (!confirm('Delete ' + name + '? This cannot be undone.')) return;
+      try {
+        var res = await fetch('/api/admin/masjids/' + id, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + adminToken },
+          credentials: 'include'
+        });
+        if (!res.ok) throw new Error('Failed');
+        showToast('Masjid deleted');
+        loadMasjids();
+      } catch(e) {
+        showToast('Failed to delete masjid', true);
+      }
     }
   </script>
 </body>
