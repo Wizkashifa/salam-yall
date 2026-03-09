@@ -462,12 +462,12 @@
 
     async function openBusinessEditor(id) {
       try {
-        const res = await fetch('/api/admin/businesses?status=pending&status=approved&status=rejected', {
+        const res = await fetch('/api/admin/businesses?status=' + currentBizFilter, {
           headers: { 'Authorization': 'Bearer ' + adminToken },
         });
         if (res.status === 401) { handleUnauthorized(); return; }
         const businesses = await res.json();
-        const business = businesses.find((b: any) => b.id === id);
+        const business = businesses.find(b => b.id === id);
         if (!business) {
           showToast('Business not found', true);
           return;

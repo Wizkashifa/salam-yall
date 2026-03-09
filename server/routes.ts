@@ -1037,7 +1037,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid status filter" });
       }
       const result = await pool.query(
-        "SELECT id, name, category, description, address, phone, website, submitted_by_email, status, created_at FROM businesses WHERE status = $1 ORDER BY created_at DESC",
+        "SELECT id, name, category, description, address, phone, website, submitted_by_email, status, created_at, specialty, keywords, photo_url, booking_url, hospital_affiliation, member_note, search_tags, place_id, google_url FROM businesses WHERE status = $1 ORDER BY created_at DESC",
         [status]
       );
       res.json(result.rows);
