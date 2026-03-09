@@ -983,7 +983,7 @@ export default function PrayerScreen() {
                     {formatTime(prayer.time)}
                   </Text>
                   {iqamaTime ? (
-                    <Text style={[styles.prayerIqamaTime, { color: isDark ? colors.gold : "#9A7B2A" }]} allowFontScaling={false}>
+                    <Text style={[styles.prayerIqamaTime, { color: isPast ? colors.textTertiary : (isDark ? colors.gold : "#9A7B2A") }]} allowFontScaling={false}>
                       {iqamaTime}
                     </Text>
                   ) : null}
