@@ -218,9 +218,12 @@ function formatTimings(openingHours: HalalRestaurant["opening_hours"]): string[]
     return `${h12}:${m.toString().padStart(2, "0")} ${ampm}`;
   };
   return dayOrder.map((day) => {
-    const periods = openingHours.periods?.filter((p) => p.open.day === day) || [];
+    const periods = openingHours.periods?.filter((p) => p?.open?.day === day) || [];
     if (periods.length === 0) return `${day.charAt(0) + day.slice(1).toLowerCase()}: Closed`;
-    const ranges = periods.map((p) => `${formatTime(p.open.time)} – ${formatTime(p.close.time)}`);
+    const ranges = periods.map((p) => {
+      if (!p.close?.time) return `${formatTime(p.open.time)} – Open 24 hrs`;
+      return `${formatTime(p.open.time)} – ${formatTime(p.close.time)}`;
+    });
     return `${day.charAt(0) + day.slice(1).toLowerCase()}: ${ranges.join(", ")}`;
   });
 }
