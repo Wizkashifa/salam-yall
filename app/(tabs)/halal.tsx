@@ -103,14 +103,22 @@ function getHalalBadge(status: string): { label: string; color: string; bg: stri
   }
 }
 
+function getRaleighTime(): { day: string; minutes: number } {
+  const now = new Date();
+  const raleighStr = now.toLocaleString("en-US", { timeZone: "America/New_York" });
+  const raleighDate = new Date(raleighStr);
+  const days = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+  return {
+    day: days[raleighDate.getDay()],
+    minutes: raleighDate.getHours() * 60 + raleighDate.getMinutes(),
+  };
+}
+
 function isCurrentlyOpen(hours: HalalRestaurant["opening_hours"]): boolean | null {
   if (!hours || !hours.periods || hours.periods.length === 0) return null;
-  const now = new Date();
-  const days = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
-  const today = days[now.getDay()];
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const { day, minutes: currentMinutes } = getRaleighTime();
 
-  const todayPeriod = hours.periods.find((p) => p.open.day === today);
+  const todayPeriod = hours.periods.find((p) => p.open.day === day);
   if (!todayPeriod) return false;
 
   const openMinutes = todayPeriod.open.time[0] * 60 + todayPeriod.open.time[1];
@@ -294,8 +302,8 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
                   <Text style={[styles.hoursSectionTitle, { color: colors.text }]}>Hours</Text>
                 </View>
                 {hours.map((h: string, i: number) => {
-                  const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
-                  const isToday = h.toLowerCase().startsWith(today.toLowerCase());
+                  const todayName = new Date().toLocaleDateString("en-US", { weekday: "long", timeZone: "America/New_York" });
+                  const isToday = h.toLowerCase().startsWith(todayName.toLowerCase());
                   return (
                     <Text
                       key={i}
