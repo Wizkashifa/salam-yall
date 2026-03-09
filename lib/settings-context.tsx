@@ -11,8 +11,6 @@ interface SettingsContextValue {
   setNotificationsEnabled: (enabled: boolean) => void;
   preferredMasjid: string | null;
   setPreferredMasjid: (name: string | null) => void;
-  travelMode: boolean;
-  setTravelMode: (enabled: boolean) => void;
   menuOpen: boolean;
   openMenu: () => void;
   closeMenu: () => void;
@@ -21,15 +19,12 @@ interface SettingsContextValue {
 const CALC_METHOD_KEY = "prayer_calc_method";
 const NOTIF_PREF_KEY = "prayer_notifications_enabled";
 const PREFERRED_MASJID_KEY = "preferred_masjid";
-const TRAVEL_MODE_KEY = "travel_mode";
-
 const SettingsContext = createContext<SettingsContextValue | null>(null);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [calcMethod, setCalcMethodState] = useState<CalcMethodKey>("NorthAmerica");
   const [notificationsEnabled, setNotificationsEnabledState] = useState(false);
   const [preferredMasjid, setPreferredMasjidState] = useState<string | null>(null);
-  const [travelMode, setTravelModeState] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -37,14 +32,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       AsyncStorage.getItem(CALC_METHOD_KEY),
       AsyncStorage.getItem(NOTIF_PREF_KEY),
       AsyncStorage.getItem(PREFERRED_MASJID_KEY),
-      AsyncStorage.getItem(TRAVEL_MODE_KEY),
-    ]).then(([method, notif, masjid, travel]) => {
+    ]).then(([method, notif, masjid]) => {
       if (method && VALID_METHODS.includes(method as CalcMethodKey)) {
         setCalcMethodState(method as CalcMethodKey);
       }
       if (notif === "true") setNotificationsEnabledState(true);
       if (masjid) setPreferredMasjidState(masjid);
-      if (travel === "true") setTravelModeState(true);
     });
   }, []);
 
@@ -67,11 +60,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const setTravelMode = useCallback((enabled: boolean) => {
-    setTravelModeState(enabled);
-    AsyncStorage.setItem(TRAVEL_MODE_KEY, enabled ? "true" : "false");
-  }, []);
-
   const openMenu = useCallback(() => setMenuOpen(true), []);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
 
@@ -83,8 +71,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setNotificationsEnabled,
       preferredMasjid,
       setPreferredMasjid,
-      travelMode,
-      setTravelMode,
       menuOpen,
       openMenu,
       closeMenu,

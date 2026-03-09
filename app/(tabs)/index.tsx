@@ -370,7 +370,7 @@ function CountdownRing({ colors, isDark, progress, qiblaBearing }: {
 export default function PrayerScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { calcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid, travelMode } = useSettings();
+  const { calcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid } = useSettings();
   const router = useRouter();
   const { setPendingTarget } = useDeepLink();
   const [prayers, setPrayers] = useState<PrayerTimeEntry[]>([]);
@@ -959,7 +959,7 @@ export default function PrayerScreen() {
                 : isGreen
                   ? (isDark ? colors.emerald + "25" : colors.emerald + "12")
                   : undefined;
-              const iqamaTime = travelMode ? undefined : activeIqama?.iqama?.[prayer.name as keyof typeof activeIqama.iqama];
+              const iqamaTime = !preferredMasjid ? undefined : activeIqama?.iqama?.[prayer.name as keyof typeof activeIqama.iqama];
               return (
                 <Pressable
                   key={prayer.name}
@@ -991,11 +991,7 @@ export default function PrayerScreen() {
               );
             })}
           </ScrollView>
-          {travelMode ? (
-            <Text style={[styles.iqamaSource, { color: colors.gold }]}>
-              ✈ Travel Mode — adhan times only
-            </Text>
-          ) : activeIqama ? (
+          {!preferredMasjid ? null : activeIqama ? (
             <Text style={[styles.iqamaSource, { color: colors.textTertiary }]}>
               Iqama times from {activeIqama.masjid === "IAR" ? "Islamic Assoc. of Raleigh" : activeIqama.masjid === "ICMNC" ? "Islamic Center of Morrisville" : activeIqama.masjid === "JIAR (Parkwood)" ? "JIAR (Parkwood)" : activeIqama.masjid === "JIAR (Fayetteville)" ? "JIAR (Fayetteville St)" : activeIqama.masjid === "Al Noor" ? "Al-Noor Islamic Center" : activeIqama.masjid}
             </Text>
