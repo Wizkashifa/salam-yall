@@ -230,7 +230,7 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
             {business.member_note ? (
               <View style={[styles.specialtyRow, { backgroundColor: colors.prayerIconBg }]}>
                 <Ionicons name="ribbon-outline" size={14} color={colors.emerald} />
-                <Text style={[styles.specialtyText, { color: colors.emerald }]}>{business.member_note}</Text>
+                <Text style={[styles.specialtyText, { color: colors.text }]}>{business.member_note}</Text>
               </View>
             ) : null}
 
@@ -248,7 +248,7 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
             {business.hospital_affiliation ? (
               <View style={[styles.specialtyRow, { backgroundColor: colors.prayerIconBg }]}>
                 <Ionicons name="business-outline" size={14} color={colors.emerald} />
-                <Text style={[styles.specialtyText, { color: colors.text }]}>Affiliated with {business.hospital_affiliation}</Text>
+                <Text style={[styles.specialtyText, { color: colors.text }]}>{business.hospital_affiliation}</Text>
               </View>
             ) : null}
 
@@ -645,7 +645,7 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
 
             {category === "Healthcare" ? (
               <>
-                <Text style={[styles.fieldLabel, { color: colors.text }]}>Hospital / Clinic Affiliation</Text>
+                <Text style={[styles.fieldLabel, { color: colors.text }]}>Affiliation</Text>
                 <View style={styles.categoryGrid}>
                   {["UNC-Rex", "Duke", "WakeMed", "MyEyeDr"].map((hosp) => {
                     const isSelected = hospitalAffiliation === hosp;
