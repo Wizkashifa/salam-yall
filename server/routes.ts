@@ -752,6 +752,8 @@ async function ensureBusinessesTable(pool: pg.Pool) {
   await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS search_tags TEXT[] DEFAULT '{}'`);
   await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS member_note TEXT DEFAULT ''`);
   await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS hospital_affiliation TEXT DEFAULT ''`);
+  await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS instagram_url TEXT DEFAULT ''`);
+  await pool.query(`ALTER TABLE halal_restaurants ADD COLUMN IF NOT EXISTS instagram_url TEXT DEFAULT ''`);
 
   await pool.query(`UPDATE businesses SET specialty = 'Optometry' WHERE category = 'Healthcare' AND (specialty IS NULL OR specialty = '') AND (name ILIKE '%OD%' OR name ILIKE '%MyEyeDr%')`);
   await pool.query(`UPDATE businesses SET specialty = 'Dermatology' WHERE category = 'Healthcare' AND (specialty IS NULL OR specialty = '') AND name ILIKE '%Dermatology%'`);
@@ -946,7 +948,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/halal-restaurants", async (req, res) => {
     try {
       const { cuisine, status, search } = req.query;
-      let query = "SELECT id, external_id, name, formatted_address, formatted_phone, url, lat, lng, is_halal, halal_comment, cuisine_types, emoji, evidence, considerations, opening_hours, rating, user_ratings_total, website, photo_reference, place_id FROM halal_restaurants";
+      let query = "SELECT id, external_id, name, formatted_address, formatted_phone, url, lat, lng, is_halal, halal_comment, cuisine_types, emoji, evidence, considerations, opening_hours, rating, user_ratings_total, website, photo_reference, place_id, instagram_url FROM halal_restaurants";
       const conditions: string[] = ["is_halal != 'NOT_HALAL'", "name NOT ILIKE '%IAR Masjid%'"];
       const params: any[] = [];
 
@@ -1001,7 +1003,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/businesses", async (_req, res) => {
     try {
       const result = await pool.query(
-        "SELECT id, name, category, description, address, phone, website, place_id, rating, user_ratings_total, photo_reference, business_hours, lat, lng, specialty, keywords, photo_url, booking_url, search_tags, member_note, hospital_affiliation FROM businesses WHERE status = 'approved' AND category != 'Restaurant' ORDER BY name"
+        "SELECT id, name, category, description, address, phone, website, place_id, rating, user_ratings_total, photo_reference, business_hours, lat, lng, specialty, keywords, photo_url, booking_url, search_tags, member_note, hospital_affiliation, instagram_url FROM businesses WHERE status = 'approved' AND category != 'Restaurant' ORDER BY name"
       );
       res.json(result.rows);
     } catch (error: any) {
@@ -1165,7 +1167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/businesses/submit", async (req, res) => {
     try {
-      const { name, category, description, address, phone, website, email, google_url, specialty, keywords, photo_url, booking_url, hospital_affiliation } = req.body;
+      const { name, category, description, address, phone, website, email, google_url, specialty, keywords, photo_url, booking_url, hospital_affiliation, instagram_url } = req.body;
 
       if (!name || !category || !email) {
         return res.status(400).json({ error: "Name, category, and email are required" });
@@ -1192,10 +1194,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const keywordsArray = Array.isArray(keywords) ? keywords : [];
 
       const result = await pool.query(
-        `INSERT INTO businesses (name, category, description, address, phone, website, submitted_by_email, google_url, specialty, keywords, photo_url, booking_url, hospital_affiliation, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'pending')
+        `INSERT INTO businesses (name, category, description, address, phone, website, submitted_by_email, google_url, specialty, keywords, photo_url, booking_url, hospital_affiliation, instagram_url, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'pending')
          RETURNING id`,
-        [name, category, description || "", address || "", phone || "", website || "", email, google_url || "", specialty || "", keywordsArray, photo_url || "", booking_url || "", hospital_affiliation || ""]
+        [name, category, description || "", address || "", phone || "", website || "", email, google_url || "", specialty || "", keywordsArray, photo_url || "", booking_url || "", hospital_affiliation || "", instagram_url || ""]
       );
 
       res.status(201).json({
@@ -1219,7 +1221,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid status filter" });
       }
       const result = await pool.query(
-        "SELECT id, name, category, description, address, phone, website, submitted_by_email, status, created_at, specialty, keywords, photo_url, booking_url, hospital_affiliation, member_note, search_tags, place_id, google_url FROM businesses WHERE status = $1 ORDER BY created_at DESC",
+        "SELECT id, name, category, description, address, phone, website, submitted_by_email, status, created_at, specialty, keywords, photo_url, booking_url, hospital_affiliation, member_note, search_tags, place_id, google_url, instagram_url FROM businesses WHERE status = $1 ORDER BY created_at DESC",
         [status]
       );
       res.json(result.rows);
@@ -1528,7 +1530,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid business ID" });
       }
-      const { name, category, description, address, phone, website, google_url, specialty, keywords, photo_url, booking_url, hospital_affiliation, member_note, search_tags, disable_enrichment } = req.body;
+      const { name, category, description, address, phone, website, google_url, specialty, keywords, photo_url, booking_url, hospital_affiliation, member_note, search_tags, disable_enrichment, instagram_url } = req.body;
       const validCats = ["Restaurant", "Grocery", "Finance", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Technology"];
       if (category !== undefined && !validCats.includes(category)) {
         return res.status(400).json({ error: "Invalid category" });
@@ -1550,6 +1552,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (hospital_affiliation !== undefined) { fields.push(`hospital_affiliation = $${idx++}`); values.push(String(hospital_affiliation).substring(0, 255)); }
       if (member_note !== undefined) { fields.push(`member_note = $${idx++}`); values.push(String(member_note).substring(0, 255)); }
       if (search_tags !== undefined) { fields.push(`search_tags = $${idx++}`); values.push(Array.isArray(search_tags) ? search_tags : []); }
+      if (instagram_url !== undefined) { fields.push(`instagram_url = $${idx++}`); values.push(String(instagram_url).substring(0, 500)); }
       if (disable_enrichment !== undefined) { fields.push(`place_id = $${idx++}`); values.push(disable_enrichment === true ? 'none' : null); }
       if (fields.length === 0) {
         return res.status(400).json({ error: "No fields to update" });
@@ -1675,7 +1678,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
       const search = req.query.search as string | undefined;
-      let query = "SELECT id, name, formatted_address, opening_hours, is_halal FROM halal_restaurants";
+      let query = "SELECT id, name, formatted_address, opening_hours, is_halal, instagram_url FROM halal_restaurants";
       const params: any[] = [];
       if (search && search.trim()) {
         params.push(`%${search.trim()}%`);
@@ -1722,6 +1725,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error saving restaurant override:", error.message);
       res.status(500).json({ error: "Failed to save restaurant override" });
+    }
+  });
+
+  app.patch("/api/admin/restaurants/:id", async (req, res) => {
+    try {
+      if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+      const restaurantId = parseInt(req.params.id);
+      if (isNaN(restaurantId)) return res.status(400).json({ error: "Invalid restaurant ID" });
+      const { instagram_url } = req.body;
+      const fields: string[] = [];
+      const values: any[] = [];
+      let idx = 1;
+      if (instagram_url !== undefined) { fields.push(`instagram_url = $${idx++}`); values.push(String(instagram_url).substring(0, 500)); }
+      if (fields.length === 0) return res.status(400).json({ error: "No fields to update" });
+      values.push(restaurantId);
+      await pool.query(`UPDATE halal_restaurants SET ${fields.join(", ")} WHERE id = $${idx}`, values);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error updating restaurant:", error.message);
+      res.status(500).json({ error: "Failed to update restaurant" });
     }
   });
 

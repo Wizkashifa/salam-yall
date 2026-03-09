@@ -365,6 +365,8 @@
         <input type="text" id="editHospital" style="margin-bottom:14px;">
         <label>Member Note (optional)</label>
         <input type="text" id="editMemberNote" style="margin-bottom:14px;">
+        <label>Instagram URL (optional)</label>
+        <input type="text" id="editInstagramUrl" placeholder="https://instagram.com/yourbiz" style="margin-bottom:14px;">
         <label>Search Tags (comma-separated, optional)</label>
         <input type="text" id="editSearchTags" style="margin-bottom:14px;">
         <label style="display:flex;align-items:center;font-weight:normal;font-size:14px;margin-bottom:20px;cursor:pointer;">
@@ -813,6 +815,7 @@
         document.getElementById('editHospital').value = business.hospital_affiliation || '';
         document.getElementById('editMemberNote').value = business.member_note || '';
         document.getElementById('editSearchTags').value = (Array.isArray(business.search_tags) ? business.search_tags.join(', ') : '') || '';
+        document.getElementById('editInstagramUrl').value = business.instagram_url || '';
         document.getElementById('editDisableEnrichment').checked = business.place_id === 'none';
         document.getElementById('editBusinessModal').style.display = 'block';
         document.getElementById('editCategory').onchange = function() {
@@ -841,9 +844,10 @@
       const member_note = document.getElementById('editMemberNote').value.trim();
       const tagsStr = document.getElementById('editSearchTags').value.trim();
       const search_tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(t => t) : [];
+      const instagram_url = document.getElementById('editInstagramUrl').value.trim();
       const disable_enrichment = document.getElementById('editDisableEnrichment').checked;
       if (!name || !category || !address) { showToast('Name, category, and address are required', true); return; }
-      const body = { name, category, description, address, phone, website, disable_enrichment };
+      const body = { name, category, description, address, phone, website, instagram_url, disable_enrichment };
       if (specialty) body.specialty = specialty;
       if (keywords.length > 0) body.keywords = keywords;
       if (hospital_affiliation) body.hospital_affiliation = hospital_affiliation;
@@ -981,6 +985,11 @@
                 '<div style="font-size:11px;color:#6B7280;margin-top:2px;">' + escHtml(r.formatted_address || '') + '</div>' +
               '</div>' +
             '</div>' +
+            '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">' +
+              '<label style="font-size:11px;color:#9CA3AF;margin:0;white-space:nowrap;">IG URL</label>' +
+              '<input type="text" id="igUrl_' + r.id + '" value="' + escHtml(r.instagram_url || '') + '" placeholder="https://instagram.com/..." style="flex:1;padding:4px 8px;font-size:12px;background:#161616;border:1px solid #333;border-radius:6px;color:#F5F5F5;">' +
+              '<button class="btn btn-sm" style="background:#2A2318;color:#D4A843;padding:4px 10px;font-size:11px;" onclick="saveRestaurantIg(' + r.id + ')">Save</button>' +
+            '</div>' +
             '<div style="display:flex;gap:6px;">' +
               '<button class="btn btn-gold btn-sm" onclick="openRestaurantEditor(' + r.id + ')">Edit Hours</button>' +
               (r.hasOverride ? '<button class="btn btn-danger btn-sm" onclick="removeRestaurantOverride(' + r.id + ')">Reset to Google</button>' : '') +
@@ -1097,6 +1106,22 @@
         } else {
           var data = await res.json();
           showToast(data.error || 'Failed to save', true);
+        }
+      } catch(e) { showToast('Connection error', true); }
+    }
+
+    async function saveRestaurantIg(id) {
+      var igUrl = document.getElementById('igUrl_' + id).value.trim();
+      try {
+        var res = await fetch('/api/admin/restaurants/' + id, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify({ instagram_url: igUrl }),
+        });
+        if (res.ok) {
+          showToast('Instagram URL saved');
+        } else {
+          showToast('Failed to save', true);
         }
       } catch(e) { showToast('Connection error', true); }
     }

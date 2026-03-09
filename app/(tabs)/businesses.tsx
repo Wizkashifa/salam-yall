@@ -51,6 +51,7 @@ interface Business {
   search_tags?: string[];
   member_note?: string;
   hospital_affiliation?: string;
+  instagram_url?: string;
 }
 
 interface PlacesDetails {
@@ -328,44 +329,29 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
               </View>
             ) : null}
 
-            <View style={styles.detailActions}>
-              {business.phone ? (
-                <Pressable
-                  style={({ pressed }) => [styles.detailActionBtn, { backgroundColor: colors.emerald, opacity: pressed ? 0.8 : 1 }]}
-                  onPress={() => Linking.openURL(`tel:${business.phone}`)}
-                >
-                  <Ionicons name="call" size={18} color="#fff" />
-                  <Text style={styles.detailActionText}>Call</Text>
-                </Pressable>
-              ) : null}
-              {business.address && /\d/.test(business.address) ? (
-                <Pressable
-                  style={({ pressed }) => [styles.detailActionBtn, { backgroundColor: colors.gold, opacity: pressed ? 0.8 : 1 }]}
-                  onPress={openMaps}
-                >
-                  <Ionicons name="navigate" size={18} color="#fff" />
-                  <Text style={styles.detailActionText}>Directions</Text>
-                </Pressable>
-              ) : null}
-              {business.website ? (
-                <Pressable
-                  style={({ pressed }) => [styles.detailActionBtn, { backgroundColor: isDark ? "#4B5563" : "#374151", opacity: pressed ? 0.8 : 1 }]}
-                  onPress={() => Linking.openURL(business.website)}
-                >
-                  <Ionicons name="globe" size={18} color="#fff" />
-                  <Text style={styles.detailActionText}>Website</Text>
-                </Pressable>
-              ) : null}
-              {business.booking_url ? (
-                <Pressable
-                  style={({ pressed }) => [styles.detailActionBtn, { backgroundColor: "#2563EB", opacity: pressed ? 0.8 : 1 }]}
-                  onPress={() => Linking.openURL(business.booking_url!)}
-                >
-                  <Ionicons name="calendar" size={18} color="#fff" />
-                  <Text style={styles.detailActionText}>Book</Text>
-                </Pressable>
-              ) : null}
-            </View>
+            {(() => {
+              const actions: Array<{ icon: string; label: string; color: string; onPress: () => void }> = [];
+              if (business.phone) actions.push({ icon: "call", label: "Call", color: colors.emerald, onPress: () => Linking.openURL(`tel:${business.phone}`) });
+              if (business.address && /\d/.test(business.address)) actions.push({ icon: "navigate", label: "Directions", color: colors.gold, onPress: openMaps });
+              if (business.website) actions.push({ icon: "globe", label: "Website", color: isDark ? "#4B5563" : "#374151", onPress: () => Linking.openURL(business.website) });
+              if (business.booking_url) actions.push({ icon: "calendar", label: "Book", color: "#2563EB", onPress: () => Linking.openURL(business.booking_url!) });
+              if (business.instagram_url) actions.push({ icon: "logo-instagram", label: "Instagram", color: "#E1306C", onPress: () => Linking.openURL(business.instagram_url!) });
+              const iconOnly = actions.length > 3;
+              return (
+                <View style={styles.detailActions}>
+                  {actions.map((a, i) => (
+                    <Pressable
+                      key={i}
+                      style={({ pressed }) => [styles.detailActionBtn, { backgroundColor: a.color, opacity: pressed ? 0.8 : 1, paddingVertical: iconOnly ? 14 : 12 }]}
+                      onPress={a.onPress}
+                    >
+                      <Ionicons name={a.icon as any} size={iconOnly ? 22 : 18} color="#fff" />
+                      {!iconOnly && <Text style={styles.detailActionText}>{a.label}</Text>}
+                    </Pressable>
+                  ))}
+                </View>
+              );
+            })()}
           </View>
         </ScrollView>
       </View>
@@ -388,6 +374,7 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [photoUrl, setPhotoUrl] = useState("");
   const [bookingUrl, setBookingUrl] = useState("");
+  const [instagramUrl, setInstagramUrl] = useState("");
   const [hospitalAffiliation, setHospitalAffiliation] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
@@ -403,7 +390,7 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/businesses/submit", {
         name, category, description, address, phone, website, email, google_url: googleUrl,
-        specialty, keywords: selectedKeywords, photo_url: photoUrl, booking_url: bookingUrl, hospital_affiliation: hospitalAffiliation,
+        specialty, keywords: selectedKeywords, photo_url: photoUrl, booking_url: bookingUrl, instagram_url: instagramUrl, hospital_affiliation: hospitalAffiliation,
       });
       return res.json();
     },
@@ -430,6 +417,7 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
     setSelectedKeywords([]);
     setPhotoUrl("");
     setBookingUrl("");
+    setInstagramUrl("");
     setSubmitted(false);
   }, []);
 
@@ -624,6 +612,17 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
             <Text style={[styles.fieldHint, { color: colors.textTertiary }]}>
               Paste a link to a profile photo, logo, or storefront image
             </Text>
+
+            <Text style={[styles.fieldLabel, { color: colors.text }]}>Instagram URL</Text>
+            <TextInput
+              style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+              value={instagramUrl}
+              onChangeText={setInstagramUrl}
+              placeholder="https://instagram.com/yourbusiness"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="url"
+              autoCapitalize="none"
+            />
 
             {category === "Healthcare" ? (
               <>

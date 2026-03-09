@@ -56,6 +56,7 @@ interface HalalRestaurant {
   website: string | null;
   photo_reference: string | null;
   place_id: string | null;
+  instagram_url?: string | null;
   _distance?: number;
 }
 
@@ -358,33 +359,28 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
               </View>
             ) : null}
 
-            <View style={styles.detailActions}>
-              {restaurant.formatted_phone ? (
-                <Pressable
-                  style={({ pressed }) => [styles.detailActionBtn, { backgroundColor: colors.emerald, opacity: pressed ? 0.8 : 1 }]}
-                  onPress={() => Linking.openURL(`tel:${restaurant.formatted_phone}`)}
-                >
-                  <Ionicons name="call" size={18} color="#fff" />
-                  <Text style={styles.detailActionText}>Call</Text>
-                </Pressable>
-              ) : null}
-              {restaurant.website ? (
-                <Pressable
-                  style={({ pressed }) => [styles.detailActionBtn, { backgroundColor: isDark ? "#4B5563" : "#374151", opacity: pressed ? 0.8 : 1 }]}
-                  onPress={() => Linking.openURL(restaurant.website!)}
-                >
-                  <Ionicons name="globe" size={18} color="#fff" />
-                  <Text style={styles.detailActionText}>Website</Text>
-                </Pressable>
-              ) : null}
-              <Pressable
-                style={({ pressed }) => [styles.detailActionBtn, { backgroundColor: colors.gold, opacity: pressed ? 0.8 : 1 }]}
-                onPress={openMaps}
-              >
-                <Ionicons name="navigate" size={18} color="#fff" />
-                <Text style={styles.detailActionText}>Directions</Text>
-              </Pressable>
-            </View>
+            {(() => {
+              const actions: Array<{ icon: string; label: string; color: string; onPress: () => void }> = [];
+              if (restaurant.formatted_phone) actions.push({ icon: "call", label: "Call", color: colors.emerald, onPress: () => Linking.openURL(`tel:${restaurant.formatted_phone}`) });
+              actions.push({ icon: "navigate", label: "Directions", color: colors.gold, onPress: openMaps });
+              if (restaurant.website) actions.push({ icon: "globe", label: "Website", color: isDark ? "#4B5563" : "#374151", onPress: () => Linking.openURL(restaurant.website!) });
+              if (restaurant.instagram_url) actions.push({ icon: "logo-instagram", label: "Instagram", color: "#E1306C", onPress: () => Linking.openURL(restaurant.instagram_url!) });
+              const iconOnly = actions.length > 3;
+              return (
+                <View style={styles.detailActions}>
+                  {actions.map((a, i) => (
+                    <Pressable
+                      key={i}
+                      style={({ pressed }) => [styles.detailActionBtn, { backgroundColor: a.color, opacity: pressed ? 0.8 : 1, paddingVertical: iconOnly ? 14 : 12 }]}
+                      onPress={a.onPress}
+                    >
+                      <Ionicons name={a.icon as any} size={iconOnly ? 22 : 18} color="#fff" />
+                      {!iconOnly && <Text style={styles.detailActionText}>{a.label}</Text>}
+                    </Pressable>
+                  ))}
+                </View>
+              );
+            })()}
           </View>
         </ScrollView>
       </View>
