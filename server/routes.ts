@@ -488,6 +488,17 @@ async function ensureEventOverridesTable(pool: pg.Pool) {
   `);
 }
 
+async function ensureRestaurantOverridesTable(pool: pg.Pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS restaurant_overrides (
+      id SERIAL PRIMARY KEY,
+      restaurant_id INTEGER UNIQUE NOT NULL,
+      override_periods JSONB,
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+}
+
 async function ensureTickerTable(pool: pg.Pool) {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS ticker_messages (
@@ -752,6 +763,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const pool = getDbPool();
   await ensureJumuahTable(pool).catch(err => console.error("[DB] Jumuah table init error:", err.message));
   await ensureEventOverridesTable(pool).catch(err => console.error("[DB] Event overrides table init error:", err.message));
+  await ensureRestaurantOverridesTable(pool).catch(err => console.error("[DB] Restaurant overrides table init error:", err.message));
   await ensureTickerTable(pool).catch(err => console.error("[DB] Ticker table init error:", err.message));
   await ensurePushTokensTable(pool).catch(err => console.error("[DB] Push tokens table init error:", err.message));
   await ensureHalalRestaurantsTable(pool).catch(err => console.error("[DB] Halal restaurants table init error:", err.message));
@@ -903,6 +915,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       query += " ORDER BY name";
       const result = await pool.query(query, params);
+
+      try {
+        const { rows: overrides } = await pool.query("SELECT restaurant_id, override_periods FROM restaurant_overrides");
+        if (overrides.length > 0) {
+          const overrideMap = new Map(overrides.map((o: any) => [o.restaurant_id, o.override_periods]));
+          for (const row of result.rows) {
+            const op = overrideMap.get(row.id);
+            if (op) {
+              let hours = row.opening_hours;
+              if (typeof hours === "string") try { hours = JSON.parse(hours); } catch { hours = {}; }
+              if (!hours) hours = {};
+              hours.periods = op;
+              row.opening_hours = hours;
+            }
+          }
+        }
+      } catch (overrideErr: any) {
+        console.error("[Halal] Error applying restaurant overrides:", overrideErr.message);
+      }
+
       res.json(result.rows);
     } catch (error: any) {
       console.error("Error fetching halal restaurants:", error.message);
@@ -1534,6 +1566,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error: any) {
       console.error("Error removing event override:", error.message);
+      res.status(500).json({ error: "Failed to remove override" });
+    }
+  });
+
+  app.get("/api/admin/restaurants", async (req, res) => {
+    try {
+      if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+      const search = req.query.search as string | undefined;
+      let query = "SELECT id, name, formatted_address, opening_hours, is_halal FROM halal_restaurants";
+      const params: any[] = [];
+      if (search && search.trim()) {
+        params.push(`%${search.trim()}%`);
+        query += ` WHERE (name ILIKE $1 OR formatted_address ILIKE $1)`;
+      }
+      query += " ORDER BY name";
+      const result = await pool.query(query, params);
+
+      const { rows: overrides } = await pool.query("SELECT restaurant_id, override_periods FROM restaurant_overrides");
+      const overrideMap = new Map(overrides.map((o: any) => [o.restaurant_id, o.override_periods]));
+
+      const enriched = result.rows.map((r: any) => {
+        const op = overrideMap.get(r.id);
+        if (op) {
+          let hours = r.opening_hours;
+          if (typeof hours === "string") try { hours = JSON.parse(hours); } catch { hours = {}; }
+          if (!hours) hours = {};
+          hours.periods = op;
+          r.opening_hours = hours;
+        }
+        return { ...r, hasOverride: overrideMap.has(r.id) };
+      });
+      res.json(enriched);
+    } catch (error: any) {
+      console.error("Error fetching admin restaurants:", error.message);
+      res.status(500).json({ error: "Failed to fetch restaurants" });
+    }
+  });
+
+  app.put("/api/admin/restaurants/:id", async (req, res) => {
+    try {
+      if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+      const restaurantId = parseInt(req.params.id);
+      if (isNaN(restaurantId)) return res.status(400).json({ error: "Invalid restaurant ID" });
+      const { periods } = req.body;
+      if (!periods || !Array.isArray(periods)) return res.status(400).json({ error: "periods must be an array" });
+      const result = await pool.query(
+        `INSERT INTO restaurant_overrides (restaurant_id, override_periods) VALUES ($1, $2)
+         ON CONFLICT (restaurant_id) DO UPDATE SET override_periods = $2, updated_at = NOW()
+         RETURNING *`,
+        [restaurantId, JSON.stringify(periods)]
+      );
+      res.json(result.rows[0]);
+    } catch (error: any) {
+      console.error("Error saving restaurant override:", error.message);
+      res.status(500).json({ error: "Failed to save restaurant override" });
+    }
+  });
+
+  app.delete("/api/admin/restaurants/:id", async (req, res) => {
+    try {
+      if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+      const restaurantId = parseInt(req.params.id);
+      if (isNaN(restaurantId)) return res.status(400).json({ error: "Invalid restaurant ID" });
+      await pool.query("DELETE FROM restaurant_overrides WHERE restaurant_id = $1", [restaurantId]);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error removing restaurant override:", error.message);
       res.status(500).json({ error: "Failed to remove override" });
     }
   });

@@ -25,14 +25,15 @@ The application follows a client-server architecture:
 - **API:** Serves various APIs for events, businesses, halal restaurants, weather, and administrative functions.
 - **Google Calendar Integration:** Manages community event fetching and processing, including image extraction, registration URL parsing, and organizer resolution.
 - **Business Enrichment:** Automatically enriches submitted businesses and halal restaurants with Google Places data.
-- **Admin Dashboard:** Provides an interface for managing ticker messages, sending push notifications, and reviewing business submissions.
+- **Admin Dashboard:** Provides an interface for managing ticker messages, sending push notifications, reviewing business submissions, overriding event details, and overriding restaurant opening hours (periods). Has 4 tabs: Notifications & Ticker, Events, Business Submissions, Restaurants.
 - **Deep Linking:** Handles incoming deep links for events, restaurants, and businesses, redirecting to the appropriate in-app content.
 - **Share Pages:** Generates shareable HTML pages with Open Graph meta tags for rich link previews of app content.
 
 **Database (PostgreSQL):**
-- Stores `ticker_messages`, `push_tokens`, `halal_restaurants`, `businesses`, `jumuah_schedules`, and `iqama_schedules`.
+- Stores `ticker_messages`, `push_tokens`, `halal_restaurants`, `businesses`, `jumuah_schedules`, `iqama_schedules`, `event_overrides`, and `restaurant_overrides`.
 - `iqama_schedules` table: UNIQUE(masjid, date) with columns for fajr, dhuhr, asr, maghrib, isha times. Supports 5 masjids: `"IAR"`, `"ICMNC"`, `"JIAR (Parkwood)"`, `"JIAR (Fayetteville)"`, `"Al Noor"`.
 - `halal_restaurants` has `hours_last_updated TIMESTAMPTZ` column — used for monthly hours refresh from Google Places. Restaurants with stale hours (>30 days or null) get re-fetched on server startup.
+- `restaurant_overrides` table: `restaurant_id INTEGER UNIQUE`, `override_periods JSONB`. Admin can override restaurant opening hours periods via the admin dashboard Restaurants tab. Overrides are applied in both the public `/api/halal-restaurants` endpoint and the admin listing. Pattern matches `event_overrides`.
 
 **Iqama Times System:**
 - JIAR data is seeded from `server/jiar-iqama-data.ts` (range-based compact format, Mar-Dec 2026). Asr times differ between Parkwood (5:30 PM) and Fayetteville (5:00 PM) campuses.

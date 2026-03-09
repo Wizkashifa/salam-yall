@@ -98,6 +98,7 @@
           <button class="tab-btn active" data-tab="comms" onclick="switchTab('comms')">Notifications & Ticker</button>
           <button class="tab-btn" data-tab="events" onclick="switchTab('events')">Events</button>
           <button class="tab-btn" data-tab="businesses" onclick="switchTab('businesses')">Business Submissions</button>
+          <button class="tab-btn" data-tab="restaurants" onclick="switchTab('restaurants')">Restaurants</button>
         </div>
       </div>
     </div>
@@ -197,6 +198,29 @@
           <button class="btn btn-sm" id="filterRejected" onclick="loadBusinesses('rejected')" style="background:#1E1E1E;color:#9CA3AF;">Rejected</button>
         </div>
         <div id="businessList"><div class="loading">Loading...</div></div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-restaurants">
+      <div class="section">
+        <div class="section-title"><span class="icon">🍽️</span> Restaurant Hours Overrides</div>
+        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Search for a restaurant and override its opening hours periods. Overrides persist across Google Places syncs.</p>
+        <input type="text" id="restaurantSearch" placeholder="Search by name or address..." style="margin-bottom:14px;" oninput="debounceRestaurantSearch()">
+        <div id="restaurantList"><div class="empty-state">Type to search for restaurants</div></div>
+      </div>
+    </div>
+
+    <div id="editRestaurantModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:1000;overflow:auto;padding:20px;">
+      <div style="background:#161616;border:1px solid #252525;border-radius:14px;max-width:600px;margin:40px auto;padding:20px;">
+        <div style="font-size:18px;font-weight:700;color:#D4A843;margin-bottom:4px;">Edit Restaurant Hours</div>
+        <div id="editRestaurantName" style="font-size:13px;color:#9CA3AF;margin-bottom:16px;"></div>
+        <input type="hidden" id="editingRestaurantId">
+        <div id="periodsEditor"></div>
+        <button class="btn btn-sm" style="background:#2A2318;color:#D4A843;margin-bottom:16px;" onclick="addPeriodRow()">+ Add Period</button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-primary" onclick="saveRestaurantOverride()" style="flex:1;">Save Override</button>
+          <button class="btn" style="flex:1;background:#333;color:#9CA3AF;" onclick="closeRestaurantEditor()">Cancel</button>
+        </div>
       </div>
     </div>
 
@@ -793,6 +817,185 @@
         if (res.ok) { showToast('Deleted'); loadJumuah(); }
         else { showToast('Failed to delete', true); }
       } catch { showToast('Connection error', true); }
+    }
+
+    var cachedAdminRestaurants = [];
+    var restaurantSearchTimer = null;
+    var DAY_NAMES = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+    var DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    function debounceRestaurantSearch() {
+      if (restaurantSearchTimer) clearTimeout(restaurantSearchTimer);
+      restaurantSearchTimer = setTimeout(loadRestaurants, 300);
+    }
+
+    async function loadRestaurants() {
+      var search = document.getElementById('restaurantSearch').value.trim();
+      var list = document.getElementById('restaurantList');
+      if (!search) {
+        list.innerHTML = '<div class="empty-state">Type to search for restaurants</div>';
+        return;
+      }
+      list.innerHTML = '<div class="loading">Loading...</div>';
+      try {
+        var res = await fetch('/api/admin/restaurants?search=' + encodeURIComponent(search), {
+          headers: { 'Authorization': 'Bearer ' + adminToken },
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        var restaurants = await res.json();
+        cachedAdminRestaurants = restaurants;
+        if (!restaurants.length) {
+          list.innerHTML = '<div class="empty-state">No restaurants found</div>';
+          return;
+        }
+        list.innerHTML = '<ul class="message-list">' + restaurants.map(function(r) {
+          var hours = r.opening_hours;
+          if (typeof hours === 'string') try { hours = JSON.parse(hours); } catch(e) { hours = null; }
+          var periodCount = (hours && hours.periods) ? hours.periods.length : 0;
+          var overrideBadge = r.hasOverride ? '<span style="font-size:10px;padding:2px 6px;background:#2A2318;color:#D4A843;border-radius:4px;margin-left:6px;">OVERRIDE</span>' : '';
+          var statusColor = r.is_halal === 'IS_HALAL' ? '#6EE7B7' : (r.is_halal === 'PARTIALLY_HALAL' ? '#FBBF24' : '#9CA3AF');
+          return '<li class="message-item" style="flex-direction:column;gap:8px;">' +
+            '<div style="display:flex;align-items:flex-start;gap:12px;width:100%;">' +
+              '<span class="message-badge" style="background:#1A2E22;color:' + statusColor + ';">' + periodCount + ' periods</span>' +
+              '<div style="flex:1;">' +
+                '<div style="font-size:14px;font-weight:600;color:#F5F5F5;">' + escHtml(r.name) + overrideBadge + '</div>' +
+                '<div style="font-size:11px;color:#6B7280;margin-top:2px;">' + escHtml(r.formatted_address || '') + '</div>' +
+              '</div>' +
+            '</div>' +
+            '<div style="display:flex;gap:6px;">' +
+              '<button class="btn btn-gold btn-sm" onclick="openRestaurantEditor(' + r.id + ')">Edit Hours</button>' +
+              (r.hasOverride ? '<button class="btn btn-danger btn-sm" onclick="removeRestaurantOverride(' + r.id + ')">Reset to Google</button>' : '') +
+            '</div>' +
+          '</li>';
+        }).join('') + '</ul>';
+      } catch(e) { list.innerHTML = '<div class="empty-state">Failed to load restaurants</div>'; }
+    }
+
+    function openRestaurantEditor(id) {
+      var restaurant = cachedAdminRestaurants.find(function(r) { return r.id === id; });
+      if (!restaurant) { showToast('Restaurant not found', true); return; }
+      document.getElementById('editingRestaurantId').value = id;
+      document.getElementById('editRestaurantName').textContent = restaurant.name + ' — ' + (restaurant.formatted_address || '');
+      var hours = restaurant.opening_hours;
+      if (typeof hours === 'string') try { hours = JSON.parse(hours); } catch(e) { hours = null; }
+      var periods = (hours && hours.periods) ? hours.periods : [];
+      var editor = document.getElementById('periodsEditor');
+      editor.innerHTML = '';
+      if (periods.length === 0) {
+        addPeriodRow();
+      } else {
+        periods.forEach(function(p) { addPeriodRow(p); });
+      }
+      document.getElementById('editRestaurantModal').style.display = 'block';
+    }
+
+    function addPeriodRow(period) {
+      var editor = document.getElementById('periodsEditor');
+      var row = document.createElement('div');
+      row.style.cssText = 'background:#1E1E1E;border:1px solid #333;border-radius:10px;padding:12px;margin-bottom:8px;position:relative;';
+
+      var openDay = period ? period.open.day : 'MONDAY';
+      var openH = period ? period.open.time[0] : 11;
+      var openM = period ? period.open.time[1] : 0;
+      var closeDay = period ? period.close.day : 'MONDAY';
+      var closeH = period ? period.close.time[0] : 23;
+      var closeM = period ? period.close.time[1] : 0;
+
+      var dayOpts = DAY_NAMES.map(function(d, i) {
+        return '<option value="' + d + '">' + DAY_LABELS[i] + '</option>';
+      }).join('');
+
+      var hourOpts = '';
+      for (var h = 0; h < 24; h++) {
+        var label = h === 0 ? '12 AM' : h < 12 ? h + ' AM' : h === 12 ? '12 PM' : (h - 12) + ' PM';
+        hourOpts += '<option value="' + h + '">' + label + '</option>';
+      }
+      var minOpts = '<option value="0">:00</option><option value="15">:15</option><option value="30">:30</option><option value="45">:45</option>';
+
+      row.innerHTML =
+        '<button onclick="this.parentElement.remove()" style="position:absolute;top:6px;right:8px;background:none;border:none;color:#6B7280;cursor:pointer;font-size:16px;">&times;</button>' +
+        '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">' +
+          '<span style="font-size:11px;color:#9CA3AF;width:42px;">Opens</span>' +
+          '<select class="period-open-day" style="flex:1;padding:6px;background:#161616;border:1px solid #333;border-radius:6px;color:#F5F5F5;font-size:12px;">' + dayOpts + '</select>' +
+          '<select class="period-open-hour" style="width:70px;padding:6px;background:#161616;border:1px solid #333;border-radius:6px;color:#F5F5F5;font-size:12px;">' + hourOpts + '</select>' +
+          '<select class="period-open-min" style="width:50px;padding:6px;background:#161616;border:1px solid #333;border-radius:6px;color:#F5F5F5;font-size:12px;">' + minOpts + '</select>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;align-items:center;">' +
+          '<span style="font-size:11px;color:#9CA3AF;width:42px;">Closes</span>' +
+          '<select class="period-close-day" style="flex:1;padding:6px;background:#161616;border:1px solid #333;border-radius:6px;color:#F5F5F5;font-size:12px;">' + dayOpts + '</select>' +
+          '<select class="period-close-hour" style="width:70px;padding:6px;background:#161616;border:1px solid #333;border-radius:6px;color:#F5F5F5;font-size:12px;">' + hourOpts + '</select>' +
+          '<select class="period-close-min" style="width:50px;padding:6px;background:#161616;border:1px solid #333;border-radius:6px;color:#F5F5F5;font-size:12px;">' + minOpts + '</select>' +
+        '</div>';
+
+      editor.appendChild(row);
+
+      row.querySelector('.period-open-day').value = openDay;
+      row.querySelector('.period-open-hour').value = openH;
+      row.querySelector('.period-open-min').value = openM;
+      row.querySelector('.period-close-day').value = closeDay;
+      row.querySelector('.period-close-hour').value = closeH;
+      row.querySelector('.period-close-min').value = closeM;
+    }
+
+    function closeRestaurantEditor() {
+      document.getElementById('editRestaurantModal').style.display = 'none';
+    }
+
+    function collectPeriods() {
+      var rows = document.getElementById('periodsEditor').children;
+      var periods = [];
+      for (var i = 0; i < rows.length; i++) {
+        var r = rows[i];
+        periods.push({
+          open: {
+            day: r.querySelector('.period-open-day').value,
+            time: [parseInt(r.querySelector('.period-open-hour').value), parseInt(r.querySelector('.period-open-min').value)]
+          },
+          close: {
+            day: r.querySelector('.period-close-day').value,
+            time: [parseInt(r.querySelector('.period-close-hour').value), parseInt(r.querySelector('.period-close-min').value)]
+          }
+        });
+      }
+      return periods;
+    }
+
+    async function saveRestaurantOverride() {
+      var id = document.getElementById('editingRestaurantId').value;
+      if (!id) return;
+      var periods = collectPeriods();
+      if (periods.length === 0) { showToast('Add at least one period', true); return; }
+      try {
+        var res = await fetch('/api/admin/restaurants/' + id, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify({ periods: periods }),
+        });
+        if (res.ok) {
+          showToast('Restaurant hours override saved');
+          closeRestaurantEditor();
+          loadRestaurants();
+        } else {
+          var data = await res.json();
+          showToast(data.error || 'Failed to save', true);
+        }
+      } catch(e) { showToast('Connection error', true); }
+    }
+
+    async function removeRestaurantOverride(id) {
+      if (!confirm('Reset this restaurant to its Google Places hours?')) return;
+      try {
+        var res = await fetch('/api/admin/restaurants/' + id, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + adminToken },
+        });
+        if (res.ok) {
+          showToast('Override removed');
+          loadRestaurants();
+        } else {
+          showToast('Failed to remove override', true);
+        }
+      } catch(e) { showToast('Connection error', true); }
     }
 
     function escHtml(s) {
