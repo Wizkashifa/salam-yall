@@ -1151,6 +1151,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      const missingHours = await pool.query(
+        "SELECT id, name, place_id FROM halal_restaurants WHERE place_id IS NOT NULL AND place_id != 'none' AND opening_hours IS NULL LIMIT 50"
+      );
+      if (missingHours.rows.length > 0) {
+        console.log(`[Halal Enrich] Backfilling hours for ${missingHours.rows.length} restaurants`);
+        const hApiKey = process.env.GOOGLE_PLACES_API_KEY;
+        if (hApiKey) {
+          const dayMap: Record<number, string> = {0:"SUNDAY",1:"MONDAY",2:"TUESDAY",3:"WEDNESDAY",4:"THURSDAY",5:"FRIDAY",6:"SATURDAY"};
+          for (const r of missingHours.rows) {
+            try {
+              const detailResp = await fetch(
+                `https://places.googleapis.com/v1/places/${r.place_id}`,
+                { headers: { "X-Goog-Api-Key": hApiKey, "X-Goog-FieldMask": "regularOpeningHours" } }
+              );
+              const detailData = await detailResp.json();
+              const roh = detailData.regularOpeningHours;
+              if (roh && roh.periods) {
+                const periods = roh.periods.map((p: any) => ({
+                  open: { day: dayMap[p.open.day] || "MONDAY", time: [p.open.hour, p.open.minute] },
+                  close: { day: dayMap[p.close.day] || "MONDAY", time: [p.close.hour, p.close.minute] },
+                }));
+                const hoursObj: any = { periods };
+                if (roh.weekdayDescriptions) hoursObj.weekdayDescriptions = roh.weekdayDescriptions;
+                await pool.query("UPDATE halal_restaurants SET opening_hours = $1::jsonb WHERE id = $2", [JSON.stringify(hoursObj), r.id]);
+                console.log(`[Halal Enrich] Hours added for #${r.id} "${r.name}"`);
+              }
+              await new Promise(resolve => setTimeout(resolve, 200));
+            } catch {}
+          }
+        }
+      }
+
       const missingWebsites = await pool.query(
         "SELECT id, name, place_id FROM halal_restaurants WHERE place_id IS NOT NULL AND place_id != 'none' AND (website IS NULL OR website = '') LIMIT 300"
       );
