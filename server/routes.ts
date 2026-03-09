@@ -1334,7 +1334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid business ID" });
       }
-      const { name, category, description, address, phone, website, google_url } = req.body;
+      const { name, category, description, address, phone, website, google_url, specialty, keywords, photo_url, booking_url, hospital_affiliation, member_note, search_tags, disable_enrichment } = req.body;
       const validCats = ["Restaurant", "Grocery", "Finance", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Technology"];
       if (category !== undefined && !validCats.includes(category)) {
         return res.status(400).json({ error: "Invalid category" });
@@ -1349,6 +1349,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (phone !== undefined) { fields.push(`phone = $${idx++}`); values.push(String(phone).substring(0, 50)); }
       if (website !== undefined) { fields.push(`website = $${idx++}`); values.push(String(website).substring(0, 500)); }
       if (google_url !== undefined) { fields.push(`google_url = $${idx++}`); values.push(String(google_url).substring(0, 500)); }
+      if (specialty !== undefined) { fields.push(`specialty = $${idx++}`); values.push(String(specialty).substring(0, 255)); }
+      if (keywords !== undefined) { fields.push(`keywords = $${idx++}`); values.push(Array.isArray(keywords) ? keywords : []); }
+      if (photo_url !== undefined) { fields.push(`photo_url = $${idx++}`); values.push(String(photo_url).substring(0, 500)); }
+      if (booking_url !== undefined) { fields.push(`booking_url = $${idx++}`); values.push(String(booking_url).substring(0, 500)); }
+      if (hospital_affiliation !== undefined) { fields.push(`hospital_affiliation = $${idx++}`); values.push(String(hospital_affiliation).substring(0, 255)); }
+      if (member_note !== undefined) { fields.push(`member_note = $${idx++}`); values.push(String(member_note).substring(0, 255)); }
+      if (search_tags !== undefined) { fields.push(`search_tags = $${idx++}`); values.push(Array.isArray(search_tags) ? search_tags : []); }
+      if (disable_enrichment !== undefined) { fields.push(`place_id = $${idx++}`); values.push(disable_enrichment === true ? 'none' : null); }
       if (fields.length === 0) {
         return res.status(400).json({ error: "No fields to update" });
       }

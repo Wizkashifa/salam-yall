@@ -167,6 +167,54 @@
         <div id="businessList"><div class="loading">Loading...</div></div>
       </div>
     </div>
+
+    <div id="editBusinessModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:1000;overflow:auto;padding:20px;">
+      <div style="background:#161616;border:1px solid #252525;border-radius:14px;max-width:500px;margin:40px auto;padding:20px;">
+        <div style="font-size:18px;font-weight:700;color:#D4A843;margin-bottom:20px;">Edit Business</div>
+        <input type="hidden" id="editingBusinessId">
+        <label>Name</label>
+        <input type="text" id="editName" style="margin-bottom:14px;">
+        <label>Category</label>
+        <select id="editCategory" style="margin-bottom:14px;">
+          <option>Restaurant</option>
+          <option>Grocery</option>
+          <option>Finance</option>
+          <option>Retail</option>
+          <option>Automotive</option>
+          <option>Real Estate</option>
+          <option>Healthcare</option>
+          <option>Education</option>
+          <option>Services</option>
+          <option>Technology</option>
+        </select>
+        <label>Description</label>
+        <textarea id="editDescription" style="margin-bottom:14px;"></textarea>
+        <label>Address</label>
+        <input type="text" id="editAddress" style="margin-bottom:14px;">
+        <label>Phone</label>
+        <input type="text" id="editPhone" style="margin-bottom:14px;">
+        <label>Website</label>
+        <input type="text" id="editWebsite" style="margin-bottom:14px;">
+        <label>Specialty (optional)</label>
+        <input type="text" id="editSpecialty" style="margin-bottom:14px;">
+        <label>Keywords (comma-separated, optional)</label>
+        <input type="text" id="editKeywords" style="margin-bottom:14px;">
+        <label>Hospital Affiliation (optional)</label>
+        <input type="text" id="editHospital" style="margin-bottom:14px;">
+        <label>Member Note (optional)</label>
+        <input type="text" id="editMemberNote" style="margin-bottom:14px;">
+        <label>Search Tags (comma-separated, optional)</label>
+        <input type="text" id="editSearchTags" style="margin-bottom:14px;">
+        <label style="display:flex;align-items:center;font-weight:normal;font-size:14px;margin-bottom:20px;cursor:pointer;">
+          <input type="checkbox" id="editDisableEnrichment" style="width:18px;height:18px;margin-right:8px;cursor:pointer;">
+          Disable future enrichment
+        </label>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-primary" onclick="saveBusiness()" style="flex:1;">Save</button>
+          <button class="btn" style="flex:1;background:#333;color:#9CA3AF;" onclick="closeBusinessEditor()">Cancel</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -351,15 +399,15 @@
           const contact = [b.phone, b.website].filter(Boolean).join(' · ');
           const contactLine = contact ? '<div style="font-size:11px;color:#6B7280;margin-top:2px;">' + escHtml(contact) + '</div>' : '';
           const emailLine = '<div style="font-size:11px;color:#6B7280;margin-top:2px;">Submitted by: ' + escHtml(b.submitted_by_email) + '</div>';
-          let actions = '';
+          let actions = '<button class="btn btn-gold btn-sm" onclick="openBusinessEditor(' + b.id + ')" style="margin-right:6px;">Edit</button>';
           if (currentBizFilter === 'pending') {
-            actions = '<button class="btn btn-primary btn-sm" onclick="updateBusiness(' + b.id + ',\'approved\')" style="margin-right:6px;">Approve</button>' +
+            actions += '<button class="btn btn-primary btn-sm" onclick="updateBusiness(' + b.id + ',\'approved\')" style="margin-right:6px;">Approve</button>' +
                       '<button class="btn btn-danger btn-sm" onclick="updateBusiness(' + b.id + ',\'rejected\')">Reject</button>';
           } else if (currentBizFilter === 'approved') {
-            actions = '<button class="btn btn-danger btn-sm" onclick="updateBusiness(' + b.id + ',\'rejected\')">Reject</button>';
+            actions += '<button class="btn btn-danger btn-sm" onclick="updateBusiness(' + b.id + ',\'rejected\')">Reject</button>';
           } else {
-            actions = '<button class="btn btn-primary btn-sm" onclick="updateBusiness(' + b.id + ',\'approved\')">Approve</button>' +
-                      '<button class="btn btn-danger btn-sm" onclick="deleteBusiness(' + b.id + ')" style="margin-left:6px;">Delete</button>';
+            actions += '<button class="btn btn-primary btn-sm" onclick="updateBusiness(' + b.id + ',\'approved\')" style="margin-right:6px;">Approve</button>' +
+                      '<button class="btn btn-danger btn-sm" onclick="deleteBusiness(' + b.id + ')">Delete</button>';
           }
           return '<li class="message-item" style="flex-direction:column;gap:8px;">' +
             '<div style="display:flex;align-items:flex-start;gap:12px;width:100%;">' +
@@ -371,7 +419,7 @@
                 '<div class="message-meta">' + date + '</div>' +
               '</div>' +
             '</div>' +
-            '<div style="display:flex;gap:6px;">' + actions + '</div>' +
+            '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + actions + '</div>' +
           '</li>';
         }).join('') + '</ul>';
       } catch {
@@ -408,6 +456,80 @@
           loadBusinesses(currentBizFilter);
         } else {
           showToast('Failed to delete', true);
+        }
+      } catch { showToast('Connection error', true); }
+    }
+
+    async function openBusinessEditor(id) {
+      try {
+        const res = await fetch('/api/admin/businesses?status=pending&status=approved&status=rejected', {
+          headers: { 'Authorization': 'Bearer ' + adminToken },
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        const businesses = await res.json();
+        const business = businesses.find((b: any) => b.id === id);
+        if (!business) {
+          showToast('Business not found', true);
+          return;
+        }
+        document.getElementById('editingBusinessId').value = business.id;
+        document.getElementById('editName').value = business.name || '';
+        document.getElementById('editCategory').value = business.category || '';
+        document.getElementById('editDescription').value = business.description || '';
+        document.getElementById('editAddress').value = business.address || '';
+        document.getElementById('editPhone').value = business.phone || '';
+        document.getElementById('editWebsite').value = business.website || '';
+        document.getElementById('editSpecialty').value = business.specialty || '';
+        document.getElementById('editKeywords').value = (Array.isArray(business.keywords) ? business.keywords.join(', ') : '') || '';
+        document.getElementById('editHospital').value = business.hospital_affiliation || '';
+        document.getElementById('editMemberNote').value = business.member_note || '';
+        document.getElementById('editSearchTags').value = (Array.isArray(business.search_tags) ? business.search_tags.join(', ') : '') || '';
+        document.getElementById('editDisableEnrichment').checked = business.place_id === 'none';
+        document.getElementById('editBusinessModal').style.display = 'block';
+      } catch { showToast('Failed to load business', true); }
+    }
+
+    function closeBusinessEditor() {
+      document.getElementById('editBusinessModal').style.display = 'none';
+    }
+
+    async function saveBusiness() {
+      const id = document.getElementById('editingBusinessId').value;
+      if (!id) { showToast('No business selected', true); return; }
+      const name = document.getElementById('editName').value.trim();
+      const category = document.getElementById('editCategory').value;
+      const description = document.getElementById('editDescription').value.trim();
+      const address = document.getElementById('editAddress').value.trim();
+      const phone = document.getElementById('editPhone').value.trim();
+      const website = document.getElementById('editWebsite').value.trim();
+      const specialty = document.getElementById('editSpecialty').value.trim();
+      const keywordsStr = document.getElementById('editKeywords').value.trim();
+      const keywords = keywordsStr ? keywordsStr.split(',').map(k => k.trim()).filter(k => k) : [];
+      const hospital_affiliation = document.getElementById('editHospital').value.trim();
+      const member_note = document.getElementById('editMemberNote').value.trim();
+      const tagsStr = document.getElementById('editSearchTags').value.trim();
+      const search_tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(t => t) : [];
+      const disable_enrichment = document.getElementById('editDisableEnrichment').checked;
+      if (!name || !category || !address) { showToast('Name, category, and address are required', true); return; }
+      const body: any = { name, category, description, address, phone, website, disable_enrichment };
+      if (specialty) body.specialty = specialty;
+      if (keywords.length > 0) body.keywords = keywords;
+      if (hospital_affiliation) body.hospital_affiliation = hospital_affiliation;
+      if (member_note) body.member_note = member_note;
+      if (search_tags.length > 0) body.search_tags = search_tags;
+      try {
+        const res = await fetch('/api/admin/businesses/' + id, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify(body),
+        });
+        if (res.ok) {
+          showToast('Business updated');
+          closeBusinessEditor();
+          loadBusinesses(currentBizFilter);
+        } else {
+          const data = await res.json();
+          showToast(data.error || 'Failed to update', true);
         }
       } catch { showToast('Connection error', true); }
     }
