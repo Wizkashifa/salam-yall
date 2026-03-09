@@ -333,6 +333,10 @@ export default function EventsScreen() {
 
                 {group.events.map((event) => {
                   const dateInfo = formatEventDate(event.start, event.isAllDay);
+                  const endInfo = event.end ? formatEventDate(event.end, event.isAllDay) : null;
+                  const cardTimeRange = endInfo && !event.isAllDay
+                    ? `${dateInfo.time} – ${endInfo.time}`
+                    : dateInfo.time;
 
                   return (
                     <Pressable
@@ -368,8 +372,8 @@ export default function EventsScreen() {
                             {event.title}
                           </Text>
 
-                          <Text style={[styles.eventTimeText, { color: colors.emerald }]} numberOfLines={1}>
-                            {dateInfo.time}
+                          <Text style={[styles.eventTimeText, { color: colors.gold }]} numberOfLines={1}>
+                            {cardTimeRange}
                           </Text>
 
                           {event.organizer ? (

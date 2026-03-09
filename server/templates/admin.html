@@ -96,6 +96,7 @@
         </div>
         <div class="tab-bar">
           <button class="tab-btn active" data-tab="comms" onclick="switchTab('comms')">Notifications & Ticker</button>
+          <button class="tab-btn" data-tab="events" onclick="switchTab('events')">Events</button>
           <button class="tab-btn" data-tab="businesses" onclick="switchTab('businesses')">Business Submissions</button>
         </div>
       </div>
@@ -153,6 +154,37 @@
         </div>
         <button class="btn btn-primary" onclick="addJumuah()" id="addJumuahBtn">Add Schedule</button>
         <div id="jumuahList" style="margin-top:14px;"><div class="loading">Loading...</div></div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-events">
+      <div class="section">
+        <div class="section-title"><span class="icon">📅</span> Community Events</div>
+        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Events synced from Google Calendar. Edit an event to override its details — overrides persist across syncs.</p>
+        <div id="eventList"><div class="loading">Loading...</div></div>
+      </div>
+    </div>
+
+    <div id="editEventModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:1000;overflow:auto;padding:20px;">
+      <div style="background:#161616;border:1px solid #252525;border-radius:14px;max-width:500px;margin:40px auto;padding:20px;">
+        <div style="font-size:18px;font-weight:700;color:#D4A843;margin-bottom:20px;">Edit Event</div>
+        <input type="hidden" id="editingEventId">
+        <label>Title</label>
+        <input type="text" id="editEventTitle" style="margin-bottom:14px;">
+        <label>Description</label>
+        <textarea id="editEventDescription" style="margin-bottom:14px;min-height:100px;"></textarea>
+        <label>Location</label>
+        <input type="text" id="editEventLocation" style="margin-bottom:14px;">
+        <label>Organizer</label>
+        <input type="text" id="editEventOrganizer" style="margin-bottom:14px;">
+        <label>Image URL (optional)</label>
+        <input type="text" id="editEventImageUrl" style="margin-bottom:14px;">
+        <label>Registration URL (optional)</label>
+        <input type="text" id="editEventRegUrl" style="margin-bottom:14px;">
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-primary" onclick="saveEvent()" style="flex:1;">Save Override</button>
+          <button class="btn" style="flex:1;background:#333;color:#9CA3AF;" onclick="closeEventEditor()">Cancel</button>
+        </div>
       </div>
     </div>
 
@@ -308,6 +340,7 @@
           loadTickers();
           loadBusinesses('pending');
           loadJumuah();
+          loadEvents();
         } else {
           document.getElementById('loginError').style.display = 'block';
         }
@@ -512,6 +545,106 @@
       } catch { showToast('Connection error', true); }
     }
 
+    let cachedAdminEvents = [];
+
+    async function loadEvents() {
+      const list = document.getElementById('eventList');
+      list.innerHTML = '<div class="loading">Loading...</div>';
+      try {
+        const res = await fetch('/api/admin/events', {
+          headers: { 'Authorization': 'Bearer ' + adminToken },
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        const events = await res.json();
+        cachedAdminEvents = events;
+        if (!events.length) {
+          list.innerHTML = '<div class="empty-state">No upcoming events</div>';
+          return;
+        }
+        list.innerHTML = '<ul class="message-list">' + events.map(e => {
+          const startDate = new Date(e.start);
+          const dateStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+          const overrideBadge = e.hasOverride ? '<span style="font-size:10px;padding:2px 6px;background:#2A2318;color:#D4A843;border-radius:4px;margin-left:6px;">OVERRIDE</span>' : '';
+          const org = e.organizer ? '<div style="font-size:11px;color:#6B7280;margin-top:2px;">' + escHtml(e.organizer) + '</div>' : '';
+          const loc = e.location ? '<div style="font-size:11px;color:#6B7280;">' + escHtml(e.location) + '</div>' : '';
+          return '<li class="message-item" style="flex-direction:column;gap:8px;">' +
+            '<div style="display:flex;align-items:flex-start;gap:12px;width:100%;">' +
+              '<span class="message-badge badge-event" style="white-space:nowrap;">' + dateStr + '</span>' +
+              '<div style="flex:1;">' +
+                '<div style="font-size:14px;font-weight:600;color:#F5F5F5;">' + escHtml(e.title) + overrideBadge + '</div>' +
+                org + loc +
+              '</div>' +
+            '</div>' +
+            '<div style="display:flex;gap:6px;">' +
+              '<button class="btn btn-gold btn-sm" onclick="openEventEditor(\'' + escHtml(e.id).replace(/'/g, "\\'") + '\')">Edit</button>' +
+              (e.hasOverride ? '<button class="btn btn-danger btn-sm" onclick="removeEventOverride(\'' + escHtml(e.id).replace(/'/g, "\\'") + '\')">Reset to Calendar</button>' : '') +
+            '</div>' +
+          '</li>';
+        }).join('') + '</ul>';
+      } catch { list.innerHTML = '<div class="empty-state">Failed to load events</div>'; }
+    }
+
+    function openEventEditor(eventId) {
+      const event = cachedAdminEvents.find(e => e.id === eventId);
+      if (!event) { showToast('Event not found', true); return; }
+      document.getElementById('editingEventId').value = eventId;
+      document.getElementById('editEventTitle').value = event.title || '';
+      document.getElementById('editEventDescription').value = event.description || '';
+      document.getElementById('editEventLocation').value = event.location || '';
+      document.getElementById('editEventOrganizer').value = event.organizer || '';
+      document.getElementById('editEventImageUrl').value = event.imageUrl || '';
+      document.getElementById('editEventRegUrl').value = event.registrationUrl || '';
+      document.getElementById('editEventModal').style.display = 'block';
+    }
+
+    function closeEventEditor() {
+      document.getElementById('editEventModal').style.display = 'none';
+    }
+
+    async function saveEvent() {
+      const eventId = document.getElementById('editingEventId').value;
+      if (!eventId) return;
+      const body = {
+        title: document.getElementById('editEventTitle').value.trim(),
+        description: document.getElementById('editEventDescription').value.trim(),
+        location: document.getElementById('editEventLocation').value.trim(),
+        organizer: document.getElementById('editEventOrganizer').value.trim(),
+        image_url: document.getElementById('editEventImageUrl').value.trim(),
+        registration_url: document.getElementById('editEventRegUrl').value.trim(),
+      };
+      try {
+        const res = await fetch('/api/admin/events/' + encodeURIComponent(eventId), {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify(body),
+        });
+        if (res.ok) {
+          showToast('Event override saved');
+          closeEventEditor();
+          loadEvents();
+        } else {
+          const data = await res.json();
+          showToast(data.error || 'Failed to save', true);
+        }
+      } catch { showToast('Connection error', true); }
+    }
+
+    async function removeEventOverride(eventId) {
+      if (!confirm('Reset this event to its Google Calendar data?')) return;
+      try {
+        const res = await fetch('/api/admin/events/' + encodeURIComponent(eventId), {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + adminToken },
+        });
+        if (res.ok) {
+          showToast('Override removed');
+          loadEvents();
+        } else {
+          showToast('Failed to remove override', true);
+        }
+      } catch { showToast('Connection error', true); }
+    }
+
     async function openBusinessEditor(id) {
       try {
         const res = await fetch('/api/admin/businesses?status=' + currentBizFilter, {
@@ -691,6 +824,7 @@
             loadTickers();
             loadBusinesses('pending');
             loadJumuah();
+            loadEvents();
           } else {
             handleUnauthorized();
           }

@@ -470,6 +470,24 @@ async function ensureJumuahTable(pool: pg.Pool) {
   }
 }
 
+async function ensureEventOverridesTable(pool: pg.Pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS event_overrides (
+      id SERIAL PRIMARY KEY,
+      event_id VARCHAR(500) UNIQUE NOT NULL,
+      title VARCHAR(500),
+      description TEXT,
+      location VARCHAR(500),
+      start_time VARCHAR(100),
+      end_time VARCHAR(100),
+      organizer VARCHAR(255),
+      image_url TEXT,
+      registration_url TEXT,
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+}
+
 async function ensureTickerTable(pool: pg.Pool) {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS ticker_messages (
@@ -733,6 +751,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const pool = getDbPool();
   await ensureJumuahTable(pool).catch(err => console.error("[DB] Jumuah table init error:", err.message));
+  await ensureEventOverridesTable(pool).catch(err => console.error("[DB] Event overrides table init error:", err.message));
   await ensureTickerTable(pool).catch(err => console.error("[DB] Ticker table init error:", err.message));
   await ensurePushTokensTable(pool).catch(err => console.error("[DB] Push tokens table init error:", err.message));
   await ensureHalalRestaurantsTable(pool).catch(err => console.error("[DB] Halal restaurants table init error:", err.message));
@@ -743,14 +762,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   startHalalAutoSync(pool);
   startIqamaSync(pool);
 
+  async function applyEventOverrides(events: CachedEvent[]): Promise<CachedEvent[]> {
+    try {
+      const { rows: overrides } = await pool.query("SELECT * FROM event_overrides");
+      if (overrides.length === 0) return events;
+      const overrideMap = new Map(overrides.map((o: any) => [o.event_id, o]));
+      return events.map(e => {
+        const o = overrideMap.get(e.id);
+        if (!o) return e;
+        return {
+          ...e,
+          title: o.title || e.title,
+          description: o.description !== null && o.description !== undefined ? o.description : e.description,
+          location: o.location !== null && o.location !== undefined ? o.location : e.location,
+          start: o.start_time || e.start,
+          end: o.end_time || e.end,
+          organizer: o.organizer !== null && o.organizer !== undefined ? o.organizer : e.organizer,
+          imageUrl: o.image_url !== null && o.image_url !== undefined ? o.image_url : e.imageUrl,
+          registrationUrl: o.registration_url !== null && o.registration_url !== undefined ? o.registration_url : e.registrationUrl,
+        };
+      });
+    } catch (err: any) {
+      console.error("[Events] Error applying overrides:", err.message);
+      return events;
+    }
+  }
+
   app.get("/api/events", async (_req, res) => {
     try {
       const now = Date.now();
+      let events: CachedEvent[];
       if (cachedEvents.length > 0 && (now - lastFetchTime) < CACHE_TTL) {
-        return res.json(cachedEvents);
+        events = cachedEvents;
+      } else {
+        events = await fetchAndCacheEvents();
       }
-      const events = await fetchAndCacheEvents();
-      res.json(events);
+      const withOverrides = await applyEventOverrides(events);
+      res.json(withOverrides);
     } catch (error: any) {
       console.error("Error fetching calendar events:", error.message);
       res.status(500).json({ error: "Failed to fetch events" });
@@ -760,7 +808,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/events/refresh", async (_req, res) => {
     try {
       const events = await fetchAndCacheEvents();
-      res.json({ refreshed: true, count: events.length });
+      const withOverrides = await applyEventOverrides(events);
+      res.json({ refreshed: true, count: withOverrides.length });
     } catch (error: any) {
       console.error("Error refreshing events:", error.message);
       res.status(500).json({ error: "Failed to refresh events" });
@@ -1410,6 +1459,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     path.resolve(process.cwd(), "server", "templates", "support.html"),
     "utf-8"
   );
+
+  app.get("/api/admin/events", async (req, res) => {
+    try {
+      if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+      const now = Date.now();
+      let events: CachedEvent[];
+      if (cachedEvents.length > 0 && (now - lastFetchTime) < CACHE_TTL) {
+        events = cachedEvents;
+      } else {
+        events = await fetchAndCacheEvents();
+      }
+      const withOverrides = await applyEventOverrides(events);
+      const { rows: overrides } = await pool.query("SELECT event_id FROM event_overrides");
+      const overrideSet = new Set(overrides.map((o: any) => o.event_id));
+      const enriched = withOverrides.map(e => ({ ...e, hasOverride: overrideSet.has(e.id) }));
+      res.json(enriched);
+    } catch (error: any) {
+      console.error("Error fetching admin events:", error.message);
+      res.status(500).json({ error: "Failed to fetch events" });
+    }
+  });
+
+  app.put("/api/admin/events/:eventId", async (req, res) => {
+    try {
+      if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+      const eventId = req.params.eventId;
+      const { title, description, location, start_time, end_time, organizer, image_url, registration_url } = req.body;
+      const fields: string[] = ["event_id"];
+      const values: any[] = [eventId];
+      let idx = 2;
+      const updates: string[] = [];
+      if (title !== undefined) { fields.push("title"); values.push(title); updates.push(`title = $${idx++}`); }
+      if (description !== undefined) { fields.push("description"); values.push(description); updates.push(`description = $${idx++}`); }
+      if (location !== undefined) { fields.push("location"); values.push(location); updates.push(`location = $${idx++}`); }
+      if (start_time !== undefined) { fields.push("start_time"); values.push(start_time); updates.push(`start_time = $${idx++}`); }
+      if (end_time !== undefined) { fields.push("end_time"); values.push(end_time); updates.push(`end_time = $${idx++}`); }
+      if (organizer !== undefined) { fields.push("organizer"); values.push(organizer); updates.push(`organizer = $${idx++}`); }
+      if (image_url !== undefined) { fields.push("image_url"); values.push(image_url); updates.push(`image_url = $${idx++}`); }
+      if (registration_url !== undefined) { fields.push("registration_url"); values.push(registration_url); updates.push(`registration_url = $${idx++}`); }
+      updates.push(`updated_at = NOW()`);
+      if (fields.length <= 1) return res.status(400).json({ error: "No fields to update" });
+      const placeholders = fields.map((_, i) => `$${i + 1}`).join(", ");
+      const result = await pool.query(
+        `INSERT INTO event_overrides (${fields.join(", ")}) VALUES (${placeholders})
+         ON CONFLICT (event_id) DO UPDATE SET ${updates.join(", ")}
+         RETURNING *`,
+        values
+      );
+      res.json(result.rows[0]);
+    } catch (error: any) {
+      console.error("Error saving event override:", error.message);
+      res.status(500).json({ error: "Failed to save event override" });
+    }
+  });
+
+  app.delete("/api/admin/events/:eventId", async (req, res) => {
+    try {
+      if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+      const eventId = req.params.eventId;
+      await pool.query("DELETE FROM event_overrides WHERE event_id = $1", [eventId]);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error removing event override:", error.message);
+      res.status(500).json({ error: "Failed to remove override" });
+    }
+  });
 
   app.get("/admin", (_req, res) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
