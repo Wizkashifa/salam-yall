@@ -134,7 +134,7 @@ function isCurrentlyOpen(hours: HalalRestaurant["opening_hours"]): boolean | nul
   if (weekdayDescs && weekdayDescs.length > 0) {
     const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const todayName = dayNames[dayIndex];
-    const todayLine = weekdayDescs.find((l) => l.toLowerCase().startsWith(todayName.toLowerCase()));
+    const todayLine = weekdayDescs.find((l) => l && l.toLowerCase().startsWith(todayName.toLowerCase()));
     if (!todayLine) return null;
     if (/closed/i.test(todayLine)) return false;
     const colonIdx = todayLine.indexOf(":");
