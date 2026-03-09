@@ -351,6 +351,57 @@ export default function SettingsScreen() {
     </>
   );
 
+  const mapRegion = useMemo(() => {
+    const lats = NEARBY_MASJIDS.map(m => m.latitude);
+    const lngs = NEARBY_MASJIDS.map(m => m.longitude);
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    const minLng = Math.min(...lngs);
+    const maxLng = Math.max(...lngs);
+    return {
+      latitude: (minLat + maxLat) / 2,
+      longitude: (minLng + maxLng) / 2,
+      latitudeDelta: (maxLat - minLat) * 1.4 + 0.02,
+      longitudeDelta: (maxLng - minLng) * 1.4 + 0.02,
+    };
+  }, []);
+
+  const renderMapContent = () => {
+    return (
+      <View style={[styles.mapContainer, { borderColor: colors.border }]}>
+        <View style={[styles.map, { backgroundColor: isDark ? "#1a1a2e" : "#e8edf2" }]}>
+          {NEARBY_MASJIDS.map((m, i) => {
+            const latRange = mapRegion.latitudeDelta;
+            const lngRange = mapRegion.longitudeDelta;
+            const top = ((mapRegion.latitude + latRange / 2 - m.latitude) / latRange) * 100;
+            const left = ((m.longitude - (mapRegion.longitude - lngRange / 2)) / lngRange) * 100;
+            const isPreferred = preferredMasjid === m.name;
+            return (
+              <Pressable
+                key={i}
+                onPress={() => { setSelectedMasjid(m); setSection("masjidDetail"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                style={{
+                  position: "absolute" as const,
+                  top: `${Math.max(5, Math.min(90, top))}%`,
+                  left: `${Math.max(5, Math.min(95, left))}%`,
+                  alignItems: "center" as const,
+                  zIndex: isPreferred ? 10 : 1,
+                }}
+              >
+                <View style={[styles.mapPin, { backgroundColor: isPreferred ? "#D4AF37" : colors.emerald }]}>
+                  <MaterialCommunityIcons name="mosque" size={14} color="#fff" />
+                </View>
+              </Pressable>
+            );
+          })}
+          <Text style={{ color: colors.textTertiary, fontSize: 10, position: "absolute" as const, bottom: 6, right: 10, fontFamily: "Inter_500Medium" }}>
+            Triangle NC Masjids
+          </Text>
+        </View>
+      </View>
+    );
+  };
+
   const renderMasjids = () => (
     <>
       <Pressable
@@ -360,6 +411,8 @@ export default function SettingsScreen() {
         <Ionicons name="arrow-back" size={20} color={colors.text} />
         <Text style={[styles.backLabel, { color: colors.text }]}>Masjid Directory</Text>
       </Pressable>
+
+      {renderMapContent()}
 
       {sortedMasjids.map((entry, i) => {
         const masjid = entry.masjid;
@@ -1196,5 +1249,42 @@ const styles = StyleSheet.create({
   distanceText: {
     fontSize: 12,
     fontFamily: "Inter_600SemiBold",
+  },
+  mapContainer: {
+    height: 220,
+    borderRadius: 16,
+    overflow: "hidden",
+    marginBottom: 16,
+    borderWidth: 1,
+  },
+  map: {
+    flex: 1,
+  },
+  calloutView: {
+    width: 180,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  calloutTitle: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: "#111827",
+    marginBottom: 2,
+  },
+  calloutSub: {
+    fontSize: 11,
+    color: "#6B7280",
+  },
+  mapPin: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    elevation: 4,
   },
 });
