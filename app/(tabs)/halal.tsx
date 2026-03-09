@@ -105,14 +105,41 @@ function getHalalBadge(status: string): { label: string; color: string; bg: stri
 
 function getRaleighNow(): { dayName: string; dayIndex: number; minutes: number } {
   const now = new Date();
-  const raleighStr = now.toLocaleString("en-US", { timeZone: "America/New_York" });
-  const raleighDate = new Date(raleighStr);
-  const days = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
-  return {
-    dayName: days[raleighDate.getDay()],
-    dayIndex: raleighDate.getDay(),
-    minutes: raleighDate.getHours() * 60 + raleighDate.getMinutes(),
+  const dayMap: Record<string, number> = {
+    Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
   };
+  const dayNames = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+
+  try {
+    const fmt = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York",
+      weekday: "short",
+      hour: "numeric",
+      minute: "numeric",
+      hour12: false,
+    });
+    const parts = fmt.formatToParts(now);
+    const weekday = parts.find((p) => p.type === "weekday")?.value || "Mon";
+    const hour = parseInt(parts.find((p) => p.type === "hour")?.value || "0", 10);
+    const minute = parseInt(parts.find((p) => p.type === "minute")?.value || "0", 10);
+    const dayIndex = dayMap[weekday] ?? 1;
+    return {
+      dayName: dayNames[dayIndex],
+      dayIndex,
+      minutes: (hour === 24 ? 0 : hour) * 60 + minute,
+    };
+  } catch {
+    const raleighStr = now.toLocaleString("en-US", { timeZone: "America/New_York" });
+    const raleighDate = new Date(raleighStr);
+    if (isNaN(raleighDate.getTime())) {
+      return { dayName: dayNames[now.getDay()], dayIndex: now.getDay(), minutes: now.getHours() * 60 + now.getMinutes() };
+    }
+    return {
+      dayName: dayNames[raleighDate.getDay()],
+      dayIndex: raleighDate.getDay(),
+      minutes: raleighDate.getHours() * 60 + raleighDate.getMinutes(),
+    };
+  }
 }
 
 function isCurrentlyOpen(hours: HalalRestaurant["opening_hours"]): boolean | null {
