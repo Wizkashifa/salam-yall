@@ -1268,20 +1268,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      await pool.query(`ALTER TABLE halal_restaurants ADD COLUMN IF NOT EXISTS hours_last_updated TIMESTAMPTZ`);
+
       const missingHours = await pool.query(
         "SELECT id, name, place_id FROM halal_restaurants WHERE place_id IS NOT NULL AND place_id != 'none' AND opening_hours IS NULL LIMIT 50"
       );
-      if (missingHours.rows.length > 0) {
-        console.log(`[Halal Enrich] Backfilling hours for ${missingHours.rows.length} restaurants`);
+      const staleHours = await pool.query(
+        "SELECT id, name, place_id FROM halal_restaurants WHERE place_id IS NOT NULL AND place_id != 'none' AND opening_hours IS NOT NULL AND (hours_last_updated IS NULL OR hours_last_updated < NOW() - INTERVAL '30 days') LIMIT 50"
+      );
+      const hoursToFetch = [...missingHours.rows, ...staleHours.rows];
+      if (hoursToFetch.length > 0) {
+        console.log(`[Halal Enrich] Fetching hours for ${hoursToFetch.length} restaurants (${missingHours.rows.length} missing, ${staleHours.rows.length} stale)`);
         const hApiKey = process.env.GOOGLE_PLACES_API_KEY;
         if (hApiKey) {
           const dayMap: Record<number, string> = {0:"SUNDAY",1:"MONDAY",2:"TUESDAY",3:"WEDNESDAY",4:"THURSDAY",5:"FRIDAY",6:"SATURDAY"};
-          for (const r of missingHours.rows) {
+          for (const r of hoursToFetch) {
             try {
               const detailResp = await fetch(
                 `https://places.googleapis.com/v1/places/${r.place_id}`,
                 { headers: { "X-Goog-Api-Key": hApiKey, "X-Goog-FieldMask": "regularOpeningHours" } }
               );
+              if (!detailResp.ok) {
+                console.log(`[Halal Enrich] API error ${detailResp.status} for #${r.id} "${r.name}", will retry later`);
+                continue;
+              }
               const detailData = await detailResp.json();
               const roh = detailData.regularOpeningHours;
               if (roh && roh.periods) {
@@ -1291,8 +1301,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }));
                 const hoursObj: any = { periods };
                 if (roh.weekdayDescriptions) hoursObj.weekdayDescriptions = roh.weekdayDescriptions;
-                await pool.query("UPDATE halal_restaurants SET opening_hours = $1::jsonb WHERE id = $2", [JSON.stringify(hoursObj), r.id]);
-                console.log(`[Halal Enrich] Hours added for #${r.id} "${r.name}"`);
+                await pool.query("UPDATE halal_restaurants SET opening_hours = $1::jsonb, hours_last_updated = NOW() WHERE id = $2", [JSON.stringify(hoursObj), r.id]);
+                console.log(`[Halal Enrich] Hours updated for #${r.id} "${r.name}"`);
+              } else {
+                await pool.query("UPDATE halal_restaurants SET hours_last_updated = NOW() WHERE id = $1", [r.id]);
               }
               await new Promise(resolve => setTimeout(resolve, 200));
             } catch {}

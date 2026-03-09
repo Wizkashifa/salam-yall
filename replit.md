@@ -32,6 +32,7 @@ The application follows a client-server architecture:
 **Database (PostgreSQL):**
 - Stores `ticker_messages`, `push_tokens`, `halal_restaurants`, `businesses`, `jumuah_schedules`, and `iqama_schedules`.
 - `iqama_schedules` table: UNIQUE(masjid, date) with columns for fajr, dhuhr, asr, maghrib, isha times. Supports 5 masjids: `"IAR"`, `"ICMNC"`, `"JIAR (Parkwood)"`, `"JIAR (Fayetteville)"`, `"Al Noor"`.
+- `halal_restaurants` has `hours_last_updated TIMESTAMPTZ` column — used for monthly hours refresh from Google Places. Restaurants with stale hours (>30 days or null) get re-fetched on server startup.
 
 **Iqama Times System:**
 - JIAR data is seeded from `server/jiar-iqama-data.ts` (range-based compact format, Mar-Dec 2026). Asr times differ between Parkwood (5:30 PM) and Fayetteville (5:00 PM) campuses.

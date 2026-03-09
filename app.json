@@ -26,14 +26,7 @@
       }
     },
     "android": {
-      "package": "com.salamyall",
-      "adaptiveIcon": {
-        "backgroundColor": "#1B6B4A",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
-      },
-      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"]
+      "package": "com.salamyall"
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
