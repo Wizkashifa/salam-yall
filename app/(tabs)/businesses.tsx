@@ -76,8 +76,8 @@ function getCategoryInfo(category: string) {
   return CATEGORY_ICONS[category] || { icon: "business-outline", color: "#6B7280" };
 }
 
-const CATEGORIES = ["All", "Restaurant", "Grocery", "Finance", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Technology"];
-const SUBMIT_CATEGORIES = ["Restaurant", "Grocery", "Finance", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Technology"];
+const CATEGORIES = ["All", "Grocery", "Finance", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Technology"];
+const SUBMIT_CATEGORIES = ["Grocery", "Finance", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Technology"];
 
 const HEALTHCARE_SPECIALTIES = [
   "Primary Care", "Dentistry", "Optometry", "Ophthalmology", "Dermatology",

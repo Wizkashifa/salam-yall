@@ -1253,9 +1253,33 @@ export default function PrayerScreen() {
               if (q.length < 2) return (
                 <Text style={{ textAlign: "center", marginTop: 40, color: colors.textTertiary, fontFamily: "Inter_400Regular", fontSize: 14 }}>Type at least 2 characters to search</Text>
               );
-              const eventResults = (calendarEvents || []).filter((e: any) => e.title?.toLowerCase().includes(q) || e.description?.toLowerCase().includes(q) || e.organizer?.toLowerCase().includes(q)).slice(0, 5);
-              const restaurantResults = (halalRestaurants || []).filter((r: HalalRestaurant) => r.name?.toLowerCase().includes(q) || (r.cuisine_types || []).some(c => c.toLowerCase().includes(q))).slice(0, 5);
-              const businessResults = (businessesData || []).filter((b: any) => b.name?.toLowerCase().includes(q) || b.category?.toLowerCase().includes(q) || b.description?.toLowerCase().includes(q)).slice(0, 5);
+              const fuzzyMatch = (text: string | null | undefined, query: string): boolean => {
+                if (!text) return false;
+                const t = text.toLowerCase();
+                if (t.includes(query)) return true;
+                const words = query.split(/\s+/);
+                if (words.length > 1 && words.every(w => t.includes(w))) return true;
+                const tWords = t.split(/\s+/);
+                for (const tw of tWords) {
+                  for (const qw of words) {
+                    if (qw.length < 3) continue;
+                    if (tw.startsWith(qw.slice(0, Math.ceil(qw.length * 0.7)))) return true;
+                    if (qw.length >= 4) {
+                      let matches = 0;
+                      const shorter = qw.length < tw.length ? qw : tw;
+                      const longer = qw.length < tw.length ? tw : qw;
+                      for (let i = 0; i < shorter.length; i++) {
+                        if (longer.includes(shorter[i])) matches++;
+                      }
+                      if (matches / shorter.length >= 0.75 && Math.abs(tw.length - qw.length) <= 2) return true;
+                    }
+                  }
+                }
+                return false;
+              };
+              const eventResults = (calendarEvents || []).filter((e: any) => fuzzyMatch(e.title, q) || fuzzyMatch(e.description, q) || fuzzyMatch(e.organizer, q)).slice(0, 5);
+              const restaurantResults = (halalRestaurants || []).filter((r: HalalRestaurant) => fuzzyMatch(r.name, q) || (r.cuisine_types || []).some(c => fuzzyMatch(c, q)) || fuzzyMatch(r.formatted_address, q)).slice(0, 5);
+              const businessResults = (businessesData || []).filter((b: any) => fuzzyMatch(b.name, q) || fuzzyMatch(b.category, q) || fuzzyMatch(b.description, q)).slice(0, 5);
               const totalResults = eventResults.length + restaurantResults.length + businessResults.length;
               if (totalResults === 0) return (
                 <Text style={{ textAlign: "center", marginTop: 40, color: colors.textTertiary, fontFamily: "Inter_400Regular", fontSize: 14 }}>No results found</Text>
