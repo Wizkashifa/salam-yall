@@ -626,8 +626,6 @@ export default function HalalScreen() {
         </View>
       </GlassHeader>
 
-      <View style={{ height: headerHeight }} />
-
       {showFilterDropdown ? (
         <>
           <Pressable style={styles.filterOverlay} onPress={() => setShowFilterDropdown(false)} />
@@ -699,7 +697,7 @@ export default function HalalScreen() {
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={[
             styles.listContent,
-            { paddingBottom: isWeb ? 34 : 100 },
+            { paddingTop: headerHeight + 12, paddingBottom: isWeb ? 34 : 100 },
           ]}
           showsVerticalScrollIndicator={false}
           scrollEnabled={filtered.length > 0}
@@ -834,7 +832,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 16,
-    paddingTop: 12,
   },
   card: {
     borderRadius: 12,

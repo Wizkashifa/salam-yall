@@ -947,8 +947,6 @@ export default function BusinessesScreen() {
         </View>
       </GlassHeader>
 
-      <View style={{ height: headerHeight }} />
-
       {showDropdown ? (
         <>
           <Pressable style={styles.dropdownOverlay} onPress={() => setShowDropdown(false)} />
@@ -990,7 +988,7 @@ export default function BusinessesScreen() {
           data={filtered}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingTop: headerHeight + 12 }]}
           showsVerticalScrollIndicator={false}
           scrollEnabled={filtered.length > 0}
           refreshControl={
@@ -1132,7 +1130,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 20,
-    paddingTop: 12,
     paddingBottom: Platform.OS === "web" ? 34 : 100,
   },
   centerContainer: {
