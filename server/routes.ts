@@ -1306,6 +1306,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/admin/businesses/lookup", async (req, res) => {
+    try {
+      if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+      const { place_id } = req.body;
+      if (!place_id || !place_id.trim()) return res.status(400).json({ error: "Place ID is required" });
+      const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+      if (!apiKey) return res.status(500).json({ error: "Google Places API key not configured" });
+      const detailResp = await fetch(
+        `https://places.googleapis.com/v1/places/${place_id.trim()}`,
+        {
+          headers: {
+            "X-Goog-Api-Key": apiKey,
+            "X-Goog-FieldMask": "displayName,formattedAddress,nationalPhoneNumber,websiteUri,googleMapsUri,location,rating,userRatingCount,photos,regularOpeningHours",
+          },
+        }
+      );
+      if (!detailResp.ok) {
+        const errText = await detailResp.text();
+        console.error("[Admin Biz Lookup] Places API error:", errText);
+        return res.status(400).json({ error: "Place not found. Check the Place ID." });
+      }
+      const place = await detailResp.json();
+      const photoRef = place.photos?.[0]?.name || null;
+      const hours = place.regularOpeningHours?.weekdayDescriptions || null;
+      res.json({
+        name: place.displayName?.text || "",
+        address: place.formattedAddress || "",
+        phone: place.nationalPhoneNumber || "",
+        website: place.websiteUri || "",
+        google_url: place.googleMapsUri || "",
+        lat: place.location?.latitude || null,
+        lng: place.location?.longitude || null,
+        rating: place.rating || null,
+        user_ratings_total: place.userRatingCount || null,
+        photo_reference: photoRef,
+        business_hours: hours,
+        place_id: place_id.trim(),
+      });
+    } catch (error: any) {
+      console.error("Error looking up business place:", error.message);
+      res.status(500).json({ error: "Failed to look up place" });
+    }
+  });
+
+  app.post("/api/admin/businesses/add", async (req, res) => {
+    try {
+      if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+      const { name, category, description, address, phone, website, google_url, specialty, keywords, instagram_url, place_id, rating, user_ratings_total, photo_reference, business_hours, lat, lng } = req.body;
+      if (!name || !name.trim()) return res.status(400).json({ error: "Name is required" });
+      if (!category) return res.status(400).json({ error: "Category is required" });
+      const validCategories = ["Restaurant", "Grocery", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Events", "Creator"];
+      if (!validCategories.includes(category)) return res.status(400).json({ error: "Invalid category" });
+      const keywordsArray = Array.isArray(keywords) ? keywords : [];
+      const result = await pool.query(
+        `INSERT INTO businesses (name, category, description, address, phone, website, google_url, specialty, keywords, instagram_url, place_id, rating, user_ratings_total, photo_reference, business_hours, lat, lng, submitted_by_email, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 'admin@salamyall.net', 'approved') RETURNING id, name`,
+        [
+          name.trim(),
+          category,
+          description || "",
+          address || "",
+          phone || "",
+          website || "",
+          google_url || "",
+          specialty || "",
+          keywordsArray,
+          instagram_url || "",
+          place_id || null,
+          rating || null,
+          user_ratings_total || null,
+          photo_reference || null,
+          business_hours ? JSON.stringify(business_hours) : null,
+          lat || null,
+          lng || null,
+        ]
+      );
+      console.log(`[Admin] Business added: ${result.rows[0].name} (ID ${result.rows[0].id})`);
+      res.json(result.rows[0]);
+    } catch (error: any) {
+      console.error("Error adding business:", error.message);
+      res.status(500).json({ error: "Failed to add business" });
+    }
+  });
+
   app.get("/api/admin/businesses", async (req, res) => {
     try {
       if (!isAdminAuthorized(req)) {

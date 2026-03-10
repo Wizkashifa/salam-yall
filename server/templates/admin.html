@@ -216,6 +216,53 @@
 
     <div class="tab-content" id="tab-businesses">
       <div class="section">
+        <div class="section-title"><span class="icon">➕</span> Quick Add Business</div>
+        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Paste a Google Place ID to auto-fill everything, then pick a category and add. Goes live immediately as approved.</p>
+        <div id="addBusinessForm">
+          <label>Google Place ID</label>
+          <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <input type="text" id="newBizPlaceId" placeholder="ChIJ..." style="flex:1;">
+            <button class="btn btn-gold" onclick="lookupBizPlaceId()" id="bizLookupBtn" style="white-space:nowrap;">Lookup</button>
+          </div>
+          <div id="bizLookupStatus" style="display:none;font-size:12px;margin:-8px 0 12px;padding:8px 12px;border-radius:8px;"></div>
+          <div class="row">
+            <div style="flex:2"><label>Name *</label><input type="text" id="newBizName" placeholder="Business name"></div>
+            <div style="flex:1">
+              <label>Category *</label>
+              <select id="newBizCategory" style="width:100%;padding:10px 14px;background:#1E1E1E;border:1px solid #333;border-radius:10px;color:#F5F5F5;font-size:14px;">
+                <option value="">Select...</option>
+                <option>Restaurant</option>
+                <option>Grocery</option>
+                <option>Retail</option>
+                <option>Automotive</option>
+                <option>Real Estate</option>
+                <option>Healthcare</option>
+                <option>Education</option>
+                <option>Services</option>
+                <option>Events</option>
+                <option>Creator</option>
+              </select>
+            </div>
+          </div>
+          <label>Address</label>
+          <input type="text" id="newBizAddress" placeholder="123 Main St, Raleigh, NC 27601">
+          <div class="row">
+            <div><label>Phone</label><input type="text" id="newBizPhone" placeholder="(919) 555-0123"></div>
+            <div><label>Website</label><input type="text" id="newBizWebsite" placeholder="https://..."></div>
+          </div>
+          <div class="row">
+            <div><label>Instagram</label><input type="text" id="newBizIg" placeholder="https://instagram.com/..."></div>
+            <div><label>Specialty</label><input type="text" id="newBizSpecialty" placeholder="e.g. Dentist, Tailor..."></div>
+          </div>
+          <label>Description</label>
+          <input type="text" id="newBizDescription" placeholder="Brief description of the business">
+          <label>Keywords (comma-separated)</label>
+          <input type="text" id="newBizKeywords" placeholder="e.g. mechanic, oil change, brakes">
+          <div id="bizLookupExtras" style="display:none;font-size:12px;color:#6B7280;margin-top:8px;padding:8px 12px;background:#1A1A1A;border-radius:8px;"></div>
+          <button class="btn btn-gold" onclick="addBusiness()" style="margin-top:12px;width:100%;">Add Business</button>
+        </div>
+      </div>
+      <div class="section">
         <div class="section-title"><span class="icon">🏪</span> Business Submissions</div>
         <div style="display:flex;gap:8px;margin-bottom:10px;">
           <button class="btn btn-sm" id="filterPending" onclick="loadBusinesses('pending')" style="background:#2A2318;color:#D4A843;">Pending</button>
@@ -655,6 +702,117 @@
         }
       } catch { showToast('Connection error', true); }
       btn.disabled = false;
+    }
+
+    var pendingBizLookupData = null;
+
+    async function lookupBizPlaceId() {
+      var placeId = document.getElementById('newBizPlaceId').value.trim();
+      if (!placeId) { showToast('Enter a Place ID first', true); return; }
+      var btn = document.getElementById('bizLookupBtn');
+      var status = document.getElementById('bizLookupStatus');
+      btn.disabled = true;
+      btn.textContent = 'Looking up...';
+      status.style.display = 'block';
+      status.style.background = '#1A2E22';
+      status.style.color = '#6EE7B7';
+      status.textContent = 'Fetching data from Google Places...';
+      try {
+        var res = await fetch('/api/admin/businesses/lookup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify({ place_id: placeId }),
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        var data = await res.json();
+        if (!res.ok) {
+          status.style.background = '#2A1818';
+          status.style.color = '#F87171';
+          status.textContent = data.error || 'Lookup failed';
+          return;
+        }
+        pendingBizLookupData = data;
+        document.getElementById('newBizName').value = data.name || '';
+        document.getElementById('newBizAddress').value = data.address || '';
+        document.getElementById('newBizPhone').value = data.phone || '';
+        document.getElementById('newBizWebsite').value = data.website || '';
+        var extras = [];
+        if (data.rating) extras.push('Rating: ' + data.rating + ' (' + (data.user_ratings_total || 0) + ' reviews)');
+        if (data.photo_reference) extras.push('Photo: found');
+        if (data.business_hours) extras.push('Hours: found');
+        var extrasEl = document.getElementById('bizLookupExtras');
+        if (extras.length) {
+          extrasEl.style.display = 'block';
+          extrasEl.innerHTML = '<strong style="color:#D4A843;">Auto-filled from Google:</strong> ' + extras.join(' · ');
+        } else {
+          extrasEl.style.display = 'none';
+        }
+        status.style.background = '#1A2E22';
+        status.style.color = '#6EE7B7';
+        status.textContent = 'Found: ' + data.name + '. Pick a category and click Add.';
+      } catch(e) {
+        status.style.background = '#2A1818';
+        status.style.color = '#F87171';
+        status.textContent = 'Connection error';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Lookup';
+      }
+    }
+
+    async function addBusiness() {
+      var name = document.getElementById('newBizName').value.trim();
+      var category = document.getElementById('newBizCategory').value;
+      if (!name) { showToast('Business name is required', true); return; }
+      if (!category) { showToast('Category is required', true); return; }
+      var kwStr = document.getElementById('newBizKeywords').value.trim();
+      var keywords = kwStr ? kwStr.split(',').map(function(s) { return s.trim(); }).filter(Boolean) : [];
+      var body = {
+        name: name,
+        category: category,
+        description: document.getElementById('newBizDescription').value.trim() || '',
+        address: document.getElementById('newBizAddress').value.trim() || '',
+        phone: document.getElementById('newBizPhone').value.trim() || '',
+        website: document.getElementById('newBizWebsite').value.trim() || '',
+        instagram_url: document.getElementById('newBizIg').value.trim() || '',
+        specialty: document.getElementById('newBizSpecialty').value.trim() || '',
+        keywords: keywords,
+      };
+      if (pendingBizLookupData) {
+        body.place_id = pendingBizLookupData.place_id || null;
+        body.rating = pendingBizLookupData.rating || null;
+        body.user_ratings_total = pendingBizLookupData.user_ratings_total || null;
+        body.photo_reference = pendingBizLookupData.photo_reference || null;
+        body.business_hours = pendingBizLookupData.business_hours || null;
+        body.google_url = pendingBizLookupData.google_url || null;
+        body.lat = pendingBizLookupData.lat || null;
+        body.lng = pendingBizLookupData.lng || null;
+      }
+      try {
+        var res = await fetch('/api/admin/businesses/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify(body),
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        var data = await res.json();
+        if (!res.ok) { showToast(data.error || 'Failed to add', true); return; }
+        showToast('Business "' + data.name + '" added (ID ' + data.id + ')');
+        document.getElementById('newBizPlaceId').value = '';
+        document.getElementById('newBizName').value = '';
+        document.getElementById('newBizCategory').value = '';
+        document.getElementById('newBizAddress').value = '';
+        document.getElementById('newBizPhone').value = '';
+        document.getElementById('newBizWebsite').value = '';
+        document.getElementById('newBizIg').value = '';
+        document.getElementById('newBizSpecialty').value = '';
+        document.getElementById('newBizDescription').value = '';
+        document.getElementById('newBizKeywords').value = '';
+        document.getElementById('bizLookupStatus').style.display = 'none';
+        document.getElementById('bizLookupExtras').style.display = 'none';
+        pendingBizLookupData = null;
+        loadBusinesses('approved');
+      } catch(e) { showToast('Connection error', true); }
     }
 
     let currentBizFilter = 'pending';
