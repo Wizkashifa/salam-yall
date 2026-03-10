@@ -230,8 +230,14 @@
     <div class="tab-content" id="tab-restaurants">
       <div class="section">
         <div class="section-title"><span class="icon">➕</span> Add Restaurant</div>
-        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Manually add a halal restaurant. It will be auto-enriched with Google Places data (photo, hours, rating) on the next enrichment cycle.</p>
+        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Paste a Google Place ID to auto-fill everything, then set halal status and add.</p>
         <div id="addRestaurantForm">
+          <label>Google Place ID</label>
+          <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <input type="text" id="newRestPlaceId" placeholder="ChIJ..." style="flex:1;">
+            <button class="btn btn-gold" onclick="lookupPlaceId()" id="lookupBtn" style="white-space:nowrap;">Lookup</button>
+          </div>
+          <div id="lookupStatus" style="display:none;font-size:12px;margin:-8px 0 12px;padding:8px 12px;border-radius:8px;"></div>
           <div class="row">
             <div style="flex:2"><label>Name *</label><input type="text" id="newRestName" placeholder="Restaurant name"></div>
             <div style="flex:1"><label>Emoji</label><input type="text" id="newRestEmoji" placeholder="🍕" maxlength="4"></div>
@@ -260,6 +266,8 @@
           <div class="row" style="margin-top:4px;">
             <div><label>Latitude</label><input type="text" id="newRestLat" placeholder="35.7796"></div>
             <div><label>Longitude</label><input type="text" id="newRestLng" placeholder="-78.6382"></div>
+          </div>
+          <div id="lookupExtras" style="display:none;font-size:12px;color:#6B7280;margin-top:8px;padding:8px 12px;background:#1A1A1A;border-radius:8px;">
           </div>
           <button class="btn btn-gold" onclick="addRestaurant()" style="margin-top:12px;width:100%;">Add Restaurant</button>
         </div>
@@ -1020,6 +1028,64 @@
       } catch { showToast('Connection error', true); }
     }
 
+    var pendingLookupData = null;
+
+    async function lookupPlaceId() {
+      var placeId = document.getElementById('newRestPlaceId').value.trim();
+      if (!placeId) { showToast('Enter a Place ID first', true); return; }
+      var btn = document.getElementById('lookupBtn');
+      var status = document.getElementById('lookupStatus');
+      btn.disabled = true;
+      btn.textContent = 'Looking up...';
+      status.style.display = 'block';
+      status.style.background = '#1A2E22';
+      status.style.color = '#6EE7B7';
+      status.textContent = 'Fetching data from Google Places...';
+      try {
+        var res = await fetch('/api/admin/restaurants/lookup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify({ place_id: placeId }),
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        var data = await res.json();
+        if (!res.ok) {
+          status.style.background = '#2A1818';
+          status.style.color = '#F87171';
+          status.textContent = data.error || 'Lookup failed';
+          return;
+        }
+        pendingLookupData = data;
+        document.getElementById('newRestName').value = data.name || '';
+        document.getElementById('newRestAddress').value = data.formatted_address || '';
+        document.getElementById('newRestPhone').value = data.formatted_phone || '';
+        document.getElementById('newRestWebsite').value = data.website || '';
+        document.getElementById('newRestLat').value = data.lat || '';
+        document.getElementById('newRestLng').value = data.lng || '';
+        var extras = [];
+        if (data.rating) extras.push('Rating: ' + data.rating + ' (' + (data.user_ratings_total || 0) + ' reviews)');
+        if (data.photo_reference) extras.push('Photo: found');
+        if (data.opening_hours) extras.push('Hours: ' + data.opening_hours.periods.length + ' periods');
+        var extrasEl = document.getElementById('lookupExtras');
+        if (extras.length) {
+          extrasEl.style.display = 'block';
+          extrasEl.innerHTML = '<strong style="color:#D4A843;">Auto-filled from Google:</strong> ' + extras.join(' · ');
+        } else {
+          extrasEl.style.display = 'none';
+        }
+        status.style.background = '#1A2E22';
+        status.style.color = '#6EE7B7';
+        status.textContent = 'Found: ' + data.name + '. Set halal status and cuisine, then click Add.';
+      } catch(e) {
+        status.style.background = '#2A1818';
+        status.style.color = '#F87171';
+        status.textContent = 'Connection error';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Lookup';
+      }
+    }
+
     async function addRestaurant() {
       var name = document.getElementById('newRestName').value.trim();
       if (!name) { showToast('Restaurant name is required', true); return; }
@@ -1040,6 +1106,14 @@
         lat: latVal ? parseFloat(latVal) : null,
         lng: lngVal ? parseFloat(lngVal) : null,
       };
+      if (pendingLookupData) {
+        body.place_id = pendingLookupData.place_id || null;
+        body.rating = pendingLookupData.rating || null;
+        body.user_ratings_total = pendingLookupData.user_ratings_total || null;
+        body.photo_reference = pendingLookupData.photo_reference || null;
+        body.opening_hours = pendingLookupData.opening_hours || null;
+        body.url = pendingLookupData.url || null;
+      }
       try {
         var res = await fetch('/api/admin/restaurants', {
           method: 'POST',
@@ -1050,6 +1124,7 @@
         var data = await res.json();
         if (!res.ok) { showToast(data.error || 'Failed to add', true); return; }
         showToast('Restaurant "' + data.name + '" added (ID ' + data.id + ')');
+        document.getElementById('newRestPlaceId').value = '';
         document.getElementById('newRestName').value = '';
         document.getElementById('newRestAddress').value = '';
         document.getElementById('newRestPhone').value = '';
@@ -1061,6 +1136,9 @@
         document.getElementById('newRestEmoji').value = '';
         document.getElementById('newRestLat').value = '';
         document.getElementById('newRestLng').value = '';
+        document.getElementById('lookupStatus').style.display = 'none';
+        document.getElementById('lookupExtras').style.display = 'none';
+        pendingLookupData = null;
       } catch(e) { showToast('Connection error', true); }
     }
 

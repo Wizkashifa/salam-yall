@@ -1774,14 +1774,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/admin/restaurants/lookup", async (req, res) => {
+    try {
+      if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+      const { place_id } = req.body;
+      if (!place_id || !place_id.trim()) return res.status(400).json({ error: "Place ID is required" });
+      const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+      if (!apiKey) return res.status(500).json({ error: "Google Places API key not configured" });
+      const detailResp = await fetch(
+        `https://places.googleapis.com/v1/places/${place_id.trim()}`,
+        {
+          headers: {
+            "X-Goog-Api-Key": apiKey,
+            "X-Goog-FieldMask": "displayName,formattedAddress,nationalPhoneNumber,websiteUri,googleMapsUri,location,rating,userRatingCount,photos,regularOpeningHours",
+          },
+        }
+      );
+      if (!detailResp.ok) {
+        const errText = await detailResp.text();
+        console.error("[Admin Lookup] Places API error:", errText);
+        return res.status(400).json({ error: "Place not found. Check the Place ID." });
+      }
+      const place = await detailResp.json();
+      const photoRef = place.photos?.[0]?.name || null;
+      const hours = place.regularOpeningHours || null;
+      let openingHours = null;
+      if (hours && hours.periods) {
+        openingHours = {
+          periods: hours.periods.map((p: any) => ({
+            open: { day: ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"][p.open?.day || 0], time: [p.open?.hour || 0, p.open?.minute || 0] },
+            close: p.close ? { day: ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"][p.close?.day || 0], time: [p.close?.hour || 0, p.close?.minute || 0] } : { day: ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"][p.open?.day || 0], time: [23, 59] },
+          })),
+        };
+      }
+      res.json({
+        name: place.displayName?.text || "",
+        formatted_address: place.formattedAddress || "",
+        formatted_phone: place.nationalPhoneNumber || "",
+        website: place.websiteUri || "",
+        url: place.googleMapsUri || "",
+        lat: place.location?.latitude || null,
+        lng: place.location?.longitude || null,
+        rating: place.rating || null,
+        user_ratings_total: place.userRatingCount || null,
+        photo_reference: photoRef,
+        opening_hours: openingHours,
+        place_id: place_id.trim(),
+      });
+    } catch (error: any) {
+      console.error("Error looking up place:", error.message);
+      res.status(500).json({ error: "Failed to look up place" });
+    }
+  });
+
   app.post("/api/admin/restaurants", async (req, res) => {
     try {
       if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
-      const { name, formatted_address, formatted_phone, is_halal, halal_comment, cuisine_types, emoji, website, instagram_url, lat, lng } = req.body;
+      const { name, formatted_address, formatted_phone, is_halal, halal_comment, cuisine_types, emoji, website, instagram_url, lat, lng, place_id, rating, user_ratings_total, photo_reference, opening_hours, url } = req.body;
       if (!name || !name.trim()) return res.status(400).json({ error: "Name is required" });
       const result = await pool.query(
-        `INSERT INTO halal_restaurants (name, formatted_address, formatted_phone, is_halal, halal_comment, cuisine_types, emoji, website, instagram_url, lat, lng)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id, name`,
+        `INSERT INTO halal_restaurants (name, formatted_address, formatted_phone, is_halal, halal_comment, cuisine_types, emoji, website, instagram_url, lat, lng, place_id, rating, user_ratings_total, photo_reference, opening_hours, url, hours_last_updated)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id, name`,
         [
           name.trim(),
           formatted_address || null,
@@ -1794,6 +1847,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           instagram_url || null,
           lat || null,
           lng || null,
+          place_id || null,
+          rating || null,
+          user_ratings_total || null,
+          photo_reference || null,
+          opening_hours ? JSON.stringify(opening_hours) : null,
+          url || null,
+          place_id ? new Date() : null,
         ]
       );
       console.log(`[Admin] Restaurant added: ${result.rows[0].name} (ID ${result.rows[0].id})`);
