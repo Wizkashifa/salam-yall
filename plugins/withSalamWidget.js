@@ -69,17 +69,75 @@ function withSalamWidget(config) {
       );
     }
 
-    const appTargetKey = xcodeProject.getFirstTarget().firstTarget.uuid;
-    const embedPhase = xcodeProject.addBuildPhase(
-      [`${WIDGET_NAME}.appex`],
-      "PBXCopyFilesBuildPhase",
-      "Embed App Extensions",
-      appTargetKey,
-      "app_extension"
-    );
-    if (embedPhase && embedPhase.buildPhase) {
-      embedPhase.buildPhase.dstSubfolderSpec = 13;
+    const appTarget = xcodeProject.getFirstTarget().firstTarget;
+    const appTargetUuid = appTarget.uuid;
+
+    const widgetProductFileRef = widgetTarget.pbxNativeTarget.productReference;
+
+    const embedBuildFileUuid = xcodeProject.generateUuid();
+    const embedBuildFileCommentKey = `${embedBuildFileUuid}_comment`;
+
+    xcodeProject.hash.project.objects["PBXBuildFile"][embedBuildFileUuid] = {
+      isa: "PBXBuildFile",
+      fileRef: widgetProductFileRef,
+      settings: { ATTRIBUTES: ["RemoveHeadersOnCopy"] },
+    };
+    xcodeProject.hash.project.objects["PBXBuildFile"][embedBuildFileCommentKey] = `${WIDGET_NAME}.appex in Embed App Extensions`;
+
+    const embedPhaseUuid = xcodeProject.generateUuid();
+    const embedPhaseCommentKey = `${embedPhaseUuid}_comment`;
+
+    xcodeProject.hash.project.objects["PBXCopyFilesBuildPhase"] = xcodeProject.hash.project.objects["PBXCopyFilesBuildPhase"] || {};
+    xcodeProject.hash.project.objects["PBXCopyFilesBuildPhase"][embedPhaseUuid] = {
+      isa: "PBXCopyFilesBuildPhase",
+      buildActionMask: 2147483647,
+      dstPath: '""',
+      dstSubfolderSpec: 13,
+      files: [
+        { value: embedBuildFileUuid, comment: `${WIDGET_NAME}.appex in Embed App Extensions` },
+      ],
+      name: '"Embed App Extensions"',
+      runOnlyForDeploymentPostprocessing: 0,
+    };
+    xcodeProject.hash.project.objects["PBXCopyFilesBuildPhase"][embedPhaseCommentKey] = "Embed App Extensions";
+
+    appTarget.buildPhases.push({
+      value: embedPhaseUuid,
+      comment: "Embed App Extensions",
+    });
+
+    const depTargetProxy = xcodeProject.generateUuid();
+    const depTargetProxyComment = `${depTargetProxy}_comment`;
+    const projectUuid = xcodeProject.getFirstProject().firstProject.uuid;
+
+    xcodeProject.hash.project.objects["PBXContainerItemProxy"] = xcodeProject.hash.project.objects["PBXContainerItemProxy"] || {};
+    xcodeProject.hash.project.objects["PBXContainerItemProxy"][depTargetProxy] = {
+      isa: "PBXContainerItemProxy",
+      containerPortal: projectUuid,
+      proxyType: 1,
+      remoteGlobalIDString: widgetTarget.uuid,
+      remoteInfo: `"${WIDGET_NAME}"`,
+    };
+    xcodeProject.hash.project.objects["PBXContainerItemProxy"][depTargetProxyComment] = "PBXContainerItemProxy";
+
+    const depUuid = xcodeProject.generateUuid();
+    const depUuidComment = `${depUuid}_comment`;
+
+    xcodeProject.hash.project.objects["PBXTargetDependency"] = xcodeProject.hash.project.objects["PBXTargetDependency"] || {};
+    xcodeProject.hash.project.objects["PBXTargetDependency"][depUuid] = {
+      isa: "PBXTargetDependency",
+      target: widgetTarget.uuid,
+      targetProxy: depTargetProxy,
+    };
+    xcodeProject.hash.project.objects["PBXTargetDependency"][depUuidComment] = "PBXTargetDependency";
+
+    if (!appTarget.dependencies) {
+      appTarget.dependencies = [];
     }
+    appTarget.dependencies.push({
+      value: depUuid,
+      comment: "PBXTargetDependency",
+    });
 
     const configurations = xcodeProject.pbxXCBuildConfigurationSection();
     for (const key in configurations) {
