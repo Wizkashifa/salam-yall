@@ -50,7 +50,7 @@ import {
 } from "@/lib/prayer-utils";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { cyclePrayerStatus, getPrayerLog, type DayLog, type PrayerName as TrackerPrayerName } from "@/lib/prayer-tracker";
-import { getDailyContent, getDailyPair, isFriday } from "@/lib/daily-content";
+import { getDailyVerse, isFriday, type DailyVerse } from "@/lib/daily-content";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 
 interface CalendarEvent {
@@ -675,8 +675,36 @@ export default function PrayerScreen() {
     trackEvent("prayer_tracked", { prayer: prayerName, status: updated[trackerName] });
   }, []);
 
-  const dailyContent = useMemo(() => getDailyContent(), []);
-  const dailyPair = useMemo(() => getDailyPair(), []);
+  const dailyVerse = useMemo(() => getDailyVerse(), []);
+  const [showVerseModal, setShowVerseModal] = useState(false);
+  const [tafsirText, setTafsirText] = useState<string | null>(null);
+  const [tafsirLoading, setTafsirLoading] = useState(false);
+
+  const openVerseModal = useCallback(async () => {
+    setShowVerseModal(true);
+    setTafsirText(null);
+    setTafsirLoading(true);
+    try {
+      const url = new URL(`/api/tafsir/${dailyVerse.surah}/${dailyVerse.ayah}`, getApiUrl());
+      const resp = await fetch(url.toString());
+      if (resp.ok) {
+        const data = await resp.json();
+        setTafsirText(data.text || "Tafsir not available for this verse.");
+      } else {
+        setTafsirText("Unable to load tafsir at this time.");
+      }
+    } catch {
+      setTafsirText("Unable to load tafsir at this time.");
+    } finally {
+      setTafsirLoading(false);
+    }
+  }, [dailyVerse]);
+
+  const shareVerse = useCallback(() => {
+    const msg = `${dailyVerse.arabic}\n\n"${dailyVerse.translation}"\n\n— ${dailyVerse.source}\n(Dr. Mustafa Khattab, The Clear Quran)\n\nShared via Salam Y'all`;
+    Share.share({ message: msg });
+  }, [dailyVerse]);
+
   const fridayMode = useMemo(() => isFriday(), []);
 
   interface JumuahSchedule {
@@ -1070,20 +1098,24 @@ export default function PrayerScreen() {
             ))}
           </View>
         ) : (
-          <View style={[styles.glassCard, styles.dailyContentCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
+          <Pressable
+            onPress={openVerseModal}
+            style={({ pressed }) => [styles.glassCard, styles.dailyContentCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder, opacity: pressed ? 0.85 : 1 }]}
+          >
             <View style={styles.dailyContentHeader}>
-              <Ionicons name={dailyContent.type === "quran" ? "book" : "chatbox-ellipses"} size={16} color={colors.gold} />
-              <Text style={[styles.dailyContentType, { color: colors.gold }]}>
-                {dailyContent.type === "quran" ? "Quran" : "Hadith"}
-              </Text>
+              <Ionicons name="book" size={16} color={colors.gold} />
+              <Text style={[styles.dailyContentType, { color: colors.gold }]}>Daily Verse</Text>
             </View>
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 22, color: colors.text, textAlign: "right" as const, lineHeight: 38, marginBottom: 12, writingDirection: "rtl" as const }}>
+              {dailyVerse.arabic}
+            </Text>
             <Text style={[styles.dailyContentText, { color: colors.text }]}>
-              "{dailyContent.text}"
+              "{dailyVerse.translation}"
             </Text>
             <Text style={[styles.dailyContentSource, { color: colors.textTertiary }]}>
-              — {dailyContent.source}
+              — {dailyVerse.source} · Dr. Mustafa Khattab
             </Text>
-          </View>
+          </Pressable>
         )}
 
         {masjidsExpanded ? (
@@ -1189,50 +1221,24 @@ export default function PrayerScreen() {
             })}
           </View>
         ) : (
-          <View style={[styles.glassCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder, padding: 0, overflow: "hidden" as const }]}>
-            <View style={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                <Text style={{ fontFamily: "PlayfairDisplay_700Bold", fontSize: 18, color: colors.text }}>Daily Reflections</Text>
-              </View>
-              <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textTertiary }}>
-                A verse and wisdom for your day
-              </Text>
+          <Pressable
+            onPress={openVerseModal}
+            style={({ pressed }) => [styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder, opacity: pressed ? 0.85 : 1 }]}
+          >
+            <View style={styles.sectionCardHeader}>
+              <Text style={[styles.sectionCardTitle, { color: colors.text }]}>Daily Verse</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
             </View>
-
-            <View style={{ paddingHorizontal: 20, paddingBottom: 18 }}>
-              <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, marginBottom: 16 }}>
-                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.gold + "18", justifyContent: "center" as const, alignItems: "center" as const, marginTop: 2 }}>
-                  <Ionicons name="book" size={18} color={colors.gold} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, color: colors.gold, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: 6 }}>Quran</Text>
-                  <Text style={{ fontFamily: "PlayfairDisplay_700Bold", fontSize: 16, color: colors.text, lineHeight: 24, fontStyle: "italic" as const }}>
-                    "{dailyPair.quran.text}"
-                  </Text>
-                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textTertiary, marginTop: 6 }}>
-                    — {dailyPair.quran.source}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={{ height: 1, backgroundColor: colors.border, marginBottom: 16 }} />
-
-              <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
-                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.emerald + "18", justifyContent: "center" as const, alignItems: "center" as const, marginTop: 2 }}>
-                  <Ionicons name="chatbox-ellipses" size={18} color={colors.emerald} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, color: colors.emerald, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: 6 }}>Hadith</Text>
-                  <Text style={{ fontFamily: "PlayfairDisplay_700Bold", fontSize: 16, color: colors.text, lineHeight: 24, fontStyle: "italic" as const }}>
-                    "{dailyPair.hadith.text}"
-                  </Text>
-                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textTertiary, marginTop: 6 }}>
-                    — {dailyPair.hadith.source}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </View>
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 24, color: colors.text, textAlign: "right" as const, lineHeight: 42, marginBottom: 14, writingDirection: "rtl" as const }}>
+              {dailyVerse.arabic}
+            </Text>
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 15, color: colors.text, lineHeight: 22, marginBottom: 8 }}>
+              "{dailyVerse.translation}"
+            </Text>
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textTertiary }}>
+              — {dailyVerse.source} · Dr. Mustafa Khattab
+            </Text>
+          </Pressable>
         )}
 
         {nearbyHalalPreview.length > 0 ? (
@@ -1414,6 +1420,55 @@ export default function PrayerScreen() {
               );
             })()}
           </ScrollView>
+        </View>
+      </Modal>
+
+      <Modal visible={showVerseModal} transparent animationType="slide" onRequestClose={() => setShowVerseModal(false)}>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}>
+          <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "85%", paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 16 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: 20, paddingBottom: 12 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontFamily: "PlayfairDisplay_700Bold", fontSize: 18, color: colors.text }}>Daily Verse</Text>
+                <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textTertiary, marginTop: 2 }}>{dailyVerse.source}</Text>
+              </View>
+              <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
+                <Pressable onPress={shareVerse} hitSlop={8}>
+                  <Ionicons name="share-outline" size={22} color={colors.emerald} />
+                </Pressable>
+                <Pressable onPress={() => setShowVerseModal(false)} hitSlop={8}>
+                  <Ionicons name="close" size={24} color={colors.textSecondary} />
+                </Pressable>
+              </View>
+            </View>
+            <ScrollView style={{ paddingHorizontal: 20 }} showsVerticalScrollIndicator={false}>
+              <View style={{ backgroundColor: colors.gold + "0D", borderRadius: 16, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: colors.gold + "20" }}>
+                <Text style={{ fontFamily: "Inter_400Regular", fontSize: 26, color: colors.text, textAlign: "right" as const, lineHeight: 48, writingDirection: "rtl" as const }}>
+                  {dailyVerse.arabic}
+                </Text>
+              </View>
+              <View style={{ backgroundColor: colors.emerald + "0D", borderRadius: 16, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: colors.emerald + "20" }}>
+                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, color: colors.emerald, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: 8 }}>Translation</Text>
+                <Text style={{ fontFamily: "Inter_400Regular", fontSize: 16, color: colors.text, lineHeight: 26 }}>
+                  "{dailyVerse.translation}"
+                </Text>
+                <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textTertiary, marginTop: 8 }}>
+                  Dr. Mustafa Khattab · The Clear Quran
+                </Text>
+              </View>
+              <View style={{ marginBottom: 20 }}>
+                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, color: colors.gold, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: 12 }}>Tafsir Ibn Kathir</Text>
+                {tafsirLoading ? (
+                  <View style={{ alignItems: "center", paddingVertical: 20 }}>
+                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: colors.textTertiary }}>Loading tafsir...</Text>
+                  </View>
+                ) : tafsirText ? (
+                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: colors.textSecondary, lineHeight: 22 }}>
+                    {tafsirText.replace(/<[^>]*>/g, "")}
+                  </Text>
+                ) : null}
+              </View>
+            </ScrollView>
+          </View>
         </View>
       </Modal>
     </View>

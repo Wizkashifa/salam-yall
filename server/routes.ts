@@ -2257,6 +2257,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   let weatherCache: { data: any; timestamp: number; key: string } | null = null;
+  const tafsirCache = new Map<string, { data: any; timestamp: number }>();
+  const TAFSIR_CACHE_MS = 24 * 60 * 60 * 1000;
+
+  app.get("/api/tafsir/:surah/:ayah", async (req, res) => {
+    try {
+      const { surah, ayah } = req.params;
+      const cacheKey = `${surah}:${ayah}`;
+      const cached = tafsirCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < TAFSIR_CACHE_MS) {
+        return res.json(cached.data);
+      }
+      const resp = await fetch(`https://api.quran.com/api/v4/tafsirs/169/by_ayah/${surah}:${ayah}`);
+      if (!resp.ok) {
+        return res.status(resp.status).json({ error: "Failed to fetch tafsir" });
+      }
+      const json = await resp.json();
+      const tafsirText = json.tafsir?.text || json.tafsirs?.[0]?.text || "";
+      const result = { surah: parseInt(surah), ayah: parseInt(ayah), text: tafsirText };
+      tafsirCache.set(cacheKey, { data: result, timestamp: Date.now() });
+      res.json(result);
+    } catch (err) {
+      console.error("[Tafsir] Error:", err);
+      res.status(500).json({ error: "Failed to fetch tafsir" });
+    }
+  });
+
   const WEATHER_CACHE_MS = 30 * 60 * 1000;
 
   app.get("/api/weather", async (req, res) => {
