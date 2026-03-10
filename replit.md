@@ -62,7 +62,6 @@ The application follows a client-server architecture:
 - **Google Places API:** Used for enriching business and halal restaurant data (ratings, photos, hours, location).
 - **Adhan.js:** A JavaScript library for accurate Islamic prayer time calculations.
 - **Expo SDK:** Provides core functionalities like location services (`expo-location`) and notifications (`expo-notifications`).
-- **iOS Widget Extension:** Native SwiftUI widget (`widgets/SalamYallWidget/`) displaying prayer countdown and times. Uses built-in astronomical calculation (ISNA method). Config plugin at `plugins/withSalamWidget.js`. Supports small and medium sizes, dark/light mode, and Ramadan theme. Requires development build (`eas build`) — does not work in Expo Go. Bundle ID: `com.salamyall.widget`.
 - **AsyncStorage:** For client-side persistent storage of user preferences.
 - **googleapis:** Node.js client library for Google APIs, used in backend for calendar interactions.
 - **pg:** PostgreSQL client for Node.js.

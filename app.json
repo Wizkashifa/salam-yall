@@ -41,8 +41,7 @@
         }
       ],
       "expo-font",
-      "expo-web-browser",
-      "./plugins/withSalamWidget"
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
