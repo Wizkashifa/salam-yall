@@ -900,14 +900,52 @@ export default function BusinessesScreen() {
 
   const searchTrimmed = searchQuery.trim().toLowerCase();
 
+  const SEARCH_SYNONYMS: Record<string, string[]> = {
+    "eye doctor": ["optometrist", "ophthalmologist", "optometry", "vision", "eye care", "eye exam"],
+    "optometrist": ["eye doctor", "ophthalmologist", "optometry", "vision", "eye care"],
+    "ophthalmologist": ["eye doctor", "optometrist", "optometry", "vision", "eye care"],
+    "dentist": ["dental", "orthodontist", "oral", "teeth"],
+    "dental": ["dentist", "orthodontist", "oral", "teeth"],
+    "doctor": ["physician", "medical", "clinic", "healthcare", "family medicine", "primary care"],
+    "therapist": ["therapy", "counselor", "counseling", "mental health", "psychologist"],
+    "mental health": ["therapist", "therapy", "counselor", "counseling", "psychologist"],
+    "lawyer": ["attorney", "legal", "law firm", "law office"],
+    "attorney": ["lawyer", "legal", "law firm", "law office"],
+    "realtor": ["real estate", "realty", "property", "home", "housing"],
+    "real estate": ["realtor", "realty", "property", "home", "housing"],
+    "mechanic": ["auto repair", "automotive", "car repair", "auto shop"],
+    "auto repair": ["mechanic", "automotive", "car repair", "auto shop"],
+    "accountant": ["accounting", "tax", "cpa", "bookkeeping", "financial"],
+    "tax": ["accountant", "accounting", "cpa", "tax preparation"],
+    "insurance": ["auto insurance", "health insurance", "life insurance", "coverage"],
+    "contractor": ["contracting", "construction", "builder", "remodeling", "renovation"],
+    "construction": ["contractor", "contracting", "builder", "remodeling"],
+    "plumber": ["plumbing", "pipes", "drain"],
+    "electrician": ["electrical", "wiring"],
+    "tutor": ["tutoring", "education", "learning", "teaching"],
+    "daycare": ["childcare", "child care", "preschool", "nursery"],
+    "barber": ["barbershop", "haircut", "men's grooming"],
+    "salon": ["hair salon", "beauty", "styling", "hairdresser"],
+    "restaurant": ["food", "dining", "eatery", "cafe"],
+    "grocery": ["groceries", "supermarket", "market", "food store"],
+    "halal": ["zabiha", "halal-certified", "halal meat"],
+    "zabiha": ["halal", "halal-certified", "halal meat"],
+    "wedding": ["bridal", "nikah", "marriage", "wedding planner"],
+    "photographer": ["photography", "photo", "portrait"],
+    "photography": ["photographer", "photo", "portrait"],
+  };
+
+  const expandedTerms = searchTrimmed ? [searchTrimmed, ...(SEARCH_SYNONYMS[searchTrimmed] || [])] : [];
+
   const filtered = businesses
     ? businesses.filter((b) => {
         const matchesCategory = selectedCategory === "All" || b.category === selectedCategory;
-        const matchesSearch = !searchTrimmed || 
-          b.name.toLowerCase().includes(searchTrimmed) ||
-          (b.description && b.description.toLowerCase().includes(searchTrimmed)) ||
-          (b.address && b.address.toLowerCase().includes(searchTrimmed)) ||
-          (b.search_tags && b.search_tags.some(t => t.toLowerCase().includes(searchTrimmed)));
+        if (!searchTrimmed) return matchesCategory;
+        const haystack = [
+          b.name, b.description, b.address, b.specialty,
+          ...(b.keywords || []), ...(b.search_tags || []),
+        ].filter(Boolean).join(" ").toLowerCase();
+        const matchesSearch = expandedTerms.some(term => haystack.includes(term));
         return matchesCategory && matchesSearch;
       })
     : [];
