@@ -84,30 +84,13 @@ function getCategoryInfo(category: string) {
 const CATEGORIES = ["All", "Grocery", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Events", "Creator"];
 const SUBMIT_CATEGORIES = ["Grocery", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Events", "Creator"];
 
-const HEALTHCARE_SPECIALTIES = [
-  "Primary Care", "Dentistry", "Optometry", "Ophthalmology", "Dermatology",
-  "Pediatrics", "OB/GYN", "Cardiology", "Orthopedics", "Psychiatry",
-  "Psychology", "Therapy / Counseling", "Chiropractic", "Physical Therapy",
-  "Pharmacy", "Urgent Care", "Internal Medicine", "ENT",
-  "Allergy / Immunology", "Nutrition / Dietetics", "Other",
-];
-
-const BUSINESS_KEYWORDS: Record<string, string[]> = {
+const SPECIALTIES: Record<string, string[]> = {
   Healthcare: [
-    "Female provider", "Male provider",
-    "Accepts insurance", "Cash / self-pay", "Sliding scale",
-    "Telehealth available", "Walk-ins welcome", "By appointment only",
-    "Pediatric", "Halal medications",
-    "Mental health", "Women's health", "Sports medicine",
-    "Arabic-speaking", "Urdu-speaking", "Spanish-speaking",
-  ],
-  Restaurant: [
-    "Halal-certified", "Zabiha", "Dine-in", "Takeout",
-    "Delivery", "Catering", "Late night",
-  ],
-  Grocery: [
-    "Halal meat", "Zabiha", "Imported goods",
-    "Middle Eastern", "South Asian", "African", "Bakery",
+    "Primary Care", "Dentistry", "Optometry", "Ophthalmology", "Dermatology",
+    "Pediatrics", "OB/GYN", "Cardiology", "Orthopedics", "Psychiatry",
+    "Psychology", "Therapy / Counseling", "Chiropractic", "Physical Therapy",
+    "Pharmacy", "Urgent Care", "Internal Medicine", "ENT",
+    "Allergy / Immunology", "Nutrition / Dietetics", "Other",
   ],
   Events: [
     "Venue", "Caterer", "Photography", "Videography",
@@ -118,11 +101,41 @@ const BUSINESS_KEYWORDS: Record<string, string[]> = {
     "Artist", "Content Creator", "Photographer", "Videographer",
     "Graphic Designer", "Social Media", "Podcast", "YouTube", "Blogger",
   ],
+};
+
+const UNIVERSAL_TAGS = [
+  "Women-owned", "Arabic-speaking", "Urdu-speaking", "Spanish-speaking",
+];
+
+const BUSINESS_KEYWORDS: Record<string, string[]> = {
+  Healthcare: [
+    "Female provider", "Male provider",
+    "Accepts insurance", "Cash / self-pay", "Sliding scale",
+    "Telehealth available", "Walk-ins welcome", "By appointment only",
+    "Pediatric", "Halal medications",
+    "Mental health", "Women's health", "Sports medicine",
+    ...UNIVERSAL_TAGS,
+  ],
+  Restaurant: [
+    "Halal-certified", "Zabiha", "Dine-in", "Takeout",
+    "Delivery", "Catering", "Late night",
+    ...UNIVERSAL_TAGS,
+  ],
+  Grocery: [
+    "Halal meat", "Zabiha", "Imported goods",
+    "Middle Eastern", "South Asian", "African", "Bakery",
+    ...UNIVERSAL_TAGS,
+  ],
+  Events: [
+    ...UNIVERSAL_TAGS,
+  ],
+  Creator: [
+    ...UNIVERSAL_TAGS,
+  ],
   _default: [
-    "Women-owned",
+    ...UNIVERSAL_TAGS,
     "Veteran-owned", "By appointment only", "Walk-ins welcome",
     "Islamic finance", "Halal investing", "Financial planning",
-    "Arabic-speaking", "Urdu-speaking", "Spanish-speaking",
   ],
 };
 
@@ -451,7 +464,7 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
   const handleSubmit = useCallback(() => {
     if (!name.trim()) { Alert.alert("Required", "Please enter the business name"); return; }
     if (!category) { Alert.alert("Required", "Please select a category"); return; }
-    if (category === "Healthcare" && !specialty) { Alert.alert("Required", "Please select a specialty"); return; }
+    if (SPECIALTIES[category] && !specialty) { Alert.alert("Required", "Please select a specialty"); return; }
     
     if (!email.trim()) { Alert.alert("Required", "Please enter your email for verification"); return; }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -540,7 +553,7 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
                       if (cat !== category) {
                         setCategory(cat);
                         setSelectedKeywords([]);
-                        if (cat !== "Healthcare") setSpecialty("");
+                        setSpecialty("");
                       }
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     }}
@@ -646,11 +659,11 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
               autoCapitalize="none"
             />
 
-            {category === "Healthcare" ? (
+            {SPECIALTIES[category] ? (
               <>
-                <Text style={[styles.fieldLabel, { color: colors.text }]}>Specialty *</Text>
+                <Text style={[styles.fieldLabel, { color: colors.text }]}>{category === "Healthcare" ? "Specialty" : "Type"} *</Text>
                 <View style={styles.categoryGrid}>
-                  {HEALTHCARE_SPECIALTIES.map((spec) => {
+                  {SPECIALTIES[category].map((spec) => {
                     const isSelected = specialty === spec;
                     return (
                       <Pressable

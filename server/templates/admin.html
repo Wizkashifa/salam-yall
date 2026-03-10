@@ -217,11 +217,12 @@
     <div class="tab-content" id="tab-businesses">
       <div class="section">
         <div class="section-title"><span class="icon">🏪</span> Business Submissions</div>
-        <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <div style="display:flex;gap:8px;margin-bottom:10px;">
           <button class="btn btn-sm" id="filterPending" onclick="loadBusinesses('pending')" style="background:#2A2318;color:#D4A843;">Pending</button>
           <button class="btn btn-sm" id="filterApproved" onclick="loadBusinesses('approved')" style="background:#1E1E1E;color:#9CA3AF;">Approved</button>
           <button class="btn btn-sm" id="filterRejected" onclick="loadBusinesses('rejected')" style="background:#1E1E1E;color:#9CA3AF;">Rejected</button>
         </div>
+        <input type="text" id="businessSearch" placeholder="Search businesses by name, category, or address..." style="margin-bottom:14px;" oninput="filterBusinessList()">
         <div id="businessList"><div class="loading">Loading...</div></div>
       </div>
     </div>
@@ -399,44 +400,36 @@
   <script>
     let adminToken = '';
     let editSelectedKeywords = [];
+    var cachedBusinesses = [];
     
     function toggleMobileMenu() {
       const tabBar = document.getElementById('tabBar');
       tabBar.classList.toggle('mobile-open');
     }
 
+    var UNIVERSAL_TAGS = ["Women-owned", "Arabic-speaking", "Urdu-speaking", "Spanish-speaking"];
     const BUSINESS_KEYWORDS = {
       Healthcare: [
         "Female provider", "Male provider",
         "Accepts insurance", "Cash / self-pay", "Sliding scale",
         "Telehealth available", "Walk-ins welcome", "By appointment only",
         "Pediatric", "Halal medications",
-        "Mental health", "Women's health", "Sports medicine",
-        "Arabic-speaking", "Urdu-speaking", "Spanish-speaking"
-      ],
+        "Mental health", "Women's health", "Sports medicine"
+      ].concat(UNIVERSAL_TAGS),
       Restaurant: [
         "Halal-certified", "Zabiha", "Dine-in", "Takeout",
         "Delivery", "Catering", "Late night"
-      ],
+      ].concat(UNIVERSAL_TAGS),
       Grocery: [
         "Halal meat", "Zabiha", "Imported goods",
         "Middle Eastern", "South Asian", "African", "Bakery"
-      ],
-      Events: [
-        "Venue", "Caterer", "Photography", "Videography",
-        "Decorator", "Florist", "DJ / Entertainment",
-        "Henna Artist", "Wedding Planner"
-      ],
-      Creator: [
-        "Artist", "Content Creator", "Photographer", "Videographer",
-        "Graphic Designer", "Social Media", "Podcast", "YouTube", "Blogger"
-      ],
-      _default: [
-        "Women-owned",
+      ].concat(UNIVERSAL_TAGS),
+      Events: UNIVERSAL_TAGS.slice(),
+      Creator: UNIVERSAL_TAGS.slice(),
+      _default: UNIVERSAL_TAGS.concat([
         "Veteran-owned", "By appointment only", "Walk-ins welcome",
-        "Islamic finance", "Halal investing", "Financial planning",
-        "Arabic-speaking", "Urdu-speaking", "Spanish-speaking"
-      ]
+        "Islamic finance", "Halal investing", "Financial planning"
+      ])
     };
 
     function renderKeywordChips(category, selected) {
@@ -642,8 +635,31 @@
         });
         if (res.status === 401) { handleUnauthorized(); return; }
         const businesses = await res.json();
-        if (!businesses.length) {
-          list.innerHTML = '<div class="empty-state">No ' + currentBizFilter + ' businesses</div>';
+        cachedBusinesses = businesses;
+        document.getElementById('businessSearch').value = '';
+        renderBusinessList(businesses);
+      } catch {
+        list.innerHTML = '<div class="empty-state">Failed to load businesses</div>';
+      }
+    }
+
+    function filterBusinessList() {
+      var q = (document.getElementById('businessSearch').value || '').toLowerCase().trim();
+      if (!q) { renderBusinessList(cachedBusinesses); return; }
+      var filtered = cachedBusinesses.filter(function(b) {
+        return (b.name || '').toLowerCase().includes(q) ||
+               (b.category || '').toLowerCase().includes(q) ||
+               (b.address || '').toLowerCase().includes(q) ||
+               (b.description || '').toLowerCase().includes(q) ||
+               (b.phone || '').toLowerCase().includes(q);
+      });
+      renderBusinessList(filtered);
+    }
+
+    function renderBusinessList(businesses) {
+      var list = document.getElementById('businessList');
+      if (!businesses.length) {
+          list.innerHTML = '<div class="empty-state">No ' + currentBizFilter + ' businesses found</div>';
           return;
         }
         list.innerHTML = '<ul class="message-list">' + businesses.map(b => {
@@ -675,9 +691,6 @@
             '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + actions + '</div>' +
           '</li>';
         }).join('') + '</ul>';
-      } catch {
-        list.innerHTML = '<div class="empty-state">Failed to load businesses</div>';
-      }
     }
 
     async function updateBusiness(id, status) {

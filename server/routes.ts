@@ -1188,8 +1188,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid category" });
       }
 
-      if (category === "Healthcare" && !specialty) {
-        return res.status(400).json({ error: "Specialty is required for healthcare providers" });
+      if ((category === "Healthcare" || category === "Events" || category === "Creator") && !specialty) {
+        return res.status(400).json({ error: "Specialty/type is required for " + category });
       }
 
       const keywordsArray = Array.isArray(keywords) ? keywords : [];
