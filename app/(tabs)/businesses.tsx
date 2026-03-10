@@ -950,7 +950,7 @@ export default function BusinessesScreen() {
       {showDropdown ? (
         <>
           <Pressable style={styles.dropdownOverlay} onPress={() => setShowDropdown(false)} />
-          <View style={[styles.dropdownMenu, { backgroundColor: colors.surface, borderColor: colors.border, ...(Platform.OS === "web" ? { boxShadow: "0 8px 24px rgba(0,0,0,0.15)" } as any : {}) }]}>
+          <View style={[styles.dropdownMenu, { top: headerHeight + 4, backgroundColor: colors.surface, borderColor: colors.border, ...(Platform.OS === "web" ? { boxShadow: "0 8px 24px rgba(0,0,0,0.15)" } as any : {}) }]}>
             <Pressable
               style={[styles.dropdownItem, selectedCategory === "All" && { backgroundColor: colors.prayerIconBg }]}
               onPress={() => { setSelectedCategory("All"); setShowDropdown(false); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
@@ -1102,8 +1102,9 @@ const styles = StyleSheet.create({
     zIndex: 98,
   },
   dropdownMenu: {
-    marginHorizontal: 16,
-    marginTop: 2,
+    position: "absolute" as const,
+    left: 16,
+    right: 16,
     zIndex: 100,
     borderWidth: 1,
     borderRadius: 14,

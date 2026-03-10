@@ -629,7 +629,7 @@ export default function HalalScreen() {
       {showFilterDropdown ? (
         <>
           <Pressable style={styles.filterOverlay} onPress={() => setShowFilterDropdown(false)} />
-          <View style={[styles.filterDropdownMenu, { backgroundColor: colors.surface, borderColor: colors.border, ...(Platform.OS === "web" ? { boxShadow: "0 8px 24px rgba(0,0,0,0.15)" } as any : {}) }]}>
+          <View style={[styles.filterDropdownMenu, { top: headerHeight + 4, backgroundColor: colors.surface, borderColor: colors.border, ...(Platform.OS === "web" ? { boxShadow: "0 8px 24px rgba(0,0,0,0.15)" } as any : {}) }]}>
             <ScrollView nestedScrollEnabled bounces={false}>
               <Text style={[styles.filterSectionTitle, { color: colors.textTertiary }]}>Halal Status</Text>
               {HALAL_FILTERS.map((f) => (
@@ -798,7 +798,9 @@ const styles = StyleSheet.create({
     zIndex: 98,
   },
   filterDropdownMenu: {
-    marginHorizontal: 16,
+    position: "absolute" as const,
+    left: 16,
+    right: 16,
     borderRadius: 12,
     borderWidth: 1,
     maxHeight: 400,
