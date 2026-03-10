@@ -216,6 +216,22 @@ export function getDailyContent(): DailyContent {
   return islamicReminders[dayOfYear % islamicReminders.length];
 }
 
+export function getDailyPair(): { quran: DailyContent; hadith: DailyContent } {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 0);
+  const diff = now.getTime() - start.getTime();
+  const oneDay = 1000 * 60 * 60 * 24;
+  const dayOfYear = Math.floor(diff / oneDay);
+
+  const quranVerses = islamicReminders.filter(r => r.type === "quran");
+  const hadithVerses = islamicReminders.filter(r => r.type === "hadith");
+
+  return {
+    quran: quranVerses[dayOfYear % quranVerses.length],
+    hadith: hadithVerses[dayOfYear % hadithVerses.length],
+  };
+}
+
 export function isFriday(): boolean {
   return new Date().getDay() === 5;
 }

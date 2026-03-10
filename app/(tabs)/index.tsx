@@ -50,7 +50,7 @@ import {
 } from "@/lib/prayer-utils";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { cyclePrayerStatus, getPrayerLog, type DayLog, type PrayerName as TrackerPrayerName } from "@/lib/prayer-tracker";
-import { getDailyContent, isFriday } from "@/lib/daily-content";
+import { getDailyContent, getDailyPair, isFriday } from "@/lib/daily-content";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 
 interface CalendarEvent {
@@ -676,6 +676,7 @@ export default function PrayerScreen() {
   }, []);
 
   const dailyContent = useMemo(() => getDailyContent(), []);
+  const dailyPair = useMemo(() => getDailyPair(), []);
   const fridayMode = useMemo(() => isFriday(), []);
 
   interface JumuahSchedule {
@@ -1187,7 +1188,52 @@ export default function PrayerScreen() {
               );
             })}
           </View>
-        ) : null}
+        ) : (
+          <View style={[styles.glassCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder, padding: 0, overflow: "hidden" as const }]}>
+            <View style={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <Text style={{ fontFamily: "PlayfairDisplay_700Bold", fontSize: 18, color: colors.text }}>Daily Reflections</Text>
+              </View>
+              <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textTertiary }}>
+                A verse and wisdom for your day
+              </Text>
+            </View>
+
+            <View style={{ paddingHorizontal: 20, paddingBottom: 18 }}>
+              <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12, marginBottom: 16 }}>
+                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.gold + "18", justifyContent: "center" as const, alignItems: "center" as const, marginTop: 2 }}>
+                  <Ionicons name="book" size={18} color={colors.gold} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, color: colors.gold, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: 6 }}>Quran</Text>
+                  <Text style={{ fontFamily: "PlayfairDisplay_700Bold", fontSize: 16, color: colors.text, lineHeight: 24, fontStyle: "italic" as const }}>
+                    "{dailyPair.quran.text}"
+                  </Text>
+                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textTertiary, marginTop: 6 }}>
+                    — {dailyPair.quran.source}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={{ height: 1, backgroundColor: colors.border, marginBottom: 16 }} />
+
+              <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
+                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.emerald + "18", justifyContent: "center" as const, alignItems: "center" as const, marginTop: 2 }}>
+                  <Ionicons name="chatbox-ellipses" size={18} color={colors.emerald} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, color: colors.emerald, textTransform: "uppercase" as const, letterSpacing: 0.8, marginBottom: 6 }}>Hadith</Text>
+                  <Text style={{ fontFamily: "PlayfairDisplay_700Bold", fontSize: 16, color: colors.text, lineHeight: 24, fontStyle: "italic" as const }}>
+                    "{dailyPair.hadith.text}"
+                  </Text>
+                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textTertiary, marginTop: 6 }}>
+                    — {dailyPair.hadith.source}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
 
         {nearbyHalalPreview.length > 0 ? (
           <View style={styles.halalSection}>
