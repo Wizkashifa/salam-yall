@@ -512,9 +512,7 @@ export default function PrayerScreen() {
   const communityEvents = useMemo(() => {
     if (!calendarEvents) return [];
     const now = new Date();
-    const endOfTonight = new Date(now);
-    endOfTonight.setDate(endOfTonight.getDate() + 1);
-    endOfTonight.setHours(2, 0, 0, 0);
+    const twelveHoursLater = new Date(now.getTime() + 12 * 60 * 60 * 1000);
 
     const fivePM = new Date(now);
     fivePM.setHours(17, 0, 0, 0);
@@ -526,8 +524,9 @@ export default function PrayerScreen() {
         const start = new Date(ev.start);
         const end = ev.end ? new Date(ev.end) : start;
         if (ev.isAllDay) return false;
-        const isHappeningOrUpcoming = (start >= now && start <= endOfTonight) || (start <= now && end >= now);
-        if (!isHappeningOrUpcoming) return false;
+        const isCurrentlyHappening = start <= now && end >= now;
+        const isUpcomingSoon = start >= now && start <= twelveHoursLater;
+        if (!isCurrentlyHappening && !isUpcomingSoon) return false;
         if (!isBeforeFivePM) {
           return start >= fivePM || end >= fivePM;
         }
