@@ -1168,6 +1168,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const lookupLimiter: Record<string, { count: number; resetAt: number }> = {};
+  app.post("/api/businesses/lookup", async (req, res) => {
+    try {
+      const clientIp = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress || "unknown";
+      const now = Date.now();
+      if (!lookupLimiter[clientIp] || lookupLimiter[clientIp].resetAt < now) {
+        lookupLimiter[clientIp] = { count: 0, resetAt: now + 60_000 };
+      }
+      lookupLimiter[clientIp].count++;
+      if (lookupLimiter[clientIp].count > 5) {
+        return res.status(429).json({ error: "Too many lookups. Please wait a minute before trying again." });
+      }
+
+      const { url } = req.body;
+      if (!url || typeof url !== "string" || url.length > 2000) {
+        return res.status(400).json({ error: "Please provide a valid Google Maps link" });
+      }
+
+      const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: "Lookup service is not configured" });
+      }
+
+      let resolvedUrl = url.trim();
+      if (/^https?:\/\/(maps\.app\.goo\.gl|goo\.gl)\//i.test(resolvedUrl)) {
+        try {
+          const redirectResp = await fetch(resolvedUrl, { method: "HEAD", redirect: "follow" });
+          if (redirectResp.url) resolvedUrl = redirectResp.url;
+        } catch {}
+      }
+
+      let searchQuery = "";
+      try {
+        const parsed = new URL(resolvedUrl);
+        const pathMatch = parsed.pathname.match(/\/maps\/place\/([^/@]+)/);
+        if (pathMatch) {
+          searchQuery = decodeURIComponent(pathMatch[1].replace(/\+/g, " "));
+        }
+        if (!searchQuery) {
+          const qParam = parsed.searchParams.get("q") || parsed.searchParams.get("query") || "";
+          if (qParam) searchQuery = qParam;
+        }
+        if (!searchQuery) {
+          const ftidMatch = parsed.searchParams.get("ftid");
+          const nameFromPath = parsed.pathname.match(/\/place\/([^/]+)/);
+          if (nameFromPath) searchQuery = decodeURIComponent(nameFromPath[1].replace(/\+/g, " "));
+        }
+      } catch {
+        searchQuery = resolvedUrl;
+      }
+
+      if (!searchQuery) {
+        return res.status(400).json({ error: "Could not parse a business name from that link. Try pasting the full Google Maps URL." });
+      }
+
+      const searchResp = await fetch(
+        `https://places.googleapis.com/v1/places:searchText`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": apiKey,
+            "X-Goog-FieldMask": "places.id,places.displayName,places.rating,places.userRatingCount,places.photos,places.regularOpeningHours,places.location,places.websiteUri,places.googleMapsUri,places.nationalPhoneNumber,places.formattedAddress",
+          },
+          body: JSON.stringify({ textQuery: searchQuery }),
+        }
+      );
+      const searchData = await searchResp.json();
+      const place = searchData.places?.[0];
+      if (!place) {
+        return res.status(404).json({ error: `No results found for "${searchQuery}". Double-check the link and try again.` });
+      }
+
+      const photoRef = place.photos?.[0]?.name || null;
+
+      res.json({
+        name: place.displayName?.text || "",
+        address: place.formattedAddress || "",
+        phone: place.nationalPhoneNumber || "",
+        website: place.websiteUri || "",
+        google_url: place.googleMapsUri || url,
+        rating: place.rating || null,
+        user_ratings_total: place.userRatingCount || null,
+        photo_reference: photoRef || "",
+        business_hours: place.regularOpeningHours?.weekdayDescriptions || null,
+        lat: place.location?.latitude || null,
+        lng: place.location?.longitude || null,
+        place_id: place.id || null,
+      });
+    } catch (error: any) {
+      console.error("Error looking up business:", error.message);
+      res.status(500).json({ error: "Failed to look up business" });
+    }
+  });
+
   app.post("/api/businesses/submit", async (req, res) => {
     try {
       const { name, category, description, address, phone, website, email, google_url, specialty, keywords, photo_url, booking_url, hospital_affiliation, instagram_url } = req.body;

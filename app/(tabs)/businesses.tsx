@@ -412,6 +412,27 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
   const [instagramUrl, setInstagramUrl] = useState("");
   const [hospitalAffiliation, setHospitalAffiliation] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [autoUrl, setAutoUrl] = useState("");
+  const [autoLoaded, setAutoLoaded] = useState(false);
+
+  const lookupMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/businesses/lookup", { url: autoUrl });
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      if (data.name) setName(data.name);
+      if (data.address) setAddress(data.address);
+      if (data.phone) setPhone(data.phone);
+      if (data.website) setWebsite(data.website);
+      if (data.google_url) setGoogleUrl(data.google_url);
+      setAutoLoaded(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onError: (err: any) => {
+      Alert.alert("Lookup Failed", err.message || "Could not find that business. Try entering details manually.");
+    },
+  });
 
   const availableKeywords = BUSINESS_KEYWORDS[category] || BUSINESS_KEYWORDS._default;
 
@@ -454,6 +475,8 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
     setBookingUrl("");
     setInstagramUrl("");
     setSubmitted(false);
+    setAutoUrl("");
+    setAutoLoaded(false);
   }, []);
 
   const handleClose = useCallback(() => {
@@ -525,6 +548,57 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
             <Text style={[styles.formNote, { color: colors.textSecondary }]}>
               All submissions are reviewed before being listed in the directory.
             </Text>
+
+            <View style={[styles.autoSection, { backgroundColor: colors.surface, borderColor: autoLoaded ? colors.emerald : colors.border }]}>
+              <View style={styles.autoHeader}>
+                <Ionicons name="flash" size={18} color={colors.emerald} />
+                <Text style={[styles.autoTitle, { color: colors.text }]}>Quick Add</Text>
+              </View>
+              <Text style={[styles.autoHint, { color: colors.textSecondary }]}>
+                Paste a Google Maps link and we'll fill in the details for you
+              </Text>
+              <View style={styles.autoRow}>
+                <TextInput
+                  style={[styles.autoInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text, flex: 1 }]}
+                  value={autoUrl}
+                  onChangeText={(t) => { setAutoUrl(t); setAutoLoaded(false); }}
+                  placeholder="Paste Google Maps link..."
+                  placeholderTextColor={colors.textSecondary}
+                  autoCapitalize="none"
+                  keyboardType="url"
+                />
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.autoButton,
+                    { backgroundColor: colors.emerald, opacity: pressed ? 0.8 : lookupMutation.isPending ? 0.6 : 1 },
+                  ]}
+                  onPress={() => {
+                    if (!autoUrl.trim()) { Alert.alert("Paste a link", "Enter a Google Maps URL first"); return; }
+                    lookupMutation.mutate();
+                  }}
+                  disabled={lookupMutation.isPending}
+                >
+                  {lookupMutation.isPending ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : autoLoaded ? (
+                    <Ionicons name="checkmark" size={20} color="#fff" />
+                  ) : (
+                    <Ionicons name="search" size={20} color="#fff" />
+                  )}
+                </Pressable>
+              </View>
+              {autoLoaded ? (
+                <Text style={[styles.autoSuccess, { color: colors.emerald }]}>
+                  Fields populated — review below, pick a category, then submit
+                </Text>
+              ) : null}
+            </View>
+
+            <View style={[styles.autoDivider, { borderBottomColor: colors.divider }]}>
+              <Text style={[styles.autoDividerText, { color: colors.textTertiary, backgroundColor: colors.background }]}>
+                {autoLoaded ? "Review & complete" : "Or enter manually"}
+              </Text>
+            </View>
 
             <Text style={[styles.fieldLabel, { color: colors.text }]}>Business Name *</Text>
             <TextInput
@@ -1411,6 +1485,66 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     marginBottom: 20,
     lineHeight: 18,
+  },
+  autoSection: {
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 8,
+  },
+  autoHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    marginBottom: 6,
+  },
+  autoTitle: {
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
+  },
+  autoHint: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    marginBottom: 12,
+    lineHeight: 18,
+  },
+  autoRow: {
+    flexDirection: "row" as const,
+    gap: 8,
+    alignItems: "center" as const,
+  },
+  autoInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+  },
+  autoButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  autoSuccess: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    marginTop: 10,
+  },
+  autoDivider: {
+    borderBottomWidth: 1,
+    alignItems: "center" as const,
+    marginBottom: 4,
+    marginTop: 4,
+  },
+  autoDividerText: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    paddingHorizontal: 12,
+    position: "relative" as const,
+    top: 8,
   },
   fieldLabel: {
     fontSize: 14,
