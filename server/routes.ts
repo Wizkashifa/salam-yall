@@ -2390,7 +2390,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   <meta property="og:type" content="website">
   <meta property="og:url" content="${pageUrl}">
   <meta property="og:site_name" content="Salam Y'all">
-  ${imageUrl ? `<meta property="og:image" content="${escapeHtml(imageUrl)}">` : ""}
+  <meta property="og:image" content="${imageUrl ? escapeHtml(imageUrl) : `https://${host}/app-icon.png`}">
   <meta name="twitter:card" content="${imageUrl ? "summary_large_image" : "summary"}">
   <meta name="twitter:title" content="${escapeHtml(title)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
@@ -2457,6 +2457,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   <meta property="og:type" content="website">
   <meta property="og:url" content="${pageUrl}">
   <meta property="og:site_name" content="Salam Y'all">
+  <meta property="og:image" content="https://${host}/app-icon.png">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="${escapeHtml(title)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
@@ -2518,6 +2519,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   <meta property="og:type" content="website">
   <meta property="og:url" content="${pageUrl}">
   <meta property="og:site_name" content="Salam Y'all">
+  <meta property="og:image" content="https://${host}/app-icon.png">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="${escapeHtml(title)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
