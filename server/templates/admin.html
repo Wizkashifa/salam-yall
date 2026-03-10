@@ -17,16 +17,26 @@
     .login-card button:hover { background: #14523A; }
     .login-error { color: #F87171; font-size: 13px; margin-bottom: 12px; display: none; }
 
-    .app-wrap { display: none; max-width: 600px; margin: 0 auto; padding: 20px; padding-top: 110px; padding-bottom: 40px; }
+    .app-wrap { display: none; width: 100%; margin: 0 auto; padding: 20px; padding-top: 110px; padding-bottom: 40px; max-width: 100%; }
+    @media (min-width: 768px) { .app-wrap { max-width: 90%; margin: 0 auto; } }
     .top-bar { position: fixed; top: 0; left: 0; right: 0; background: #161616; border-bottom: 1px solid #252525; z-index: 10; }
-    .top-bar-inner { max-width: 600px; margin: 0 auto; padding: 14px 20px 0; }
+    .top-bar-inner { width: 100%; margin: 0 auto; padding: 14px 20px 0; }
+    @media (min-width: 768px) { .top-bar-inner { max-width: 90%; margin: 0 auto; } }
     .top-bar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
     .top-bar h1 { font-size: 16px; color: #D4A843; }
     .top-bar button.sign-out { background: none; border: 1px solid #333; color: #9CA3AF; padding: 6px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; }
     .top-bar button.sign-out:hover { color: #F5F5F5; border-color: #555; }
 
+    .hamburger { display: none; background: none; border: none; color: #9CA3AF; font-size: 20px; cursor: pointer; padding: 4px 0; }
+    .hamburger:hover { color: #F5F5F5; }
+    @media (max-width: 767px) { .hamburger { display: block; } }
+
     .tab-bar { display: flex; gap: 0; }
+    @media (max-width: 767px) { .tab-bar { display: none; max-height: 0; overflow: hidden; position: absolute; top: 60px; left: 0; right: 0; background: #161616; border-bottom: 1px solid #252525; flex-direction: column; } }
+    @media (max-width: 767px) { .tab-bar.mobile-open { display: flex; max-height: 400px; } }
     .tab-btn { flex: 1; padding: 10px 0; font-size: 13px; font-weight: 600; color: #6B7280; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.2s; }
+    @media (max-width: 767px) { .tab-btn { flex: none; width: 100%; padding: 12px 20px; border-bottom: 1px solid #252525; border-right: 3px solid transparent; } }
+    @media (max-width: 767px) { .tab-btn.active { border-right-color: #D4A843; border-bottom-color: #252525; } }
     .tab-btn:hover { color: #9CA3AF; }
     .tab-btn.active { color: #D4A843; border-bottom-color: #D4A843; }
 
@@ -92,9 +102,12 @@
       <div class="top-bar-inner">
         <div class="top-bar-header">
           <h1>Salam Y'all Admin</h1>
-          <button class="sign-out" onclick="doLogout()">Sign Out</button>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <button class="hamburger" id="hamburgerBtn" onclick="toggleMobileMenu()">☰</button>
+            <button class="sign-out" onclick="doLogout()">Sign Out</button>
+          </div>
         </div>
-        <div class="tab-bar">
+        <div class="tab-bar" id="tabBar">
           <button class="tab-btn active" data-tab="comms" onclick="switchTab('comms')">Notifications & Ticker</button>
           <button class="tab-btn" data-tab="events" onclick="switchTab('events')">Events</button>
           <button class="tab-btn" data-tab="businesses" onclick="switchTab('businesses')">Business Submissions</button>
@@ -386,6 +399,12 @@
   <script>
     let adminToken = '';
     let editSelectedKeywords = [];
+    
+    function toggleMobileMenu() {
+      const tabBar = document.getElementById('tabBar');
+      tabBar.classList.toggle('mobile-open');
+    }
+
     const BUSINESS_KEYWORDS = {
       Healthcare: [
         "Female provider", "Male provider",
@@ -449,6 +468,10 @@
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
       document.querySelector('[data-tab="' + tab + '"]').classList.add('active');
       document.getElementById('tab-' + tab).classList.add('active');
+      const tabBar = document.getElementById('tabBar');
+      if (tabBar.classList.contains('mobile-open')) {
+        tabBar.classList.remove('mobile-open');
+      }
       if (tab === 'analytics') {
         initAnalyticsDateRange();
         loadAnalytics();
