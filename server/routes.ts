@@ -1176,9 +1176,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Name, category, and email are required" });
       }
 
-      if (!address && !google_url) {
-        return res.status(400).json({ error: "Please provide either an address or a Google Maps URL" });
-      }
+      
 
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {

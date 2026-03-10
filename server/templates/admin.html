@@ -875,7 +875,7 @@
       const search_tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(t => t) : [];
       const instagram_url = document.getElementById('editInstagramUrl').value.trim();
       const disable_enrichment = document.getElementById('editDisableEnrichment').checked;
-      if (!name || !category || !address) { showToast('Name, category, and address are required', true); return; }
+      if (!name || !category) { showToast('Name and category are required', true); return; }
       const body = { name, category, description, address, phone, website, instagram_url, disable_enrichment };
       if (specialty) body.specialty = specialty;
       if (keywords.length > 0) body.keywords = keywords;

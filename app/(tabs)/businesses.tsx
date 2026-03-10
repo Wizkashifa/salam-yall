@@ -436,7 +436,7 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
     if (!name.trim()) { Alert.alert("Required", "Please enter the business name"); return; }
     if (!category) { Alert.alert("Required", "Please select a category"); return; }
     if (category === "Healthcare" && !specialty) { Alert.alert("Required", "Please select a specialty"); return; }
-    if (!address.trim() && !googleUrl.trim()) { Alert.alert("Required", "Please enter an address or Google Maps URL"); return; }
+    
     if (!email.trim()) { Alert.alert("Required", "Please enter your email for verification"); return; }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) { Alert.alert("Invalid Email", "Please enter a valid email address"); return; }
@@ -570,7 +570,7 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
               keyboardType="url"
             />
             <Text style={[styles.fieldHint, { color: colors.textTertiary }]}>
-              Provide an address or Google Maps URL (or both). Ensure the business Google listing is up to date.
+              Optionally provide an address or Google Maps URL. Ensure the business Google listing is up to date.
             </Text>
 
             <Text style={[styles.fieldLabel, { color: colors.text }]}>Phone Number</Text>
