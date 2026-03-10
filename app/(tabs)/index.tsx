@@ -52,6 +52,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { cyclePrayerStatus, getPrayerLog, type DayLog, type PrayerName as TrackerPrayerName } from "@/lib/prayer-tracker";
 import { getDailyVerse, isFriday, type DailyVerse } from "@/lib/daily-content";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
+import { expandSearchTerms } from "@/lib/search-synonyms";
 
 interface CalendarEvent {
   id: string;
@@ -1348,9 +1349,18 @@ export default function PrayerScreen() {
                 }
                 return false;
               };
+              const synonymTerms = expandSearchTerms(q);
+              const synonymMatch = (text: string | null | undefined): boolean => {
+                if (!text) return false;
+                const t = text.toLowerCase();
+                return synonymTerms.some(term => t.includes(term));
+              };
               const eventResults = (calendarEvents || []).filter((e: any) => simpleMatch(e.title, q) || simpleMatch(e.description, q) || simpleMatch(e.organizer, q)).slice(0, 5);
               const restaurantResults = (halalRestaurants || []).filter((r: HalalRestaurant) => simpleMatch(r.name, q) || (r.cuisine_types || []).some(c => simpleMatch(c, q)) || simpleMatch(r.formatted_address, q)).slice(0, 5);
-              const businessResults = (businessesData || []).filter((b: any) => simpleMatch(b.name, q) || simpleMatch(b.category, q) || simpleMatch(b.description, q) || (b.search_tags && b.search_tags.some((t: string) => fuzzyMatch(t, q)))).slice(0, 5);
+              const businessResults = (businessesData || []).filter((b: any) => {
+                const haystack = [b.name, b.category, b.description, b.specialty, ...(b.keywords || []), ...(b.search_tags || [])].filter(Boolean).join(" ").toLowerCase();
+                return synonymTerms.some(term => haystack.includes(term));
+              }).slice(0, 5);
               const totalResults = eventResults.length + restaurantResults.length + businessResults.length;
               if (totalResults === 0) return (
                 <Text style={{ textAlign: "center", marginTop: 40, color: colors.textTertiary, fontFamily: "Inter_400Regular", fontSize: 14 }}>No results found</Text>
