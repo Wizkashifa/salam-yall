@@ -47,7 +47,7 @@ The application follows a client-server architecture:
 - Admin CRUD available at `/api/admin/iqama` (GET/POST), `/api/admin/iqama/bulk` (POST), `/api/admin/iqama/:id` (DELETE).
 
 **Key Features:**
-- **Home Screen:** Displays prayer times, Qibla direction, weather, daily Quran/Hadith, and "Tonight in the Community" events. Includes an interactive prayer tracker and a search bar.
+- **Home Screen:** Displays prayer times, Qibla direction, weather, daily Quran verse (Arabic + Dr. Mustafa Khattab translation, tappable for Ibn Kathir tafsir modal with share), Jumu'ah card on Fridays, and "Tonight in the Community" events. Includes an interactive prayer tracker and a search bar. Time-sensitive logic (iqama date, event filtering) refreshes every 60 seconds via clockTick.
 - **Halal Eats:** A directory of halal restaurants with search, filters, and distance sorting. Action buttons: Call → Website → Directions.
 - **Events:** Integrates Google Calendar to display community events with registration options.
 - **Directory:** A Muslim business directory with category filtering, Google Places integration, and enhanced submission form. Supports specialty (Healthcare), keyword tags (predefined per category), photo URL, and booking/appointment links. DB columns: `specialty VARCHAR(255)`, `keywords TEXT[]`, `photo_url TEXT`, `booking_url TEXT`.
