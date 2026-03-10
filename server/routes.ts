@@ -1596,6 +1596,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const downloadHtml = fs.readFileSync(
+    path.resolve(process.cwd(), "server", "templates", "download.html"),
+    "utf-8"
+  );
   const adminHtml = fs.readFileSync(
     path.resolve(process.cwd(), "server", "templates", "admin.html"),
     "utf-8"
@@ -1867,6 +1871,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("[Analytics] Top error:", error.message);
       res.status(500).json({ error: "Failed to fetch top analytics" });
     }
+  });
+
+  app.get("/app", (_req, res) => {
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.send(downloadHtml);
   });
 
   app.get("/admin", (_req, res) => {
