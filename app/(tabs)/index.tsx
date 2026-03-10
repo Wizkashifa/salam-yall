@@ -403,8 +403,9 @@ export default function PrayerScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [headerHeight, setHeaderHeight] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
+  const tafsirAbortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => { trackScreenView("Home"); }, []);
+  useEffect(() => { trackScreenView("Home"); return () => { if (tafsirAbortRef.current) tafsirAbortRef.current.abort(); }; }, []);
 
   const { data: calendarEvents } = useQuery<any[]>({
     queryKey: ["/api/events"],
@@ -467,10 +468,16 @@ export default function PrayerScreen() {
     return getAllMasjidsByDistance(userCoords.lat, userCoords.lon, masjidList).slice(0, 5);
   }, [userCoords, masjidList]);
 
+  const [clockTick, setClockTick] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setClockTick(t => t + 1), 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   const todayDateStr = useMemo(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  }, []);
+  }, [clockTick]);
 
   const activeIqama = useMemo(() => {
     if (!iqamaData || iqamaData.length === 0) return null;
@@ -500,7 +507,7 @@ export default function PrayerScreen() {
       || iqamaData[0];
   }, [iqamaData, preferredMasjid, todayDateStr]);
 
-  const isBeforeFivePM = useMemo(() => new Date().getHours() < 17, []);
+  const isBeforeFivePM = useMemo(() => new Date().getHours() < 17, [clockTick]);
 
   const communityEvents = useMemo(() => {
     if (!calendarEvents) return [];
@@ -679,8 +686,6 @@ export default function PrayerScreen() {
   const [showVerseModal, setShowVerseModal] = useState(false);
   const [tafsirText, setTafsirText] = useState<string | null>(null);
   const [tafsirLoading, setTafsirLoading] = useState(false);
-
-  const tafsirAbortRef = useRef<AbortController | null>(null);
 
   const openVerseModal = useCallback(async () => {
     if (tafsirAbortRef.current) tafsirAbortRef.current.abort();

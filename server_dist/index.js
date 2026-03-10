@@ -1,38 +1,14 @@
-"use strict";
-var __create = Object.create;
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getProtoOf = Object.getPrototypeOf;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-  // If the importer is in node compatibility mode or this is not an ESM
-  // file that has been converted to a CommonJS file using a Babel-
-  // compatible transform (i.e. "__esModule" has not been set), then set
-  // "default" to the CommonJS "module.exports" for node compatibility.
-  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-  mod
-));
-
 // server/index.ts
-var import_express = __toESM(require("express"));
+import express from "express";
 
 // server/routes.ts
-var import_node_http = require("node:http");
-var import_pg = __toESM(require("pg"));
-var fs = __toESM(require("fs"));
-var path = __toESM(require("path"));
+import { createServer } from "node:http";
+import pg from "pg";
+import * as fs from "fs";
+import * as path from "path";
 
 // server/google-calendar.ts
-var import_googleapis = require("googleapis");
+import { google } from "googleapis";
 var connectionSettings;
 async function getAccessToken() {
   if (connectionSettings && connectionSettings.settings.expires_at && new Date(connectionSettings.settings.expires_at).getTime() > Date.now()) {
@@ -60,9 +36,9 @@ async function getAccessToken() {
 }
 async function getUncachableGoogleCalendarClient() {
   const accessToken = await getAccessToken();
-  const oauth2Client = new import_googleapis.google.auth.OAuth2();
+  const oauth2Client = new google.auth.OAuth2();
   oauth2Client.setCredentials({ access_token: accessToken });
-  return import_googleapis.google.calendar({ version: "v3", auth: oauth2Client });
+  return google.calendar({ version: "v3", auth: oauth2Client });
 }
 
 // server/halal-seed-data.json
@@ -851,7 +827,7 @@ function startAutoRefresh() {
   }, REFRESH_INTERVAL);
 }
 function getDbPool() {
-  return new import_pg.default.Pool({
+  return new pg.Pool({
     connectionString: process.env.DATABASE_URL
   });
 }
@@ -2688,6 +2664,30 @@ async function registerRoutes(app2) {
     }
   });
   let weatherCache = null;
+  const tafsirCache = /* @__PURE__ */ new Map();
+  const TAFSIR_CACHE_MS = 24 * 60 * 60 * 1e3;
+  app2.get("/api/tafsir/:surah/:ayah", async (req, res) => {
+    try {
+      const { surah, ayah } = req.params;
+      const cacheKey = `${surah}:${ayah}`;
+      const cached = tafsirCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < TAFSIR_CACHE_MS) {
+        return res.json(cached.data);
+      }
+      const resp = await fetch(`https://api.quran.com/api/v4/tafsirs/169/by_ayah/${surah}:${ayah}`);
+      if (!resp.ok) {
+        return res.status(resp.status).json({ error: "Failed to fetch tafsir" });
+      }
+      const json = await resp.json();
+      const tafsirText = json.tafsir?.text || json.tafsirs?.[0]?.text || "";
+      const result = { surah: parseInt(surah), ayah: parseInt(ayah), text: tafsirText };
+      tafsirCache.set(cacheKey, { data: result, timestamp: Date.now() });
+      res.json(result);
+    } catch (err) {
+      console.error("[Tafsir] Error:", err);
+      res.status(500).json({ error: "Failed to fetch tafsir" });
+    }
+  });
   const WEATHER_CACHE_MS = 30 * 60 * 1e3;
   app2.get("/api/weather", async (req, res) => {
     try {
@@ -2934,7 +2934,7 @@ async function registerRoutes(app2) {
       res.status(500).send("Error loading share page");
     }
   });
-  const httpServer = (0, import_node_http.createServer)(app2);
+  const httpServer = createServer(app2);
   return httpServer;
 }
 function escapeHtml(str) {
@@ -2942,9 +2942,9 @@ function escapeHtml(str) {
 }
 
 // server/index.ts
-var fs2 = __toESM(require("fs"));
-var path2 = __toESM(require("path"));
-var app = (0, import_express.default)();
+import * as fs2 from "fs";
+import * as path2 from "path";
+var app = express();
 var log = console.log;
 function setupCors(app2) {
   app2.use((req, res, next) => {
@@ -2977,13 +2977,13 @@ function setupCors(app2) {
 }
 function setupBodyParsing(app2) {
   app2.use(
-    import_express.default.json({
+    express.json({
       verify: (req, _res, buf) => {
         req.rawBody = buf;
       }
     })
   );
-  app2.use(import_express.default.urlencoded({ extended: false }));
+  app2.use(express.urlencoded({ extended: false }));
 }
 function setupRequestLogging(app2) {
   app2.use((req, res, next) => {
@@ -3085,8 +3085,8 @@ function configureExpoAndLanding(app2) {
     }
     next();
   });
-  app2.use("/assets", import_express.default.static(path2.resolve(process.cwd(), "assets")));
-  app2.use(import_express.default.static(path2.resolve(process.cwd(), "static-build")));
+  app2.use("/assets", express.static(path2.resolve(process.cwd(), "assets")));
+  app2.use(express.static(path2.resolve(process.cwd(), "static-build")));
   log("Expo routing: Checking expo-platform header on / and /manifest");
 }
 function setupErrorHandler(app2) {
