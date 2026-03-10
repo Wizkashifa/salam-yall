@@ -680,23 +680,29 @@ export default function PrayerScreen() {
   const [tafsirText, setTafsirText] = useState<string | null>(null);
   const [tafsirLoading, setTafsirLoading] = useState(false);
 
+  const tafsirAbortRef = useRef<AbortController | null>(null);
+
   const openVerseModal = useCallback(async () => {
+    if (tafsirAbortRef.current) tafsirAbortRef.current.abort();
+    const controller = new AbortController();
+    tafsirAbortRef.current = controller;
     setShowVerseModal(true);
     setTafsirText(null);
     setTafsirLoading(true);
     try {
       const url = new URL(`/api/tafsir/${dailyVerse.surah}/${dailyVerse.ayah}`, getApiUrl());
-      const resp = await fetch(url.toString());
+      const resp = await fetch(url.toString(), { signal: controller.signal });
       if (resp.ok) {
         const data = await resp.json();
         setTafsirText(data.text || "Tafsir not available for this verse.");
       } else {
         setTafsirText("Unable to load tafsir at this time.");
       }
-    } catch {
+    } catch (err: any) {
+      if (err?.name === "AbortError") return;
       setTafsirText("Unable to load tafsir at this time.");
     } finally {
-      setTafsirLoading(false);
+      if (!controller.signal.aborted) setTafsirLoading(false);
     }
   }, [dailyVerse]);
 
@@ -1404,7 +1410,7 @@ export default function PrayerScreen() {
         </View>
       </Modal>
 
-      <Modal visible={showVerseModal} transparent animationType="slide" onRequestClose={() => setShowVerseModal(false)}>
+      <Modal visible={showVerseModal} transparent animationType="slide" onRequestClose={() => { if (tafsirAbortRef.current) tafsirAbortRef.current.abort(); setShowVerseModal(false); }}>
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}>
           <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "85%", paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 16 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: 20, paddingBottom: 12 }}>
@@ -1416,7 +1422,7 @@ export default function PrayerScreen() {
                 <Pressable onPress={shareVerse} hitSlop={8}>
                   <Ionicons name="share-outline" size={22} color={colors.emerald} />
                 </Pressable>
-                <Pressable onPress={() => setShowVerseModal(false)} hitSlop={8}>
+                <Pressable onPress={() => { if (tafsirAbortRef.current) tafsirAbortRef.current.abort(); setShowVerseModal(false); }} hitSlop={8}>
                   <Ionicons name="close" size={24} color={colors.textSecondary} />
                 </Pressable>
               </View>
