@@ -1449,9 +1449,46 @@ export default function PrayerScreen() {
                     <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: colors.textTertiary }}>Loading tafsir...</Text>
                   </View>
                 ) : tafsirText ? (
-                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: colors.textSecondary, lineHeight: 22 }}>
-                    {tafsirText.replace(/<[^>]*>/g, "")}
-                  </Text>
+                  <View>
+                    {tafsirText
+                      .replace(/<h[1-6][^>]*>/gi, "\n### ")
+                      .replace(/<\/h[1-6]>/gi, "\n")
+                      .replace(/<br\s*\/?>/gi, "\n")
+                      .replace(/<\/p>/gi, "\n\n")
+                      .replace(/<p[^>]*>/gi, "")
+                      .replace(/<li[^>]*>/gi, "\n• ")
+                      .replace(/<\/?[uo]l[^>]*>/gi, "\n")
+                      .replace(/<\/li>/gi, "")
+                      .replace(/<[^>]*>/g, "")
+                      .replace(/&amp;/g, "&")
+                      .replace(/&lt;/g, "<")
+                      .replace(/&gt;/g, ">")
+                      .replace(/&quot;/g, '"')
+                      .replace(/&#39;/g, "'")
+                      .replace(/&nbsp;/g, " ")
+                      .replace(/\n{3,}/g, "\n\n")
+                      .trim()
+                      .split("\n\n")
+                      .filter((p: string) => p.trim().length > 0)
+                      .map((paragraph: string, idx: number) => {
+                        const isHeading = paragraph.trim().startsWith("### ");
+                        const text = isHeading ? paragraph.trim().replace("### ", "") : paragraph.trim();
+                        return (
+                          <Text
+                            key={idx}
+                            style={{
+                              fontFamily: isHeading ? "Inter_600SemiBold" : "Inter_400Regular",
+                              fontSize: isHeading ? 15 : 14,
+                              color: isHeading ? colors.text : colors.textSecondary,
+                              lineHeight: isHeading ? 22 : 22,
+                              marginBottom: 12,
+                            }}
+                          >
+                            {text}
+                          </Text>
+                        );
+                      })}
+                  </View>
                 ) : null}
               </View>
             </ScrollView>
