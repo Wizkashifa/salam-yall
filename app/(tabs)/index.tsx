@@ -1220,26 +1220,7 @@ export default function PrayerScreen() {
               );
             })}
           </View>
-        ) : (
-          <Pressable
-            onPress={openVerseModal}
-            style={({ pressed }) => [styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder, opacity: pressed ? 0.85 : 1 }]}
-          >
-            <View style={styles.sectionCardHeader}>
-              <Text style={[styles.sectionCardTitle, { color: colors.text }]}>Daily Verse</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
-            </View>
-            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 24, color: colors.text, textAlign: "right" as const, lineHeight: 42, marginBottom: 14, writingDirection: "rtl" as const }}>
-              {dailyVerse.arabic}
-            </Text>
-            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 15, color: colors.text, lineHeight: 22, marginBottom: 8 }}>
-              "{dailyVerse.translation}"
-            </Text>
-            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textTertiary }}>
-              — {dailyVerse.source} · Dr. Mustafa Khattab
-            </Text>
-          </Pressable>
-        )}
+        ) : null}
 
         {nearbyHalalPreview.length > 0 ? (
           <View style={styles.halalSection}>
