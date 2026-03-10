@@ -1232,36 +1232,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const UNIVERSAL_TAGS = ["Women-owned", "Arabic-speaking", "Urdu-speaking", "Spanish-speaking"];
-  const BUSINESS_KEYWORDS: Record<string, string[]> = {
-    Healthcare: ["Female provider", "Male provider", "Accepts insurance", "Telehealth available", "Walk-ins welcome", "Pediatric", ...UNIVERSAL_TAGS],
-    Restaurant: ["Halal-certified", "Zabiha", "Dine-in", "Takeout", "Delivery", "Catering", ...UNIVERSAL_TAGS],
-    Grocery: ["Halal meat", "Zabiha", "Imported goods", "Middle Eastern", "South Asian", "Bakery", ...UNIVERSAL_TAGS],
-    Events: [...UNIVERSAL_TAGS],
-    Creator: [...UNIVERSAL_TAGS],
-    Retail: ["Women-owned", "Local artisan", ...UNIVERSAL_TAGS],
-    Automotive: ["Halal financing", ...UNIVERSAL_TAGS],
-    "Real Estate": ["Halal financing", "Islamic finance", ...UNIVERSAL_TAGS],
-    Education: ["Islamic curriculum", "Quran classes", ...UNIVERSAL_TAGS],
-    Services: ["By appointment only", "Walk-ins welcome", ...UNIVERSAL_TAGS],
-  };
-
-  function generateSearchTags(category: string, business: any): string[] {
-    const categoryTags = BUSINESS_KEYWORDS[category] || UNIVERSAL_TAGS;
-    const tags = [...new Set(categoryTags)];
-    
-    if (business.business_hours) {
-      tags.push("Hours available");
-    }
-    if (business.rating && business.rating >= 4.5) {
-      tags.push("Highly rated");
-    }
-    if (business.phone) {
-      tags.push("Call available");
-    }
-    return tags.slice(0, 8);
-  }
-
   async function enrichBusinessWithPlaces(businessId: number) {
     try {
       const apiKey = process.env.GOOGLE_PLACES_API_KEY;
@@ -1291,24 +1261,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const googleUrl = place.googleMapsUri || null;
       const placePhone = place.nationalPhoneNumber || null;
       const placeAddress = place.formattedAddress || null;
-
-      const enrichedPlace = {
-        ...place,
-        business_hours: hours,
-        phone: placePhone,
-        photo_reference: photoRef,
-        formattedAddress: placeAddress,
-      };
-
-      const searchTags = generateSearchTags(business.category, enrichedPlace);
-      const existingKeywords = business.keywords || [];
-      const mergedKeywords = [...new Set([...existingKeywords, ...searchTags])];
-
       await pool.query(
-        `UPDATE businesses SET place_id = $1, rating = $2, user_ratings_total = $3, photo_reference = $4, business_hours = $5, lat = $6, lng = $7, website = COALESCE(NULLIF($9, ''), website), google_url = COALESCE(NULLIF($10, ''), google_url), phone = COALESCE(NULLIF($11, ''), phone), address = COALESCE(NULLIF($12, ''), address), keywords = $13 WHERE id = $8`,
-        [place.id, place.rating || null, place.userRatingCount || null, photoRef, hours ? JSON.stringify(hours) : null, place.location?.latitude || null, place.location?.longitude || null, businessId, placeWebsite || '', googleUrl || '', placePhone || '', placeAddress || '', JSON.stringify(mergedKeywords)]
+        `UPDATE businesses SET place_id = $1, rating = $2, user_ratings_total = $3, photo_reference = $4, business_hours = $5, lat = $6, lng = $7, website = COALESCE(NULLIF($9, ''), website), google_url = COALESCE(NULLIF($10, ''), google_url), phone = COALESCE(NULLIF($11, ''), phone), address = COALESCE(NULLIF($12, ''), address) WHERE id = $8`,
+        [place.id, place.rating || null, place.userRatingCount || null, photoRef, hours ? JSON.stringify(hours) : null, place.location?.latitude || null, place.location?.longitude || null, businessId, placeWebsite || '', googleUrl || '', placePhone || '', placeAddress || '']
       );
-      console.log(`[Business Enrich] Enriched business #${businessId} "${business.name}" with Places data and keywords: [${mergedKeywords.join(", ")}]`);
+      console.log(`[Business Enrich] Enriched business #${businessId} "${business.name}" with Places data`);
     } catch (err: any) {
       console.error(`[Business Enrich] Error enriching business #${businessId}:`, err.message);
     }
