@@ -396,7 +396,7 @@ export default function HalalScreen() {
   const [cuisineFilter, setCuisineFilter] = useState("ALL");
   const [openNowFilter, setOpenNowFilter] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [showCuisineDropdown, setShowCuisineDropdown] = useState(false);
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedRestaurant, setSelectedRestaurant] = useState<HalalRestaurant | null>(null);
   const { pendingTarget, consumeTarget } = useDeepLink();
@@ -572,7 +572,8 @@ export default function HalalScreen() {
     [colors, isDark]
   );
 
-  const selectedCuisineLabel = CUISINE_FILTERS.find((c) => c.key === cuisineFilter)?.label || "All Cuisines";
+  const activeFilterCount = (halalFilter !== "ALL" ? 1 : 0) + (cuisineFilter !== "ALL" ? 1 : 0) + (openNowFilter ? 1 : 0);
+  const filterLabel = activeFilterCount > 0 ? `Filters (${activeFilterCount})` : "Filters";
   const isWeb = Platform.OS === "web";
 
   return (
@@ -587,143 +588,104 @@ export default function HalalScreen() {
           </View>
         </View>
         <TickerBanner />
-        <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6 }}>
-          <View style={[styles.searchBar, { backgroundColor: "rgba(255,255,255,0.12)", borderColor: "rgba(255,255,255,0.2)" }]}>
-            <Ionicons name="search-outline" size={18} color="rgba(255,255,255,0.6)" />
-            <TextInput
-              style={[styles.searchInput, { color: "#FFFFFF" }]}
-              placeholder="Search restaurants..."
-              placeholderTextColor="rgba(255,255,255,0.45)"
-              value={searchText}
-              onChangeText={setSearchText}
-              returnKeyType="search"
-              testID="halal-search"
-            />
-            {searchText ? (
-              <Pressable onPress={() => setSearchText("")} hitSlop={8}>
-                <Ionicons name="close-circle" size={18} color="rgba(255,255,255,0.6)" />
-              </Pressable>
-            ) : null}
-          </View>
-        </View>
-        <View style={styles.filtersRow}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersScroll}>
-          {HALAL_FILTERS.map((f) => (
+        <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10 }}>
+          <View style={styles.searchFilterRow}>
+            <View style={[styles.searchBar, { backgroundColor: "rgba(255,255,255,0.12)", borderColor: "rgba(255,255,255,0.2)" }]}>
+              <Ionicons name="search-outline" size={18} color="rgba(255,255,255,0.6)" />
+              <TextInput
+                style={[styles.searchInput, { color: "#FFFFFF" }]}
+                placeholder="Search restaurants..."
+                placeholderTextColor="rgba(255,255,255,0.45)"
+                value={searchText}
+                onChangeText={setSearchText}
+                returnKeyType="search"
+                testID="halal-search"
+              />
+              {searchText ? (
+                <Pressable onPress={() => setSearchText("")} hitSlop={8}>
+                  <Ionicons name="close-circle" size={18} color="rgba(255,255,255,0.6)" />
+                </Pressable>
+              ) : null}
+            </View>
+
             <Pressable
-              key={f.key}
-              style={[
-                styles.filterChip,
-                {
-                  backgroundColor: halalFilter === f.key ? colors.emerald : colors.surface,
-                  borderColor: halalFilter === f.key ? colors.emerald : colors.border,
-                },
-              ]}
-              onPress={() => setHalalFilter(f.key)}
+              style={[styles.dropdownTrigger, { backgroundColor: activeFilterCount > 0 ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.12)", borderColor: activeFilterCount > 0 ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.2)" }]}
+              onPress={() => {
+                setShowFilterDropdown(!showFilterDropdown);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+              testID="halal-filter-dropdown"
             >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  { color: halalFilter === f.key ? "#FFFFFF" : colors.textSecondary },
-                ]}
-              >
-                {f.label}
+              <Ionicons name="options-outline" size={16} color={activeFilterCount > 0 ? "#FFFFFF" : "rgba(255,255,255,0.6)"} />
+              <Text style={[styles.dropdownTriggerText, { color: activeFilterCount > 0 ? "#FFFFFF" : "rgba(255,255,255,0.6)" }]} numberOfLines={1}>
+                {filterLabel}
               </Text>
+              <Ionicons name={showFilterDropdown ? "chevron-up" : "chevron-down"} size={14} color="rgba(255,255,255,0.5)" />
             </Pressable>
-          ))}
-
-          <Pressable
-            style={[
-              styles.filterChip,
-              {
-                backgroundColor: openNowFilter ? colors.emerald : colors.surface,
-                borderColor: openNowFilter ? colors.emerald : colors.border,
-              },
-            ]}
-            onPress={() => setOpenNowFilter(!openNowFilter)}
-          >
-            <Ionicons name="time-outline" size={14} color={openNowFilter ? "#FFFFFF" : colors.textSecondary} style={{ marginRight: 4 }} />
-            <Text
-              style={[
-                styles.filterChipText,
-                { color: openNowFilter ? "#FFFFFF" : colors.textSecondary },
-              ]}
-            >
-              Open Now
-            </Text>
-          </Pressable>
-
-          <Pressable
-            style={[
-              styles.filterChip,
-              styles.cuisineChip,
-              {
-                backgroundColor: cuisineFilter !== "ALL" ? colors.gold + "20" : colors.surface,
-                borderColor: cuisineFilter !== "ALL" ? colors.gold : colors.border,
-              },
-            ]}
-            onPress={() => setShowCuisineDropdown(!showCuisineDropdown)}
-          >
-            <Text
-              style={[
-                styles.filterChipText,
-                { color: cuisineFilter !== "ALL" ? colors.gold : colors.textSecondary },
-              ]}
-              numberOfLines={1}
-            >
-              {selectedCuisineLabel}
-            </Text>
-            <Ionicons
-              name={showCuisineDropdown ? "chevron-up" : "chevron-down"}
-              size={14}
-              color={cuisineFilter !== "ALL" ? colors.gold : colors.textTertiary}
-            />
-          </Pressable>
-          </ScrollView>
+          </View>
         </View>
       </GlassHeader>
 
       <View style={{ height: headerHeight }} />
 
-      {showCuisineDropdown ? (
-        <View style={[styles.dropdown, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <ScrollView nestedScrollEnabled bounces={false}>
-            {CUISINE_FILTERS.map((c) => (
-              <Pressable
-                key={c.key}
-                style={({ pressed }) => [
-                  styles.dropdownItem,
-                  {
-                    backgroundColor:
-                      cuisineFilter === c.key
-                        ? colors.emerald + "15"
-                        : pressed
-                        ? colors.borderLight
-                        : "transparent",
-                  },
-                ]}
-                onPress={() => {
-                  setCuisineFilter(c.key);
-                  setShowCuisineDropdown(false);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.dropdownText,
-                    {
-                      color: cuisineFilter === c.key ? colors.emerald : colors.text,
-                      fontFamily: cuisineFilter === c.key ? "Inter_600SemiBold" : "Inter_400Regular",
-                    },
-                  ]}
+      {showFilterDropdown ? (
+        <>
+          <Pressable style={styles.filterOverlay} onPress={() => setShowFilterDropdown(false)} />
+          <View style={[styles.filterDropdownMenu, { backgroundColor: colors.surface, borderColor: colors.border, ...(Platform.OS === "web" ? { boxShadow: "0 8px 24px rgba(0,0,0,0.15)" } as any : {}) }]}>
+            <ScrollView nestedScrollEnabled bounces={false}>
+              <Text style={[styles.filterSectionTitle, { color: colors.textTertiary }]}>Halal Status</Text>
+              {HALAL_FILTERS.map((f) => (
+                <Pressable
+                  key={f.key}
+                  style={[styles.filterDropdownItem, halalFilter === f.key && { backgroundColor: colors.prayerIconBg }]}
+                  onPress={() => { setHalalFilter(f.key); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
                 >
-                  {c.label}
-                </Text>
-                {cuisineFilter === c.key ? (
-                  <Ionicons name="checkmark" size={16} color={colors.emerald} />
-                ) : null}
+                  <Ionicons name={f.key === "ALL" ? "grid-outline" : f.key === "IS_HALAL" ? "checkmark-circle-outline" : "ellipse-outline"} size={18} color={halalFilter === f.key ? colors.emerald : colors.textSecondary} />
+                  <Text style={[styles.filterDropdownItemText, { color: halalFilter === f.key ? colors.emerald : colors.text }]}>{f.label}</Text>
+                  {halalFilter === f.key ? <Ionicons name="checkmark" size={16} color={colors.emerald} style={{ marginLeft: "auto" }} /> : null}
+                </Pressable>
+              ))}
+
+              <View style={[styles.filterDivider, { backgroundColor: colors.border }]} />
+
+              <Pressable
+                style={[styles.filterDropdownItem, openNowFilter && { backgroundColor: colors.prayerIconBg }]}
+                onPress={() => { setOpenNowFilter(!openNowFilter); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+              >
+                <Ionicons name="time-outline" size={18} color={openNowFilter ? colors.emerald : colors.textSecondary} />
+                <Text style={[styles.filterDropdownItemText, { color: openNowFilter ? colors.emerald : colors.text }]}>Open Now</Text>
+                {openNowFilter ? <Ionicons name="checkmark" size={16} color={colors.emerald} style={{ marginLeft: "auto" }} /> : null}
               </Pressable>
-            ))}
-          </ScrollView>
-        </View>
+
+              <View style={[styles.filterDivider, { backgroundColor: colors.border }]} />
+
+              <Text style={[styles.filterSectionTitle, { color: colors.textTertiary }]}>Cuisine</Text>
+              {CUISINE_FILTERS.map((c) => (
+                <Pressable
+                  key={c.key}
+                  style={[styles.filterDropdownItem, cuisineFilter === c.key && { backgroundColor: colors.prayerIconBg }]}
+                  onPress={() => { setCuisineFilter(c.key); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                >
+                  <Text style={[styles.filterDropdownItemText, { color: cuisineFilter === c.key ? colors.emerald : colors.text }]}>{c.label}</Text>
+                  {cuisineFilter === c.key ? <Ionicons name="checkmark" size={16} color={colors.emerald} style={{ marginLeft: "auto" }} /> : null}
+                </Pressable>
+              ))}
+
+              {activeFilterCount > 0 ? (
+                <>
+                  <View style={[styles.filterDivider, { backgroundColor: colors.border }]} />
+                  <Pressable
+                    style={styles.filterDropdownItem}
+                    onPress={() => { setHalalFilter("ALL"); setCuisineFilter("ALL"); setOpenNowFilter(false); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); }}
+                  >
+                    <Ionicons name="close-circle-outline" size={18} color={colors.textSecondary} />
+                    <Text style={[styles.filterDropdownItemText, { color: colors.textSecondary }]}>Clear All Filters</Text>
+                  </Pressable>
+                </>
+              ) : null}
+            </ScrollView>
+          </View>
+        </>
       ) : null}
 
       {isLoading ? (
@@ -792,6 +754,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  searchFilterRow: {
+    flexDirection: "row" as const,
+    gap: 10,
+    alignItems: "center" as const,
+  },
   searchBar: {
     flex: 1,
     flexDirection: "row" as const,
@@ -809,47 +776,61 @@ const styles = StyleSheet.create({
     height: 42,
     paddingVertical: 0,
   },
-  filtersRow: {
-    paddingBottom: 10,
-  },
-  filtersScroll: {
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  filterChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
+  dropdownTrigger: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 42,
+    gap: 6,
+    minWidth: 90,
   },
-  cuisineChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  filterChipText: {
+  dropdownTriggerText: {
     fontSize: 13,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Inter_600SemiBold",
+    flexShrink: 1,
   },
-  dropdown: {
+  filterOverlay: {
+    position: "absolute" as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 98,
+  },
+  filterDropdownMenu: {
     marginHorizontal: 16,
-    marginTop: 6,
     borderRadius: 12,
     borderWidth: 1,
-    maxHeight: 250,
-    overflow: "hidden",
+    maxHeight: 400,
+    overflow: "hidden" as const,
+    zIndex: 99,
   },
-  dropdownItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+  filterSectionTitle: {
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+    textTransform: "uppercase" as const,
+    letterSpacing: 0.5,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  filterDropdownItem: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     paddingHorizontal: 16,
     paddingVertical: 11,
+    gap: 10,
   },
-  dropdownText: {
-    fontSize: 14,
+  filterDropdownItemText: {
+    fontSize: 15,
+    fontFamily: "Inter_400Regular",
+  },
+  filterDivider: {
+    height: 1,
+    marginHorizontal: 16,
+    marginVertical: 4,
   },
   listContent: {
     paddingHorizontal: 16,
