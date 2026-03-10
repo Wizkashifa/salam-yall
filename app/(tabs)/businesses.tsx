@@ -138,6 +138,7 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
   const insets = useSafeAreaInsets();
   const [details, setDetails] = useState<PlacesDetails | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
 
   useEffect(() => {
     if (!visible || !business) {
@@ -270,71 +271,6 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
               </View>
             ) : null}
 
-            <View style={[styles.detailSection, { borderTopColor: colors.divider }]}>
-              {business.address ? (
-                <Pressable style={styles.detailInfoRow} onPress={openMaps}>
-                  <Ionicons name="location-outline" size={18} color={colors.emerald} />
-                  <Text style={[styles.detailInfoText, { color: colors.text }]}>{business.address}</Text>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
-                </Pressable>
-              ) : business.lat ? (
-                <Pressable style={styles.detailInfoRow} onPress={openMaps}>
-                  <Ionicons name="location-outline" size={18} color={colors.emerald} />
-                  <Text style={[styles.detailInfoText, { color: colors.textSecondary, fontStyle: "italic" as const }]}>View on map</Text>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
-                </Pressable>
-              ) : null}
-
-              {business.phone ? (
-                <Pressable style={styles.detailInfoRow} onPress={() => Linking.openURL(`tel:${business.phone}`)}>
-                  <Ionicons name="call-outline" size={18} color={colors.emerald} />
-                  <Text style={[styles.detailInfoText, { color: colors.text }]}>{business.phone}</Text>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
-                </Pressable>
-              ) : null}
-
-              {business.website ? (
-                <Pressable style={styles.detailInfoRow} onPress={() => Linking.openURL(business.website)}>
-                  <Ionicons name="globe-outline" size={18} color={colors.emerald} />
-                  <Text style={[styles.detailInfoText, { color: colors.text }]} numberOfLines={1}>{business.website.replace(/^https?:\/\//, "")}</Text>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
-                </Pressable>
-              ) : null}
-
-              {business.booking_url ? (
-                <Pressable style={styles.detailInfoRow} onPress={() => Linking.openURL(business.booking_url!)}>
-                  <Ionicons name="calendar-outline" size={18} color={colors.emerald} />
-                  <Text style={[styles.detailInfoText, { color: colors.text }]}>Book an appointment</Text>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
-                </Pressable>
-              ) : null}
-            </View>
-
-            {hours && hours.length > 0 ? (
-              <View style={[styles.hoursSection, { borderTopColor: colors.divider }]}>
-                <View style={styles.hoursSectionHeader}>
-                  <Ionicons name="time-outline" size={18} color={colors.gold} />
-                  <Text style={[styles.hoursSectionTitle, { color: colors.text }]}>Hours</Text>
-                </View>
-                {hours.map((h: string, i: number) => {
-                  const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
-                  const isToday = h.toLowerCase().startsWith(today.toLowerCase());
-                  return (
-                    <Text
-                      key={i}
-                      style={[
-                        styles.hoursText,
-                        { color: isToday ? colors.text : colors.textSecondary },
-                        isToday && { fontFamily: "Inter_600SemiBold" },
-                      ]}
-                    >
-                      {h}
-                    </Text>
-                  );
-                })}
-              </View>
-            ) : null}
-
             {(() => {
               const actions: Array<{ icon: string; label: string; color: string; onPress: () => void }> = [];
               if (business.phone) actions.push({ icon: "call", label: "Call", color: colors.emerald, onPress: () => Linking.openURL(`tel:${business.phone}`) });
@@ -358,6 +294,86 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
                 </View>
               );
             })()}
+
+            {(business.address || business.phone || business.website || business.booking_url || (hours && hours.length > 0)) ? (
+              <View style={[styles.detailSection, { borderTopColor: colors.divider }]}>
+                <Pressable
+                  style={styles.expandableHeader}
+                  onPress={() => setDetailsExpanded(!detailsExpanded)}
+                >
+                  <Ionicons name="information-circle-outline" size={18} color={colors.emerald} />
+                  <Text style={[styles.expandableHeaderText, { color: colors.text }]}>Details</Text>
+                  <Ionicons name={detailsExpanded ? "chevron-up" : "chevron-down"} size={18} color={colors.textTertiary} />
+                </Pressable>
+
+                {detailsExpanded ? (
+                  <View style={{ marginTop: 8 }}>
+                    {business.address ? (
+                      <Pressable style={styles.detailInfoRow} onPress={openMaps}>
+                        <Ionicons name="location-outline" size={18} color={colors.emerald} />
+                        <Text style={[styles.detailInfoText, { color: colors.text }]}>{business.address}</Text>
+                        <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                      </Pressable>
+                    ) : business.lat ? (
+                      <Pressable style={styles.detailInfoRow} onPress={openMaps}>
+                        <Ionicons name="location-outline" size={18} color={colors.emerald} />
+                        <Text style={[styles.detailInfoText, { color: colors.textSecondary, fontStyle: "italic" as const }]}>View on map</Text>
+                        <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                      </Pressable>
+                    ) : null}
+
+                    {business.phone ? (
+                      <Pressable style={styles.detailInfoRow} onPress={() => Linking.openURL(`tel:${business.phone}`)}>
+                        <Ionicons name="call-outline" size={18} color={colors.emerald} />
+                        <Text style={[styles.detailInfoText, { color: colors.text }]}>{business.phone}</Text>
+                        <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                      </Pressable>
+                    ) : null}
+
+                    {business.website ? (
+                      <Pressable style={styles.detailInfoRow} onPress={() => Linking.openURL(business.website)}>
+                        <Ionicons name="globe-outline" size={18} color={colors.emerald} />
+                        <Text style={[styles.detailInfoText, { color: colors.text }]} numberOfLines={1}>{business.website.replace(/^https?:\/\//, "")}</Text>
+                        <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                      </Pressable>
+                    ) : null}
+
+                    {business.booking_url ? (
+                      <Pressable style={styles.detailInfoRow} onPress={() => Linking.openURL(business.booking_url!)}>
+                        <Ionicons name="calendar-outline" size={18} color={colors.emerald} />
+                        <Text style={[styles.detailInfoText, { color: colors.text }]}>Book an appointment</Text>
+                        <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                      </Pressable>
+                    ) : null}
+
+                    {hours && hours.length > 0 ? (
+                      <View style={{ marginTop: 8 }}>
+                        <View style={styles.hoursSectionHeader}>
+                          <Ionicons name="time-outline" size={18} color={colors.gold} />
+                          <Text style={[styles.hoursSectionTitle, { color: colors.text }]}>Hours</Text>
+                        </View>
+                        {hours.map((h: string, i: number) => {
+                          const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
+                          const isToday = h.toLowerCase().startsWith(today.toLowerCase());
+                          return (
+                            <Text
+                              key={i}
+                              style={[
+                                styles.hoursText,
+                                { color: isToday ? colors.text : colors.textSecondary },
+                                isToday && { fontFamily: "Inter_600SemiBold" },
+                              ]}
+                            >
+                              {h}
+                            </Text>
+                          );
+                        })}
+                      </View>
+                    ) : null}
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
           </View>
         </ScrollView>
       </View>
@@ -1296,6 +1312,17 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     paddingTop: 16,
     marginBottom: 8,
+  },
+  expandableHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    paddingVertical: 4,
+  },
+  expandableHeaderText: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    flex: 1,
   },
   detailInfoRow: {
     flexDirection: "row",
