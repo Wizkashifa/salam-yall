@@ -2410,7 +2410,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       </div>
       ${description ? `<p class="desc">${escapeHtml(description.substring(0, 180))}${description.length > 180 ? "..." : ""}</p>` : ""}
       <a href="${deepLink}" class="cta" id="open">Open in Salam Y'all</a>
-      <a href="${deepLink}" class="get-app">Don't have the app? Get Salam Y'all</a>
+      <a href="https://apps.apple.com/us/app/salam-yall/id6760231963" class="get-app">Don't have the app? Get Salam Y'all</a>
     </div>
   </div>
   <div class="footer">Salam Y'all — Your Triangle Muslim Community App</div>
@@ -2477,7 +2477,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       </div>
       ${description ? `<p class="desc">${escapeHtml(description.substring(0, 180))}${description.length > 180 ? "..." : ""}</p>` : ""}
       <a href="${deepLink}" class="cta" id="open">Open in Salam Y'all</a>
-      <a href="${deepLink}" class="get-app">Don't have the app? Get Salam Y'all</a>
+      <a href="https://apps.apple.com/us/app/salam-yall/id6760231963" class="get-app">Don't have the app? Get Salam Y'all</a>
     </div>
   </div>
   <div class="footer">Salam Y'all — Your Triangle Muslim Community App</div>
@@ -2535,7 +2535,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       </div>
       ${description ? `<p class="desc">${escapeHtml(description.substring(0, 180))}${description.length > 180 ? "..." : ""}</p>` : ""}
       <a href="${deepLink}" class="cta" id="open">Open in Salam Y'all</a>
-      <a href="${deepLink}" class="get-app">Don't have the app? Get Salam Y'all</a>
+      <a href="https://apps.apple.com/us/app/salam-yall/id6760231963" class="get-app">Don't have the app? Get Salam Y'all</a>
     </div>
   </div>
   <div class="footer">Salam Y'all — Your Triangle Muslim Community App</div>
