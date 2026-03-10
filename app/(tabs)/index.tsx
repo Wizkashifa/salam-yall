@@ -22,7 +22,6 @@ import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
 import * as Notifications from "expo-notifications";
 import { LinearGradient } from "expo-linear-gradient";
-import { Magnetometer } from "expo-sensors";
 import { useQuery } from "@tanstack/react-query";
 import { getApiUrl } from "@/lib/query-client";
 import { useDeepLink } from "@/lib/deeplink-context";
@@ -846,18 +845,40 @@ export default function PrayerScreen() {
   }, [userCoords]);
 
   const [compassHeading, setCompassHeading] = useState(0);
+  const smoothedHeadingRef = useRef(-1);
 
   useEffect(() => {
     if (Platform.OS === "web") return;
-    Magnetometer.setUpdateInterval(200);
-    const sub = Magnetometer.addListener((data) => {
-      const { x, y } = data;
-      let angle = Math.atan2(y, x) * (180 / Math.PI);
-      angle = (90 - angle + 360) % 360;
-      setCompassHeading(angle);
-    });
-    return () => sub.remove();
-  }, []);
+    let cancelled = false;
+    let sub: Location.LocationSubscription | null = null;
+
+    (async () => {
+      try {
+        const { status } = await Location.getForegroundPermissionsAsync();
+        if (status !== "granted" || cancelled) return;
+        const subscription = await Location.watchHeadingAsync((heading) => {
+          if (cancelled) { subscription.remove(); return; }
+          const raw = heading.trueHeading >= 0 ? heading.trueHeading : heading.magHeading;
+          if (smoothedHeadingRef.current < 0) {
+            smoothedHeadingRef.current = raw;
+            setCompassHeading(raw);
+            return;
+          }
+          const prev = smoothedHeadingRef.current;
+          let delta = raw - prev;
+          if (delta > 180) delta -= 360;
+          if (delta < -180) delta += 360;
+          const smoothed = (prev + delta * 0.3 + 360) % 360;
+          smoothedHeadingRef.current = smoothed;
+          setCompassHeading(smoothed);
+        });
+        if (cancelled) { subscription.remove(); return; }
+        sub = subscription;
+      } catch {}
+    })();
+
+    return () => { cancelled = true; if (sub) sub.remove(); };
+  }, [hasRealLocation]);
 
   const qiblaRotation = useMemo(() => {
     if (Platform.OS === "web") return qiblaBearing;
