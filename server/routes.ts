@@ -2666,11 +2666,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   <meta property="og:type" content="website">
   <meta property="og:url" content="${pageUrl}">
   <meta property="og:site_name" content="Salam Y'all">
-  <meta property="og:image" content="${imageUrl ? escapeHtml(imageUrl) : `https://${host}/app-icon.png`}">
-  <meta name="twitter:card" content="${imageUrl ? "summary_large_image" : "summary"}">
+  <meta property="og:image" content="${imageUrl ? escapeHtml(imageUrl) : `https://${host}/assets/images/og-share.png`}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="675">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${escapeHtml(title)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
-  ${imageUrl ? `<meta name="twitter:image" content="${escapeHtml(imageUrl)}">` : ""}
+  <meta name="twitter:image" content="${imageUrl ? escapeHtml(imageUrl) : `https://${host}/assets/images/og-share.png`}">
   <style>${sharePageStyles}</style>
 </head>
 <body>
@@ -2733,10 +2735,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   <meta property="og:type" content="website">
   <meta property="og:url" content="${pageUrl}">
   <meta property="og:site_name" content="Salam Y'all">
-  <meta property="og:image" content="https://${host}/app-icon.png">
-  <meta name="twitter:card" content="summary">
+  <meta property="og:image" content="https://${host}/assets/images/og-share.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="675">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${escapeHtml(title)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
+  <meta name="twitter:image" content="https://${host}/assets/images/og-share.png">
   <style>${sharePageStyles}</style>
 </head>
 <body>
@@ -2795,10 +2800,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   <meta property="og:type" content="website">
   <meta property="og:url" content="${pageUrl}">
   <meta property="og:site_name" content="Salam Y'all">
-  <meta property="og:image" content="https://${host}/app-icon.png">
-  <meta name="twitter:card" content="summary">
+  <meta property="og:image" content="https://${host}/assets/images/og-share.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="675">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${escapeHtml(title)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
+  <meta name="twitter:image" content="https://${host}/assets/images/og-share.png">
   <style>${sharePageStyles}</style>
 </head>
 <body>
