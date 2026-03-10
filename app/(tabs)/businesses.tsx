@@ -262,7 +262,7 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
 
             {business.specialty ? (
               <View style={[styles.specialtyRow, { backgroundColor: colors.prayerIconBg }]}>
-                <Ionicons name="medical-outline" size={14} color={colors.emerald} />
+                <Ionicons name="pricetag-outline" size={14} color={colors.emerald} />
                 <Text style={[styles.specialtyText, { color: colors.text }]}>{business.specialty}</Text>
               </View>
             ) : null}
