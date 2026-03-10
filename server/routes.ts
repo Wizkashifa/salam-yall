@@ -760,6 +760,9 @@ async function ensureBusinessesTable(pool: pg.Pool) {
   await pool.query(`UPDATE businesses SET specialty = 'Dentistry' WHERE category = 'Healthcare' AND (specialty IS NULL OR specialty = '') AND name ILIKE '%Dentistry%'`);
 
   await pool.query(`UPDATE businesses SET website = 'https://curatestudioevents.com/' WHERE name ILIKE '%Curate Studio%' AND (website IS NULL OR website = '')`);
+  await pool.query(`UPDATE businesses SET category = 'Services' WHERE category = 'Finance'`);
+  await pool.query(`UPDATE businesses SET category = 'Services' WHERE category = 'Technology'`);
+  await pool.query(`UPDATE businesses SET category = 'Events', keywords = ARRAY['Venue'] WHERE name ILIKE '%Curate Studio%' AND category != 'Events'`);
 
   const attorneySeeds = [
     { name: "Mousa Alshanteer, Associate Attorney - Brooks Pierce", desc: "Healthcare, Business, Corporate, Mergers & Acquisitions, Transactional", addr: "230 North Elm Street, 2000 Renaissance Plaza, Greensboro, NC 27401", phone: "(336) 373-8850", web: "https://www.brookspierce.com/people-mousa-alshanteer" },
@@ -1182,7 +1185,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Please provide a valid email address" });
       }
 
-      const validCategories = ["Restaurant", "Grocery", "Finance", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Technology"];
+      const validCategories = ["Restaurant", "Grocery", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Events", "Creator"];
       if (!validCategories.includes(category)) {
         return res.status(400).json({ error: "Invalid category" });
       }
@@ -1531,7 +1534,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid business ID" });
       }
       const { name, category, description, address, phone, website, google_url, specialty, keywords, photo_url, booking_url, hospital_affiliation, member_note, search_tags, disable_enrichment, instagram_url } = req.body;
-      const validCats = ["Restaurant", "Grocery", "Finance", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Technology"];
+      const validCats = ["Restaurant", "Grocery", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Events", "Creator"];
       if (category !== undefined && !validCats.includes(category)) {
         return res.status(400).json({ error: "Invalid category" });
       }

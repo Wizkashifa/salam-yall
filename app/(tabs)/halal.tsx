@@ -392,7 +392,6 @@ export default function HalalScreen() {
   const { colors, isDark } = useTheme();
   const queryClient = useQueryClient();
   const [searchText, setSearchText] = useState("");
-  const [showSearch, setShowSearch] = useState(false);
   const [halalFilter, setHalalFilter] = useState("ALL");
   const [cuisineFilter, setCuisineFilter] = useState("ALL");
   const [openNowFilter, setOpenNowFilter] = useState(false);
@@ -586,49 +585,29 @@ export default function HalalScreen() {
               Halal-certified restaurants nearby
             </Text>
           </View>
-          <Pressable
-            onPress={() => setShowSearch(!showSearch)}
-            style={({ pressed }) => [{
-              width: 36,
-              height: 36,
-              borderRadius: 18,
-              backgroundColor: "rgba(255,255,255,0.15)",
-              justifyContent: "center" as const,
-              alignItems: "center" as const,
-              opacity: pressed ? 0.7 : 1,
-            }]}
-          >
-            <Ionicons name={showSearch ? "close" : "search"} size={20} color="#FFFFFF" />
-          </Pressable>
         </View>
         <TickerBanner />
-      </GlassHeader>
-
-      <View style={{ height: headerHeight }} />
-
-      {showSearch && (
-        <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Ionicons name="search" size={18} color={colors.textTertiary} />
-          <TextInput
-            style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Search restaurants..."
-            placeholderTextColor={colors.textTertiary}
-            value={searchText}
-            onChangeText={setSearchText}
-            returnKeyType="search"
-            autoFocus
-            testID="halal-search"
-          />
-          {searchText ? (
-            <Pressable onPress={() => setSearchText("")}>
-              <Ionicons name="close-circle" size={18} color={colors.textTertiary} />
-            </Pressable>
-          ) : null}
+        <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6 }}>
+          <View style={[styles.searchBar, { backgroundColor: "rgba(255,255,255,0.12)", borderColor: "rgba(255,255,255,0.2)" }]}>
+            <Ionicons name="search-outline" size={18} color="rgba(255,255,255,0.6)" />
+            <TextInput
+              style={[styles.searchInput, { color: "#FFFFFF" }]}
+              placeholder="Search restaurants..."
+              placeholderTextColor="rgba(255,255,255,0.45)"
+              value={searchText}
+              onChangeText={setSearchText}
+              returnKeyType="search"
+              testID="halal-search"
+            />
+            {searchText ? (
+              <Pressable onPress={() => setSearchText("")} hitSlop={8}>
+                <Ionicons name="close-circle" size={18} color="rgba(255,255,255,0.6)" />
+              </Pressable>
+            ) : null}
+          </View>
         </View>
-      )}
-
-      <View style={styles.filtersRow}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersScroll}>
+        <View style={styles.filtersRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersScroll}>
           {HALAL_FILTERS.map((f) => (
             <Pressable
               key={f.key}
@@ -699,8 +678,11 @@ export default function HalalScreen() {
               color={cuisineFilter !== "ALL" ? colors.gold : colors.textTertiary}
             />
           </Pressable>
-        </ScrollView>
-      </View>
+          </ScrollView>
+        </View>
+      </GlassHeader>
+
+      <View style={{ height: headerHeight }} />
 
       {showCuisineDropdown ? (
         <View style={[styles.dropdown, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -810,25 +792,25 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginHorizontal: 16,
-    marginTop: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
+  searchBar: {
+    flex: 1,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 42,
     gap: 8,
   },
   searchInput: {
     flex: 1,
     fontSize: 15,
     fontFamily: "Inter_400Regular",
-    padding: 0,
+    height: 42,
+    paddingVertical: 0,
   },
   filtersRow: {
-    marginTop: 10,
+    paddingBottom: 10,
   },
   filtersScroll: {
     paddingHorizontal: 16,

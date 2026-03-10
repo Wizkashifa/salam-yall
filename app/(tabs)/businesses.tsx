@@ -67,22 +67,22 @@ interface PlacesDetails {
 const CATEGORY_ICONS: Record<string, { icon: string; color: string }> = {
   Restaurant: { icon: "restaurant-outline", color: "#DC2626" },
   Grocery: { icon: "cart-outline", color: "#0891B2" },
-  Finance: { icon: "cash-outline", color: "#059669" },
   Retail: { icon: "bag-handle-outline", color: "#7C3AED" },
   Automotive: { icon: "car-outline", color: "#EA580C" },
   "Real Estate": { icon: "home-outline", color: "#2563EB" },
   Healthcare: { icon: "medkit-outline", color: "#DB2777" },
   Education: { icon: "school-outline", color: "#0D9488" },
   Services: { icon: "construct-outline", color: "#6366F1" },
-  Technology: { icon: "hardware-chip-outline", color: "#4F46E5" },
+  Events: { icon: "calendar-outline", color: "#D946EF" },
+  Creator: { icon: "videocam-outline", color: "#F59E0B" },
 };
 
 function getCategoryInfo(category: string) {
   return CATEGORY_ICONS[category] || { icon: "business-outline", color: "#6B7280" };
 }
 
-const CATEGORIES = ["All", "Grocery", "Finance", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Technology"];
-const SUBMIT_CATEGORIES = ["Grocery", "Finance", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Technology"];
+const CATEGORIES = ["All", "Grocery", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Events", "Creator"];
+const SUBMIT_CATEGORIES = ["Grocery", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Events", "Creator"];
 
 const HEALTHCARE_SPECIALTIES = [
   "Primary Care", "Dentistry", "Optometry", "Ophthalmology", "Dermatology",
@@ -109,13 +109,19 @@ const BUSINESS_KEYWORDS: Record<string, string[]> = {
     "Halal meat", "Zabiha", "Imported goods",
     "Middle Eastern", "South Asian", "African", "Bakery",
   ],
-  Finance: [
-    "Islamic finance", "Halal investing",
-    "No-interest loans", "Financial planning", "Tax services",
+  Events: [
+    "Venue", "Caterer", "Photography", "Videography",
+    "Decorator", "Florist", "DJ / Entertainment",
+    "Henna Artist", "Wedding Planner",
+  ],
+  Creator: [
+    "Artist", "Content Creator", "Photographer", "Videographer",
+    "Graphic Designer", "Social Media", "Podcast", "YouTube", "Blogger",
   ],
   _default: [
     "Women-owned",
     "Veteran-owned", "By appointment only", "Walk-ins welcome",
+    "Islamic finance", "Halal investing", "Financial planning",
     "Arabic-speaking", "Urdu-speaking", "Spanish-speaking",
   ],
 };
@@ -899,48 +905,49 @@ export default function BusinessesScreen() {
           </Pressable>
         </View>
         <TickerBanner />
+        <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10 }}>
+          <View style={styles.searchFilterRow}>
+            <View style={[styles.searchBar, { backgroundColor: "rgba(255,255,255,0.12)", borderColor: "rgba(255,255,255,0.2)" }]}>
+              <Ionicons name="search-outline" size={18} color="rgba(255,255,255,0.6)" />
+              <TextInput
+                style={[styles.searchInput, { color: "#FFFFFF" }]}
+                placeholder="Search businesses..."
+                placeholderTextColor="rgba(255,255,255,0.45)"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                returnKeyType="search"
+                testID="business-search-input"
+              />
+              {searchQuery.length > 0 ? (
+                <Pressable onPress={() => setSearchQuery("")} hitSlop={8}>
+                  <Ionicons name="close-circle" size={18} color="rgba(255,255,255,0.6)" />
+                </Pressable>
+              ) : null}
+            </View>
+
+            <Pressable
+              style={[styles.dropdownTrigger, { backgroundColor: "rgba(255,255,255,0.12)", borderColor: "rgba(255,255,255,0.2)" }]}
+              onPress={() => {
+                setShowDropdown(!showDropdown);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+              testID="category-dropdown"
+            >
+              {selectedCategory !== "All" ? (
+                <Ionicons name={getCategoryInfo(selectedCategory).icon as any} size={16} color={getCategoryInfo(selectedCategory).color} />
+              ) : (
+                <Ionicons name="filter-outline" size={16} color="rgba(255,255,255,0.6)" />
+              )}
+              <Text style={[styles.dropdownTriggerText, { color: selectedCategory === "All" ? "rgba(255,255,255,0.6)" : "#FFFFFF" }]} numberOfLines={1}>
+                {selectedCategory === "All" ? "All" : selectedCategory}
+              </Text>
+              <Ionicons name={showDropdown ? "chevron-up" : "chevron-down"} size={14} color="rgba(255,255,255,0.5)" />
+            </Pressable>
+          </View>
+        </View>
       </GlassHeader>
 
-      <View style={{ paddingHorizontal: 16, paddingTop: headerHeight + 10, paddingBottom: 6, backgroundColor: colors.background }}>
-        <View style={styles.searchFilterRow}>
-          <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Ionicons name="search-outline" size={18} color={colors.textSecondary} />
-            <TextInput
-              style={[styles.searchInput, { color: colors.text }]}
-              placeholder="Search businesses..."
-              placeholderTextColor={colors.textSecondary}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              returnKeyType="search"
-              testID="business-search-input"
-            />
-            {searchQuery.length > 0 ? (
-              <Pressable onPress={() => setSearchQuery("")} hitSlop={8}>
-                <Ionicons name="close-circle" size={18} color={colors.textTertiary} />
-              </Pressable>
-            ) : null}
-          </View>
-
-          <Pressable
-            style={[styles.dropdownTrigger, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            onPress={() => {
-              setShowDropdown(!showDropdown);
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            }}
-            testID="category-dropdown"
-          >
-            {selectedCategory !== "All" ? (
-              <Ionicons name={getCategoryInfo(selectedCategory).icon as any} size={16} color={getCategoryInfo(selectedCategory).color} />
-            ) : (
-              <Ionicons name="filter-outline" size={16} color={colors.textSecondary} />
-            )}
-            <Text style={[styles.dropdownTriggerText, { color: selectedCategory === "All" ? colors.textSecondary : colors.text }]} numberOfLines={1}>
-              {selectedCategory === "All" ? "All" : selectedCategory}
-            </Text>
-            <Ionicons name={showDropdown ? "chevron-up" : "chevron-down"} size={14} color={colors.textTertiary} />
-          </Pressable>
-        </View>
-      </View>
+      <View style={{ height: headerHeight }} />
 
       {showDropdown ? (
         <>

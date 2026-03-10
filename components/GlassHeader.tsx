@@ -38,14 +38,14 @@ export function GlassHeader({ children, style, onHeaderHeight }: GlassHeaderProp
     return (
       <View style={containerStyle} onLayout={handleLayout}>
         <BlurView
-          intensity={isDark ? 120 : 80}
+          intensity={isDark ? 150 : 100}
           tint={isDark ? "systemChromeMaterialDark" : "light"}
           style={StyleSheet.absoluteFill}
         />
         <LinearGradient
           colors={[
-            colors.gradientStart + (isDark ? "CC" : "E6"),
-            colors.gradientEnd + (isDark ? "99" : "B3"),
+            colors.gradientStart + (isDark ? "99" : "CC"),
+            colors.gradientEnd + (isDark ? "66" : "99"),
           ]}
           style={StyleSheet.absoluteFill}
         />
@@ -57,7 +57,7 @@ export function GlassHeader({ children, style, onHeaderHeight }: GlassHeaderProp
   return (
     <View style={containerStyle} onLayout={handleLayout}>
       <LinearGradient
-        colors={[colors.gradientStart, colors.gradientEnd]}
+        colors={[colors.gradientStart + "E6", colors.gradientEnd + "E6"]}
         style={StyleSheet.absoluteFill}
       />
       {children}
