@@ -1774,6 +1774,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/admin/restaurants", async (req, res) => {
+    try {
+      if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+      const { name, formatted_address, formatted_phone, is_halal, halal_comment, cuisine_types, emoji, website, instagram_url, lat, lng } = req.body;
+      if (!name || !name.trim()) return res.status(400).json({ error: "Name is required" });
+      const result = await pool.query(
+        `INSERT INTO halal_restaurants (name, formatted_address, formatted_phone, is_halal, halal_comment, cuisine_types, emoji, website, instagram_url, lat, lng)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id, name`,
+        [
+          name.trim(),
+          formatted_address || null,
+          formatted_phone || null,
+          is_halal || "IS_HALAL",
+          halal_comment || null,
+          cuisine_types && cuisine_types.length ? cuisine_types : null,
+          emoji || null,
+          website || null,
+          instagram_url || null,
+          lat || null,
+          lng || null,
+        ]
+      );
+      console.log(`[Admin] Restaurant added: ${result.rows[0].name} (ID ${result.rows[0].id})`);
+      res.json(result.rows[0]);
+    } catch (error: any) {
+      console.error("Error adding restaurant:", error.message);
+      res.status(500).json({ error: "Failed to add restaurant" });
+    }
+  });
+
   app.get("/api/admin/restaurants", async (req, res) => {
     try {
       if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });

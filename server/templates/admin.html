@@ -229,6 +229,42 @@
 
     <div class="tab-content" id="tab-restaurants">
       <div class="section">
+        <div class="section-title"><span class="icon">➕</span> Add Restaurant</div>
+        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Manually add a halal restaurant. It will be auto-enriched with Google Places data (photo, hours, rating) on the next enrichment cycle.</p>
+        <div id="addRestaurantForm">
+          <div class="row">
+            <div style="flex:2"><label>Name *</label><input type="text" id="newRestName" placeholder="Restaurant name"></div>
+            <div style="flex:1"><label>Emoji</label><input type="text" id="newRestEmoji" placeholder="🍕" maxlength="4"></div>
+          </div>
+          <label>Address</label>
+          <input type="text" id="newRestAddress" placeholder="123 Main St, Raleigh, NC 27601">
+          <div class="row">
+            <div><label>Phone</label><input type="text" id="newRestPhone" placeholder="(919) 555-0123"></div>
+            <div><label>Website</label><input type="text" id="newRestWebsite" placeholder="https://..."></div>
+          </div>
+          <div class="row">
+            <div><label>Instagram</label><input type="text" id="newRestIg" placeholder="https://instagram.com/..."></div>
+            <div>
+              <label>Halal Status</label>
+              <select id="newRestHalal" style="width:100%;padding:10px 14px;background:#1E1E1E;border:1px solid #333;border-radius:10px;color:#F5F5F5;font-size:14px;">
+                <option value="IS_HALAL">Fully Halal</option>
+                <option value="PARTIALLY_HALAL">Partially Halal</option>
+                <option value="UNKNOWN">Unknown</option>
+              </select>
+            </div>
+          </div>
+          <label>Halal Details</label>
+          <input type="text" id="newRestHalalComment" placeholder="e.g. Hand-slaughtered zabiha, owner is Muslim...">
+          <label>Cuisine Types (comma-separated)</label>
+          <input type="text" id="newRestCuisines" placeholder="e.g. Middle Eastern, Mediterranean, Grill">
+          <div class="row" style="margin-top:4px;">
+            <div><label>Latitude</label><input type="text" id="newRestLat" placeholder="35.7796"></div>
+            <div><label>Longitude</label><input type="text" id="newRestLng" placeholder="-78.6382"></div>
+          </div>
+          <button class="btn btn-gold" onclick="addRestaurant()" style="margin-top:12px;width:100%;">Add Restaurant</button>
+        </div>
+      </div>
+      <div class="section">
         <div class="section-title"><span class="icon">🍽️</span> Restaurant Hours Overrides</div>
         <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Search for a restaurant and override its opening hours periods. Overrides persist across Google Places syncs.</p>
         <input type="text" id="restaurantSearch" placeholder="Search by name or address..." style="margin-bottom:14px;" oninput="debounceRestaurantSearch()">
@@ -982,6 +1018,50 @@
         if (res.ok) { showToast('Deleted'); loadJumuah(); }
         else { showToast('Failed to delete', true); }
       } catch { showToast('Connection error', true); }
+    }
+
+    async function addRestaurant() {
+      var name = document.getElementById('newRestName').value.trim();
+      if (!name) { showToast('Restaurant name is required', true); return; }
+      var cuisineStr = document.getElementById('newRestCuisines').value.trim();
+      var cuisineTypes = cuisineStr ? cuisineStr.split(',').map(function(s) { return s.trim(); }).filter(Boolean) : [];
+      var latVal = document.getElementById('newRestLat').value.trim();
+      var lngVal = document.getElementById('newRestLng').value.trim();
+      var body = {
+        name: name,
+        formatted_address: document.getElementById('newRestAddress').value.trim() || null,
+        formatted_phone: document.getElementById('newRestPhone').value.trim() || null,
+        is_halal: document.getElementById('newRestHalal').value,
+        halal_comment: document.getElementById('newRestHalalComment').value.trim() || null,
+        cuisine_types: cuisineTypes.length ? cuisineTypes : null,
+        emoji: document.getElementById('newRestEmoji').value.trim() || null,
+        website: document.getElementById('newRestWebsite').value.trim() || null,
+        instagram_url: document.getElementById('newRestIg').value.trim() || null,
+        lat: latVal ? parseFloat(latVal) : null,
+        lng: lngVal ? parseFloat(lngVal) : null,
+      };
+      try {
+        var res = await fetch('/api/admin/restaurants', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify(body),
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        var data = await res.json();
+        if (!res.ok) { showToast(data.error || 'Failed to add', true); return; }
+        showToast('Restaurant "' + data.name + '" added (ID ' + data.id + ')');
+        document.getElementById('newRestName').value = '';
+        document.getElementById('newRestAddress').value = '';
+        document.getElementById('newRestPhone').value = '';
+        document.getElementById('newRestWebsite').value = '';
+        document.getElementById('newRestIg').value = '';
+        document.getElementById('newRestHalal').value = 'IS_HALAL';
+        document.getElementById('newRestHalalComment').value = '';
+        document.getElementById('newRestCuisines').value = '';
+        document.getElementById('newRestEmoji').value = '';
+        document.getElementById('newRestLat').value = '';
+        document.getElementById('newRestLng').value = '';
+      } catch(e) { showToast('Connection error', true); }
     }
 
     var cachedAdminRestaurants = [];
