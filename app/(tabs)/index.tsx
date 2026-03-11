@@ -507,16 +507,14 @@ export default function PrayerScreen() {
       || iqamaData[0];
   }, [iqamaData, preferredMasjid, todayDateStr]);
 
-  const isBeforeFivePM = useMemo(() => new Date().getHours() < 17, [clockTick]);
+  const isDaytimeMode = useMemo(() => {
+    const h = new Date().getHours();
+    return h >= 6 && h < 17;
+  }, [clockTick]);
 
   const communityEvents = useMemo(() => {
     if (!calendarEvents) return [];
     const now = new Date();
-    const twelveHoursLater = new Date(now.getTime() + 12 * 60 * 60 * 1000);
-
-    const fivePM = new Date(now);
-    fivePM.setHours(17, 0, 0, 0);
-
     const allNearby = getAllMasjidsByDistance(userCoords.lat, userCoords.lon, masjidList).slice(0, 8);
 
     return calendarEvents
@@ -525,12 +523,19 @@ export default function PrayerScreen() {
         const end = ev.end ? new Date(ev.end) : start;
         if (ev.isAllDay) return false;
         const isCurrentlyHappening = start <= now && end >= now;
-        const isUpcomingSoon = start >= now && start <= twelveHoursLater;
-        if (!isCurrentlyHappening && !isUpcomingSoon) return false;
-        if (!isBeforeFivePM) {
+        if (isDaytimeMode) {
+          const endOfDay = new Date(now);
+          endOfDay.setHours(23, 59, 59, 999);
+          const startsToday = start >= now && start <= endOfDay;
+          return isCurrentlyHappening || startsToday;
+        } else {
+          const twelveHoursLater = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+          const fivePM = new Date(now);
+          fivePM.setHours(17, 0, 0, 0);
+          const isUpcomingSoon = start >= now && start <= twelveHoursLater;
+          if (!isCurrentlyHappening && !isUpcomingSoon) return false;
           return start >= fivePM || end >= fivePM;
         }
-        return true;
       })
       .slice(0, 4)
       .map((ev: any) => {
@@ -552,7 +557,7 @@ export default function PrayerScreen() {
           time: new Date(ev.start),
         };
       });
-  }, [calendarEvents, userCoords, isBeforeFivePM]);
+  }, [calendarEvents, userCoords, isDaytimeMode]);
 
   const nearbyHalalPreview = useMemo(() => {
     if (!halalRestaurants) return [];
@@ -1188,7 +1193,7 @@ export default function PrayerScreen() {
         {communityEvents.length > 0 ? (
           <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
             <View style={styles.sectionCardHeader}>
-              <Text style={[styles.sectionCardTitle, { color: colors.text }]}>{isBeforeFivePM ? "Today" : "Tonight"} in the Community</Text>
+              <Text style={[styles.sectionCardTitle, { color: colors.text }]}>{isDaytimeMode ? "Today" : "Tonight"} in the Community</Text>
             </View>
             {communityEvents.map((ev, idx) => {
               const title = (ev.title ?? "").toLowerCase();
