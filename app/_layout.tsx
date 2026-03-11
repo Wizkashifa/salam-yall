@@ -10,7 +10,7 @@ import {
   PlayfairDisplay_600SemiBold,
 } from "@expo-google-fonts/playfair-display";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { Stack, router } from "expo-router";
+import { Stack, router, type Href } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as Linking from "expo-linking";
 import * as Notifications from "expo-notifications";
@@ -53,7 +53,7 @@ function DeepLinkListener() {
           const tab = DEEP_LINK_TAB_MAP[target.type];
           if (tab) {
             setTimeout(() => {
-              try { router.push(tab as any); } catch {}
+              try { router.push(tab as Href); } catch {}
             }, 500);
           }
         }
@@ -86,10 +86,10 @@ function PushNotificationHandler() {
       const data = response.notification.request.content.data;
       if (data?.type === "janaza") {
         setPendingTarget({ type: "janaza", id: "" });
-        setTimeout(() => router.replace("/(tabs)/settings"), 100);
+        setTimeout(() => router.replace("/(tabs)/settings" as Href), 100);
       } else if (data?.type === "event" && data?.eventId) {
         setPendingTarget({ type: "event", id: String(data.eventId) });
-        setTimeout(() => router.replace("/(tabs)/events"), 100);
+        setTimeout(() => router.replace("/(tabs)/events" as Href), 100);
       }
     });
 
