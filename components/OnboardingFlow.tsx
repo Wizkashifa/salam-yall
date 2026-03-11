@@ -40,6 +40,12 @@ function WelcomeScreen() {
       <Text style={screenStyles.body}>
         Your companion for the Triangle NC Muslim community — prayer times, events, halal restaurants, and local businesses all in one place.
       </Text>
+      <View style={screenStyles.disclaimerWrap}>
+        <Ionicons name="information-circle-outline" size={14} color="rgba(255,255,255,0.4)" />
+        <Text style={screenStyles.disclaimerText}>
+          Halal status is community-sourced. We encourage you to trust but verify.
+        </Text>
+      </View>
     </View>
   );
 }
@@ -471,6 +477,23 @@ const screenStyles = StyleSheet.create({
   statusText: {
     fontFamily: "Inter_500Medium",
     fontSize: 16,
+  },
+  disclaimerWrap: {
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
+    gap: 6,
+    maxWidth: 300,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderRadius: 10,
+  },
+  disclaimerText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    color: "rgba(255,255,255,0.4)",
+    lineHeight: 17,
+    flex: 1,
   },
   masjidList: {
     width: "100%" as const,
