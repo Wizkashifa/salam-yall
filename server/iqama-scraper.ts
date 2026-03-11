@@ -3,6 +3,7 @@ import { generateJIARSchedule } from "./jiar-iqama-data";
 
 const IAR_API_URL = "https://raleighmasjid.org/API/prayer/month/";
 const ICMNC_API_URL = "https://www.icmnc.org/wp-json/dpt/v1/prayertime";
+const SRVIC_API_URL = "https://srvic.org/wp-json/dpt/v1/prayertime";
 const ALNOOR_URL = "https://alnooric.org/monthly-prayer-times/";
 
 export interface DayIqama {
@@ -170,6 +171,60 @@ async function fetchAndStoreICMNC(pool: pg.Pool): Promise<void> {
   }
 }
 
+async function fetchAndStoreSRVIC(pool: pg.Pool): Promise<void> {
+  try {
+    const resp = await fetch(`${SRVIC_API_URL}?filter=month`);
+    if (!resp.ok) {
+      console.error(`[Iqama] SRVIC API returned ${resp.status}`);
+      return;
+    }
+
+    const json = await resp.json() as any;
+    if (!json || !Array.isArray(json) || json.length === 0) return;
+
+    const monthObj = json[0];
+    const days: any[] = [];
+    for (const key of Object.keys(monthObj)) {
+      const entry = monthObj[key];
+      if (Array.isArray(entry) && entry.length > 0 && entry[0].d_date) {
+        days.push(entry[0]);
+      } else if (entry && entry.d_date) {
+        days.push(entry);
+      }
+    }
+
+    const values: any[] = [];
+    const placeholders: string[] = [];
+    let idx = 1;
+
+    for (const day of days) {
+      if (!day.d_date || !day.fajr_jamah || !day.isha_jamah) continue;
+      placeholders.push(`($${idx}, $${idx + 1}, $${idx + 2}, $${idx + 3}, $${idx + 4}, $${idx + 5}, $${idx + 6})`);
+      values.push(
+        "SRVIC",
+        day.d_date,
+        to12h(day.fajr_jamah),
+        to12h(day.zuhr_jamah),
+        to12h(day.asr_jamah),
+        to12h(day.maghrib_jamah),
+        to12h(day.isha_jamah)
+      );
+      idx += 7;
+    }
+
+    if (placeholders.length > 0) {
+      await pool.query(
+        `INSERT INTO iqama_schedules (masjid, date, fajr, dhuhr, asr, maghrib, isha) VALUES ${placeholders.join(", ")}
+         ON CONFLICT (masjid, date) DO UPDATE SET fajr=EXCLUDED.fajr, dhuhr=EXCLUDED.dhuhr, asr=EXCLUDED.asr, maghrib=EXCLUDED.maghrib, isha=EXCLUDED.isha, updated_at=NOW()`,
+        values
+      );
+      console.log(`[Iqama] Synced ${placeholders.length} SRVIC days`);
+    }
+  } catch (err: any) {
+    console.error("[Iqama] Error syncing SRVIC:", err.message);
+  }
+}
+
 const MONTH_ABBRS: Record<string, number> = {
   Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6,
   Jul: 7, Aug: 8, Sep: 9, Oct: 10, Nov: 11, Dec: 12,
@@ -258,6 +313,7 @@ export async function syncExternalIqama(pool: pg.Pool): Promise<void> {
   await Promise.all([
     fetchAndStoreIAR(pool, year, month),
     fetchAndStoreICMNC(pool),
+    fetchAndStoreSRVIC(pool),
     fetchAndStoreAlNoor(pool),
   ]);
 

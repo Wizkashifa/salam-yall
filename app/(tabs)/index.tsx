@@ -493,6 +493,8 @@ export default function PrayerScreen() {
         targetMasjid = "ICMNC";
       } else if (pref.includes("al-noor") || pref.includes("alnoor") || pref.includes("al noor")) {
         targetMasjid = "Al Noor";
+      } else if (pref.includes("srvic") || pref.includes("san ramon")) {
+        targetMasjid = "SRVIC";
       }
     }
 
