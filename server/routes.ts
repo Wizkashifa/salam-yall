@@ -1454,17 +1454,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/businesses/submit", async (req, res) => {
     try {
-      const { name, category, description, address, phone, website, email, google_url, specialty, keywords, photo_url, booking_url, hospital_affiliation, instagram_url } = req.body;
+      const { name, category, description, address, phone, website, google_url, specialty, keywords, photo_url, booking_url, hospital_affiliation, instagram_url } = req.body;
 
-      if (!name || !category || !email) {
-        return res.status(400).json({ error: "Name, category, and email are required" });
-      }
-
-      
-
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        return res.status(400).json({ error: "Please provide a valid email address" });
+      if (!name || !category) {
+        return res.status(400).json({ error: "Name and category are required" });
       }
 
       const validCategories = ["Restaurant", "Grocery", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Events", "Creator"];
@@ -1482,7 +1475,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `INSERT INTO businesses (name, category, description, address, phone, website, submitted_by_email, google_url, specialty, keywords, photo_url, booking_url, hospital_affiliation, instagram_url, status)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'pending')
          RETURNING id`,
-        [name, category, description || "", address || "", phone || "", website || "", email, google_url || "", specialty || "", keywordsArray, photo_url || "", booking_url || "", hospital_affiliation || "", instagram_url || ""]
+        [name, category, description || "", address || "", phone || "", website || "", "", google_url || "", specialty || "", keywordsArray, photo_url || "", booking_url || "", hospital_affiliation || "", instagram_url || ""]
       );
 
       res.status(201).json({
