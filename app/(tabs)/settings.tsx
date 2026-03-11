@@ -30,6 +30,7 @@ import {
   type Masjid,
 } from "@/lib/prayer-utils";
 import { getApiUrl } from "@/lib/query-client";
+import { useRouter } from "expo-router";
 import { useDeepLink } from "@/lib/deeplink-context";
 import { getMonthLogs, cyclePrayerStatus, getMonthMissedFasts, toggleMissedFast, type DayLog, type PrayerName } from "@/lib/prayer-tracker";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
@@ -52,6 +53,7 @@ type SettingsSection = "main" | "calcMethod" | "masjids" | "masjidDetail" | "fee
 
 export default function SettingsScreen() {
   const { colors, isDark, themeMode, setThemeMode, ramadanMode, setRamadanMode } = useTheme();
+  const router = useRouter();
   const { calcMethod, setCalcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid, setPreferredMasjid } = useSettings();
   const { user, signInWithApple, signOut, isLoading: authLoading, getAuthHeaders } = useAuth();
   const qc = useQueryClient();
@@ -61,7 +63,7 @@ export default function SettingsScreen() {
   const [feedbackText, setFeedbackText] = useState("");
   const [feedbackEmail, setFeedbackEmail] = useState("");
 
-  const { consumeTarget } = useDeepLink();
+  const { consumeTarget, setPendingTarget } = useDeepLink();
 
   useEffect(() => { trackScreenView("Settings"); }, []);
 
@@ -1070,7 +1072,15 @@ export default function SettingsScreen() {
           <>
             <Text style={[styles.sectionLabel, { color: colors.textSecondary, marginTop: 8 }]}>RATING HISTORY</Text>
             {stats.ratingHistory.map((r, i) => (
-              <View key={i} style={[styles.menuItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Pressable
+                key={i}
+                style={[styles.menuItem, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                onPress={() => {
+                  setPendingTarget({ type: r.entityType === "restaurant" ? "restaurant" : "business", id: String(r.entityId) });
+                  router.navigate(r.entityType === "restaurant" ? "/(tabs)/halal" : "/(tabs)/businesses");
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
+              >
                 <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
                   <Ionicons name={r.entityType === "restaurant" ? "restaurant-outline" : "storefront-outline"} size={18} color={colors.emerald} />
                 </View>
@@ -1085,7 +1095,8 @@ export default function SettingsScreen() {
                     <Ionicons key={s} name={s <= r.rating ? "star" : "star-outline"} size={14} color={s <= r.rating ? colors.gold : colors.textTertiary} />
                   ))}
                 </View>
-              </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+              </Pressable>
             ))}
           </>
         )}
