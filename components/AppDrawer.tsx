@@ -50,7 +50,7 @@ type DrawerSection = "main" | "settings" | "masjids" | "feedback" | "calcMethod"
 export function AppDrawer() {
   const insets = useSafeAreaInsets();
   const { colors, isDark, themeMode, setThemeMode } = useTheme();
-  const { calcMethod, setCalcMethod, notificationsEnabled, setNotificationsEnabled, menuOpen, closeMenu } = useSettings();
+  const { calcMethod, setCalcMethod, notificationsEnabled, setNotificationsEnabled, menuOpen, closeMenu, consumePendingDrawerSection } = useSettings();
   const [section, setSection] = useState<DrawerSection>("main");
   const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
@@ -74,7 +74,8 @@ export function AppDrawer() {
   useEffect(() => {
     if (menuOpen) {
       setVisible(true);
-      setSection("main");
+      const pending = consumePendingDrawerSection();
+      setSection((pending as DrawerSection) || "main");
       Animated.parallel([
         Animated.spring(slideAnim, { toValue: 0, useNativeDriver: USE_NATIVE_DRIVER, tension: 65, friction: 11 }),
         Animated.timing(overlayAnim, { toValue: 1, duration: 250, useNativeDriver: USE_NATIVE_DRIVER }),

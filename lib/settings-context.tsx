@@ -13,6 +13,9 @@ interface SettingsContextValue {
   setPreferredMasjid: (name: string | null) => void;
   menuOpen: boolean;
   openMenu: () => void;
+  openMenuToSection: (section: string) => void;
+  pendingDrawerSection: string | null;
+  consumePendingDrawerSection: () => string | null;
   closeMenu: () => void;
 }
 
@@ -26,6 +29,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [notificationsEnabled, setNotificationsEnabledState] = useState(false);
   const [preferredMasjid, setPreferredMasjidState] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [pendingDrawerSection, setPendingDrawerSection] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -61,6 +65,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const openMenu = useCallback(() => setMenuOpen(true), []);
+  const openMenuToSection = useCallback((section: string) => {
+    setPendingDrawerSection(section);
+    setMenuOpen(true);
+  }, []);
+  const consumePendingDrawerSection = useCallback(() => {
+    const s = pendingDrawerSection;
+    setPendingDrawerSection(null);
+    return s;
+  }, [pendingDrawerSection]);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
 
   return (
@@ -73,6 +86,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPreferredMasjid,
       menuOpen,
       openMenu,
+      openMenuToSection,
+      pendingDrawerSection,
+      consumePendingDrawerSection,
       closeMenu,
     }}>
       {children}

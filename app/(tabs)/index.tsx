@@ -381,7 +381,7 @@ function CountdownRing({ colors, isDark, progress, qiblaBearing, hasRealLocation
 export default function PrayerScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { calcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid, openMenu } = useSettings();
+  const { calcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid, openMenuToSection } = useSettings();
   const router = useRouter();
   const { setPendingTarget } = useDeepLink();
   const [prayers, setPrayers] = useState<PrayerTimeEntry[]>([]);
@@ -580,7 +580,7 @@ export default function PrayerScreen() {
     setHijriDate(toHijriDate(now));
     setUserCoords({ lat, lon });
 
-    const nearMosqueCheck = checkNearMosque(lat, lon);
+    const nearMosqueCheck = checkNearMosque(lat, lon, masjidList);
     setNearMosque(nearMosqueCheck);
 
     const next = getNextPrayer(todayPrayers, now);
@@ -594,7 +594,7 @@ export default function PrayerScreen() {
       setNextPrayer(tomorrowPrayers[0]);
       setCountdown(getCountdown(tomorrowPrayers[0].time, now));
     }
-  }, [calcMethod]);
+  }, [calcMethod, masjidList]);
 
   const loadPrayerData = useCallback(async () => {
     try {
@@ -614,7 +614,7 @@ export default function PrayerScreen() {
             lon = pos.coords.longitude;
             gotLocation = true;
             setLocationPermission(true);
-            const nearest = findNearestMasjid(lat, lon);
+            const nearest = findNearestMasjid(lat, lon, masjidList);
             setNearestMasjid({ name: nearest.masjid.name, distanceMiles: nearest.distanceMiles, masjid: nearest.masjid });
           } else {
             setLocationPermission(false);
@@ -664,7 +664,7 @@ export default function PrayerScreen() {
 
       loadDefaultPrayers(latitude, longitude);
 
-      const nearest = findNearestMasjid(latitude, longitude);
+      const nearest = findNearestMasjid(latitude, longitude, masjidList);
       setNearestMasjid({ name: nearest.masjid.name, distanceMiles: nearest.distanceMiles, masjid: nearest.masjid });
     } catch (err) {
       console.error("Error loading prayer data:", err);
@@ -673,7 +673,7 @@ export default function PrayerScreen() {
     } finally {
       setLoading(false);
     }
-  }, [loadDefaultPrayers]);
+  }, [loadDefaultPrayers, masjidList]);
 
   useEffect(() => {
     loadPrayerData();
@@ -1099,7 +1099,7 @@ export default function PrayerScreen() {
                 <MaterialCommunityIcons name="mosque" size={16} color={colors.gold} />
                 <Text style={[styles.iqamaCardLabel, { color: colors.gold }]}>MY MASJID, MY HOME</Text>
               </View>
-              <Pressable onPress={() => { openMenu(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} hitSlop={8}>
+              <Pressable onPress={() => { openMenuToSection("masjids"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} hitSlop={8}>
                 <Text style={[styles.iqamaCardMasjidName, { color: colors.textSecondary }]} numberOfLines={1}>{preferredMasjid.replace(/\s*\(.*\)/, "")}</Text>
               </Pressable>
             </View>
