@@ -923,6 +923,36 @@ async function ensureUserRatingsTable(pool: pg.Pool) {
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_ratings_entity ON user_ratings(entity_type, entity_id);`);
 }
 
+async function ensureRestaurantSubmissionsTable(pool: pg.Pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS restaurant_submissions (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES user_accounts(id),
+      google_maps_url TEXT NOT NULL,
+      name VARCHAR(255),
+      address TEXT,
+      place_id VARCHAR(255),
+      lat DOUBLE PRECISION,
+      lng DOUBLE PRECISION,
+      status VARCHAR(20) NOT NULL DEFAULT 'pending',
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_restaurant_submissions_status ON restaurant_submissions(status);`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS halal_verification_votes (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES user_accounts(id),
+      submission_id INTEGER NOT NULL REFERENCES restaurant_submissions(id) ON DELETE CASCADE,
+      halal_status VARCHAR(20) NOT NULL,
+      description TEXT,
+      created_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(user_id, submission_id)
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_halal_votes_submission ON halal_verification_votes(submission_id);`);
+}
+
 async function ensureHalalCheckinsTable(pool: pg.Pool) {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS halal_checkins (
@@ -955,6 +985,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await ensureUserAccountsTable(pool).catch(err => console.error("[DB] User accounts table init error:", err.message));
   await ensureUserRatingsTable(pool).catch(err => console.error("[DB] User ratings table init error:", err.message));
   await ensureHalalCheckinsTable(pool).catch(err => console.error("[DB] Halal checkins table init error:", err.message));
+  await ensureRestaurantSubmissionsTable(pool).catch(err => console.error("[DB] Restaurant submissions table init error:", err.message));
 
   startHalalAutoSync(pool);
   startIqamaSync(pool);
@@ -2559,6 +2590,150 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("[Checkins] Fetch error:", error.message);
       res.status(500).json({ error: "Failed to fetch check-ins" });
+    }
+  });
+
+  app.post("/api/restaurant-submissions", async (req, res) => {
+    try {
+      const userId = await getUserIdFromRequest(req);
+      if (!userId) return res.status(401).json({ error: "Sign in required" });
+
+      const { googleMapsUrl, name, address, placeId, lat, lng } = req.body;
+      if (!googleMapsUrl) {
+        return res.status(400).json({ error: "Google Maps URL is required" });
+      }
+
+      const existing = await pool.query(
+        "SELECT id FROM restaurant_submissions WHERE google_maps_url = $1 AND status = 'pending'",
+        [googleMapsUrl]
+      );
+      if (existing.rows.length > 0) {
+        return res.status(400).json({ error: "This restaurant has already been submitted and is awaiting verification" });
+      }
+
+      const result = await pool.query(
+        `INSERT INTO restaurant_submissions (user_id, google_maps_url, name, address, place_id, lat, lng)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+        [userId, googleMapsUrl, name || null, address || null, placeId || null, lat || null, lng || null]
+      );
+
+      res.status(201).json({ success: true, id: result.rows[0].id });
+    } catch (error: any) {
+      console.error("[Restaurant Submissions] Error:", error.message);
+      res.status(500).json({ error: "Failed to submit restaurant" });
+    }
+  });
+
+  app.get("/api/restaurant-submissions/pending", async (req, res) => {
+    try {
+      const userId = await getUserIdFromRequest(req);
+      const submissions = await pool.query(
+        `SELECT rs.*, 
+          (SELECT COUNT(*) FROM halal_verification_votes WHERE submission_id = rs.id) as vote_count,
+          CASE WHEN $1::int IS NOT NULL THEN (SELECT halal_status FROM halal_verification_votes WHERE submission_id = rs.id AND user_id = $1) ELSE NULL END as user_vote
+         FROM restaurant_submissions rs WHERE rs.status = 'pending' ORDER BY rs.created_at DESC`,
+        [userId || null]
+      );
+      res.json(submissions.rows);
+    } catch (error: any) {
+      console.error("[Restaurant Submissions] Fetch error:", error.message);
+      res.status(500).json({ error: "Failed to fetch submissions" });
+    }
+  });
+
+  app.post("/api/restaurant-submissions/:id/vote", async (req, res) => {
+    try {
+      const userId = await getUserIdFromRequest(req);
+      if (!userId) return res.status(401).json({ error: "Sign in required" });
+
+      const submissionId = parseInt(req.params.id);
+      const { halalStatus, description } = req.body;
+      if (!halalStatus || !["halal", "partial", "not_halal"].includes(halalStatus)) {
+        return res.status(400).json({ error: "halalStatus must be 'halal', 'partial', or 'not_halal'" });
+      }
+
+      await pool.query(
+        `INSERT INTO halal_verification_votes (user_id, submission_id, halal_status, description)
+         VALUES ($1, $2, $3, $4) ON CONFLICT (user_id, submission_id) DO UPDATE SET halal_status = $3, description = $4`,
+        [userId, submissionId, halalStatus, description || null]
+      );
+
+      const votes = await pool.query(
+        "SELECT halal_status, COUNT(*) as cnt FROM halal_verification_votes WHERE submission_id = $1 GROUP BY halal_status",
+        [submissionId]
+      );
+
+      let autoApproved = false;
+      for (const v of votes.rows) {
+        if (parseInt(v.cnt) >= 3) {
+          const submission = await pool.query("SELECT * FROM restaurant_submissions WHERE id = $1", [submissionId]);
+          if (submission.rows.length > 0) {
+            const sub = submission.rows[0];
+            const halalMap: Record<string, string> = { halal: "IS_HALAL", partial: "PARTIALLY_HALAL", not_halal: "NOT_HALAL" };
+            const isHalal = halalMap[v.halal_status] || "UNKNOWN";
+            await pool.query(
+              `INSERT INTO halal_restaurants (name, formatted_address, url, lat, lng, is_halal, place_id, created_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
+              [sub.name || "Community Submitted", sub.address, sub.google_maps_url, sub.lat, sub.lng, isHalal, sub.place_id]
+            );
+            await pool.query("UPDATE restaurant_submissions SET status = 'approved' WHERE id = $1", [submissionId]);
+            autoApproved = true;
+          }
+          break;
+        }
+      }
+
+      res.json({
+        success: true,
+        autoApproved,
+        votes: votes.rows.map((v: any) => ({ status: v.halal_status, count: parseInt(v.cnt) })),
+      });
+    } catch (error: any) {
+      console.error("[Verification Vote] Error:", error.message);
+      res.status(500).json({ error: "Failed to submit vote" });
+    }
+  });
+
+  app.get("/api/user/stats", async (req, res) => {
+    try {
+      const userId = await getUserIdFromRequest(req);
+      if (!userId) return res.status(401).json({ error: "Sign in required" });
+
+      const ratingsResult = await pool.query(
+        `SELECT entity_type, COUNT(*) as cnt FROM user_ratings WHERE user_id = $1 GROUP BY entity_type`,
+        [userId]
+      );
+      const ratingsHistory = await pool.query(
+        `SELECT ur.entity_type, ur.entity_id, ur.rating, ur.created_at,
+          CASE WHEN ur.entity_type = 'restaurant' THEN (SELECT name FROM halal_restaurants WHERE id = ur.entity_id)
+               WHEN ur.entity_type = 'business' THEN (SELECT name FROM businesses WHERE id = ur.entity_id)
+          END as name
+         FROM user_ratings ur WHERE ur.user_id = $1 ORDER BY ur.created_at DESC LIMIT 20`,
+        [userId]
+      );
+
+      let restaurantRatings = 0;
+      let businessRatings = 0;
+      for (const r of ratingsResult.rows) {
+        if (r.entity_type === "restaurant") restaurantRatings = parseInt(r.cnt);
+        if (r.entity_type === "business") businessRatings = parseInt(r.cnt);
+      }
+
+      res.json({
+        restaurantRatings,
+        businessRatings,
+        totalRatings: restaurantRatings + businessRatings,
+        ratingHistory: ratingsHistory.rows.map((r: any) => ({
+          entityType: r.entity_type,
+          entityId: r.entity_id,
+          rating: r.rating,
+          name: r.name,
+          createdAt: r.created_at,
+        })),
+      });
+    } catch (error: any) {
+      console.error("[User Stats] Error:", error.message);
+      res.status(500).json({ error: "Failed to fetch user stats" });
     }
   });
 

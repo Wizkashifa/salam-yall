@@ -15,7 +15,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
 import { GlassHeader } from "@/components/GlassHeader";
@@ -48,12 +48,13 @@ interface CalendarEvent {
   registrationUrl: string;
 }
 
-type SettingsSection = "main" | "calcMethod" | "masjids" | "masjidDetail" | "feedback" | "prayerTracker" | "janazaHistory";
+type SettingsSection = "main" | "calcMethod" | "masjids" | "masjidDetail" | "feedback" | "prayerTracker" | "janazaHistory" | "profile";
 
 export default function SettingsScreen() {
   const { colors, isDark, themeMode, setThemeMode, ramadanMode, setRamadanMode } = useTheme();
   const { calcMethod, setCalcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid, setPreferredMasjid } = useSettings();
-  const { user, signInWithApple, signOut, isLoading: authLoading } = useAuth();
+  const { user, signInWithApple, signOut, isLoading: authLoading, getAuthHeaders } = useAuth();
+  const qc = useQueryClient();
   const [section, setSection] = useState<SettingsSection>("main");
   const [selectedMasjid, setSelectedMasjid] = useState<Masjid | null>(null);
   const [feedbackType, setFeedbackType] = useState<"bug" | "feature">("feature");
@@ -119,6 +120,64 @@ export default function SettingsScreen() {
     queryKey: ["/api/events"],
     staleTime: 5 * 60 * 1000,
   });
+
+  const userStatsQuery = useQuery<{
+    restaurantRatings: number; businessRatings: number; totalRatings: number;
+    ratingHistory: Array<{ entityType: string; entityId: number; rating: number; name: string | null; createdAt: string }>;
+  }>({
+    queryKey: ["/api/user/stats"],
+    enabled: !!user,
+    staleTime: 30 * 1000,
+    queryFn: async () => {
+      const baseUrl = getApiUrl();
+      const res = await fetch(new URL("/api/user/stats", baseUrl).toString(), { headers: getAuthHeaders() });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+  });
+
+  const pendingSubmissionsQuery = useQuery<Array<{
+    id: number; name: string | null; google_maps_url: string; address: string | null;
+    vote_count: number; user_vote: string | null; created_at: string;
+  }>>({
+    queryKey: ["/api/restaurant-submissions/pending"],
+    enabled: !!user,
+    staleTime: 30 * 1000,
+    queryFn: async () => {
+      const baseUrl = getApiUrl();
+      const res = await fetch(new URL("/api/restaurant-submissions/pending", baseUrl).toString(), { headers: getAuthHeaders() });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+  });
+
+  const [votingId, setVotingId] = useState<number | null>(null);
+  const [voteStatus, setVoteStatus] = useState<string | null>(null);
+  const [voteDescription, setVoteDescription] = useState("");
+
+  const handleVote = useCallback(async (submissionId: number, halalStatus: string, desc: string) => {
+    try {
+      const baseUrl = getApiUrl();
+      const res = await fetch(new URL(`/api/restaurant-submissions/${submissionId}/vote`, baseUrl).toString(), {
+        method: "POST",
+        headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ halalStatus, description: desc.trim() || null }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        qc.invalidateQueries({ queryKey: ["/api/restaurant-submissions/pending"] });
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setVotingId(null);
+        setVoteStatus(null);
+        setVoteDescription("");
+        if (data.autoApproved) {
+          Alert.alert("Restaurant Approved!", "This restaurant received enough votes and has been added to Halal Eats.");
+        }
+      }
+    } catch {
+      Alert.alert("Error", "Failed to submit vote. Please try again.");
+    }
+  }, [getAuthHeaders, qc]);
 
   const handleToggleNotifications = useCallback(async () => {
     if (!notificationsEnabled) {
@@ -197,27 +256,35 @@ export default function SettingsScreen() {
   const renderMain = () => (
     <>
       {user ? (
-        <View style={[styles.accountCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Pressable
+          style={({ pressed }) => [styles.accountCard, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
+          onPress={() => { setSection("profile"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+        >
           <View style={[styles.accountAvatar, { backgroundColor: colors.emerald + "20" }]}>
             <Ionicons name="person" size={24} color={colors.emerald} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.menuLabel, { color: colors.text }]}>{user.displayName || "User"}</Text>
-            <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>{user.email || "Signed in with Apple"}</Text>
+            <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>
+              {userStatsQuery.data ? `${userStatsQuery.data.totalRatings} rating${userStatsQuery.data.totalRatings !== 1 ? "s" : ""}` : user.email || "Signed in with Apple"}
+            </Text>
           </View>
-          <Pressable onPress={handleSignOut} hitSlop={8} style={{ padding: 4 }}>
-            <Ionicons name="log-out-outline" size={20} color={colors.textSecondary} />
-          </Pressable>
-        </View>
-      ) : Platform.OS !== "web" ? (
-        <Pressable
-          style={({ pressed }) => [styles.appleSignInButton, { opacity: pressed ? 0.85 : 1 }]}
-          onPress={handleSignIn}
-          disabled={authLoading}
-        >
-          <Ionicons name="logo-apple" size={20} color="#FFFFFF" />
-          <Text style={styles.appleSignInText}>Sign in with Apple</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
         </Pressable>
+      ) : Platform.OS !== "web" ? (
+        <>
+          <Pressable
+            style={({ pressed }) => [styles.appleSignInButton, { opacity: pressed ? 0.85 : 1 }]}
+            onPress={handleSignIn}
+            disabled={authLoading}
+          >
+            <Ionicons name="logo-apple" size={20} color="#FFFFFF" />
+            <Text style={styles.appleSignInText}>Sign in with Apple</Text>
+          </Pressable>
+          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textTertiary, textAlign: "center", marginTop: 8, marginBottom: 4 }}>
+            Sign in to rate and add businesses/restaurants
+          </Text>
+        </>
       ) : (
         <View style={[styles.menuItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
@@ -225,7 +292,7 @@ export default function SettingsScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.menuLabel, { color: colors.text }]}>Sign In</Text>
-            <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>Use the mobile app to sign in with Apple</Text>
+            <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>Sign in to rate and add businesses/restaurants</Text>
           </View>
         </View>
       )}
@@ -890,6 +957,135 @@ export default function SettingsScreen() {
     );
   };
 
+  const renderProfile = () => {
+    const stats = userStatsQuery.data;
+    const pending = (pendingSubmissionsQuery.data || []).filter(s => !s.user_vote);
+    const statusChips: { key: string; label: string; color: string; icon: string }[] = [
+      { key: "halal", label: "Halal", color: "#2E7D32", icon: "checkmark-circle" },
+      { key: "partial", label: "Partial", color: "#F57C00", icon: "alert-circle" },
+      { key: "not_halal", label: "Not Halal", color: "#C62828", icon: "close-circle" },
+    ];
+    return (
+      <>
+        <Pressable
+          style={styles.backRow}
+          onPress={() => { setSection("main"); setVotingId(null); setVoteStatus(null); setVoteDescription(""); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+        >
+          <Ionicons name="arrow-back" size={20} color={colors.text} />
+          <Text style={[styles.backLabel, { color: colors.text }]}>My Profile</Text>
+        </Pressable>
+
+        <View style={[styles.accountCard, { backgroundColor: colors.surface, borderColor: colors.border, marginBottom: 16 }]}>
+          <View style={[styles.accountAvatar, { backgroundColor: colors.emerald + "20" }]}>
+            <Ionicons name="person" size={24} color={colors.emerald} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.menuLabel, { color: colors.text }]}>{user?.displayName || "User"}</Text>
+            <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>{user?.email || "Signed in with Apple"}</Text>
+          </View>
+          <Pressable onPress={handleSignOut} hitSlop={8} style={{ padding: 4 }}>
+            <Ionicons name="log-out-outline" size={20} color={colors.textSecondary} />
+          </Pressable>
+        </View>
+
+        <View style={{ flexDirection: "row", gap: 10, marginBottom: 20 }}>
+          <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: colors.border, alignItems: "center" }}>
+            <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: colors.emerald }}>{stats?.restaurantRatings ?? 0}</Text>
+            <Text style={{ fontFamily: "Inter_500Medium", fontSize: 11, color: colors.textSecondary, marginTop: 2 }}>Restaurant Ratings</Text>
+          </View>
+          <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: colors.border, alignItems: "center" }}>
+            <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: colors.emerald }}>{stats?.businessRatings ?? 0}</Text>
+            <Text style={{ fontFamily: "Inter_500Medium", fontSize: 11, color: colors.textSecondary, marginTop: 2 }}>Business Ratings</Text>
+          </View>
+        </View>
+
+        {pending.length > 0 && (
+          <>
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>HELP VERIFY</Text>
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: colors.textSecondary, marginBottom: 12, lineHeight: 18 }}>
+              Can you help us verify these restaurants are halal?
+            </Text>
+            {pending.map((sub) => (
+              <View key={sub.id} style={[styles.menuItem, { backgroundColor: colors.surface, borderColor: colors.border, flexDirection: "column", alignItems: "stretch", paddingVertical: 14 }]}>
+                <Pressable onPress={() => { setVotingId(votingId === sub.id ? null : sub.id); setVoteStatus(null); setVoteDescription(""); }}>
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <Ionicons name="restaurant-outline" size={18} color={colors.emerald} />
+                    <View style={{ flex: 1, marginLeft: 10 }}>
+                      <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: colors.text }}>{sub.name || "Unknown Restaurant"}</Text>
+                      {sub.address ? <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textSecondary, marginTop: 2 }} numberOfLines={1}>{sub.address}</Text> : null}
+                    </View>
+                    <View style={{ backgroundColor: colors.emerald + "20", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 }}>
+                      <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, color: colors.emerald }}>{sub.vote_count} vote{parseInt(String(sub.vote_count)) !== 1 ? "s" : ""}</Text>
+                    </View>
+                  </View>
+                </Pressable>
+                {votingId === sub.id && (
+                  <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
+                    <View style={{ flexDirection: "row", gap: 8 }}>
+                      {statusChips.map((chip) => (
+                        <Pressable
+                          key={chip.key}
+                          onPress={() => { setVoteStatus(chip.key); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                          style={{
+                            flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4,
+                            paddingVertical: 10, borderRadius: 8, borderWidth: 2,
+                            borderColor: voteStatus === chip.key ? chip.color : colors.border,
+                            backgroundColor: voteStatus === chip.key ? chip.color + "18" : "transparent",
+                          }}
+                        >
+                          <Ionicons name={chip.icon as any} size={16} color={voteStatus === chip.key ? chip.color : colors.textSecondary} />
+                          <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: voteStatus === chip.key ? chip.color : colors.textSecondary }}>{chip.label}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                    <TextInput
+                      style={{ backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, fontFamily: "Inter_400Regular", fontSize: 13, color: colors.text, marginTop: 8 }}
+                      placeholder="Optional description..."
+                      placeholderTextColor={colors.textTertiary}
+                      value={voteDescription}
+                      onChangeText={setVoteDescription}
+                    />
+                    <Pressable
+                      onPress={() => voteStatus && handleVote(sub.id, voteStatus, voteDescription)}
+                      disabled={!voteStatus}
+                      style={{ marginTop: 8, backgroundColor: voteStatus ? colors.emerald : colors.border, paddingVertical: 10, borderRadius: 8, alignItems: "center" }}
+                    >
+                      <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff" }}>Submit Vote</Text>
+                    </Pressable>
+                  </View>
+                )}
+              </View>
+            ))}
+          </>
+        )}
+
+        {stats && stats.ratingHistory.length > 0 && (
+          <>
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary, marginTop: 8 }]}>RATING HISTORY</Text>
+            {stats.ratingHistory.map((r, i) => (
+              <View key={i} style={[styles.menuItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
+                  <Ionicons name={r.entityType === "restaurant" ? "restaurant-outline" : "storefront-outline"} size={18} color={colors.emerald} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.menuLabel, { color: colors.text }]}>{r.name || "Unknown"}</Text>
+                  <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>
+                    {new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: "row", gap: 2 }}>
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <Ionicons key={s} name={s <= r.rating ? "star" : "star-outline"} size={14} color={s <= r.rating ? colors.gold : colors.textTertiary} />
+                  ))}
+                </View>
+              </View>
+            ))}
+          </>
+        )}
+      </>
+    );
+  };
+
   const janazaHistoryQuery = useQuery<{ id: number; masjid_name: string; details: string; created_at: string }[]>({
     queryKey: ["/api/janaza-history"],
     enabled: section === "janazaHistory",
@@ -961,6 +1157,7 @@ export default function SettingsScreen() {
         {section === "feedback" && renderFeedback()}
         {section === "prayerTracker" && renderPrayerTracker()}
         {section === "janazaHistory" && renderJanazaHistory()}
+        {section === "profile" && renderProfile()}
       </ScrollView>
     </View>
   );

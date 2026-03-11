@@ -635,6 +635,188 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
   );
 }
 
+function SubmitRestaurantModal({ visible, onClose, colors }: { visible: boolean; onClose: () => void; colors: any }) {
+  const insets = useSafeAreaInsets();
+  const { user, signInWithApple, getAuthHeaders } = useAuth();
+  const [googleUrl, setGoogleUrl] = useState("");
+  const [halalStatus, setHalalStatus] = useState<"halal" | "partial" | "not_halal" | null>(null);
+  const [description, setDescription] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [lookingUp, setLookingUp] = useState(false);
+  const [restaurantName, setRestaurantName] = useState("");
+
+  useEffect(() => {
+    if (!visible) {
+      setGoogleUrl("");
+      setHalalStatus(null);
+      setDescription("");
+      setSuccess(false);
+      setRestaurantName("");
+    }
+  }, [visible]);
+
+  const handleLookup = async () => {
+    if (!googleUrl.trim()) return;
+    setLookingUp(true);
+    try {
+      const baseUrl = getApiUrl();
+      const res = await fetch(new URL("/api/businesses/lookup", baseUrl).toString(), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: googleUrl.trim() }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.name) setRestaurantName(data.name);
+      }
+    } catch {}
+    setLookingUp(false);
+  };
+
+  const handleSubmit = async () => {
+    if (!googleUrl.trim() || !halalStatus) {
+      Alert.alert("Missing Info", "Please provide a Google Maps link and select a halal status.");
+      return;
+    }
+    if (!user) {
+      try {
+        await signInWithApple();
+      } catch {
+        return;
+      }
+    }
+    setSubmitting(true);
+    try {
+      const baseUrl = getApiUrl();
+      const headers = { ...getAuthHeaders(), "Content-Type": "application/json" };
+      const subRes = await fetch(new URL("/api/restaurant-submissions", baseUrl).toString(), {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ googleMapsUrl: googleUrl.trim(), name: restaurantName || null }),
+      });
+      if (!subRes.ok) {
+        const err = await subRes.json();
+        Alert.alert("Error", err.error || "Failed to submit");
+        setSubmitting(false);
+        return;
+      }
+      const subData = await subRes.json();
+      await fetch(new URL(`/api/restaurant-submissions/${subData.id}/vote`, baseUrl).toString(), {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ halalStatus, description: description.trim() || null }),
+      });
+      setSuccess(true);
+    } catch (e: any) {
+      Alert.alert("Error", "Something went wrong. Please try again.");
+    }
+    setSubmitting(false);
+  };
+
+  const statusChips: { key: "halal" | "partial" | "not_halal"; label: string; color: string; icon: string }[] = [
+    { key: "halal", label: "Halal", color: "#2E7D32", icon: "checkmark-circle" },
+    { key: "partial", label: "Partial", color: "#F57C00", icon: "alert-circle" },
+    { key: "not_halal", label: "Not Halal", color: "#C62828", icon: "close-circle" },
+  ];
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingTop: Platform.OS === "web" ? 20 : insets.top + 10, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+          <Text style={{ fontFamily: "Inter_700Bold", fontSize: 18, color: colors.text }}>Submit a Restaurant</Text>
+          <Pressable onPress={onClose} hitSlop={10}>
+            <Ionicons name="close" size={24} color={colors.textSecondary} />
+          </Pressable>
+        </View>
+        {success ? (
+          <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 40 }}>
+            <Ionicons name="checkmark-circle" size={64} color={colors.emerald} />
+            <Text style={{ fontFamily: "Inter_700Bold", fontSize: 20, color: colors.text, marginTop: 16, textAlign: "center" }}>Thank You!</Text>
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: colors.textSecondary, marginTop: 8, textAlign: "center", lineHeight: 20 }}>
+              Your submission is now awaiting community verification. Once 3 people confirm the halal status, it will be automatically added.
+            </Text>
+            <Pressable onPress={onClose} style={{ marginTop: 24, backgroundColor: colors.emerald, paddingHorizontal: 32, paddingVertical: 12, borderRadius: 10 }}>
+              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#fff" }}>Done</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
+            <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: colors.text, marginBottom: 8 }}>Google Maps Link</Text>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <TextInput
+                style={{ flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontFamily: "Inter_400Regular", fontSize: 14, color: colors.text }}
+                placeholder="Paste Google Maps URL..."
+                placeholderTextColor={colors.textTertiary}
+                value={googleUrl}
+                onChangeText={setGoogleUrl}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <Pressable
+                onPress={handleLookup}
+                style={{ backgroundColor: colors.emerald, width: 44, borderRadius: 10, justifyContent: "center", alignItems: "center", opacity: lookingUp ? 0.6 : 1 }}
+                disabled={lookingUp}
+              >
+                <Ionicons name={lookingUp ? "hourglass" : "search"} size={20} color="#fff" />
+              </Pressable>
+            </View>
+            {restaurantName ? (
+              <View style={{ marginTop: 10, backgroundColor: colors.surface, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: colors.border }}>
+                <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: colors.textSecondary }}>Found:</Text>
+                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 15, color: colors.text, marginTop: 2 }}>{restaurantName}</Text>
+              </View>
+            ) : null}
+
+            <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: colors.text, marginTop: 24, marginBottom: 8 }}>Halal Verification</Text>
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: colors.textSecondary, marginBottom: 12, lineHeight: 18 }}>
+              Based on your experience, how would you classify this restaurant's halal status?
+            </Text>
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              {statusChips.map((chip) => (
+                <Pressable
+                  key={chip.key}
+                  onPress={() => { setHalalStatus(chip.key); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                  style={{
+                    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+                    paddingVertical: 12, borderRadius: 10, borderWidth: 2,
+                    borderColor: halalStatus === chip.key ? chip.color : colors.border,
+                    backgroundColor: halalStatus === chip.key ? chip.color + "18" : colors.surface,
+                  }}
+                >
+                  <Ionicons name={chip.icon as any} size={18} color={halalStatus === chip.key ? chip.color : colors.textSecondary} />
+                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: halalStatus === chip.key ? chip.color : colors.textSecondary }}>{chip.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: colors.text, marginTop: 24, marginBottom: 8 }}>Description (Optional)</Text>
+            <TextInput
+              style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontFamily: "Inter_400Regular", fontSize: 14, color: colors.text, minHeight: 80, textAlignVertical: "top" }}
+              placeholder="Any details about their halal status..."
+              placeholderTextColor={colors.textTertiary}
+              value={description}
+              onChangeText={setDescription}
+              multiline
+            />
+
+            <Pressable
+              onPress={handleSubmit}
+              disabled={submitting || !googleUrl.trim() || !halalStatus}
+              style={{
+                marginTop: 28, backgroundColor: colors.emerald, paddingVertical: 14, borderRadius: 12, alignItems: "center",
+                opacity: submitting || !googleUrl.trim() || !halalStatus ? 0.5 : 1,
+              }}
+            >
+              <Text style={{ fontFamily: "Inter_700Bold", fontSize: 16, color: "#fff" }}>{submitting ? "Submitting..." : "Submit Restaurant"}</Text>
+            </Pressable>
+          </ScrollView>
+        )}
+      </View>
+    </Modal>
+  );
+}
+
 export default function HalalScreen() {
   const { colors, isDark } = useTheme();
   const queryClient = useQueryClient();
@@ -646,6 +828,7 @@ export default function HalalScreen() {
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedRestaurant, setSelectedRestaurant] = useState<HalalRestaurant | null>(null);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
   const { pendingTarget, consumeTarget } = useDeepLink();
   const [headerHeight, setHeaderHeight] = useState(0);
 
@@ -850,6 +1033,12 @@ export default function HalalScreen() {
               Halal-certified restaurants nearby
             </Text>
           </View>
+          <Pressable
+            style={({ pressed }) => [{ width: 36, height: 36, borderRadius: 18, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(255,255,255,0.15)", opacity: pressed ? 0.8 : 1 }]}
+            onPress={() => { setShowSubmitModal(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); }}
+          >
+            <Ionicons name="add" size={20} color="#fff" />
+          </Pressable>
         </View>
         <TickerBanner />
         <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10 }}>
@@ -1007,6 +1196,11 @@ export default function HalalScreen() {
         onClose={() => { setSelectedRestaurant(null); }}
         colors={colors}
         isDark={isDark}
+      />
+      <SubmitRestaurantModal
+        visible={showSubmitModal}
+        onClose={() => setShowSubmitModal(false)}
+        colors={colors}
       />
     </View>
   );
