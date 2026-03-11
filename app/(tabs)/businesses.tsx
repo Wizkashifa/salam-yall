@@ -492,7 +492,6 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
   const [googleUrl, setGoogleUrl] = useState("");
   const [phone, setPhone] = useState("");
   const [website, setWebsite] = useState("");
-  const [email, setEmail] = useState("");
   const [specialty, setSpecialty] = useState("");
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [photoUrl, setPhotoUrl] = useState("");
@@ -533,7 +532,7 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
   const submitMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/businesses/submit", {
-        name, category, description, address, phone, website, email, google_url: googleUrl,
+        name, category, description, address, phone, website, google_url: googleUrl,
         specialty, keywords: selectedKeywords, photo_url: photoUrl, booking_url: bookingUrl, instagram_url: instagramUrl, hospital_affiliation: hospitalAffiliation,
       });
       return res.json();
@@ -556,7 +555,6 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
     setGoogleUrl("");
     setPhone("");
     setWebsite("");
-    setEmail("");
     setSpecialty("");
     setSelectedKeywords([]);
     setPhotoUrl("");
@@ -577,11 +575,8 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
     if (!category) { Alert.alert("Required", "Please select a category"); return; }
     if (SPECIALTIES[category] && !specialty) { Alert.alert("Required", "Please select a specialty"); return; }
     
-    if (!email.trim()) { Alert.alert("Required", "Please enter your email for verification"); return; }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) { Alert.alert("Invalid Email", "Please enter a valid email address"); return; }
     submitMutation.mutate();
-  }, [name, category, address, googleUrl, email, submitMutation]);
+  }, [name, category, address, googleUrl, submitMutation]);
 
   if (submitted) {
     return (
@@ -599,7 +594,7 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
             </View>
             <Text style={[styles.successTitle, { color: colors.text }]}>Thank you!</Text>
             <Text style={[styles.successMessage, { color: colors.textSecondary }]}>
-              Your business has been submitted for review. Once verified, it will appear in the directory. We'll contact you at {email} if we need more information.
+              Your business has been submitted for review. Once verified, it will appear in the directory.
             </Text>
             <Pressable
               style={[styles.successButton, { backgroundColor: colors.emerald }]}
@@ -911,19 +906,6 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
               </>
             ) : null}
 
-            <Text style={[styles.fieldLabel, { color: colors.text }]}>Your Email *</Text>
-            <TextInput
-              style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              value={email}
-              onChangeText={setEmail}
-              placeholder="your@email.com"
-              placeholderTextColor={colors.textSecondary}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            <Text style={[styles.emailHint, { color: colors.textSecondary }]}>
-              Used for verification purposes only
-            </Text>
 
             <Pressable
               style={({ pressed }) => [
@@ -954,6 +936,7 @@ export default function BusinessesScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const queryClient = useQueryClient();
+  const { user, signInWithApple } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
@@ -1096,7 +1079,14 @@ export default function BusinessesScreen() {
           </View>
           <Pressable
             style={({ pressed }) => [styles.addButton, { backgroundColor: "rgba(255,255,255,0.15)", opacity: pressed ? 0.8 : 1 }]}
-            onPress={() => {
+            onPress={async () => {
+              if (!user) {
+                if (Platform.OS === "web") {
+                  Alert.alert("Sign In Required", "Please sign in on the mobile app to add a business.");
+                  return;
+                }
+                try { await signInWithApple(); } catch { return; }
+              }
               setShowSubmitModal(true);
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             }}
@@ -1745,11 +1735,6 @@ const styles = StyleSheet.create({
   keywordChipText: {
     fontSize: 12,
     fontFamily: "Inter_500Medium",
-  },
-  emailHint: {
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
-    marginTop: 4,
   },
   submitButton: {
     flexDirection: "row",
