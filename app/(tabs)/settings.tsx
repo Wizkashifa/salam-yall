@@ -255,6 +255,7 @@ export default function SettingsScreen() {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={[styles.menuLabel, { color: colors.text }]}>Masjid Directory</Text>
+          <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>Select a masjid for iqamah timings</Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
       </Pressable>
