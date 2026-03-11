@@ -900,10 +900,9 @@ export default function SettingsScreen() {
         style={styles.backRow}
         onPress={() => { setSection("main"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
       >
-        <Ionicons name="chevron-back" size={20} color={colors.emerald} />
-        <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 15, color: colors.emerald, marginLeft: 4 }}>Back</Text>
+        <Ionicons name="arrow-back" size={20} color={colors.text} />
+        <Text style={[styles.backLabel, { color: colors.text }]}>Janaza History</Text>
       </Pressable>
-      <Text style={{ fontFamily: "PlayfairDisplay_700Bold", fontSize: 22, color: colors.text, marginBottom: 16 }}>Janaza History</Text>
       <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: colors.textSecondary, marginBottom: 20, lineHeight: 18 }}>
         Inna Lillahi wa Inna Ilayhi Raji'un. Recent janaza announcements from our community.
       </Text>
