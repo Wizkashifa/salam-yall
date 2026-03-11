@@ -252,7 +252,11 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
   const [detailsExpanded, setDetailsExpanded] = useState(false);
 
   useEffect(() => {
-    if (!restaurant || !visible) return;
+    if (!restaurant || !visible) {
+      setDetailsExpanded(false);
+      return;
+    }
+    setDetailsExpanded(false);
     const headers = getAuthHeaders();
     const baseUrl = getApiUrl();
 
@@ -1000,7 +1004,7 @@ export default function HalalScreen() {
       <RestaurantDetailModal
         restaurant={selectedRestaurant}
         visible={!!selectedRestaurant}
-        onClose={() => { setSelectedRestaurant(null); setDetailsExpanded(false); }}
+        onClose={() => { setSelectedRestaurant(null); }}
         colors={colors}
         isDark={isDark}
       />

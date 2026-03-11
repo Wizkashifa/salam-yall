@@ -1651,12 +1651,14 @@ const styles = StyleSheet.create({
   prayerCard: {
     marginHorizontal: 16,
     marginTop: 16,
-    padding: 18,
+    padding: 0,
+    paddingBottom: 0,
   },
   prayerHero: {
     flexDirection: "row",
     alignItems: "center",
     gap: 16,
+    paddingHorizontal: 16,
     paddingBottom: 16,
   },
   prayerHeroText: {
@@ -1686,7 +1688,8 @@ const styles = StyleSheet.create({
     flexDirection: "row" as const,
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingTop: 14,
-    paddingHorizontal: 4,
+    paddingBottom: 14,
+    paddingHorizontal: 12,
   },
   prayerPill: {
     alignItems: "center",
