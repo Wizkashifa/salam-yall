@@ -379,6 +379,13 @@
       </div>
 
       <div class="section">
+        <div class="section-title"><span class="icon">👥</span> Community Stats</div>
+        <div id="analyticsCommunity" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+          <div class="loading">Loading...</div>
+        </div>
+      </div>
+
+      <div class="section">
         <div class="section-title"><span class="icon">📱</span> Screen Views</div>
         <div id="analyticsScreenViews"><div class="loading">Loading...</div></div>
       </div>
@@ -1639,6 +1646,7 @@
       if (!from || !to) return;
       loadAnalyticsSummary(from, to);
       loadAnalyticsTop(from, to);
+      loadCommunityStats();
     }
 
     async function loadAnalyticsSummary(from, to) {
@@ -1671,6 +1679,32 @@
       } catch (e) {
         document.getElementById('analyticsScreenViews').innerHTML = '<div class="empty-state">Failed to load</div>';
       }
+    }
+
+    async function loadCommunityStats() {
+      try {
+        var res = await fetch('/api/admin/analytics/community', {
+          headers: { 'Authorization': 'Bearer ' + adminToken }
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        var data = await res.json();
+        renderCommunityStats(data);
+      } catch (e) {
+        document.getElementById('analyticsCommunity').innerHTML = '<div class="empty-state">Failed to load</div>';
+      }
+    }
+
+    function renderCommunityStats(data) {
+      var cardStyle = 'background:#1E1E1E;border:1px solid #333;border-radius:12px;padding:16px;text-align:center;';
+      var numStyle = 'font-size:28px;font-weight:800;color:#D4A843;margin-bottom:4px;';
+      var labelStyle = 'font-size:11px;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;';
+      document.getElementById('analyticsCommunity').innerHTML =
+        '<div style="' + cardStyle + '"><div style="' + numStyle + '">' + data.totalUsers + '</div><div style="' + labelStyle + '">Registered Users</div></div>' +
+        '<div style="' + cardStyle + '"><div style="' + numStyle + '">' + data.restaurantRatings + '</div><div style="' + labelStyle + '">Restaurant Ratings</div></div>' +
+        '<div style="' + cardStyle + '"><div style="' + numStyle + '">' + data.businessRatings + '</div><div style="' + labelStyle + '">Business Ratings</div></div>' +
+        '<div style="' + cardStyle + '"><div style="' + numStyle + '">' + data.pendingSubmissions + '</div><div style="' + labelStyle + '">Pending Submissions</div></div>' +
+        '<div style="' + cardStyle + '"><div style="' + numStyle + '">' + data.approvedSubmissions + '</div><div style="' + labelStyle + '">Approved Submissions</div></div>' +
+        '<div style="' + cardStyle + '"><div style="' + numStyle + '">' + data.verificationVotes + '</div><div style="' + labelStyle + '">Verification Votes</div></div>';
     }
 
     function renderOverview(data) {

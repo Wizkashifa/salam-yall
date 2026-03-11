@@ -2324,6 +2324,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/admin/analytics/community", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const users = await pool.query("SELECT COUNT(*)::int as count FROM user_accounts WHERE apple_id NOT LIKE 'test_%'");
+      const restaurantRatings = await pool.query("SELECT COUNT(*)::int as count FROM user_ratings WHERE entity_type = 'restaurant'");
+      const businessRatings = await pool.query("SELECT COUNT(*)::int as count FROM user_ratings WHERE entity_type = 'business'");
+      const pendingSubmissions = await pool.query("SELECT COUNT(*)::int as count FROM restaurant_submissions WHERE status = 'pending'");
+      const approvedSubmissions = await pool.query("SELECT COUNT(*)::int as count FROM restaurant_submissions WHERE status = 'approved'");
+      const verificationVotes = await pool.query("SELECT COUNT(*)::int as count FROM halal_verification_votes");
+      res.json({
+        totalUsers: users.rows[0].count,
+        restaurantRatings: restaurantRatings.rows[0].count,
+        businessRatings: businessRatings.rows[0].count,
+        pendingSubmissions: pendingSubmissions.rows[0].count,
+        approvedSubmissions: approvedSubmissions.rows[0].count,
+        verificationVotes: verificationVotes.rows[0].count,
+      });
+    } catch (error: any) {
+      console.error("[Analytics] Community stats error:", error.message);
+      res.status(500).json({ error: "Failed to fetch community stats" });
+    }
+  });
+
   app.get("/app", (_req, res) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.send(downloadHtml);
