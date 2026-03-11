@@ -42,7 +42,6 @@ import {
   checkNearMosque,
   matchEventsToMasjid,
   calculateQiblaBearing,
-  isRamadan,
   NEARBY_MASJIDS,
   type PrayerTimeEntry,
   type Masjid,
@@ -398,7 +397,6 @@ export default function PrayerScreen() {
   const [masjidsExpanded, setMasjidsExpanded] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [todayLog, setTodayLog] = useState<DayLog>({ fajr: 0, dhuhr: 0, asr: 0, maghrib: 0, isha: 0 });
-  const [ramadanActive, setRamadanActive] = useState(false);
   const [missedFastCount, setMissedFastCount] = useState(0);
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -682,7 +680,6 @@ export default function PrayerScreen() {
 
   useEffect(() => {
     getPrayerLog(new Date()).then(setTodayLog);
-    setRamadanActive(isRamadan());
     getMissedFastCount().then(setMissedFastCount);
   }, []);
 
@@ -980,55 +977,6 @@ export default function PrayerScreen() {
                 <Ionicons name="close" size={16} color={isDark ? "#FCA5A5" : "#991B1B"} />
               </Pressable>
             </View>
-          </View>
-        ) : null}
-
-        {ramadanActive ? (
-          <View style={[styles.glassCard, styles.ramadanCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
-            <View style={styles.ramadanHeader}>
-              <MaterialCommunityIcons name="moon-waning-crescent" size={22} color={colors.gold} />
-              <Text style={[styles.ramadanTitle, { color: colors.gold }]}>Ramadan Mubarak</Text>
-            </View>
-            <View style={styles.ramadanTimesRow}>
-              <View style={styles.ramadanTimeBlock}>
-                <Text style={[styles.ramadanTimeLabel, { color: colors.textSecondary }]}>Suhoor Ends</Text>
-                <Text style={[styles.ramadanTimeValue, { color: colors.text }]}>
-                  {prayers.find(p => p.name === "fajr") ? formatTime(prayers.find(p => p.name === "fajr")!.time) : "--:--"}
-                </Text>
-              </View>
-              <View style={[styles.ramadanDivider, { backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)" }]} />
-              <View style={styles.ramadanTimeBlock}>
-                <Text style={[styles.ramadanTimeLabel, { color: colors.textSecondary }]}>Iftar</Text>
-                <Text style={[styles.ramadanTimeValue, { color: colors.text }]}>
-                  {prayers.find(p => p.name === "maghrib") ? formatTime(prayers.find(p => p.name === "maghrib")!.time) : "--:--"}
-                </Text>
-              </View>
-            </View>
-            {(() => {
-              const fajr = prayers.find(p => p.name === "fajr");
-              const maghrib = prayers.find(p => p.name === "maghrib");
-              if (!fajr || !maghrib) return null;
-              let targetLabel: string;
-              let targetTime: Date;
-              if (now < fajr.time) {
-                targetLabel = "Suhoor ends";
-                targetTime = fajr.time;
-              } else if (now < maghrib.time) {
-                targetLabel = "Iftar";
-                targetTime = maghrib.time;
-              } else {
-                targetLabel = "Suhoor ends";
-                const tomorrowFajr = new Date(fajr.time);
-                tomorrowFajr.setDate(tomorrowFajr.getDate() + 1);
-                targetTime = tomorrowFajr;
-              }
-              const cd = getCountdown(targetTime, now);
-              return (
-                <Text style={[styles.ramadanCountdown, { color: colors.gold }]}>
-                  {targetLabel} in {padNum(cd.hours)}:{padNum(cd.minutes)}:{padNum(cd.seconds)}
-                </Text>
-              );
-            })()}
           </View>
         ) : null}
 
@@ -1812,53 +1760,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_500Medium",
     maxWidth: 160,
-  },
-  ramadanCard: {
-    marginHorizontal: 16,
-    marginTop: 16,
-    padding: 16,
-  },
-  ramadanHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 12,
-  },
-  ramadanTitle: {
-    fontSize: 16,
-    fontFamily: "Inter_700Bold",
-  },
-  ramadanTimesRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 0,
-  },
-  ramadanTimeBlock: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 8,
-  },
-  ramadanTimeLabel: {
-    fontSize: 11,
-    fontFamily: "Inter_500Medium",
-    textTransform: "uppercase" as const,
-    letterSpacing: 0.5,
-  },
-  ramadanTimeValue: {
-    fontSize: 22,
-    fontFamily: "Inter_700Bold",
-    marginTop: 4,
-  },
-  ramadanDivider: {
-    width: 1,
-    height: 36,
-  },
-  ramadanCountdown: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-    textAlign: "center" as const,
-    marginTop: 10,
   },
   dailyContentCard: {
     marginHorizontal: 16,
