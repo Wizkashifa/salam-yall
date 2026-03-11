@@ -2669,16 +2669,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         [masjidName, masjidLat, masjidLng, details]
       );
 
-      const result = await pool.query("SELECT token, lat, lng FROM push_tokens");
+      const result = await pool.query("SELECT token, lat, lng FROM push_tokens WHERE lat IS NOT NULL AND lng IS NOT NULL");
       const nearbyTokens = result.rows
-        .filter((r: any) => {
-          if (r.lat == null || r.lng == null) return true;
-          return haversineDistance(r.lat, r.lng, masjidLat, masjidLng) <= 50;
-        })
+        .filter((r: any) => haversineDistance(r.lat, r.lng, masjidLat, masjidLng) <= 50)
         .map((r: any) => r.token);
 
       if (!nearbyTokens.length) {
-        return res.json({ sent: 0, total: 0, message: "Alert stored but no nearby devices" });
+        return res.json({ sent: 0, total: 0, message: "Alert stored but no devices within 50 miles" });
       }
 
       const pushResult = await sendPushToTokens(
@@ -2700,9 +2697,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!isAdminAuthorized(req)) {
         return res.status(401).json({ error: "Unauthorized" });
       }
-      const { eventId, eventTitle } = req.body;
-      if (!eventId || !eventTitle) {
-        return res.status(400).json({ error: "Event ID and title are required" });
+      const { eventId } = req.body;
+      if (!eventId) {
+        return res.status(400).json({ error: "Event ID is required" });
+      }
+
+      const event = cachedEvents.find((e: CachedEvent) => e.id === String(eventId));
+      if (!event) {
+        return res.status(404).json({ error: "Event not found" });
       }
 
       const result = await pool.query("SELECT token FROM push_tokens");
@@ -2714,7 +2716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pushResult = await sendPushToTokens(
         tokens,
         "Community Event",
-        eventTitle,
+        event.title,
         { type: "event", eventId: String(eventId) }
       );
 
