@@ -546,6 +546,10 @@ async function ensureMasjidsTable(pool: pg.Pool) {
     `);
     console.log("[DB] Seeded default masjids");
   } else {
+    await pool.query(`UPDATE masjids SET name = 'Al-Noor Islamic Center' WHERE name = 'Al Noor Islamic Center'`);
+    await pool.query(`DELETE FROM masjids WHERE name = 'Muslim Youth and Community Center'`);
+    await pool.query(`DELETE FROM masjids WHERE name = 'MCA Noor'`);
+    await pool.query(`UPDATE iqama_schedules SET masjid = 'MCA Al-Noor' WHERE masjid = 'MCA Noor'`);
     const masjidUpserts = [
       { name: 'Al-Noor Islamic Center', lat: 35.7636, lng: -78.7443, addr: '1501 Buck Jones Rd, Raleigh, NC 27606', website: null, terms: ['al-noor', 'alnoor'], iqama: true, sort: 1 },
       { name: 'Islamic Association of Raleigh (Atwater)', lat: 35.7898, lng: -78.6912, addr: '808 Atwater St, Raleigh, NC 27607', website: 'https://www.raleighmasjid.org', terms: ['iar', 'islamic association of raleigh', 'atwater'], iqama: true, sort: 2 },
@@ -572,8 +576,6 @@ async function ensureMasjidsTable(pool: pg.Pool) {
         [m.name, m.lat, m.lng, m.addr, m.website, m.terms, m.iqama, m.sort]
       );
     }
-    await pool.query(`UPDATE iqama_schedules SET masjid = 'MCA Al-Noor' WHERE masjid = 'MCA Noor'`);
-    await pool.query(`DELETE FROM masjids WHERE name = 'MCA Noor'`);
     console.log("[DB] Upserted masjid data");
   }
 }
