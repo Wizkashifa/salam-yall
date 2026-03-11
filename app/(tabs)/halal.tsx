@@ -244,7 +244,7 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
   const { user, signInWithApple, getAuthHeaders } = useAuth();
   const [userRating, setUserRating] = useState(0);
   const [communityRating, setCommunityRating] = useState<{ avg: number | null; count: number }>({ avg: null, count: 0 });
-  const [checkinData, setCheckinData] = useState<{ lastCheckin: string | null; totalCheckins: number }>({ lastCheckin: null, totalCheckins: 0 });
+  const [checkinData, setCheckinData] = useState<{ lastCheckin: string | null; totalCheckins: number; recentComments: Array<{ comment: string; displayName: string; date: string }> }>({ lastCheckin: null, totalCheckins: 0, recentComments: [] });
   const [showCheckinForm, setShowCheckinForm] = useState(false);
   const [checkinComment, setCheckinComment] = useState("");
   const [submittingRating, setSubmittingRating] = useState(false);
@@ -263,8 +263,16 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
     }).catch(() => {});
 
     fetch(new URL(`/api/checkins/${restaurant.id}`, baseUrl).toString())
-      .then(r => r.json())
-      .then(data => setCheckinData({ lastCheckin: data.lastCheckin, totalCheckins: data.totalCheckins }))
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) {
+          const recentComments = (data.checkins || [])
+            .filter((c: any) => c.comment)
+            .slice(0, 3)
+            .map((c: any) => ({ comment: c.comment, displayName: c.displayName || "Community member", date: c.date }));
+          setCheckinData({ lastCheckin: data.lastCheckin, totalCheckins: data.totalCheckins, recentComments });
+        }
+      })
       .catch(() => {});
   }, [restaurant?.id, visible]);
 
@@ -272,7 +280,7 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
     if (!visible) {
       setUserRating(0);
       setCommunityRating({ avg: null, count: 0 });
-      setCheckinData({ lastCheckin: null, totalCheckins: 0 });
+      setCheckinData({ lastCheckin: null, totalCheckins: 0, recentComments: [] });
       setShowCheckinForm(false);
       setCheckinComment("");
     }
@@ -499,10 +507,21 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.communitySectionTitle, { color: colors.text }]}>Halal Verification</Text>
                     {checkinData.lastCheckin ? (
-                      <Text style={[styles.lastVerified, { color: colors.emerald }]}>
-                        Last verified {new Date(checkinData.lastCheckin).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                        {checkinData.totalCheckins > 1 ? ` (${checkinData.totalCheckins} check-ins)` : ""}
-                      </Text>
+                      <>
+                        <Text style={[styles.lastVerified, { color: colors.emerald }]}>
+                          Last verified {new Date(checkinData.lastCheckin).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          {checkinData.totalCheckins > 1 ? ` (${checkinData.totalCheckins} check-ins)` : ""}
+                        </Text>
+                        {checkinData.recentComments.length > 0 ? (
+                          <View style={{ marginTop: 6, gap: 4 }}>
+                            {checkinData.recentComments.map((c, i) => (
+                              <Text key={i} style={[styles.checkinCommentText, { color: colors.textSecondary }]}>
+                                "{c.comment}" — {c.displayName}
+                              </Text>
+                            ))}
+                          </View>
+                        ) : null}
+                      </>
                     ) : (
                       <Text style={[styles.communityEmpty, { color: colors.textTertiary }]}>Not yet verified by the community</Text>
                     )}
@@ -1380,6 +1399,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_500Medium",
     marginTop: 2,
+  },
+  checkinCommentText: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    fontStyle: "italic" as const,
+    lineHeight: 17,
   },
   checkinBtn: {
     flexDirection: "row" as const,

@@ -2313,6 +2313,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const APPLE_JWKS = createRemoteJWKSet(new URL("https://appleid.apple.com/auth/keys"));
         const { payload } = await jwtVerify(identityToken, APPLE_JWKS, {
           issuer: "https://appleid.apple.com",
+          audience: "com.salamyall",
         });
         if (!payload.sub) {
           return res.status(401).json({ error: "Invalid identity token: missing subject" });
