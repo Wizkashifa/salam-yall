@@ -524,22 +524,22 @@ async function ensureMasjidsTable(pool: pg.Pool) {
   if (parseInt(rows[0].count) === 0) {
     await pool.query(`
       INSERT INTO masjids (name, latitude, longitude, address, website, match_terms, has_iqama, sort_order) VALUES
-        ('Al-Noor Islamic Center', 35.7676, -78.7165, '1501 Buck Jones Rd, Raleigh, NC 27606', NULL, ARRAY['al-noor', 'alnoor'], true, 1),
-        ('Islamic Association of Raleigh (Atwater)', 35.7953, -78.6711, '808 Atwater St, Raleigh, NC 27607', 'https://www.raleighmasjid.org', ARRAY['iar', 'islamic association of raleigh', 'atwater'], true, 2),
-        ('Islamic Association of Raleigh (Page Rd)', 35.8329, -78.8274, '3104 Page Rd, Morrisville, NC 27560', 'https://www.raleighmasjid.org', ARRAY['iar', 'islamic association of raleigh', 'page rd', 'page road'], true, 3),
-        ('Islamic Center of Morrisville', 35.8316, -78.8345, '107 Quail Fields Ct, Morrisville, NC 27560', 'https://www.icmorrisville.org', ARRAY['icm', 'islamic center of morrisville', 'quail fields'], true, 4),
-        ('Jamaat Ibad Ar-Rahman (Fayetteville)', 35.9615, -78.8872, '3034 Fayetteville St, Durham, NC 27707', 'https://www.jiar.org', ARRAY['jamaat ibad', 'jiar', 'fayetteville st'], true, 5),
-        ('Jamaat Ibad Ar-Rahman (Parkwood)', 35.9194, -78.9227, '5122 Revere Rd, Durham, NC 27713', 'https://www.jiar.org', ARRAY['parkwood', 'revere rd'], true, 6),
-        ('Apex Masjid', 35.7327, -78.8502, '733 Center St, Apex, NC 27502', NULL, ARRAY['apex masjid', 'center st, apex'], false, 7),
-        ('Ar-Razzaq Islamic Center', 35.9728, -78.9327, '1920 Chapel Hill Rd, Durham, NC 27707', NULL, ARRAY['ar-razzaq', 'arrazzaq', 'chapel hill rd, durham'], false, 8),
-        ('As-Salaam Islamic Center', 35.7985, -78.6766, '2104 Woods Edge Rd, Raleigh, NC 27607', 'https://www.assalaam.org', ARRAY['as-salaam', 'assalaam', 'woods edge'], false, 9),
-        ('Chapel Hill Islamic Society', 35.8841, -79.0328, '1717 Legion Rd, Chapel Hill, NC 27517', 'https://www.chapelhillmasjid.org', ARRAY['chapel hill islamic', 'legion rd'], false, 10),
-        ('Islamic Center of Cary', 35.7773, -78.7978, '1155 W Chatham St, Cary, NC 27511', 'https://www.icocary.org', ARRAY['islamic center of cary', 'chatham st'], false, 11),
-        ('Masjid King Khalid', 35.7756, -78.6375, '130 Martin Luther King Jr Blvd, Raleigh, NC 27601', NULL, ARRAY['king khalid', 'martin luther king'], false, 12),
-        ('North Raleigh Masjid', 35.7682, -78.7149, '1411 Buck Jones Rd, Raleigh, NC 27606', NULL, ARRAY['north raleigh masjid', 'deah way', 'buck jones'], false, 13),
+        ('Al-Noor Islamic Center', 35.7636, -78.7443, '1501 Buck Jones Rd, Raleigh, NC 27606', NULL, ARRAY['al-noor', 'alnoor'], true, 1),
+        ('Islamic Association of Raleigh (Atwater)', 35.7898, -78.6912, '808 Atwater St, Raleigh, NC 27607', 'https://www.raleighmasjid.org', ARRAY['iar', 'islamic association of raleigh', 'atwater'], true, 2),
+        ('Islamic Association of Raleigh (Page Rd)', 35.9067, -78.8169, '3104 Page Rd, Morrisville, NC 27560', 'https://www.raleighmasjid.org', ARRAY['iar', 'islamic association of raleigh', 'page rd', 'page road'], true, 3),
+        ('Islamic Center of Morrisville', 35.8099, -78.8228, '107 Quail Fields Ct, Morrisville, NC 27560', 'https://www.icmorrisville.org', ARRAY['icm', 'islamic center of morrisville', 'quail fields'], true, 4),
+        ('Jamaat Ibad Ar-Rahman (Fayetteville)', 35.9856, -78.8977, '3034 Fayetteville St, Durham, NC 27707', 'https://www.jiar.org', ARRAY['jamaat ibad', 'jiar', 'fayetteville st'], true, 5),
+        ('Jamaat Ibad Ar-Rahman (Parkwood)', 35.8938, -78.9109, '5122 Revere Rd, Durham, NC 27713', 'https://www.jiar.org', ARRAY['parkwood', 'revere rd'], true, 6),
+        ('Apex Masjid', 35.7294, -78.8415, '733 Center St, Apex, NC 27502', NULL, ARRAY['apex masjid', 'center st, apex'], false, 7),
+        ('Ar-Razzaq Islamic Center', 35.9966, -78.9155, '1920 Chapel Hill Rd, Durham, NC 27707', NULL, ARRAY['ar-razzaq', 'arrazzaq', 'chapel hill rd, durham'], false, 8),
+        ('As-Salaam Islamic Center', 35.7781, -78.6075, '110 Lord Anson Dr, Raleigh, NC 27610', 'https://www.assalaam.org', ARRAY['as-salaam', 'assalaam', 'lord anson'], false, 9),
+        ('Chapel Hill Islamic Society', 35.9406, -79.0164, '1717 Legion Rd, Chapel Hill, NC 27517', 'https://www.chapelhillmasjid.org', ARRAY['chapel hill islamic', 'legion rd'], false, 10),
+        ('Islamic Center of Cary', 35.7731, -78.8028, '1155 W Chatham St, Cary, NC 27511', 'https://www.icocary.org', ARRAY['islamic center of cary', 'chatham st'], false, 11),
+        ('Masjid King Khalid', 35.7693, -78.6383, '130 Martin Luther King Jr Blvd, Raleigh, NC 27601', NULL, ARRAY['king khalid', 'martin luther king'], false, 12),
+        ('North Raleigh Masjid', 35.8520, -78.5571, '7424 Deah Way, Raleigh, NC 27616', NULL, ARRAY['north raleigh masjid', 'deah way'], false, 13),
         ('San Ramon Valley Islamic Center', 37.7770, -121.9691, '2230 Camino Ramon, San Ramon, CA 94583', 'https://srvic.org', ARRAY['srvic', 'san ramon valley islamic', 'camino ramon'], true, 14),
         ('Muslim Community Association', 37.3769, -121.9595, '3003 Scott Blvd, Santa Clara, CA 95054', 'https://www.mcabayarea.org', ARRAY['mca', 'muslim community association', 'scott blvd', 'mcabayarea'], true, 15),
-        ('MCA Noor', 37.3778, -121.9580, '3003 Scott Blvd, Santa Clara, CA 95054', 'https://www.mcabayarea.org', ARRAY['mca noor', 'noor hall'], true, 16);
+        ('MCA Noor', 37.3772, -121.9595, '3003 Scott Blvd, Santa Clara, CA 95054', 'https://www.mcabayarea.org', ARRAY['mca noor', 'noor hall'], true, 16);
     `);
     console.log("[DB] Seeded default masjids");
   }
