@@ -334,7 +334,11 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
         comment: checkinComment.trim() || null,
       }, authHeaders);
       const data = await response.json();
-      setCheckinData({ lastCheckin: data.lastCheckin, totalCheckins: data.totalCheckins });
+      const newComment = checkinComment.trim();
+      const updatedComments = newComment && user
+        ? [{ comment: newComment, displayName: user.displayName || "Community member", date: new Date().toISOString() }, ...checkinData.recentComments].slice(0, 3)
+        : checkinData.recentComments;
+      setCheckinData({ lastCheckin: data.lastCheckin, totalCheckins: data.totalCheckins, recentComments: updatedComments });
       setShowCheckinForm(false);
       setCheckinComment("");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
