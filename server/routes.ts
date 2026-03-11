@@ -1127,6 +1127,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await pool.query(
         "SELECT id, name, category, description, address, phone, website, place_id, rating, user_ratings_total, photo_reference, business_hours, lat, lng, specialty, keywords, photo_url, booking_url, search_tags, member_note, hospital_affiliation, instagram_url FROM businesses WHERE status = 'approved' AND category != 'Restaurant' ORDER BY name"
       );
+
+      try {
+        const { rows: communityRatings } = await pool.query(
+          "SELECT entity_id, AVG(rating)::NUMERIC(3,2) as avg_rating, COUNT(*) as total_ratings FROM user_ratings WHERE entity_type = 'business' GROUP BY entity_id"
+        );
+        const ratingMap = new Map(communityRatings.map((r: any) => [r.entity_id, { avg: parseFloat(r.avg_rating), count: parseInt(r.total_ratings) }]));
+        for (const row of result.rows) {
+          const cr = ratingMap.get(parseInt(row.id));
+          row.community_rating = cr ? cr.avg : null;
+          row.community_rating_count = cr ? cr.count : 0;
+        }
+      } catch (crErr: any) {
+        console.error("[Business] Error fetching community ratings:", crErr.message);
+      }
+
       res.json(result.rows);
     } catch (error: any) {
       console.error("Error fetching businesses:", error.message);

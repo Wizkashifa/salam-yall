@@ -54,6 +54,8 @@ interface Business {
   member_note?: string;
   hospital_affiliation?: string;
   instagram_url?: string;
+  community_rating?: number | null;
+  community_rating_count?: number;
 }
 
 interface PlacesDetails {
@@ -1021,11 +1023,19 @@ export default function BusinessesScreen() {
               <Text style={[styles.businessName, { color: colors.text }]}>{item.name}</Text>
               <View style={styles.cardSubRow}>
                 <Text style={[styles.categoryLabel, { color: catInfo.color }]}>{item.category}</Text>
-                {item.category !== "Services" && item.category !== "Healthcare" && rating && rating > 0 ? (
-                  <View style={styles.cardRatingRow}>
-                    <Text style={[styles.cardRatingScore, { color: colors.gold }]}>{rating.toFixed(1)}</Text>
-                    <Text style={styles.cardRatingStars}>{renderStars(rating)}</Text>
-                  </View>
+                {item.category !== "Services" && item.category !== "Healthcare" ? (
+                  item.community_rating != null && item.community_rating > 0 ? (
+                    <View style={styles.cardRatingRow}>
+                      <Ionicons name="star" size={11} color={colors.gold} />
+                      <Text style={[styles.cardRatingScore, { color: colors.gold }]}>{Number(item.community_rating).toFixed(1)}</Text>
+                      <Text style={[styles.cardRatingCount, { color: colors.textTertiary }]}>({item.community_rating_count})</Text>
+                    </View>
+                  ) : rating && rating > 0 ? (
+                    <View style={styles.cardRatingRow}>
+                      <Text style={[styles.cardRatingScore, { color: colors.gold }]}>{rating.toFixed(1)}</Text>
+                      <Text style={styles.cardRatingStars}>{renderStars(rating)}</Text>
+                    </View>
+                  ) : null
                 ) : null}
               </View>
             </View>
@@ -1368,6 +1378,10 @@ const styles = StyleSheet.create({
   cardRatingStars: {
     fontSize: 10,
     color: "#F59E0B",
+  },
+  cardRatingCount: {
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
   },
   businessDesc: {
     fontSize: 13,
