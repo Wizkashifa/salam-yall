@@ -802,22 +802,38 @@ async function ensureBusinessesTable(pool: pg.Pool) {
   await pool.query(`UPDATE businesses SET category = 'Services' WHERE category = 'Technology'`);
   await pool.query(`UPDATE businesses SET category = 'Events', keywords = ARRAY['Venue'] WHERE name ILIKE '%Curate Studio%' AND category != 'Events'`);
 
+  const attorneyDupes = [
+    "Mousa Alshanteer, Associate Attorney - Brooks Pierce",
+    "Ayeshinaye Smith, Esq. - Smith Dominguez, PLLC",
+    "The Law Office of Neubia L. Harris, PLLC",
+    "Safwan Ali - Ali Law Firm PLLC",
+    "Omar Baloch - The Law Offices of Omar Baloch, PLLC",
+    "Nigel Edwards - The Law Offices of Omar Baloch, PLLC",
+    "Pooyan Ordoubadi - Law Office of Pooyan Ordoubadi",
+    "Sammy Naji - Triangle Legal",
+    "Nada Mohamed - Law Office of Nada Mohamed, PLLC",
+    "Hay'ralah Alghorazi - Triangle Legal",
+  ];
+  for (const dupeName of attorneyDupes) {
+    await pool.query("DELETE FROM businesses WHERE name = $1", [dupeName]);
+  }
+
   const attorneySeeds = [
-    { name: "Mousa Alshanteer, Associate Attorney - Brooks Pierce", desc: "Healthcare, Business, Corporate, Mergers & Acquisitions, Transactional", addr: "230 North Elm Street, 2000 Renaissance Plaza, Greensboro, NC 27401", phone: "(336) 373-8850", web: "https://www.brookspierce.com/people-mousa-alshanteer" },
-    { name: "The Law Office of Neubia L. Harris, PLLC", desc: "Education Law, Civil Rights", addr: "312 W. Millbrook Road, Ste. 141, Raleigh, NC 27609", phone: "(919) 526-0500", web: "https://www.neubiaharrislaw.com" },
-    { name: "Patterson Harkavy LLP", desc: "Civil Rights, Employment, Workers' Compensation, Labor, Police Misconduct", addr: "100 Europa Drive, Suite 420, Chapel Hill, NC 27517", phone: "(919) 942-5200", web: "https://www.pathlaw.com" },
-    { name: "Ayeshinaye Smith, Esq. - Smith Dominguez, PLLC", desc: "Family Law, Estates (Planning, Administration, and Guardianship)", addr: "4816 Six Forks Road, Suite 202, Raleigh, NC 27609", phone: "(919) 390-3512", web: "https://www.smithdominguez.com" },
-    { name: "The Law Office of Derrick J. Hensley, PLLC", desc: "Child Welfare/Adoptions, Immigration, International Family Law", addr: "401 Meadowlands Dr. Ste. 201, Hillsborough, NC 27278", phone: "(919) 480-1999", web: "https://www.LODJH.com" },
-    { name: "Safwan Ali - Ali Law Firm PLLC", desc: "Immigration, Traffic", addr: "PO Box 1046, Henderson, NC 27536", phone: "(919) 213-1945", web: "https://www.alilawfirm.net" },
-    { name: "Omar Baloch - The Law Offices of Omar Baloch, PLLC", desc: "Immigration", addr: "8801 Fast Park Drive, Suite 313, Raleigh, NC 27617", phone: "(919) 834-3535", web: "https://www.balochlaw.com" },
-    { name: "Nigel Edwards - The Law Offices of Omar Baloch, PLLC", desc: "Immigration (excluding business immigration)", addr: "8801 Fast Park Drive, Suite 313, Raleigh, NC 27617", phone: "(919) 834-3535", web: "https://www.balochlaw.com" },
-    { name: "Pooyan Ordoubadi - Law Office of Pooyan Ordoubadi", desc: "Immigration (Removal Defense and Federal Appeals), Criminal Defense, Family Law", addr: "33 Hillsboro Street, Pittsboro, NC 27312", phone: "(919) 351-1101", web: "https://pordolaw.com" },
-    { name: "Sammy Naji - Triangle Legal", desc: "Personal Injury, Wills, Trusts, Litigation, Business Law", addr: "2500 Regency Parkway, Cary, NC 27518", phone: "(919) 590-3647", web: "https://www.triangle.legal/" },
-    { name: "Nada Mohamed - Law Office of Nada Mohamed, PLLC", desc: "Estate Planning, Real Estate Transactions", addr: "64 Forest View Place, Durham, NC 27713", phone: "(919) 808-0067", web: "https://nrmlawoffice.com" },
-    { name: "Hay'ralah Alghorazi - Triangle Legal", desc: "Estate Planning", addr: "2500 Regency Parkway, Cary, NC 27518", phone: "(919) 590-3647", web: "https://www.triangle.legal/" },
+    { name: "Mousa Alshanteer, Associate Attorney - Brooks Pierce", match: "Mousa Alshanteer", desc: "Healthcare, Business, Corporate, Mergers & Acquisitions, Transactional", addr: "230 North Elm Street, 2000 Renaissance Plaza, Greensboro, NC 27401", phone: "(336) 373-8850", web: "https://www.brookspierce.com/people-mousa-alshanteer" },
+    { name: "The Law Office of Neubia L. Harris, PLLC", match: "Neubia", desc: "Education Law, Civil Rights", addr: "312 W. Millbrook Road, Ste. 141, Raleigh, NC 27609", phone: "(919) 526-0500", web: "https://www.neubiaharrislaw.com" },
+    { name: "Patterson Harkavy LLP", match: "Patterson Harkavy", desc: "Civil Rights, Employment, Workers' Compensation, Labor, Police Misconduct", addr: "100 Europa Drive, Suite 420, Chapel Hill, NC 27517", phone: "(919) 942-5200", web: "https://www.pathlaw.com" },
+    { name: "Ayeshinaye Smith, Esq. - Smith Dominguez, PLLC", match: "Ayeshinaye", desc: "Family Law, Estates (Planning, Administration, and Guardianship)", addr: "4816 Six Forks Road, Suite 202, Raleigh, NC 27609", phone: "(919) 390-3512", web: "https://www.smithdominguez.com" },
+    { name: "The Law Office of Derrick J. Hensley, PLLC", match: "Hensley", desc: "Child Welfare/Adoptions, Immigration, International Family Law", addr: "401 Meadowlands Dr. Ste. 201, Hillsborough, NC 27278", phone: "(919) 480-1999", web: "https://www.LODJH.com" },
+    { name: "Safwan Ali - Ali Law Firm PLLC", match: "Safwan Ali", desc: "Immigration, Traffic", addr: "PO Box 1046, Henderson, NC 27536", phone: "(919) 213-1945", web: "https://www.alilawfirm.net" },
+    { name: "Omar Baloch - The Law Offices of Omar Baloch, PLLC", match: "Omar Baloch", desc: "Immigration", addr: "8801 Fast Park Drive, Suite 313, Raleigh, NC 27617", phone: "(919) 834-3535", web: "https://www.balochlaw.com" },
+    { name: "Nigel Edwards - The Law Offices of Omar Baloch, PLLC", match: "Nigel Edwards", desc: "Immigration (excluding business immigration)", addr: "8801 Fast Park Drive, Suite 313, Raleigh, NC 27617", phone: "(919) 834-3535", web: "https://www.balochlaw.com" },
+    { name: "Pooyan Ordoubadi - Law Office of Pooyan Ordoubadi", match: "Pooyan Ordoubadi", desc: "Immigration (Removal Defense and Federal Appeals), Criminal Defense, Family Law", addr: "33 Hillsboro Street, Pittsboro, NC 27312", phone: "(919) 351-1101", web: "https://pordolaw.com" },
+    { name: "Sammy Naji - Triangle Legal", match: "Sammy Naji", desc: "Personal Injury, Wills, Trusts, Litigation, Business Law", addr: "2500 Regency Parkway, Cary, NC 27518", phone: "(919) 590-3647", web: "https://www.triangle.legal/" },
+    { name: "Nada Mohamed - Law Office of Nada Mohamed, PLLC", match: "Nada Mohamed", desc: "Estate Planning, Real Estate Transactions", addr: "64 Forest View Place, Durham, NC 27713", phone: "(919) 808-0067", web: "https://nrmlawoffice.com" },
+    { name: "Hay'ralah Alghorazi - Triangle Legal", match: "Alghorazi", desc: "Estate Planning", addr: "2500 Regency Parkway, Cary, NC 27518", phone: "(919) 590-3647", web: "https://www.triangle.legal/" },
   ];
   for (const a of attorneySeeds) {
-    const exists = await pool.query("SELECT id FROM businesses WHERE name = $1", [a.name]);
+    const exists = await pool.query("SELECT id FROM businesses WHERE name ILIKE $1", ['%' + a.match + '%']);
     if (exists.rows.length === 0) {
       await pool.query(
         "INSERT INTO businesses (name, category, description, address, phone, website, submitted_by_email, status, member_note, search_tags, place_id) VALUES ($1, 'Services', $2, $3, $4, $5, 'admin@salamyall.net', 'approved', 'Member of NC Muslim Bar', '{lawyer,attorney,legal}', 'none')",
@@ -825,7 +841,9 @@ async function ensureBusinessesTable(pool: pg.Pool) {
       );
     }
   }
-  await pool.query(`UPDATE businesses SET member_note = 'Member of NC Muslim Bar', search_tags = '{lawyer,attorney,legal}', place_id = 'none' WHERE name IN (${attorneySeeds.map((_, i) => `$${i+1}`).join(',')})`, attorneySeeds.map(a => a.name));
+  const allAttorneyNames = attorneySeeds.map(a => a.match);
+  const matchConditions = allAttorneyNames.map((_, i) => `name ILIKE '%' || $${i+1} || '%'`).join(' OR ');
+  await pool.query(`UPDATE businesses SET member_note = 'Member of NC Muslim Bar', search_tags = '{lawyer,attorney,legal}', place_id = 'none' WHERE ${matchConditions}`, allAttorneyNames);
 
   await pool.query(`ALTER TABLE halal_restaurants ADD COLUMN IF NOT EXISTS photo_reference TEXT`);
   await pool.query(`ALTER TABLE halal_restaurants ADD COLUMN IF NOT EXISTS place_id VARCHAR(255)`);
