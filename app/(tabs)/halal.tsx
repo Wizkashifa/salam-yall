@@ -249,6 +249,7 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
   const [checkinComment, setCheckinComment] = useState("");
   const [submittingRating, setSubmittingRating] = useState(false);
   const [submittingCheckin, setSubmittingCheckin] = useState(false);
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
 
   useEffect(() => {
     if (!restaurant || !visible) return;
@@ -417,74 +418,28 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
               <Text style={[styles.detailCuisine, { color: colors.textSecondary }]}>{cuisines}</Text>
             ) : null}
 
-            {rating != null && !isNaN(rating) && rating > 0 ? (
-              <View style={styles.detailRatingRow}>
-                <Text style={[styles.detailRatingScore, { color: colors.gold }]}>{rating.toFixed(1)}</Text>
-                <Text style={styles.detailStars}>{renderStars(rating)}</Text>
-                {restaurant.user_ratings_total ? (
-                  <Text style={[styles.detailRatingCount, { color: colors.textTertiary }]}>
-                    ({restaurant.user_ratings_total.toLocaleString()} reviews)
-                  </Text>
-                ) : null}
-              </View>
-            ) : null}
-
-            {restaurant.halal_comment ? (
-              <Text style={[styles.detailDesc, { color: colors.textSecondary }]}>{restaurant.halal_comment}</Text>
-            ) : null}
-
-            <View style={[styles.detailSection, { borderTopColor: colors.divider }]}>
-              {restaurant.formatted_address ? (
-                <Pressable style={styles.detailInfoRow} onPress={openMaps}>
-                  <Ionicons name="location-outline" size={18} color={colors.emerald} />
-                  <Text style={[styles.detailInfoText, { color: colors.text }]}>{restaurant.formatted_address}</Text>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
-                </Pressable>
-              ) : null}
-
-              {restaurant.formatted_phone ? (
-                <Pressable style={styles.detailInfoRow} onPress={() => Linking.openURL(`tel:${restaurant.formatted_phone}`)}>
-                  <Ionicons name="call-outline" size={18} color={colors.emerald} />
-                  <Text style={[styles.detailInfoText, { color: colors.text }]}>{restaurant.formatted_phone}</Text>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
-                </Pressable>
-              ) : null}
-
-              {restaurant.website ? (
-                <Pressable style={styles.detailInfoRow} onPress={() => Linking.openURL(restaurant.website!)}>
-                  <Ionicons name="globe-outline" size={18} color={colors.emerald} />
-                  <Text style={[styles.detailInfoText, { color: colors.text }]} numberOfLines={1}>
-                    {restaurant.website.replace(/^https?:\/\//, "")}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
-                </Pressable>
-              ) : null}
-            </View>
-
-            {hours && hours.length > 0 ? (
-              <View style={[styles.hoursSection, { borderTopColor: colors.divider }]}>
-                <View style={styles.hoursSectionHeader}>
-                  <Ionicons name="time-outline" size={18} color={colors.gold} />
-                  <Text style={[styles.hoursSectionTitle, { color: colors.text }]}>Hours</Text>
-                </View>
-                {hours.map((h: string, i: number) => {
-                  const todayName = new Date().toLocaleDateString("en-US", { weekday: "long", timeZone: "America/New_York" });
-                  const isToday = h.toLowerCase().startsWith(todayName.toLowerCase());
-                  return (
-                    <Text
+            {(() => {
+              const actions: Array<{ icon: string; label: string; color: string; onPress: () => void }> = [];
+              if (restaurant.formatted_phone) actions.push({ icon: "call", label: "Call", color: colors.emerald, onPress: () => Linking.openURL(`tel:${restaurant.formatted_phone}`) });
+              actions.push({ icon: "navigate", label: "Directions", color: colors.gold, onPress: openMaps });
+              if (restaurant.website) actions.push({ icon: "globe", label: "Website", color: isDark ? "#4B5563" : "#374151", onPress: () => Linking.openURL(restaurant.website!) });
+              if (restaurant.instagram_url) actions.push({ icon: "logo-instagram", label: "Instagram", color: "#E1306C", onPress: () => Linking.openURL(restaurant.instagram_url!) });
+              const iconOnly = actions.length > 3;
+              return (
+                <View style={styles.detailActions}>
+                  {actions.map((a, i) => (
+                    <Pressable
                       key={i}
-                      style={[
-                        styles.hoursText,
-                        { color: isToday ? colors.text : colors.textSecondary },
-                        isToday && { fontFamily: "Inter_600SemiBold" },
-                      ]}
+                      style={({ pressed }) => [styles.detailActionBtn, { backgroundColor: a.color, opacity: pressed ? 0.8 : 1, paddingVertical: iconOnly ? 14 : 12 }]}
+                      onPress={a.onPress}
                     >
-                      {h}
-                    </Text>
-                  );
-                })}
-              </View>
-            ) : null}
+                      <Ionicons name={a.icon as any} size={iconOnly ? 22 : 18} color="#fff" />
+                      {!iconOnly && <Text style={styles.detailActionText}>{a.label}</Text>}
+                    </Pressable>
+                  ))}
+                </View>
+              );
+            })()}
 
             <View style={[styles.communitySection, { borderTopColor: colors.divider }]}>
               <Text style={[styles.communitySectionTitle, { color: colors.text }]}>Community Rating</Text>
@@ -580,28 +535,95 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
               </View>
             ) : null}
 
-            {(() => {
-              const actions: Array<{ icon: string; label: string; color: string; onPress: () => void }> = [];
-              if (restaurant.formatted_phone) actions.push({ icon: "call", label: "Call", color: colors.emerald, onPress: () => Linking.openURL(`tel:${restaurant.formatted_phone}`) });
-              actions.push({ icon: "navigate", label: "Directions", color: colors.gold, onPress: openMaps });
-              if (restaurant.website) actions.push({ icon: "globe", label: "Website", color: isDark ? "#4B5563" : "#374151", onPress: () => Linking.openURL(restaurant.website!) });
-              if (restaurant.instagram_url) actions.push({ icon: "logo-instagram", label: "Instagram", color: "#E1306C", onPress: () => Linking.openURL(restaurant.instagram_url!) });
-              const iconOnly = actions.length > 3;
-              return (
-                <View style={styles.detailActions}>
-                  {actions.map((a, i) => (
-                    <Pressable
-                      key={i}
-                      style={({ pressed }) => [styles.detailActionBtn, { backgroundColor: a.color, opacity: pressed ? 0.8 : 1, paddingVertical: iconOnly ? 14 : 12 }]}
-                      onPress={a.onPress}
-                    >
-                      <Ionicons name={a.icon as any} size={iconOnly ? 22 : 18} color="#fff" />
-                      {!iconOnly && <Text style={styles.detailActionText}>{a.label}</Text>}
-                    </Pressable>
-                  ))}
+            {rating != null && !isNaN(rating) && rating > 0 ? (
+              <View style={[styles.communitySection, { borderTopColor: colors.divider }]}>
+                <Text style={[styles.communitySectionTitle, { color: colors.text }]}>Google Rating</Text>
+                <View style={styles.detailRatingRow}>
+                  <Text style={[styles.detailRatingScore, { color: colors.gold }]}>{rating.toFixed(1)}</Text>
+                  <Text style={styles.detailStars}>{renderStars(rating)}</Text>
+                  {restaurant.user_ratings_total ? (
+                    <Text style={[styles.detailRatingCount, { color: colors.textTertiary }]}>
+                      ({restaurant.user_ratings_total.toLocaleString()} reviews)
+                    </Text>
+                  ) : null}
                 </View>
-              );
-            })()}
+                {restaurant.halal_comment ? (
+                  <Text style={[styles.detailDesc, { color: colors.textSecondary, marginTop: 8 }]}>{restaurant.halal_comment}</Text>
+                ) : null}
+              </View>
+            ) : restaurant.halal_comment ? (
+              <View style={[styles.communitySection, { borderTopColor: colors.divider }]}>
+                <Text style={[styles.detailDesc, { color: colors.textSecondary }]}>{restaurant.halal_comment}</Text>
+              </View>
+            ) : null}
+
+            {(restaurant.formatted_address || restaurant.formatted_phone || restaurant.website) ? (
+              <View style={[styles.detailSection, { borderTopColor: colors.divider }]}>
+                <Pressable
+                  style={styles.expandableHeader}
+                  onPress={() => setDetailsExpanded(!detailsExpanded)}
+                >
+                  <Ionicons name="information-circle-outline" size={18} color={colors.emerald} />
+                  <Text style={[styles.expandableHeaderText, { color: colors.text }]}>Details</Text>
+                  <Ionicons name={detailsExpanded ? "chevron-up" : "chevron-down"} size={18} color={colors.textTertiary} />
+                </Pressable>
+
+                {detailsExpanded ? (
+                  <View style={{ marginTop: 8 }}>
+                    {restaurant.formatted_address ? (
+                      <Pressable style={styles.detailInfoRow} onPress={openMaps}>
+                        <Ionicons name="location-outline" size={18} color={colors.emerald} />
+                        <Text style={[styles.detailInfoText, { color: colors.text }]}>{restaurant.formatted_address}</Text>
+                        <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                      </Pressable>
+                    ) : null}
+
+                    {restaurant.formatted_phone ? (
+                      <Pressable style={styles.detailInfoRow} onPress={() => Linking.openURL(`tel:${restaurant.formatted_phone}`)}>
+                        <Ionicons name="call-outline" size={18} color={colors.emerald} />
+                        <Text style={[styles.detailInfoText, { color: colors.text }]}>{restaurant.formatted_phone}</Text>
+                        <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                      </Pressable>
+                    ) : null}
+
+                    {restaurant.website ? (
+                      <Pressable style={styles.detailInfoRow} onPress={() => Linking.openURL(restaurant.website!)}>
+                        <Ionicons name="globe-outline" size={18} color={colors.emerald} />
+                        <Text style={[styles.detailInfoText, { color: colors.text }]} numberOfLines={1}>
+                          {restaurant.website.replace(/^https?:\/\//, "")}
+                        </Text>
+                        <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                      </Pressable>
+                    ) : null}
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
+
+            {hours && hours.length > 0 ? (
+              <View style={[styles.hoursSection, { borderTopColor: colors.divider }]}>
+                <View style={styles.hoursSectionHeader}>
+                  <Ionicons name="time-outline" size={18} color={colors.gold} />
+                  <Text style={[styles.hoursSectionTitle, { color: colors.text }]}>Hours</Text>
+                </View>
+                {hours.map((h: string, i: number) => {
+                  const todayName = new Date().toLocaleDateString("en-US", { weekday: "long", timeZone: "America/New_York" });
+                  const isToday = h.toLowerCase().startsWith(todayName.toLowerCase());
+                  return (
+                    <Text
+                      key={i}
+                      style={[
+                        styles.hoursText,
+                        { color: isToday ? colors.text : colors.textSecondary },
+                        isToday && { fontFamily: "Inter_600SemiBold" },
+                      ]}
+                    >
+                      {h}
+                    </Text>
+                  );
+                })}
+              </View>
+            ) : null}
           </View>
         </ScrollView>
       </View>
@@ -978,7 +1000,7 @@ export default function HalalScreen() {
       <RestaurantDetailModal
         restaurant={selectedRestaurant}
         visible={!!selectedRestaurant}
-        onClose={() => setSelectedRestaurant(null)}
+        onClose={() => { setSelectedRestaurant(null); setDetailsExpanded(false); }}
         colors={colors}
         isDark={isDark}
       />
@@ -1299,6 +1321,17 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     marginTop: 12,
     paddingTop: 12,
+  },
+  expandableHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    paddingVertical: 4,
+  },
+  expandableHeaderText: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    flex: 1,
   },
   detailInfoRow: {
     flexDirection: "row",

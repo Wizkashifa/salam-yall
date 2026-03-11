@@ -1033,6 +1033,12 @@ export default function PrayerScreen() {
         ) : null}
 
         <View style={[styles.glassCard, styles.prayerCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
+          <View style={styles.iqamaCardHeader}>
+            <View style={styles.iqamaCardHeaderLeft}>
+              <Ionicons name="location" size={16} color={colors.gold} />
+              <Text style={[styles.iqamaCardLabel, { color: colors.gold }]}>MY LOCATION</Text>
+            </View>
+          </View>
           <View style={styles.prayerHero}>
             <CountdownRing colors={colors} isDark={isDark} progress={countdownProgress} qiblaBearing={qiblaRotation} hasRealLocation={hasRealLocation} onRequestLocation={loadPrayerData} />
             {nextPrayer ? (
@@ -1082,7 +1088,7 @@ export default function PrayerScreen() {
             </View>
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.prayerPillRow, { borderTopColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)" }]} contentContainerStyle={styles.prayerPillRowContent}>
+          <View style={[styles.prayerPillRowView, { borderTopColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)" }]}>
             {prayers.filter(p => p.name !== "sunrise").map((prayer) => {
               const isNext = nextPrayer?.name === prayer.name;
               const isPast = prayer.time < now && !isNext;
@@ -1095,7 +1101,6 @@ export default function PrayerScreen() {
                 : isGreen
                   ? (isDark ? colors.emerald + "25" : colors.emerald + "12")
                   : undefined;
-              const iqamaTime = !preferredMasjid ? undefined : activeIqama?.iqama?.[prayer.name as keyof typeof activeIqama.iqama];
               return (
                 <Pressable
                   key={prayer.name}
@@ -1118,15 +1123,10 @@ export default function PrayerScreen() {
                   ]} allowFontScaling={false}>
                     {formatTime(prayer.time)}
                   </Text>
-                  {iqamaTime ? (
-                    <Text style={[styles.prayerIqamaTime, { color: isPast ? colors.textTertiary : (isDark ? colors.gold : "#9A7B2A") }]} allowFontScaling={false}>
-                      {iqamaTime}
-                    </Text>
-                  ) : null}
                 </Pressable>
               );
             })}
-          </ScrollView>
+          </View>
         </View>
 
         {preferredMasjid && activeIqama ? (
@@ -1140,7 +1140,7 @@ export default function PrayerScreen() {
                 <Text style={[styles.iqamaCardMasjidName, { color: colors.textSecondary }]} numberOfLines={1}>{preferredMasjid.replace(/\s*\(.*\)/, "")}</Text>
               </Pressable>
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.prayerPillRow, { borderTopColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)" }]} contentContainerStyle={styles.prayerPillRowContent}>
+            <View style={[styles.prayerPillRowView, { borderTopColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)" }]}>
               {prayers.filter(p => p.name !== "sunrise").map((prayer) => {
                 const isNext = nextPrayer?.name === prayer.name;
                 const isPast = prayer.time < now && !isNext;
@@ -1179,7 +1179,7 @@ export default function PrayerScreen() {
                   </Pressable>
                 );
               })}
-            </ScrollView>
+            </View>
           </View>
         ) : null}
 
@@ -1734,21 +1734,17 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     fontVariant: ["tabular-nums" as const],
   },
-  prayerPillRow: {
+  prayerPillRowView: {
+    flexDirection: "row" as const,
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingTop: 14,
-  },
-  prayerPillRowContent: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    flexGrow: 1,
+    paddingHorizontal: 4,
   },
   prayerPill: {
     alignItems: "center",
     paddingVertical: 6,
-    paddingHorizontal: 8,
     borderRadius: 10,
-    minWidth: 54,
+    flex: 1,
   },
   prayerPillName: {
     fontSize: 11,
@@ -1775,11 +1771,6 @@ const styles = StyleSheet.create({
   searchPlaceholder: {
     fontSize: 14,
     fontFamily: "Inter_400Regular",
-  },
-  prayerIqamaTime: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-    marginTop: 3,
   },
   iqamaSource: {
     fontSize: 10,
