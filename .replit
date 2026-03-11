@@ -83,3 +83,7 @@ ADMIN_KEY = "password"
 
 [userenv.production]
 EXPO_PUBLIC_DOMAIN = "salamyall.net"
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 60000
