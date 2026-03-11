@@ -1096,6 +1096,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("[Halal] Error applying restaurant overrides:", overrideErr.message);
       }
 
+      try {
+        const { rows: communityRatings } = await pool.query(
+          "SELECT entity_id, AVG(rating)::NUMERIC(3,2) as avg_rating, COUNT(*) as total_ratings FROM user_ratings WHERE entity_type = 'restaurant' GROUP BY entity_id"
+        );
+        const { rows: lastCheckins } = await pool.query(
+          "SELECT DISTINCT ON (restaurant_id) restaurant_id, created_at FROM halal_checkins ORDER BY restaurant_id, created_at DESC"
+        );
+        const ratingMap = new Map(communityRatings.map((r: any) => [r.entity_id, { avg: parseFloat(r.avg_rating), count: parseInt(r.total_ratings) }]));
+        const checkinMap = new Map(lastCheckins.map((c: any) => [c.restaurant_id, c.created_at]));
+        for (const row of result.rows) {
+          const cr = ratingMap.get(row.id);
+          row.community_rating = cr ? cr.avg : null;
+          row.community_rating_count = cr ? cr.count : 0;
+          row.last_checkin = checkinMap.get(row.id) || null;
+        }
+      } catch (crErr: any) {
+        console.error("[Halal] Error fetching community ratings:", crErr.message);
+      }
+
       res.json(result.rows);
     } catch (error: any) {
       console.error("Error fetching halal restaurants:", error.message);
@@ -2267,12 +2286,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/auth/apple", async (req, res) => {
     try {
-      const { appleId, email, displayName } = req.body;
-      if (!appleId || typeof appleId !== "string") {
-        return res.status(400).json({ error: "Apple ID is required" });
+      const { identityToken, appleId, email, displayName } = req.body;
+
+      if (!identityToken || typeof identityToken !== "string") {
+        return res.status(400).json({ error: "Identity token is required" });
       }
 
-      const existing = await pool.query("SELECT id, email, display_name FROM user_accounts WHERE apple_id = $1", [appleId]);
+      let verifiedSubject: string;
+      try {
+        const { createRemoteJWKSet, jwtVerify } = await import("jose");
+        const APPLE_JWKS = createRemoteJWKSet(new URL("https://appleid.apple.com/auth/keys"));
+        const { payload } = await jwtVerify(identityToken, APPLE_JWKS, {
+          issuer: "https://appleid.apple.com",
+        });
+        if (!payload.sub) {
+          return res.status(401).json({ error: "Invalid identity token: missing subject" });
+        }
+        verifiedSubject = payload.sub;
+      } catch (verifyErr: any) {
+        console.error("[Auth] Apple token verification failed:", verifyErr.message);
+        return res.status(401).json({ error: "Invalid or expired identity token" });
+      }
+
+      const existing = await pool.query("SELECT id, email, display_name FROM user_accounts WHERE apple_id = $1", [verifiedSubject]);
       let userId: number;
       let userEmail = email || null;
       let userName = displayName || null;
@@ -2290,7 +2326,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         const result = await pool.query(
           "INSERT INTO user_accounts (apple_id, email, display_name) VALUES ($1, $2, $3) RETURNING id",
-          [appleId, userEmail, userName]
+          [verifiedSubject, userEmail, userName]
         );
         userId = result.rows[0].id;
       }

@@ -75,6 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         : credential.fullName?.givenName || null;
 
     const response = await apiRequest("POST", "/api/auth/apple", {
+      identityToken: credential.identityToken,
       appleId: credential.user,
       email: credential.email,
       displayName,

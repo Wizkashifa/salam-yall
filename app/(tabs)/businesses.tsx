@@ -28,6 +28,7 @@ import { GlassHeader } from "@/components/GlassHeader";
 import { useDeepLink } from "@/lib/deeplink-context";
 import { apiRequest, getApiUrl } from "@/lib/query-client";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
+import { useAuth } from "@/lib/auth-context";
 import { expandSearchTerms } from "@/lib/search-synonyms";
 
 interface Business {
@@ -148,11 +149,70 @@ function renderStars(rating: number): string {
   return stars;
 }
 
+function StarRatingInput({ value, onChange, size = 28, color = "#F59E0B" }: { value: number; onChange: (v: number) => void; size?: number; color?: string }) {
+  return (
+    <View style={{ flexDirection: "row", gap: 4 }}>
+      {[1, 2, 3, 4, 5].map((star) => (
+        <Pressable key={star} onPress={() => onChange(star)} hitSlop={6}>
+          <Ionicons name={star <= value ? "star" : "star-outline"} size={size} color={star <= value ? color : "#D1D5DB"} />
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
 function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { business: Business | null; visible: boolean; onClose: () => void; colors: any; isDark: boolean }) {
   const insets = useSafeAreaInsets();
   const [details, setDetails] = useState<PlacesDetails | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
+  const { user, signInWithApple, getAuthHeaders } = useAuth();
+  const [communityRating, setCommunityRating] = useState<{ avg: number | null; count: number }>({ avg: null, count: 0 });
+  const [userRating, setUserRating] = useState(0);
+  const [submittingRating, setSubmittingRating] = useState(false);
+
+  useEffect(() => {
+    if (!visible || !business) {
+      setDetails(null);
+      setCommunityRating({ avg: null, count: 0 });
+      setUserRating(0);
+      return;
+    }
+    const baseUrl = getApiUrl();
+    fetch(new URL(`/api/ratings/business/${business.id}`, baseUrl).toString())
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setCommunityRating({ avg: data.avgRating, count: data.totalRatings }); })
+      .catch(() => {});
+  }, [visible, business?.id]);
+
+  const handleRate = useCallback(async (rating: number) => {
+    let authHeaders = getAuthHeaders();
+    if (!user) {
+      if (Platform.OS === "web") {
+        Alert.alert("Sign In Required", "Use the mobile app to sign in with Apple and rate businesses.");
+        return;
+      }
+      try {
+        const freshToken = await signInWithApple();
+        authHeaders = { Authorization: `Bearer ${freshToken}` };
+      } catch { return; }
+    }
+    setUserRating(rating);
+    setSubmittingRating(true);
+    try {
+      const response = await apiRequest("POST", "/api/ratings", {
+        entityType: "business",
+        entityId: business?.id,
+        rating,
+      }, authHeaders);
+      const data = await response.json();
+      setCommunityRating({ avg: data.avgRating, count: data.totalRatings });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch {
+      Alert.alert("Error", "Failed to submit rating");
+    }
+    setSubmittingRating(false);
+  }, [user, business?.id, signInWithApple, getAuthHeaders]);
 
   useEffect(() => {
     if (!visible || !business) {
@@ -243,12 +303,28 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
                 <Text style={[styles.ratingScore, { color: colors.gold }]}>{Number(rating).toFixed(1)}</Text>
                 <Text style={styles.ratingStars}>{renderStars(Number(rating))}</Text>
                 {reviewCount ? (
-                  <Text style={[styles.ratingCount, { color: colors.textTertiary }]}>({(reviewCount || 0).toLocaleString()} reviews)</Text>
+                  <Text style={[styles.ratingCount, { color: colors.textTertiary }]}>({(reviewCount || 0).toLocaleString()} Google reviews)</Text>
                 ) : null}
               </View>
             ) : business.category !== "Services" && business.category !== "Healthcare" && loadingDetails ? (
               <ActivityIndicator size="small" color={colors.gold} style={{ marginVertical: 4 }} />
             ) : null}
+
+            <View style={[styles.communitySection, { borderTopColor: colors.border }]}>
+              {communityRating.avg != null && communityRating.count > 0 ? (
+                <View style={styles.ratingRow}>
+                  <Text style={[styles.ratingScore, { color: colors.gold }]}>{communityRating.avg.toFixed(1)}</Text>
+                  <Text style={styles.ratingStars}>{renderStars(communityRating.avg)}</Text>
+                  <Text style={[styles.ratingCount, { color: colors.textTertiary }]}>
+                    ({communityRating.count} community {communityRating.count === 1 ? "rating" : "ratings"})
+                  </Text>
+                </View>
+              ) : null}
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <Text style={[styles.rateLabel, { color: colors.textSecondary }]}>Rate this business:</Text>
+                <StarRatingInput value={userRating} onChange={handleRate} size={24} />
+              </View>
+            </View>
 
             {business.member_note ? (
               <View style={[styles.specialtyRow, { backgroundColor: colors.prayerIconBg }]}>
@@ -1391,6 +1467,17 @@ const styles = StyleSheet.create({
   ratingCount: {
     fontSize: 13,
     fontFamily: "Inter_400Regular",
+  },
+  communitySection: {
+    marginTop: 8,
+    paddingTop: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: 8,
+    marginBottom: 4,
+  },
+  rateLabel: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
   },
   detailDesc: {
     fontSize: 15,

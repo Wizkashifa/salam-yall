@@ -59,6 +59,9 @@ interface HalalRestaurant {
   photo_reference: string | null;
   place_id: string | null;
   instagram_url?: string | null;
+  community_rating?: number | null;
+  community_rating_count?: number;
+  last_checkin?: string | null;
   _distance?: number;
 }
 
@@ -746,19 +749,36 @@ export default function HalalScreen() {
                 ) : null}
               </View>
 
-              {item.rating && Number(item.rating) > 0 ? (
-                <View style={styles.ratingRow}>
-                  <Ionicons name="star" size={12} color="#F59E0B" />
-                  <Text style={[styles.ratingScore, { color: colors.text }]}>
-                    {Number(item.rating).toFixed(1)}
-                  </Text>
-                  {item.user_ratings_total ? (
-                    <Text style={[styles.ratingCount, { color: colors.textTertiary }]}>
-                      ({item.user_ratings_total.toLocaleString()})
+              <View style={styles.ratingRow}>
+                {item.community_rating != null && item.community_rating > 0 ? (
+                  <>
+                    <Ionicons name="star" size={12} color={colors.gold} />
+                    <Text style={[styles.ratingScore, { color: colors.gold }]}>
+                      {Number(item.community_rating).toFixed(1)}
                     </Text>
-                  ) : null}
-                </View>
-              ) : null}
+                    <Text style={[styles.ratingCount, { color: colors.textTertiary }]}>
+                      ({item.community_rating_count} {item.community_rating_count === 1 ? "rating" : "ratings"})
+                    </Text>
+                  </>
+                ) : item.rating && Number(item.rating) > 0 ? (
+                  <>
+                    <Ionicons name="star" size={12} color="#F59E0B" />
+                    <Text style={[styles.ratingScore, { color: colors.text }]}>
+                      {Number(item.rating).toFixed(1)}
+                    </Text>
+                    {item.user_ratings_total ? (
+                      <Text style={[styles.ratingCount, { color: colors.textTertiary }]}>
+                        ({item.user_ratings_total.toLocaleString()})
+                      </Text>
+                    ) : null}
+                  </>
+                ) : null}
+                {item.last_checkin ? (
+                  <Text style={[styles.lastVerifiedText, { color: colors.emerald }]}>
+                    Verified {new Date(item.last_checkin).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </Text>
+                ) : null}
+              </View>
             </View>
           </View>
         </Pressable>
@@ -1129,6 +1149,11 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: "Inter_400Regular",
     marginLeft: 2,
+  },
+  lastVerifiedText: {
+    fontSize: 10,
+    fontFamily: "Inter_500Medium",
+    marginLeft: 4,
   },
   centerContainer: {
     flex: 1,
