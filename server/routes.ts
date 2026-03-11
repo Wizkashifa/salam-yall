@@ -2371,11 +2371,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let verifiedSubject: string;
       try {
-        const { createRemoteJWKSet, jwtVerify } = await import("jose");
+        const { createRemoteJWKSet, jwtVerify, decodeJwt } = await import("jose");
+        const unverified = decodeJwt(identityToken);
+        const tokenAud = typeof unverified.aud === "string" ? unverified.aud : Array.isArray(unverified.aud) ? unverified.aud[0] : "";
+        console.log("[Auth] Apple token aud:", tokenAud);
         const APPLE_JWKS = createRemoteJWKSet(new URL("https://appleid.apple.com/auth/keys"));
         const { payload } = await jwtVerify(identityToken, APPLE_JWKS, {
           issuer: "https://appleid.apple.com",
-          audience: ["com.salamyall", "com.ummahconnect", "host.exp.Exponent"],
+          audience: tokenAud,
           clockTolerance: 30,
         });
         if (!payload.sub) {
