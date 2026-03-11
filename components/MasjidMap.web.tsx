@@ -14,7 +14,7 @@ interface MasjidMapProps {
 
 export function MasjidMap({ masjids, preferredMasjid, region, hasUserLocation, onSelectMasjid, borderColor, emeraldColor }: MasjidMapProps) {
   const leafletHtml = useMemo(() => {
-    const zoomLevel = hasUserLocation ? 12 : 10;
+    const zoomLevel = hasUserLocation ? 11 : 10;
     const markers = masjids.map(({ masjid: m }) => {
       const isPreferred = preferredMasjid === m.name;
       const color = isPreferred ? "#D4AF37" : m.hasIqama ? "#D4A843" : "#047857";

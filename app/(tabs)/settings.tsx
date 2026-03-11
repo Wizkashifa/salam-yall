@@ -364,8 +364,8 @@ export default function SettingsScreen() {
       return {
         latitude: userLocation.latitude,
         longitude: userLocation.longitude,
-        latitudeDelta: 0.15,
-        longitudeDelta: 0.15,
+        latitudeDelta: 0.35,
+        longitudeDelta: 0.35,
       };
     }
     const lats = masjidList.map(m => m.latitude);
