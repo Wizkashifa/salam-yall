@@ -872,6 +872,47 @@ async function ensureBusinessesTable(pool: pg.Pool) {
   }
 }
 
+async function ensureUserAccountsTable(pool: pg.Pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_accounts (
+      id SERIAL PRIMARY KEY,
+      apple_id VARCHAR(255) UNIQUE,
+      email VARCHAR(255),
+      display_name VARCHAR(255),
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_accounts_apple ON user_accounts(apple_id);`);
+}
+
+async function ensureUserRatingsTable(pool: pg.Pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_ratings (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES user_accounts(id),
+      entity_type VARCHAR(30) NOT NULL,
+      entity_id INTEGER NOT NULL,
+      rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+      created_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(user_id, entity_type, entity_id)
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_ratings_entity ON user_ratings(entity_type, entity_id);`);
+}
+
+async function ensureHalalCheckinsTable(pool: pg.Pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS halal_checkins (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES user_accounts(id),
+      restaurant_id INTEGER NOT NULL,
+      comment TEXT,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_halal_checkins_restaurant ON halal_checkins(restaurant_id, created_at DESC);`);
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   startAutoRefresh();
 
@@ -887,6 +928,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await ensureBusinessesTable(pool).catch(err => console.error("[DB] Init error:", err.message));
   await ensureIqamaTable(pool).catch(err => console.error("[DB] Iqama table init error:", err.message));
   await seedJIARData(pool).catch(err => console.error("[DB] JIAR seed error:", err.message));
+  await ensureUserAccountsTable(pool).catch(err => console.error("[DB] User accounts table init error:", err.message));
+  await ensureUserRatingsTable(pool).catch(err => console.error("[DB] User ratings table init error:", err.message));
+  await ensureHalalCheckinsTable(pool).catch(err => console.error("[DB] Halal checkins table init error:", err.message));
 
   startHalalAutoSync(pool);
   startIqamaSync(pool);
@@ -2219,6 +2263,207 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const crypto = await import("crypto");
+  const userSessions = new Map<string, number>();
+
+  app.post("/api/auth/apple", async (req, res) => {
+    try {
+      const { appleId, email, displayName } = req.body;
+      if (!appleId || typeof appleId !== "string") {
+        return res.status(400).json({ error: "Apple ID is required" });
+      }
+
+      const existing = await pool.query("SELECT id, email, display_name FROM user_accounts WHERE apple_id = $1", [appleId]);
+      let userId: number;
+      let userEmail = email || null;
+      let userName = displayName || null;
+
+      if (existing.rows.length > 0) {
+        userId = existing.rows[0].id;
+        userEmail = existing.rows[0].email || userEmail;
+        userName = existing.rows[0].display_name || userName;
+        if (email || displayName) {
+          await pool.query(
+            "UPDATE user_accounts SET email = COALESCE($1, email), display_name = COALESCE($2, display_name) WHERE id = $3",
+            [email || null, displayName || null, userId]
+          );
+        }
+      } else {
+        const result = await pool.query(
+          "INSERT INTO user_accounts (apple_id, email, display_name) VALUES ($1, $2, $3) RETURNING id",
+          [appleId, userEmail, userName]
+        );
+        userId = result.rows[0].id;
+      }
+
+      const sessionToken = crypto.randomBytes(32).toString("hex");
+      userSessions.set(sessionToken, userId);
+
+      res.json({ token: sessionToken, user: { id: userId, email: userEmail, displayName: userName } });
+    } catch (error: any) {
+      console.error("[Auth] Apple sign-in error:", error.message);
+      res.status(500).json({ error: "Authentication failed" });
+    }
+  });
+
+  app.get("/api/auth/me", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader) return res.status(401).json({ error: "Not authenticated" });
+      const token = authHeader.replace("Bearer ", "");
+      const userId = userSessions.get(token);
+      if (!userId) return res.status(401).json({ error: "Invalid session" });
+
+      const result = await pool.query("SELECT id, email, display_name FROM user_accounts WHERE id = $1", [userId]);
+      if (result.rows.length === 0) return res.status(401).json({ error: "User not found" });
+
+      const user = result.rows[0];
+      res.json({ id: user.id, email: user.email, displayName: user.display_name });
+    } catch (error: any) {
+      console.error("[Auth] Session check error:", error.message);
+      res.status(500).json({ error: "Failed to verify session" });
+    }
+  });
+
+  function getUserIdFromRequest(req: any): number | null {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return null;
+    const token = authHeader.replace("Bearer ", "");
+    return userSessions.get(token) || null;
+  }
+
+  app.post("/api/ratings", async (req, res) => {
+    try {
+      const userId = getUserIdFromRequest(req);
+      if (!userId) return res.status(401).json({ error: "Sign in required" });
+
+      const { entityType, entityId, rating } = req.body;
+      if (!entityType || !entityId || !rating) {
+        return res.status(400).json({ error: "entityType, entityId, and rating are required" });
+      }
+      if (!["restaurant", "business"].includes(entityType)) {
+        return res.status(400).json({ error: "entityType must be 'restaurant' or 'business'" });
+      }
+      const ratingNum = parseInt(rating);
+      if (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 5) {
+        return res.status(400).json({ error: "Rating must be between 1 and 5" });
+      }
+
+      await pool.query(
+        `INSERT INTO user_ratings (user_id, entity_type, entity_id, rating) VALUES ($1, $2, $3, $4)
+         ON CONFLICT (user_id, entity_type, entity_id) DO UPDATE SET rating = $4, created_at = NOW()`,
+        [userId, entityType, parseInt(entityId), ratingNum]
+      );
+
+      const avgResult = await pool.query(
+        "SELECT AVG(rating)::NUMERIC(3,2) as avg_rating, COUNT(*) as count FROM user_ratings WHERE entity_type = $1 AND entity_id = $2",
+        [entityType, parseInt(entityId)]
+      );
+
+      res.json({
+        success: true,
+        avgRating: parseFloat(avgResult.rows[0].avg_rating),
+        totalRatings: parseInt(avgResult.rows[0].count),
+      });
+    } catch (error: any) {
+      console.error("[Ratings] Error:", error.message);
+      res.status(500).json({ error: "Failed to submit rating" });
+    }
+  });
+
+  app.get("/api/ratings/:entityType/:entityId", async (req, res) => {
+    try {
+      const { entityType, entityId } = req.params;
+      const userId = getUserIdFromRequest(req);
+
+      const avgResult = await pool.query(
+        "SELECT AVG(rating)::NUMERIC(3,2) as avg_rating, COUNT(*) as count FROM user_ratings WHERE entity_type = $1 AND entity_id = $2",
+        [entityType, parseInt(entityId)]
+      );
+
+      let userRating = null;
+      if (userId) {
+        const userResult = await pool.query(
+          "SELECT rating FROM user_ratings WHERE user_id = $1 AND entity_type = $2 AND entity_id = $3",
+          [userId, entityType, parseInt(entityId)]
+        );
+        if (userResult.rows.length > 0) {
+          userRating = userResult.rows[0].rating;
+        }
+      }
+
+      res.json({
+        avgRating: avgResult.rows[0].avg_rating ? parseFloat(avgResult.rows[0].avg_rating) : null,
+        totalRatings: parseInt(avgResult.rows[0].count),
+        userRating,
+      });
+    } catch (error: any) {
+      console.error("[Ratings] Fetch error:", error.message);
+      res.status(500).json({ error: "Failed to fetch ratings" });
+    }
+  });
+
+  app.post("/api/checkins", async (req, res) => {
+    try {
+      const userId = getUserIdFromRequest(req);
+      if (!userId) return res.status(401).json({ error: "Sign in required" });
+
+      const { restaurantId, comment } = req.body;
+      if (!restaurantId) {
+        return res.status(400).json({ error: "restaurantId is required" });
+      }
+
+      await pool.query(
+        "INSERT INTO halal_checkins (user_id, restaurant_id, comment) VALUES ($1, $2, $3)",
+        [userId, parseInt(restaurantId), comment || null]
+      );
+
+      const latestResult = await pool.query(
+        "SELECT created_at FROM halal_checkins WHERE restaurant_id = $1 ORDER BY created_at DESC LIMIT 1",
+        [parseInt(restaurantId)]
+      );
+      const countResult = await pool.query(
+        "SELECT COUNT(*) as count FROM halal_checkins WHERE restaurant_id = $1",
+        [parseInt(restaurantId)]
+      );
+
+      res.json({
+        success: true,
+        lastCheckin: latestResult.rows[0]?.created_at,
+        totalCheckins: parseInt(countResult.rows[0].count),
+      });
+    } catch (error: any) {
+      console.error("[Checkins] Error:", error.message);
+      res.status(500).json({ error: "Failed to submit check-in" });
+    }
+  });
+
+  app.get("/api/checkins/:restaurantId", async (req, res) => {
+    try {
+      const restaurantId = parseInt(req.params.restaurantId);
+      const latestResult = await pool.query(
+        "SELECT hc.created_at, hc.comment, ua.display_name FROM halal_checkins hc JOIN user_accounts ua ON hc.user_id = ua.id WHERE hc.restaurant_id = $1 ORDER BY hc.created_at DESC LIMIT 5",
+        [restaurantId]
+      );
+      const countResult = await pool.query(
+        "SELECT COUNT(*) as count FROM halal_checkins WHERE restaurant_id = $1",
+        [restaurantId]
+      );
+
+      res.json({
+        checkins: latestResult.rows.map((r: any) => ({
+          date: r.created_at,
+          comment: r.comment,
+          displayName: r.display_name,
+        })),
+        totalCheckins: parseInt(countResult.rows[0].count),
+        lastCheckin: latestResult.rows[0]?.created_at || null,
+      });
+    } catch (error: any) {
+      console.error("[Checkins] Fetch error:", error.message);
+      res.status(500).json({ error: "Failed to fetch check-ins" });
+    }
+  });
+
   const adminSessions = new Set<string>();
 
   app.post("/api/admin/login", (req, res) => {

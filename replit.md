@@ -34,6 +34,9 @@ The application follows a client-server architecture:
 - Stores `ticker_messages`, `push_tokens`, `halal_restaurants`, `businesses`, `jumuah_schedules`, `iqama_schedules`, `event_overrides`, and `restaurant_overrides`.
 - `iqama_schedules` table: UNIQUE(masjid, date) with columns for fajr, dhuhr, asr, maghrib, isha times. Supports 5 masjids: `"IAR"`, `"ICMNC"`, `"JIAR (Parkwood)"`, `"JIAR (Fayetteville)"`, `"Al Noor"`.
 - `masjids` table: Stores masjid directory data (name, lat/lon, address, website, match_terms, has_iqama, active, sort_order). Seeded with 13 Triangle-area masjids on startup via `ensureMasjidsTable()`. Public endpoint: `GET /api/masjids` (active only). Admin CRUD: `GET/POST /api/admin/masjids`, `PUT/DELETE /api/admin/masjids/:id`. Frontend fetches from API with `NEARBY_MASJIDS` hardcoded fallback.
+- `user_accounts` table: Stores Apple Sign-In users (apple_id, email, display_name). Session tokens stored in-memory on server; persisted via AsyncStorage on client (`auth_session_token` key).
+- `user_ratings` table: Community star ratings (1-5) for restaurants and businesses. UNIQUE(user_id, entity_type, entity_id). API: `GET /api/ratings/:entityType/:entityId`, `POST /api/ratings`.
+- `halal_checkins` table: Halal verification check-ins with optional comment. API: `GET /api/checkins/:restaurantId`, `POST /api/checkins`.
 - `halal_restaurants` has `hours_last_updated TIMESTAMPTZ` column — used for monthly hours refresh from Google Places. Restaurants with stale hours (>30 days or null) get re-fetched on server startup.
 - `restaurant_overrides` table: `restaurant_id INTEGER UNIQUE`, `override_periods JSONB`. Admin can override restaurant opening hours periods via the admin dashboard Restaurants tab. Overrides are applied in both the public `/api/halal-restaurants` endpoint and the admin listing. Pattern matches `event_overrides`.
 
@@ -55,7 +58,7 @@ The application follows a client-server architecture:
 - **Halal Eats:** A directory of halal restaurants with search, filters, and distance sorting. Action buttons: Call → Website → Directions.
 - **Events:** Integrates Google Calendar to display community events with registration options.
 - **Directory:** A Muslim business directory with category filtering, Google Places integration, and enhanced submission form. Supports specialty (Healthcare), keyword tags (predefined per category), photo URL, and booking/appointment links. DB columns: `specialty VARCHAR(255)`, `keywords TEXT[]`, `photo_url TEXT`, `booking_url TEXT`.
-- **More Tab:** Access to prayer tracker, masjid directory, prayer settings, appearance settings, and feedback forms.
+- **More Tab:** Access to prayer tracker, masjid directory, prayer settings, appearance settings, feedback forms, and Apple Sign-In (mobile only; web shows informational message). Signed-in users see their account card with sign-out option.
 - **Prayer Features:** Configurable prayer calculation methods, local notifications, mosque proximity alerts, and Iqama times from various masjids.
 
 ## External Dependencies

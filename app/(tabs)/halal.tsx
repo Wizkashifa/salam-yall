@@ -15,6 +15,7 @@ import {
   Modal,
   Dimensions,
   Share,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -25,7 +26,8 @@ import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
 import { GlassHeader } from "@/components/GlassHeader";
 import { useDeepLink } from "@/lib/deeplink-context";
-import { getApiUrl } from "@/lib/query-client";
+import { useAuth } from "@/lib/auth-context";
+import { getApiUrl, apiRequest } from "@/lib/query-client";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 
 interface HalalRestaurant {
@@ -218,10 +220,120 @@ function formatTimings(openingHours: HalalRestaurant["opening_hours"]): string[]
   });
 }
 
+function StarRatingInput({ value, onChange, size = 28, color = "#F59E0B" }: {
+  value: number; onChange: (v: number) => void; size?: number; color?: string;
+}) {
+  return (
+    <View style={{ flexDirection: "row", gap: 4 }}>
+      {[1, 2, 3, 4, 5].map((star) => (
+        <Pressable key={star} onPress={() => { onChange(star); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} hitSlop={4}>
+          <Ionicons name={star <= value ? "star" : "star-outline"} size={size} color={star <= value ? color : "#D1D5DB"} />
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
 function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }: {
   restaurant: HalalRestaurant | null; visible: boolean; onClose: () => void; colors: any; isDark: boolean;
 }) {
   const insets = useSafeAreaInsets();
+  const { user, signInWithApple, getAuthHeaders } = useAuth();
+  const [userRating, setUserRating] = useState(0);
+  const [communityRating, setCommunityRating] = useState<{ avg: number | null; count: number }>({ avg: null, count: 0 });
+  const [checkinData, setCheckinData] = useState<{ lastCheckin: string | null; totalCheckins: number }>({ lastCheckin: null, totalCheckins: 0 });
+  const [showCheckinForm, setShowCheckinForm] = useState(false);
+  const [checkinComment, setCheckinComment] = useState("");
+  const [submittingRating, setSubmittingRating] = useState(false);
+  const [submittingCheckin, setSubmittingCheckin] = useState(false);
+
+  useEffect(() => {
+    if (!restaurant || !visible) return;
+    const headers = getAuthHeaders();
+    const baseUrl = getApiUrl();
+
+    fetch(new URL(`/api/ratings/restaurant/${restaurant.id}`, baseUrl).toString(), {
+      headers: headers.Authorization ? headers : {},
+    }).then(r => r.json()).then(data => {
+      setCommunityRating({ avg: data.avgRating, count: data.totalRatings });
+      if (data.userRating) setUserRating(data.userRating);
+    }).catch(() => {});
+
+    fetch(new URL(`/api/checkins/${restaurant.id}`, baseUrl).toString())
+      .then(r => r.json())
+      .then(data => setCheckinData({ lastCheckin: data.lastCheckin, totalCheckins: data.totalCheckins }))
+      .catch(() => {});
+  }, [restaurant?.id, visible]);
+
+  useEffect(() => {
+    if (!visible) {
+      setUserRating(0);
+      setCommunityRating({ avg: null, count: 0 });
+      setCheckinData({ lastCheckin: null, totalCheckins: 0 });
+      setShowCheckinForm(false);
+      setCheckinComment("");
+    }
+  }, [visible]);
+
+  const handleRate = useCallback(async (rating: number) => {
+    let authHeaders = getAuthHeaders();
+    if (!user) {
+      if (Platform.OS === "web") {
+        Alert.alert("Sign In Required", "Use the mobile app to sign in with Apple and rate restaurants.");
+        return;
+      }
+      try {
+        const freshToken = await signInWithApple();
+        authHeaders = { Authorization: `Bearer ${freshToken}` };
+      } catch { return; }
+    }
+    setUserRating(rating);
+    setSubmittingRating(true);
+    try {
+      const response = await apiRequest("POST", "/api/ratings", {
+        entityType: "restaurant",
+        entityId: restaurant?.id,
+        rating,
+      }, authHeaders);
+      const data = await response.json();
+      setCommunityRating({ avg: data.avgRating, count: data.totalRatings });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch {
+      Alert.alert("Error", "Could not submit your rating. Please try again.");
+    }
+    setSubmittingRating(false);
+  }, [user, restaurant?.id, signInWithApple, getAuthHeaders]);
+
+  const handleCheckin = useCallback(async () => {
+    let authHeaders = getAuthHeaders();
+    if (!user) {
+      if (Platform.OS === "web") {
+        Alert.alert("Sign In Required", "Use the mobile app to sign in with Apple to check in.");
+        return;
+      }
+      try {
+        const freshToken = await signInWithApple();
+        authHeaders = { Authorization: `Bearer ${freshToken}` };
+      } catch { return; }
+    }
+    setSubmittingCheckin(true);
+    try {
+      const response = await apiRequest("POST", "/api/checkins", {
+        restaurantId: restaurant?.id,
+        comment: checkinComment.trim() || null,
+      }, authHeaders);
+      const data = await response.json();
+      setCheckinData({ lastCheckin: data.lastCheckin, totalCheckins: data.totalCheckins });
+      setShowCheckinForm(false);
+      setCheckinComment("");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      trackEvent("halal_checkin", { restaurant_id: restaurant?.id, restaurant_name: restaurant?.name });
+    } catch {
+      Alert.alert("Error", "Could not submit your check-in. Please try again.");
+    }
+    setSubmittingCheckin(false);
+  }, [user, restaurant?.id, checkinComment, signInWithApple, getAuthHeaders]);
+
   if (!restaurant) return null;
 
   const badge = getHalalBadge(restaurant.is_halal);
@@ -356,6 +468,89 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
                     </Text>
                   );
                 })}
+              </View>
+            ) : null}
+
+            <View style={[styles.communitySection, { borderTopColor: colors.divider }]}>
+              <Text style={[styles.communitySectionTitle, { color: colors.text }]}>Community Rating</Text>
+              {communityRating.avg != null && communityRating.count > 0 ? (
+                <View style={styles.communityRatingRow}>
+                  <Text style={[styles.communityAvg, { color: colors.gold }]}>{communityRating.avg.toFixed(1)}</Text>
+                  <Text style={styles.communityStars}>{renderStars(communityRating.avg)}</Text>
+                  <Text style={[styles.communityCount, { color: colors.textTertiary }]}>
+                    ({communityRating.count} {communityRating.count === 1 ? "rating" : "ratings"})
+                  </Text>
+                </View>
+              ) : (
+                <Text style={[styles.communityEmpty, { color: colors.textTertiary }]}>No community ratings yet</Text>
+              )}
+              <View style={styles.userRatingRow}>
+                <Text style={[styles.userRatingLabel, { color: colors.textSecondary }]}>Your rating:</Text>
+                <StarRatingInput value={userRating} onChange={handleRate} size={24} />
+              </View>
+            </View>
+
+            {(restaurant.is_halal === "IS_HALAL" || restaurant.is_halal === "PARTIALLY_HALAL") ? (
+              <View style={[styles.communitySection, { borderTopColor: colors.divider }]}>
+                <View style={styles.checkinHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.communitySectionTitle, { color: colors.text }]}>Halal Verification</Text>
+                    {checkinData.lastCheckin ? (
+                      <Text style={[styles.lastVerified, { color: colors.emerald }]}>
+                        Last verified {new Date(checkinData.lastCheckin).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        {checkinData.totalCheckins > 1 ? ` (${checkinData.totalCheckins} check-ins)` : ""}
+                      </Text>
+                    ) : (
+                      <Text style={[styles.communityEmpty, { color: colors.textTertiary }]}>Not yet verified by the community</Text>
+                    )}
+                  </View>
+                  {!showCheckinForm ? (
+                    <Pressable
+                      style={({ pressed }) => [styles.checkinBtn, { backgroundColor: colors.emerald, opacity: pressed ? 0.8 : 1 }]}
+                      onPress={() => {
+                        if (!user && Platform.OS === "web") {
+                          Alert.alert("Sign In Required", "Use the mobile app to sign in with Apple to check in.");
+                          return;
+                        }
+                        setShowCheckinForm(true);
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }}
+                    >
+                      <Ionicons name="checkmark-circle-outline" size={16} color="#fff" />
+                      <Text style={styles.checkinBtnText}>Check In</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+                {showCheckinForm ? (
+                  <View style={styles.checkinForm}>
+                    <TextInput
+                      style={[styles.checkinInput, { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.border }]}
+                      placeholder="Optional: How's the halal status?"
+                      placeholderTextColor={colors.textTertiary}
+                      value={checkinComment}
+                      onChangeText={setCheckinComment}
+                      multiline
+                      numberOfLines={2}
+                    />
+                    <View style={styles.checkinFormActions}>
+                      <Pressable
+                        style={[styles.checkinFormBtn, { backgroundColor: colors.surfaceSecondary }]}
+                        onPress={() => { setShowCheckinForm(false); setCheckinComment(""); }}
+                      >
+                        <Text style={[styles.checkinFormBtnText, { color: colors.textSecondary }]}>Cancel</Text>
+                      </Pressable>
+                      <Pressable
+                        style={[styles.checkinFormBtn, { backgroundColor: colors.emerald, opacity: submittingCheckin ? 0.6 : 1 }]}
+                        onPress={handleCheckin}
+                        disabled={submittingCheckin}
+                      >
+                        <Text style={[styles.checkinFormBtnText, { color: "#fff" }]}>
+                          {submittingCheckin ? "Submitting..." : "Confirm"}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                ) : null}
               </View>
             ) : null}
 
@@ -1104,6 +1299,101 @@ const styles = StyleSheet.create({
   },
   detailActionText: {
     color: "#fff",
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+  },
+  communitySection: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    marginTop: 16,
+    paddingTop: 14,
+  },
+  communitySectionTitle: {
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
+    marginBottom: 8,
+  },
+  communityRatingRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
+    marginBottom: 4,
+  },
+  communityAvg: {
+    fontSize: 20,
+    fontFamily: "Inter_700Bold",
+  },
+  communityStars: {
+    fontSize: 14,
+    color: "#F59E0B",
+  },
+  communityCount: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+  },
+  communityEmpty: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    fontStyle: "italic" as const,
+    marginBottom: 4,
+  },
+  userRatingRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 10,
+    marginTop: 8,
+  },
+  userRatingLabel: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+  },
+  checkinHeader: {
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
+    gap: 12,
+  },
+  lastVerified: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    marginTop: 2,
+  },
+  checkinBtn: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  checkinBtnText: {
+    color: "#fff",
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+  },
+  checkinForm: {
+    marginTop: 12,
+    gap: 10,
+  },
+  checkinInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    minHeight: 60,
+    textAlignVertical: "top" as const,
+  },
+  checkinFormActions: {
+    flexDirection: "row" as const,
+    gap: 10,
+    justifyContent: "flex-end" as const,
+  },
+  checkinFormBtn: {
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  checkinFormBtnText: {
     fontSize: 14,
     fontFamily: "Inter_600SemiBold",
   },

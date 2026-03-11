@@ -20,6 +20,7 @@ import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
 import { GlassHeader } from "@/components/GlassHeader";
 import { useSettings } from "@/lib/settings-context";
+import { useAuth } from "@/lib/auth-context";
 import {
   NEARBY_MASJIDS,
   CALC_METHOD_LABELS,
@@ -51,6 +52,7 @@ type SettingsSection = "main" | "calcMethod" | "masjids" | "masjidDetail" | "fee
 export default function SettingsScreen() {
   const { colors, isDark, themeMode, setThemeMode, ramadanMode, setRamadanMode } = useTheme();
   const { calcMethod, setCalcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid, setPreferredMasjid } = useSettings();
+  const { user, signInWithApple, signOut, isLoading: authLoading } = useAuth();
   const [section, setSection] = useState<SettingsSection>("main");
   const [selectedMasjid, setSelectedMasjid] = useState<Masjid | null>(null);
   const [feedbackType, setFeedbackType] = useState<"bug" | "feature">("feature");
@@ -164,8 +166,60 @@ export default function SettingsScreen() {
     return indices.map(i => events[i]);
   }, [selectedMasjid, events]);
 
+  const handleSignIn = useCallback(async () => {
+    try {
+      await signInWithApple();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err: any) {
+      if (err.code !== "ERR_REQUEST_CANCELED") {
+        Alert.alert("Sign In Failed", err.message || "Could not sign in with Apple. Please try again.");
+      }
+    }
+  }, [signInWithApple]);
+
+  const handleSignOut = useCallback(() => {
+    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Sign Out", style: "destructive", onPress: () => { signOut(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } },
+    ]);
+  }, [signOut]);
+
   const renderMain = () => (
     <>
+      {user ? (
+        <View style={[styles.accountCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[styles.accountAvatar, { backgroundColor: colors.emerald + "20" }]}>
+            <Ionicons name="person" size={24} color={colors.emerald} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.menuLabel, { color: colors.text }]}>{user.displayName || "User"}</Text>
+            <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>{user.email || "Signed in with Apple"}</Text>
+          </View>
+          <Pressable onPress={handleSignOut} hitSlop={8} style={{ padding: 4 }}>
+            <Ionicons name="log-out-outline" size={20} color={colors.textSecondary} />
+          </Pressable>
+        </View>
+      ) : Platform.OS !== "web" ? (
+        <Pressable
+          style={({ pressed }) => [styles.appleSignInButton, { opacity: pressed ? 0.85 : 1 }]}
+          onPress={handleSignIn}
+          disabled={authLoading}
+        >
+          <Ionicons name="logo-apple" size={20} color="#FFFFFF" />
+          <Text style={styles.appleSignInText}>Sign in with Apple</Text>
+        </Pressable>
+      ) : (
+        <View style={[styles.menuItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
+            <Ionicons name="phone-portrait-outline" size={20} color={colors.emerald} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.menuLabel, { color: colors.text }]}>Sign In</Text>
+            <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>Use the mobile app to sign in with Apple</Text>
+          </View>
+        </View>
+      )}
+
       <Pressable
         style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
         onPress={() => { setSection("prayerTracker"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
@@ -1297,5 +1351,37 @@ const styles = StyleSheet.create({
   legendText: {
     fontSize: 12,
     fontFamily: "Inter_500Medium",
+  },
+  accountCard: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 14,
+    marginBottom: 16,
+  },
+  accountAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  appleSignInButton: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    backgroundColor: "#000000",
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    gap: 10,
+    marginBottom: 16,
+  },
+  appleSignInText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
   },
 });

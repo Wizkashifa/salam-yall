@@ -26,6 +26,7 @@ import { ThemeProvider } from "@/lib/theme-context";
 import { SettingsProvider } from "@/lib/settings-context";
 import { registerPushToken } from "@/lib/push-utils";
 import { DeepLinkProvider, parseDeepLinkUrl, useDeepLink } from "@/lib/deeplink-context";
+import { AuthProvider } from "@/lib/auth-context";
 
 const ONBOARDING_KEY = "onboarding_complete";
 
@@ -124,19 +125,21 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <SettingsProvider>
-            <DeepLinkProvider>
-              <GestureHandlerRootView>
-                <KeyboardProvider>
-                  <RootLayoutNav />
-                  {showSplash && (
-                    <AnimatedSplash onFinish={() => setShowSplash(false)} />
-                  )}
-                  {!showSplash && showOnboarding && (
-                    <OnboardingFlow onComplete={handleOnboardingComplete} />
-                  )}
-                </KeyboardProvider>
-              </GestureHandlerRootView>
-            </DeepLinkProvider>
+            <AuthProvider>
+              <DeepLinkProvider>
+                <GestureHandlerRootView>
+                  <KeyboardProvider>
+                    <RootLayoutNav />
+                    {showSplash && (
+                      <AnimatedSplash onFinish={() => setShowSplash(false)} />
+                    )}
+                    {!showSplash && showOnboarding && (
+                      <OnboardingFlow onComplete={handleOnboardingComplete} />
+                    )}
+                  </KeyboardProvider>
+                </GestureHandlerRootView>
+              </DeepLinkProvider>
+            </AuthProvider>
           </SettingsProvider>
         </ThemeProvider>
       </QueryClientProvider>
