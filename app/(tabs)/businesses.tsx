@@ -181,9 +181,17 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
       return;
     }
     const baseUrl = getApiUrl();
-    fetch(new URL(`/api/ratings/business/${business.id}`, baseUrl).toString())
+    const headers = getAuthHeaders();
+    fetch(new URL(`/api/ratings/business/${business.id}`, baseUrl).toString(), {
+      headers: headers.Authorization ? headers : {},
+    })
       .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data) setCommunityRating({ avg: data.avgRating, count: data.totalRatings }); })
+      .then(data => {
+        if (data) {
+          setCommunityRating({ avg: data.avgRating, count: data.totalRatings });
+          if (data.userRating) setUserRating(data.userRating);
+        }
+      })
       .catch(() => {});
   }, [visible, business?.id]);
 
