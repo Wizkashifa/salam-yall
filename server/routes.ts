@@ -20,6 +20,8 @@ const NAME_MATCHES: [string, string][] = [
   ["shaw university mosque", "Masjid King Khalid"],
   ["as-salaam islamic", "As-Salaam Islamic Center"],
   ["north raleigh masjid", "North Raleigh Masjid"],
+  ["mycc", "North Raleigh Masjid"],
+  ["muslim youth community center", "North Raleigh Masjid"],
   ["al-noor islamic", "Al-Noor Islamic Center"],
   ["apex masjid", "Apex Masjid"],
   ["apex mosque", "Apex Masjid"],
@@ -536,7 +538,7 @@ async function ensureMasjidsTable(pool: pg.Pool) {
         ('Chapel Hill Islamic Society', 35.9406, -79.0164, '1717 Legion Rd, Chapel Hill, NC 27517', 'https://www.chapelhillmasjid.org', ARRAY['chapel hill islamic', 'legion rd'], false, 10),
         ('Islamic Center of Cary', 35.7731, -78.8028, '1155 W Chatham St, Cary, NC 27511', 'https://www.icocary.org', ARRAY['islamic center of cary', 'chatham st'], false, 11),
         ('Masjid King Khalid', 35.7693, -78.6383, '130 Martin Luther King Jr Blvd, Raleigh, NC 27601', NULL, ARRAY['king khalid', 'martin luther king'], false, 12),
-        ('North Raleigh Masjid', 35.8520, -78.5571, '7424 Deah Way, Raleigh, NC 27616', NULL, ARRAY['north raleigh masjid', 'deah way'], false, 13),
+        ('North Raleigh Masjid', 35.8520, -78.5571, '7424 Deah Way, Raleigh, NC 27616', NULL, ARRAY['north raleigh masjid', 'deah way', 'mycc', 'muslim youth community center'], false, 13),
         ('San Ramon Valley Islamic Center', 37.7770, -121.9691, '2230 Camino Ramon, San Ramon, CA 94583', 'https://srvic.org', ARRAY['srvic', 'san ramon valley islamic', 'camino ramon'], true, 14),
         ('Muslim Community Association', 37.3769, -121.9595, '3003 Scott Blvd, Santa Clara, CA 95054', 'https://www.mcabayarea.org', ARRAY['mca', 'muslim community association', 'scott blvd', 'mcabayarea'], true, 15),
         ('MCA Al-Noor', 37.3530, -121.9535, '1755 Catherine St, Santa Clara, CA 95050', 'https://www.mcabayarea.org', ARRAY['mca al-noor', 'mca alnoor', 'mca noor', 'catherine st'], true, 16);
