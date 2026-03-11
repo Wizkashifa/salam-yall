@@ -360,6 +360,14 @@ export default function SettingsScreen() {
   );
 
   const mapRegion = useMemo(() => {
+    if (userLocation) {
+      return {
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+        latitudeDelta: 0.15,
+        longitudeDelta: 0.15,
+      };
+    }
     const lats = masjidList.map(m => m.latitude);
     const lngs = masjidList.map(m => m.longitude);
     const minLat = Math.min(...lats);
@@ -372,7 +380,7 @@ export default function SettingsScreen() {
       latitudeDelta: (maxLat - minLat) * 1.4 + 0.02,
       longitudeDelta: (maxLng - minLng) * 1.4 + 0.02,
     };
-  }, [masjidList]);
+  }, [masjidList, userLocation]);
 
   const handleMapSelectMasjid = useCallback((m: Masjid) => {
     setSelectedMasjid(m);
@@ -400,6 +408,13 @@ export default function SettingsScreen() {
         emeraldColor={colors.emerald}
       />
 
+      <View style={styles.mapLegend}>
+        <View style={styles.legendItem}>
+          <MaterialCommunityIcons name="mosque" size={14} color={colors.gold} />
+          <Text style={[styles.legendText, { color: colors.textSecondary }]}>Iqama times available</Text>
+        </View>
+      </View>
+
       {sortedMasjids.map((entry, i) => {
         const masjid = entry.masjid;
         const isPreferred = preferredMasjid === masjid.name;
@@ -412,8 +427,8 @@ export default function SettingsScreen() {
             style={({ pressed }) => [styles.masjidRow, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
             onPress={() => { setSelectedMasjid(masjid); setSection("masjidDetail"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
           >
-            <View style={[styles.masjidIcon, { backgroundColor: colors.prayerIconBg }]}>
-              <MaterialCommunityIcons name="mosque" size={16} color={colors.emerald} />
+            <View style={[styles.masjidIcon, { backgroundColor: masjid.hasIqama ? colors.gold + "20" : colors.prayerIconBg }]}>
+              <MaterialCommunityIcons name="mosque" size={16} color={masjid.hasIqama ? colors.gold : colors.emerald} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.masjidName, { color: colors.text }]} numberOfLines={1}>{masjid.name}</Text>
@@ -1235,5 +1250,20 @@ const styles = StyleSheet.create({
   distanceText: {
     fontSize: 12,
     fontFamily: "Inter_600SemiBold",
+  },
+  mapLegend: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    marginBottom: 12,
+    marginTop: -8,
+  },
+  legendItem: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
+  },
+  legendText: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
   },
 });

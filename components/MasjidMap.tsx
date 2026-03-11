@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import MapView, { Marker, Callout } from "react-native-maps";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -17,6 +17,12 @@ interface MasjidMapProps {
 export function MasjidMap({ masjids, preferredMasjid, region, hasUserLocation, onSelectMasjid, borderColor, emeraldColor }: MasjidMapProps) {
   const mapRef = useRef<MapView>(null);
 
+  useEffect(() => {
+    if (hasUserLocation && mapRef.current) {
+      mapRef.current.animateToRegion(region, 500);
+    }
+  }, [hasUserLocation, region]);
+
   return (
     <View style={[styles.container, { borderColor }]}>
       <MapView
@@ -29,11 +35,12 @@ export function MasjidMap({ masjids, preferredMasjid, region, hasUserLocation, o
         {masjids.map((entry, i) => {
           const m = entry.masjid;
           const isPreferred = preferredMasjid === m.name;
+          const pinColor = isPreferred ? "#D4AF37" : m.hasIqama ? "#D4A843" : "#047857";
           return (
             <Marker
               key={i}
               coordinate={{ latitude: m.latitude, longitude: m.longitude }}
-              pinColor={isPreferred ? "#D4AF37" : "#047857"}
+              pinColor={pinColor}
               onCalloutPress={() => onSelectMasjid(m)}
             >
               <Callout tooltip={false}>

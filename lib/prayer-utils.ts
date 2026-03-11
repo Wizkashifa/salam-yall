@@ -126,6 +126,7 @@ export const NEARBY_MASJIDS: Masjid[] = [
   { name: "North Raleigh Masjid", latitude: 35.7682, longitude: -78.7149, address: "1411 Buck Jones Rd, Raleigh, NC 27606", matchTerms: ["north raleigh masjid", "deah way", "buck jones"] },
   { name: "San Ramon Valley Islamic Center", latitude: 37.7770, longitude: -121.9691, address: "2230 Camino Ramon, San Ramon, CA 94583", website: "https://srvic.org", matchTerms: ["srvic", "san ramon valley islamic", "camino ramon"], hasIqama: true },
   { name: "Muslim Community Association", latitude: 37.3769, longitude: -121.9595, address: "3003 Scott Blvd, Santa Clara, CA 95054", website: "https://www.mcabayarea.org", matchTerms: ["mca", "muslim community association", "scott blvd", "mcabayarea"], hasIqama: true },
+  { name: "MCA Noor", latitude: 37.3778, longitude: -121.9580, address: "3003 Scott Blvd, Santa Clara, CA 95054", website: "https://www.mcabayarea.org", matchTerms: ["mca noor", "noor hall"], hasIqama: true },
 ];
 
 export function matchEventsToMasjid(masjid: Masjid, events: { title: string; location: string; organizer: string }[]): number[] {

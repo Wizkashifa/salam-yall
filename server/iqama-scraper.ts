@@ -5,6 +5,7 @@ const IAR_API_URL = "https://raleighmasjid.org/API/prayer/month/";
 const ICMNC_API_URL = "https://www.icmnc.org/wp-json/dpt/v1/prayertime";
 const SRVIC_API_URL = "https://srvic.org/wp-json/dpt/v1/prayertime";
 const MCA_SCHEDULE_URL = "https://www.mcabayarea.org/prayerschedule-mca/";
+const MCA_NOOR_SCHEDULE_URL = "https://www.mcabayarea.org/prayerschedule-noor/";
 const ALNOOR_URL = "https://alnooric.org/monthly-prayer-times/";
 
 export interface DayIqama {
@@ -226,18 +227,18 @@ async function fetchAndStoreSRVIC(pool: pg.Pool): Promise<void> {
   }
 }
 
-async function fetchAndStoreMCA(pool: pg.Pool, monthNum?: number): Promise<void> {
+async function parseMCASchedulePage(pool: pg.Pool, url: string, masjidName: string, monthNum?: number): Promise<void> {
   try {
     const now = new Date();
-    const raleighNow = new Date(now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
-    const month = monthNum ?? (raleighNow.getMonth() + 1);
-    const year = raleighNow.getFullYear();
+    const caNow = new Date(now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
+    const month = monthNum ?? (caNow.getMonth() + 1);
+    const year = caNow.getFullYear();
     const monthStr = String(month).padStart(2, "0");
 
-    const url = `${MCA_SCHEDULE_URL}?month=${monthStr}`;
-    const resp = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+    const fullUrl = `${url}?month=${monthStr}`;
+    const resp = await fetch(fullUrl, { headers: { "User-Agent": "Mozilla/5.0" } });
     if (!resp.ok) {
-      console.error(`[Iqama] MCA page returned ${resp.status}`);
+      console.error(`[Iqama] ${masjidName} page returned ${resp.status}`);
       return;
     }
 
@@ -280,7 +281,7 @@ async function fetchAndStoreMCA(pool: pg.Pool, monthNum?: number): Promise<void>
       if (!fajrIqama || !ishaIqama) continue;
 
       placeholders.push(`($${idx}, $${idx + 1}, $${idx + 2}, $${idx + 3}, $${idx + 4}, $${idx + 5}, $${idx + 6})`);
-      values.push("MCA", dateKey, fajrIqama, dhuhrIqama, asrIqama, maghribIqama, ishaIqama);
+      values.push(masjidName, dateKey, fajrIqama, dhuhrIqama, asrIqama, maghribIqama, ishaIqama);
       idx += 7;
     }
 
@@ -290,11 +291,19 @@ async function fetchAndStoreMCA(pool: pg.Pool, monthNum?: number): Promise<void>
          ON CONFLICT (masjid, date) DO UPDATE SET fajr=EXCLUDED.fajr, dhuhr=EXCLUDED.dhuhr, asr=EXCLUDED.asr, maghrib=EXCLUDED.maghrib, isha=EXCLUDED.isha, updated_at=NOW()`,
         values
       );
-      console.log(`[Iqama] Synced ${placeholders.length} MCA days for month ${monthStr}`);
+      console.log(`[Iqama] Synced ${placeholders.length} ${masjidName} days for month ${monthStr}`);
     }
   } catch (err: any) {
-    console.error("[Iqama] Error syncing MCA:", err.message);
+    console.error(`[Iqama] Error syncing ${masjidName}:`, err.message);
   }
+}
+
+async function fetchAndStoreMCA(pool: pg.Pool, monthNum?: number): Promise<void> {
+  await parseMCASchedulePage(pool, MCA_SCHEDULE_URL, "MCA", monthNum);
+}
+
+async function fetchAndStoreMCANoor(pool: pg.Pool, monthNum?: number): Promise<void> {
+  await parseMCASchedulePage(pool, MCA_NOOR_SCHEDULE_URL, "MCA Noor", monthNum);
 }
 
 const MONTH_ABBRS: Record<string, number> = {
@@ -387,6 +396,7 @@ export async function syncExternalIqama(pool: pg.Pool): Promise<void> {
     fetchAndStoreICMNC(pool),
     fetchAndStoreSRVIC(pool),
     fetchAndStoreMCA(pool),
+    fetchAndStoreMCANoor(pool),
     fetchAndStoreAlNoor(pool),
   ]);
 
@@ -398,6 +408,7 @@ export async function syncExternalIqama(pool: pg.Pool): Promise<void> {
     await fetchAndStoreIAR(pool, nextMonthDate.getFullYear(), nextMonthDate.getMonth() + 1);
     const nextMonth = (month % 12) + 1;
     await fetchAndStoreMCA(pool, nextMonth);
+    await fetchAndStoreMCANoor(pool, nextMonth);
   }
 }
 
