@@ -111,22 +111,22 @@ export interface Masjid {
 }
 
 export const NEARBY_MASJIDS: Masjid[] = [
-  { name: "Al-Noor Islamic Center", latitude: 35.7676, longitude: -78.7165, address: "1501 Buck Jones Rd, Raleigh, NC 27606", matchTerms: ["al-noor", "alnoor"], hasIqama: true },
-  { name: "Islamic Association of Raleigh (Atwater)", latitude: 35.7953, longitude: -78.6711, address: "808 Atwater St, Raleigh, NC 27607", website: "https://www.raleighmasjid.org", matchTerms: ["iar", "islamic association of raleigh", "atwater"], hasIqama: true },
-  { name: "Islamic Association of Raleigh (Page Rd)", latitude: 35.8329, longitude: -78.8274, address: "3104 Page Rd, Morrisville, NC 27560", website: "https://www.raleighmasjid.org", matchTerms: ["iar", "islamic association of raleigh", "page rd", "page road"], hasIqama: true },
-  { name: "Islamic Center of Morrisville", latitude: 35.8316, longitude: -78.8345, address: "107 Quail Fields Ct, Morrisville, NC 27560", website: "https://www.icmorrisville.org", matchTerms: ["icm", "islamic center of morrisville", "quail fields"], hasIqama: true },
-  { name: "Jamaat Ibad Ar-Rahman (Fayetteville)", latitude: 35.9615, longitude: -78.8872, address: "3034 Fayetteville St, Durham, NC 27707", website: "https://www.jiar.org", matchTerms: ["jamaat ibad", "jiar", "fayetteville st"], hasIqama: true },
-  { name: "Jamaat Ibad Ar-Rahman (Parkwood)", latitude: 35.9194, longitude: -78.9227, address: "5122 Revere Rd, Durham, NC 27713", website: "https://www.jiar.org", matchTerms: ["parkwood", "revere rd"], hasIqama: true },
-  { name: "Apex Masjid", latitude: 35.7327, longitude: -78.8502, address: "733 Center St, Apex, NC 27502", matchTerms: ["apex masjid", "center st, apex"] },
-  { name: "Ar-Razzaq Islamic Center", latitude: 35.9728, longitude: -78.9327, address: "1920 Chapel Hill Rd, Durham, NC 27707", matchTerms: ["ar-razzaq", "arrazzaq", "chapel hill rd, durham"] },
-  { name: "As-Salaam Islamic Center", latitude: 35.7985, longitude: -78.6766, address: "2104 Woods Edge Rd, Raleigh, NC 27607", website: "https://www.assalaam.org", matchTerms: ["as-salaam", "assalaam", "woods edge"] },
-  { name: "Chapel Hill Islamic Society", latitude: 35.8841, longitude: -79.0328, address: "1717 Legion Rd, Chapel Hill, NC 27517", website: "https://www.chapelhillmasjid.org", matchTerms: ["chapel hill islamic", "legion rd"] },
-  { name: "Islamic Center of Cary", latitude: 35.7773, longitude: -78.7978, address: "1155 W Chatham St, Cary, NC 27511", website: "https://www.icocary.org", matchTerms: ["islamic center of cary", "chatham st"] },
-  { name: "Masjid King Khalid", latitude: 35.7756, longitude: -78.6375, address: "130 Martin Luther King Jr Blvd, Raleigh, NC 27601", matchTerms: ["king khalid", "martin luther king"] },
-  { name: "North Raleigh Masjid", latitude: 35.7682, longitude: -78.7149, address: "1411 Buck Jones Rd, Raleigh, NC 27606", matchTerms: ["north raleigh masjid", "deah way", "buck jones"] },
+  { name: "Al-Noor Islamic Center", latitude: 35.7636, longitude: -78.7443, address: "1501 Buck Jones Rd, Raleigh, NC 27606", matchTerms: ["al-noor", "alnoor"], hasIqama: true },
+  { name: "Islamic Association of Raleigh (Atwater)", latitude: 35.7898, longitude: -78.6912, address: "808 Atwater St, Raleigh, NC 27607", website: "https://www.raleighmasjid.org", matchTerms: ["iar", "islamic association of raleigh", "atwater"], hasIqama: true },
+  { name: "Islamic Association of Raleigh (Page Rd)", latitude: 35.9067, longitude: -78.8169, address: "3104 Page Rd, Morrisville, NC 27560", website: "https://www.raleighmasjid.org", matchTerms: ["iar", "islamic association of raleigh", "page rd", "page road"], hasIqama: true },
+  { name: "Islamic Center of Morrisville", latitude: 35.8099, longitude: -78.8228, address: "107 Quail Fields Ct, Morrisville, NC 27560", website: "https://www.icmorrisville.org", matchTerms: ["icm", "islamic center of morrisville", "quail fields"], hasIqama: true },
+  { name: "Jamaat Ibad Ar-Rahman (Fayetteville)", latitude: 35.9856, longitude: -78.8977, address: "3034 Fayetteville St, Durham, NC 27707", website: "https://www.jiar.org", matchTerms: ["jamaat ibad", "jiar", "fayetteville st"], hasIqama: true },
+  { name: "Jamaat Ibad Ar-Rahman (Parkwood)", latitude: 35.8938, longitude: -78.9109, address: "5122 Revere Rd, Durham, NC 27713", website: "https://www.jiar.org", matchTerms: ["parkwood", "revere rd"], hasIqama: true },
+  { name: "Apex Masjid", latitude: 35.7294, longitude: -78.8415, address: "733 Center St, Apex, NC 27502", matchTerms: ["apex masjid", "center st, apex"] },
+  { name: "Ar-Razzaq Islamic Center", latitude: 35.9966, longitude: -78.9155, address: "1920 Chapel Hill Rd, Durham, NC 27707", matchTerms: ["ar-razzaq", "arrazzaq", "chapel hill rd, durham"] },
+  { name: "As-Salaam Islamic Center", latitude: 35.7781, longitude: -78.6075, address: "110 Lord Anson Dr, Raleigh, NC 27610", website: "https://www.assalaam.org", matchTerms: ["as-salaam", "assalaam", "lord anson"] },
+  { name: "Chapel Hill Islamic Society", latitude: 35.9406, longitude: -79.0164, address: "1717 Legion Rd, Chapel Hill, NC 27517", website: "https://www.chapelhillmasjid.org", matchTerms: ["chapel hill islamic", "legion rd"] },
+  { name: "Islamic Center of Cary", latitude: 35.7731, longitude: -78.8028, address: "1155 W Chatham St, Cary, NC 27511", website: "https://www.icocary.org", matchTerms: ["islamic center of cary", "chatham st"] },
+  { name: "Masjid King Khalid", latitude: 35.7693, longitude: -78.6383, address: "130 Martin Luther King Jr Blvd, Raleigh, NC 27601", matchTerms: ["king khalid", "martin luther king"] },
+  { name: "North Raleigh Masjid", latitude: 35.8520, longitude: -78.5571, address: "7424 Deah Way, Raleigh, NC 27616", matchTerms: ["north raleigh masjid", "deah way"] },
   { name: "San Ramon Valley Islamic Center", latitude: 37.7770, longitude: -121.9691, address: "2230 Camino Ramon, San Ramon, CA 94583", website: "https://srvic.org", matchTerms: ["srvic", "san ramon valley islamic", "camino ramon"], hasIqama: true },
   { name: "Muslim Community Association", latitude: 37.3769, longitude: -121.9595, address: "3003 Scott Blvd, Santa Clara, CA 95054", website: "https://www.mcabayarea.org", matchTerms: ["mca", "muslim community association", "scott blvd", "mcabayarea"], hasIqama: true },
-  { name: "MCA Noor", latitude: 37.3778, longitude: -121.9580, address: "3003 Scott Blvd, Santa Clara, CA 95054", website: "https://www.mcabayarea.org", matchTerms: ["mca noor", "noor hall"], hasIqama: true },
+  { name: "MCA Noor", latitude: 37.3772, longitude: -121.9595, address: "3003 Scott Blvd, Santa Clara, CA 95054", website: "https://www.mcabayarea.org", matchTerms: ["mca noor", "noor hall"], hasIqama: true },
 ];
 
 export function matchEventsToMasjid(masjid: Masjid, events: { title: string; location: string; organizer: string }[]): number[] {
