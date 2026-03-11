@@ -43,14 +43,9 @@ export function MasjidMap({ masjids, preferredMasjid, region, hasUserLocation, o
               onCalloutPress={() => onSelectMasjid(m)}
             >
               <View style={styles.customMarker}>
-                <View style={[styles.markerCircle, { backgroundColor: markerBg }]}>
-                  <MaterialCommunityIcons name="mosque" size={14} color="#fff" />
+                <View style={[styles.markerCircle, { backgroundColor: isPreferred ? emeraldColor : markerBg }]}>
+                  <MaterialCommunityIcons name={isPreferred ? "star" : "mosque"} size={isPreferred ? 18 : 14} color={isPreferred ? "#D4AF37" : "#fff"} />
                 </View>
-                {isPreferred && (
-                  <View style={styles.starBadge}>
-                    <MaterialCommunityIcons name="star" size={10} color="#D4AF37" />
-                  </View>
-                )}
               </View>
               <Callout tooltip={false}>
                 <View style={styles.callout}>
@@ -106,16 +101,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 2,
     borderColor: "#fff",
-  },
-  starBadge: {
-    position: "absolute",
-    top: -2,
-    right: -2,
-    backgroundColor: "#fff",
-    borderRadius: 7,
-    width: 14,
-    height: 14,
-    alignItems: "center",
-    justifyContent: "center",
   },
 });
