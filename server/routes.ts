@@ -2390,7 +2390,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { createRemoteJWKSet, jwtVerify, decodeJwt } = await import("jose");
         const unverified = decodeJwt(identityToken);
         const tokenAud = typeof unverified.aud === "string" ? unverified.aud : Array.isArray(unverified.aud) ? unverified.aud[0] : "";
-        console.log("[Auth] Apple token aud:", tokenAud);
         const APPLE_JWKS = createRemoteJWKSet(new URL("https://appleid.apple.com/auth/keys"));
         const { payload } = await jwtVerify(identityToken, APPLE_JWKS, {
           issuer: "https://appleid.apple.com",
@@ -2410,8 +2409,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let userId: number;
       let userEmail = email || null;
       let userName = displayName || null;
-
-      console.log("[Auth] Existing user lookup:", existing.rows.length > 0 ? JSON.stringify(existing.rows[0]) : "not found", "apple_sub:", verifiedSubject);
 
       if (existing.rows.length > 0) {
         userId = existing.rows[0].id;
@@ -2434,7 +2431,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sessionToken = crypto.randomBytes(32).toString("hex");
       await pool.query("INSERT INTO user_sessions (token, user_id) VALUES ($1, $2)", [sessionToken, userId]);
 
-      console.log("[Auth] Sign-in response: userId=" + userId + " email=" + userEmail + " displayName=" + userName);
       res.json({ token: sessionToken, user: { id: userId, email: userEmail, displayName: userName } });
     } catch (error: any) {
       console.error("[Auth] Apple sign-in error:", error.message);
