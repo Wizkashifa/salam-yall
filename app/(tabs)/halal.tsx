@@ -25,6 +25,7 @@ import * as Haptics from "expo-haptics";
 import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
 import { GlassHeader } from "@/components/GlassHeader";
+import { useRouter } from "expo-router";
 import { useDeepLink } from "@/lib/deeplink-context";
 import { useAuth } from "@/lib/auth-context";
 import { getApiUrl, apiRequest } from "@/lib/query-client";
@@ -637,6 +638,8 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
 
 function SubmitRestaurantModal({ visible, onClose, colors }: { visible: boolean; onClose: () => void; colors: any }) {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { setPendingTarget } = useDeepLink();
   const { user, signInWithApple, getAuthHeaders } = useAuth();
   const [googleUrl, setGoogleUrl] = useState("");
   const [halalStatus, setHalalStatus] = useState<"halal" | "partial" | "not_halal" | null>(null);
@@ -800,11 +803,25 @@ function SubmitRestaurantModal({ visible, onClose, colors }: { visible: boolean;
               multiline
             />
 
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textSecondary, marginTop: 20, lineHeight: 18 }}>
+              Once three (3) people have verified a restaurant's halal status it will be added.{" "}
+              <Text
+                style={{ color: colors.emerald, fontFamily: "Inter_600SemiBold" }}
+                onPress={() => {
+                  onClose();
+                  setPendingTarget({ type: "verification", id: "" });
+                  router.navigate("/(tabs)/settings");
+                }}
+              >
+                Check here for restaurants that need to be verified.
+              </Text>
+            </Text>
+
             <Pressable
               onPress={handleSubmit}
               disabled={submitting || !googleUrl.trim() || !halalStatus}
               style={{
-                marginTop: 28, backgroundColor: colors.emerald, paddingVertical: 14, borderRadius: 12, alignItems: "center",
+                marginTop: 16, backgroundColor: colors.emerald, paddingVertical: 14, borderRadius: 12, alignItems: "center",
                 opacity: submitting || !googleUrl.trim() || !halalStatus ? 0.5 : 1,
               }}
             >

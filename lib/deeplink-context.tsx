@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useMemo, useCallback, ReactNode } from "react";
 
-export type DeepLinkType = "event" | "restaurant" | "business" | "janaza";
+export type DeepLinkType = "event" | "restaurant" | "business" | "janaza" | "verification";
 
 export type DeepLinkTarget = {
   type: DeepLinkType;

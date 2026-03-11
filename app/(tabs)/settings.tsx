@@ -72,6 +72,13 @@ export default function SettingsScreen() {
     }
   }, [consumeTarget]);
 
+  useEffect(() => {
+    const verificationTarget = consumeTarget("verification");
+    if (verificationTarget !== null) {
+      setSection("profile");
+    }
+  }, [consumeTarget]);
+
   const now = new Date();
   const [trackerYear, setTrackerYear] = useState(now.getFullYear());
   const [trackerMonth, setTrackerMonth] = useState(now.getMonth() + 1);
