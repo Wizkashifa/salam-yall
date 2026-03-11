@@ -1122,7 +1122,7 @@ export default function PrayerScreen() {
                       styles.prayerPillTime,
                       { color: isPast ? colors.textTertiary : colors.text },
                     ]} allowFontScaling={false}>
-                      {iqamaTime || formatTime(prayer.time)}
+                      {iqamaTime ? iqamaTime.replace(/^0/, "") : formatTime(prayer.time)}
                     </Text>
                   </Pressable>
                 );

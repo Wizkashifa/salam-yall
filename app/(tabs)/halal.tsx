@@ -460,6 +460,28 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
               </View>
             </View>
 
+            {rating != null && !isNaN(rating) && rating > 0 ? (
+              <View style={[styles.communitySection, { borderTopColor: colors.divider }]}>
+                <Text style={[styles.communitySectionTitle, { color: colors.text }]}>Google Rating</Text>
+                <View style={styles.detailRatingRow}>
+                  <Text style={[styles.detailRatingScore, { color: colors.gold }]}>{rating.toFixed(1)}</Text>
+                  <Text style={styles.detailStars}>{renderStars(rating)}</Text>
+                  {restaurant.user_ratings_total ? (
+                    <Text style={[styles.detailRatingCount, { color: colors.textTertiary }]}>
+                      ({restaurant.user_ratings_total.toLocaleString()} reviews)
+                    </Text>
+                  ) : null}
+                </View>
+                {restaurant.halal_comment ? (
+                  <Text style={[styles.detailDesc, { color: colors.textSecondary, marginTop: 8 }]}>{restaurant.halal_comment}</Text>
+                ) : null}
+              </View>
+            ) : restaurant.halal_comment ? (
+              <View style={[styles.communitySection, { borderTopColor: colors.divider }]}>
+                <Text style={[styles.detailDesc, { color: colors.textSecondary }]}>{restaurant.halal_comment}</Text>
+              </View>
+            ) : null}
+
             {(restaurant.is_halal === "IS_HALAL" || restaurant.is_halal === "PARTIALLY_HALAL") ? (
               <View style={[styles.communitySection, { borderTopColor: colors.divider }]}>
                 <View style={styles.checkinHeader}>
@@ -532,28 +554,6 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
                     </View>
                   </View>
                 ) : null}
-              </View>
-            ) : null}
-
-            {rating != null && !isNaN(rating) && rating > 0 ? (
-              <View style={[styles.communitySection, { borderTopColor: colors.divider }]}>
-                <Text style={[styles.communitySectionTitle, { color: colors.text }]}>Google Rating</Text>
-                <View style={styles.detailRatingRow}>
-                  <Text style={[styles.detailRatingScore, { color: colors.gold }]}>{rating.toFixed(1)}</Text>
-                  <Text style={styles.detailStars}>{renderStars(rating)}</Text>
-                  {restaurant.user_ratings_total ? (
-                    <Text style={[styles.detailRatingCount, { color: colors.textTertiary }]}>
-                      ({restaurant.user_ratings_total.toLocaleString()} reviews)
-                    </Text>
-                  ) : null}
-                </View>
-                {restaurant.halal_comment ? (
-                  <Text style={[styles.detailDesc, { color: colors.textSecondary, marginTop: 8 }]}>{restaurant.halal_comment}</Text>
-                ) : null}
-              </View>
-            ) : restaurant.halal_comment ? (
-              <View style={[styles.communitySection, { borderTopColor: colors.divider }]}>
-                <Text style={[styles.detailDesc, { color: colors.textSecondary }]}>{restaurant.halal_comment}</Text>
               </View>
             ) : null}
 
