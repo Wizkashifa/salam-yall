@@ -44,7 +44,7 @@ The application follows a client-server architecture:
 - Al Noor times are scraped from `https://alnooric.org/monthly-prayer-times/` (HTML table parsing, deduplicated). Syncs full current month every 6 hours. DB masjid identifier: `"Al Noor"`.
 - SRVIC times are synced from DPT plugin API (`srvic.org/wp-json/dpt/v1/prayertime`). Syncs 31 days every 6 hours. DB masjid identifier: `"SRVIC"`.
 - MCA times are scraped from `mcabayarea.org/prayerschedule-mca/?month=MM` (HTML table parsing). Syncs full current month; next-month fetch triggered when ≤7 days left. DB masjid identifier: `"MCA"`.
-- MCA Noor times are scraped from `mcabayarea.org/prayerschedule-noor/?month=MM` (same parser as MCA via shared `parseMCASchedulePage`). DB masjid identifier: `"MCA Noor"`.
+- MCA Al-Noor times are scraped from `mcabayarea.org/prayerschedule-noor/?month=MM` (same parser as MCA via shared `parseMCASchedulePage`). DB masjid identifier: `"MCA Al-Noor"`. Address: 1755 Catherine St, Santa Clara, CA 95050.
 - Frontend fetches 7 days of iqama data via `/api/iqama-times?days=7` and caches in AsyncStorage (`"iqama_cache"` key) for offline access.
 - Frontend masjid mapping: preferred masjid containing "al-noor"/"alnoor"/"al noor" → `"Al Noor"` DB identifier.
 - Masjid directory map centers on user's current location (with animated recentering on native). Masjids with `hasIqama=true` show gold mosque icons in both map markers and list rows, with a legend key under the map.

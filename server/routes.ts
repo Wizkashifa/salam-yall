@@ -539,7 +539,7 @@ async function ensureMasjidsTable(pool: pg.Pool) {
         ('North Raleigh Masjid', 35.8520, -78.5571, '7424 Deah Way, Raleigh, NC 27616', NULL, ARRAY['north raleigh masjid', 'deah way'], false, 13),
         ('San Ramon Valley Islamic Center', 37.7770, -121.9691, '2230 Camino Ramon, San Ramon, CA 94583', 'https://srvic.org', ARRAY['srvic', 'san ramon valley islamic', 'camino ramon'], true, 14),
         ('Muslim Community Association', 37.3769, -121.9595, '3003 Scott Blvd, Santa Clara, CA 95054', 'https://www.mcabayarea.org', ARRAY['mca', 'muslim community association', 'scott blvd', 'mcabayarea'], true, 15),
-        ('MCA Noor', 37.3772, -121.9595, '3003 Scott Blvd, Santa Clara, CA 95054', 'https://www.mcabayarea.org', ARRAY['mca noor', 'noor hall'], true, 16);
+        ('MCA Al-Noor', 37.3530, -121.9535, '1755 Catherine St, Santa Clara, CA 95050', 'https://www.mcabayarea.org', ARRAY['mca al-noor', 'mca alnoor', 'mca noor', 'catherine st'], true, 16);
     `);
     console.log("[DB] Seeded default masjids");
   }

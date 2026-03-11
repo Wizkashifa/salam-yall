@@ -303,7 +303,7 @@ async function fetchAndStoreMCA(pool: pg.Pool, monthNum?: number): Promise<void>
 }
 
 async function fetchAndStoreMCANoor(pool: pg.Pool, monthNum?: number): Promise<void> {
-  await parseMCASchedulePage(pool, MCA_NOOR_SCHEDULE_URL, "MCA Noor", monthNum);
+  await parseMCASchedulePage(pool, MCA_NOOR_SCHEDULE_URL, "MCA Al-Noor", monthNum);
 }
 
 const MONTH_ABBRS: Record<string, number> = {
