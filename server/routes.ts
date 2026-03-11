@@ -2344,7 +2344,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const APPLE_JWKS = createRemoteJWKSet(new URL("https://appleid.apple.com/auth/keys"));
         const { payload } = await jwtVerify(identityToken, APPLE_JWKS, {
           issuer: "https://appleid.apple.com",
-          audience: ["com.salamyall", "host.exp.Exponent"],
+          audience: ["com.salamyall", "com.ummahconnect", "host.exp.Exponent"],
           clockTolerance: 30,
         });
         if (!payload.sub) {
