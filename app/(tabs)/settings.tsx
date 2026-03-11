@@ -29,7 +29,7 @@ import {
   type Masjid,
 } from "@/lib/prayer-utils";
 import { getApiUrl } from "@/lib/query-client";
-import { getMonthLogs, cyclePrayerStatus, type DayLog, type PrayerName } from "@/lib/prayer-tracker";
+import { getMonthLogs, cyclePrayerStatus, getMonthMissedFasts, toggleMissedFast, type DayLog, type PrayerName } from "@/lib/prayer-tracker";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 import { MasjidMap } from "@/components/MasjidMap";
 
@@ -64,6 +64,7 @@ export default function SettingsScreen() {
   const [trackerMonth, setTrackerMonth] = useState(now.getMonth() + 1);
   const [monthLogs, setMonthLogs] = useState<{ [dateKey: string]: DayLog }>({});
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [missedFasts, setMissedFasts] = useState<Set<string>>(new Set());
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationRequested, setLocationRequested] = useState(false);
 
@@ -98,6 +99,7 @@ export default function SettingsScreen() {
   useEffect(() => {
     if (section === "prayerTracker") {
       getMonthLogs(trackerYear, trackerMonth).then(setMonthLogs);
+      getMonthMissedFasts(trackerYear, trackerMonth).then(setMissedFasts);
     }
   }, [section, trackerYear, trackerMonth]);
 
@@ -622,16 +624,27 @@ export default function SettingsScreen() {
     const isCurrentMonth = trackerYear === currentYear && trackerMonth === currentMonth;
     const fullDays = isCurrentMonth ? Math.max(0, currentDay - 1) : daysInMonth;
 
-    let todayElapsedPrayers = 0;
-    if (isCurrentMonth) {
-      if (currentHour >= 5) todayElapsedPrayers++;
-      if (currentHour >= 13) todayElapsedPrayers++;
-      if (currentHour >= 16) todayElapsedPrayers++;
-      if (currentHour >= 18) todayElapsedPrayers++;
-      if (currentHour >= 20) todayElapsedPrayers++;
+    let missedFastFullDays = 0;
+    for (let d = 1; d <= (isCurrentMonth ? Math.max(0, currentDay - 1) : daysInMonth); d++) {
+      const dateKey = `${trackerYear}-${String(trackerMonth).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      if (missedFasts.has(dateKey)) missedFastFullDays++;
     }
 
-    const elapsedPrayers = (fullDays * 5) + todayElapsedPrayers;
+    let todayElapsedPrayers = 0;
+    let todayIsMissedFast = false;
+    if (isCurrentMonth) {
+      const todayDateKey = `${trackerYear}-${String(trackerMonth).padStart(2, "0")}-${String(currentDay).padStart(2, "0")}`;
+      todayIsMissedFast = missedFasts.has(todayDateKey);
+      if (!todayIsMissedFast) {
+        if (currentHour >= 5) todayElapsedPrayers++;
+        if (currentHour >= 13) todayElapsedPrayers++;
+        if (currentHour >= 16) todayElapsedPrayers++;
+        if (currentHour >= 18) todayElapsedPrayers++;
+        if (currentHour >= 20) todayElapsedPrayers++;
+      }
+    }
+
+    const elapsedPrayers = ((fullDays - missedFastFullDays) * 5) + todayElapsedPrayers;
 
     let prayedCount = 0;
     let masjidCount = 0;
@@ -639,6 +652,7 @@ export default function SettingsScreen() {
 
     for (let d = 1; d <= countDays; d++) {
       const dateKey = `${trackerYear}-${String(trackerMonth).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      if (missedFasts.has(dateKey)) continue;
       const log = monthLogs[dateKey];
       if (log) {
         for (const p of PRAYER_NAMES) {
@@ -652,7 +666,7 @@ export default function SettingsScreen() {
     const masjidPct = elapsedPrayers > 0 ? Math.round((masjidCount / elapsedPrayers) * 100) : 0;
 
     return { prayedCount, masjidCount, elapsedPrayers, prayedPct, masjidPct };
-  }, [monthLogs, trackerYear, trackerMonth, now]);
+  }, [monthLogs, missedFasts, trackerYear, trackerMonth, now]);
 
   const renderPrayerTracker = () => {
     const selectedLog = selectedDay ? monthLogs[selectedDay] : null;
@@ -709,19 +723,30 @@ export default function SettingsScreen() {
             const log = monthLogs[dateKey];
             const isToday = dateKey === todayKey;
             const isSelected = dateKey === selectedDay;
+            const isMissedFast = missedFasts.has(dateKey);
             return (
               <Pressable
                 key={dateKey}
                 style={[
                   styles.calCell,
-                  isToday && { backgroundColor: isDark ? colors.actionButtonBg : colors.prayerIconBg, borderRadius: 8 },
+                  isMissedFast && { backgroundColor: isDark ? "rgba(239,68,68,0.2)" : "rgba(239,68,68,0.12)", borderRadius: 8 },
+                  isToday && !isMissedFast && { backgroundColor: isDark ? colors.actionButtonBg : colors.prayerIconBg, borderRadius: 8 },
                   isSelected && { backgroundColor: colors.emerald, borderRadius: 8 },
                 ]}
                 onPress={() => { setSelectedDay(isSelected ? null : dateKey); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                onLongPress={async () => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                  await toggleMissedFast(dateKey);
+                  const updated = await getMonthMissedFasts(trackerYear, trackerMonth);
+                  setMissedFasts(updated);
+                }}
+                delayLongPress={400}
               >
-                <Text style={[styles.calDayText, { color: isSelected ? "#fff" : isToday ? colors.emerald : colors.text }]}>{day}</Text>
+                <Text style={[styles.calDayText, { color: isSelected ? "#fff" : isMissedFast ? "#EF4444" : isToday ? colors.emerald : colors.text }]}>{day}</Text>
                 <View style={styles.calDots}>
-                  {log ? PRAYER_NAMES.map(p => {
+                  {isMissedFast ? (
+                    <View style={[styles.calDot, { backgroundColor: "#EF4444", width: 6, height: 6, borderRadius: 3 }]} />
+                  ) : log ? PRAYER_NAMES.map(p => {
                     const s = log[p];
                     if (s === 0) return <View key={p} style={[styles.calDot, { backgroundColor: "transparent" }]} />;
                     return <View key={p} style={[styles.calDot, { backgroundColor: s === 1 ? colors.gold : colors.emerald }]} />;
@@ -774,7 +799,14 @@ export default function SettingsScreen() {
             <View style={[styles.calLegendDot, { backgroundColor: colors.emerald }]} />
             <Text style={[styles.calLegendText, { color: colors.textSecondary }]}>At masjid</Text>
           </View>
+          <View style={styles.calLegendItem}>
+            <View style={[styles.calLegendDot, { backgroundColor: "#EF4444" }]} />
+            <Text style={[styles.calLegendText, { color: colors.textSecondary }]}>Missed fast</Text>
+          </View>
         </View>
+        <Text style={[styles.calLegendText, { color: colors.textTertiary, textAlign: "center", marginTop: 8, fontSize: 11 }]}>
+          Long-press a day to mark/unmark a missed fast
+        </Text>
       </>
     );
   };

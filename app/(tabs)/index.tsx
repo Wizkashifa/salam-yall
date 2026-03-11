@@ -25,7 +25,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { getApiUrl } from "@/lib/query-client";
 import { useDeepLink } from "@/lib/deeplink-context";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
 import { GlassHeader } from "@/components/GlassHeader";
@@ -48,7 +48,7 @@ import {
   type Masjid,
 } from "@/lib/prayer-utils";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { cyclePrayerStatus, getPrayerLog, type DayLog, type PrayerName as TrackerPrayerName } from "@/lib/prayer-tracker";
+import { cyclePrayerStatus, getPrayerLog, getMissedFastCount, logMakeupFast, type DayLog, type PrayerName as TrackerPrayerName } from "@/lib/prayer-tracker";
 import { getDailyVerse, isFriday, type DailyVerse } from "@/lib/daily-content";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 import { expandSearchTerms } from "@/lib/search-synonyms";
@@ -399,6 +399,7 @@ export default function PrayerScreen() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [todayLog, setTodayLog] = useState<DayLog>({ fajr: 0, dhuhr: 0, asr: 0, maghrib: 0, isha: 0 });
   const [ramadanActive, setRamadanActive] = useState(false);
+  const [missedFastCount, setMissedFastCount] = useState(0);
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [headerHeight, setHeaderHeight] = useState(0);
@@ -682,7 +683,12 @@ export default function PrayerScreen() {
   useEffect(() => {
     getPrayerLog(new Date()).then(setTodayLog);
     setRamadanActive(isRamadan());
+    getMissedFastCount().then(setMissedFastCount);
   }, []);
+
+  useFocusEffect(useCallback(() => {
+    getMissedFastCount().then(setMissedFastCount);
+  }, []));
 
   const handlePrayerPillPress = useCallback(async (prayerName: string) => {
     const trackerName = prayerName as TrackerPrayerName;
@@ -1037,12 +1043,43 @@ export default function PrayerScreen() {
                 </Text>
               </View>
             ) : null}
-            {weatherData ? (
-              <View style={{ alignItems: "center", gap: 2 }}>
-                <Ionicons name={getWeatherIcon(weatherData.weatherCode, weatherData.isDay).name as any} size={22} color={isDark ? colors.gold : colors.textSecondary} />
-                <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: isDark ? colors.gold : colors.text }}>{weatherData.temperature}°F</Text>
-              </View>
-            ) : null}
+            <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 14 }}>
+              {weatherData ? (
+                <View style={{ alignItems: "center" }}>
+                  <View style={{ height: 30, alignItems: "center", justifyContent: "center" }}>
+                    <Ionicons name={getWeatherIcon(weatherData.weatherCode, weatherData.isDay).name as any} size={26} color={isDark ? colors.gold : colors.textSecondary} />
+                  </View>
+                  <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: isDark ? colors.gold : colors.text, marginTop: 2 }}>{weatherData.temperature}°F</Text>
+                </View>
+              ) : null}
+              {missedFastCount > 0 ? (
+                <Pressable
+                  onPress={() => {
+                    Alert.alert(
+                      "Make Up Fast",
+                      "Did you make up a fast?",
+                      [
+                        { text: "Cancel", style: "cancel" },
+                        {
+                          text: "Yes, Alhamdulillah",
+                          onPress: async () => {
+                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                            const remaining = await logMakeupFast();
+                            setMissedFastCount(remaining);
+                          },
+                        },
+                      ]
+                    );
+                  }}
+                  style={{ alignItems: "center" }}
+                >
+                  <View style={{ height: 30, alignItems: "center", justifyContent: "center" }}>
+                    <MaterialCommunityIcons name="food-off" size={26} color="#EF4444" />
+                  </View>
+                  <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#EF4444", marginTop: 2 }}>{missedFastCount}</Text>
+                </Pressable>
+              ) : null}
+            </View>
           </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.prayerPillRow, { borderTopColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)" }]} contentContainerStyle={styles.prayerPillRowContent}>

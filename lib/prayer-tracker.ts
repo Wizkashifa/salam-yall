@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const STORAGE_KEY = "prayer_tracker";
+const MISSED_FASTS_KEY = "missed_fasts";
 
 export type PrayerStatus = 0 | 1 | 2;
 
@@ -95,6 +96,58 @@ export async function getMonthLogs(
     }
   }
   return result;
+}
+
+async function loadMissedFasts(): Promise<string[]> {
+  const raw = await AsyncStorage.getItem(MISSED_FASTS_KEY);
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw) as string[];
+  } catch {
+    return [];
+  }
+}
+
+async function saveMissedFasts(dates: string[]): Promise<void> {
+  await AsyncStorage.setItem(MISSED_FASTS_KEY, JSON.stringify(dates));
+}
+
+export async function getMissedFastDates(): Promise<string[]> {
+  return loadMissedFasts();
+}
+
+export async function toggleMissedFast(dateKey: string): Promise<{ dates: string[]; isMissed: boolean }> {
+  const dates = await loadMissedFasts();
+  const idx = dates.indexOf(dateKey);
+  if (idx >= 0) {
+    dates.splice(idx, 1);
+    await saveMissedFasts(dates);
+    return { dates, isMissed: false };
+  } else {
+    dates.push(dateKey);
+    await saveMissedFasts(dates);
+    return { dates, isMissed: true };
+  }
+}
+
+export async function getMissedFastCount(): Promise<number> {
+  const dates = await loadMissedFasts();
+  return dates.length;
+}
+
+export async function logMakeupFast(): Promise<number> {
+  const dates = await loadMissedFasts();
+  if (dates.length > 0) {
+    dates.shift();
+    await saveMissedFasts(dates);
+  }
+  return dates.length;
+}
+
+export async function getMonthMissedFasts(year: number, month: number): Promise<Set<string>> {
+  const dates = await loadMissedFasts();
+  const prefix = `${year}-${String(month).padStart(2, "0")}`;
+  return new Set(dates.filter(d => d.startsWith(prefix)));
 }
 
 export { formatDateKey };
