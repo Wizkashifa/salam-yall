@@ -178,6 +178,7 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
       setDetails(null);
       setCommunityRating({ avg: null, count: 0 });
       setUserRating(0);
+      setDetailsExpanded(false);
       return;
     }
     const baseUrl = getApiUrl();

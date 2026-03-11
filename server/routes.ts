@@ -1019,7 +1019,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const ADMIN_KEY = process.env.ADMIN_KEY || process.env.SESSION_SECRET || "change-me-in-production";
+  const ADMIN_KEY = process.env.ADMIN_KEY || process.env.SESSION_SECRET;
 
   app.post("/api/ticker", async (req, res) => {
     try {

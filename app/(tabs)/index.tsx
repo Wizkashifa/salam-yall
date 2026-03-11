@@ -1585,11 +1585,6 @@ export default function PrayerScreen() {
 }
 
 const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
   container: {
     flex: 1,
   },
@@ -1664,12 +1659,6 @@ const styles = StyleSheet.create({
   prayerHeroText: {
     flex: 1,
   },
-  prayerHeroLabel: {
-    fontSize: 11,
-    fontFamily: "Inter_500Medium",
-    textTransform: "uppercase" as const,
-    letterSpacing: 0.8,
-  },
   prayerHeroName: {
     fontSize: 20,
     fontFamily: "Inter_700Bold",
@@ -1722,18 +1711,6 @@ const styles = StyleSheet.create({
   searchPlaceholder: {
     fontSize: 14,
     fontFamily: "Inter_400Regular",
-  },
-  iqamaSource: {
-    fontSize: 10,
-    fontFamily: "Inter_400Regular",
-    textAlign: "center" as const,
-    marginTop: 8,
-  },
-  prayerStatusDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    marginTop: 4,
   },
   iqamaCard: {
     marginHorizontal: 16,

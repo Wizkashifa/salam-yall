@@ -549,7 +549,7 @@ export default function SettingsScreen() {
           onPress={() => { setSection("masjids"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
         >
           <Ionicons name="arrow-back" size={20} color={colors.text} />
-          <Text style={[styles.backLabel, { color: colors.text }]}>Back</Text>
+          <Text style={[styles.backLabel, { color: colors.text }]}>Masjid Directory</Text>
         </Pressable>
 
         <View style={styles.masjidDetailHeader}>
