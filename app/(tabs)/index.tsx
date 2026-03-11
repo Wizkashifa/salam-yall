@@ -495,6 +495,8 @@ export default function PrayerScreen() {
         targetMasjid = "Al Noor";
       } else if (pref.includes("srvic") || pref.includes("san ramon")) {
         targetMasjid = "SRVIC";
+      } else if (pref.includes("mca") || pref.includes("muslim community association") || pref.includes("scott blvd")) {
+        targetMasjid = "MCA";
       }
     }
 

@@ -4,6 +4,7 @@ import { generateJIARSchedule } from "./jiar-iqama-data";
 const IAR_API_URL = "https://raleighmasjid.org/API/prayer/month/";
 const ICMNC_API_URL = "https://www.icmnc.org/wp-json/dpt/v1/prayertime";
 const SRVIC_API_URL = "https://srvic.org/wp-json/dpt/v1/prayertime";
+const MCA_SCHEDULE_URL = "https://www.mcabayarea.org/prayerschedule-mca/";
 const ALNOOR_URL = "https://alnooric.org/monthly-prayer-times/";
 
 export interface DayIqama {
@@ -225,6 +226,77 @@ async function fetchAndStoreSRVIC(pool: pg.Pool): Promise<void> {
   }
 }
 
+async function fetchAndStoreMCA(pool: pg.Pool, monthNum?: number): Promise<void> {
+  try {
+    const now = new Date();
+    const raleighNow = new Date(now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
+    const month = monthNum ?? (raleighNow.getMonth() + 1);
+    const year = raleighNow.getFullYear();
+    const monthStr = String(month).padStart(2, "0");
+
+    const url = `${MCA_SCHEDULE_URL}?month=${monthStr}`;
+    const resp = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+    if (!resp.ok) {
+      console.error(`[Iqama] MCA page returned ${resp.status}`);
+      return;
+    }
+
+    const html = await resp.text();
+    const trRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+    const values: any[] = [];
+    const placeholders: string[] = [];
+    let idx = 1;
+    let trMatch;
+
+    while ((trMatch = trRegex.exec(html)) !== null) {
+      const row = trMatch[1];
+      const tdRegex2 = /<td[^>]*>([\s\S]*?)<\/td>/gi;
+      const cells: string[] = [];
+      let td;
+      while ((td = tdRegex2.exec(row)) !== null) {
+        cells.push(td[1].replace(/<[^>]+>/g, "").trim());
+      }
+      if (cells.length < 10) continue;
+
+      const dateCell = cells[0];
+      const dayMatch = dateCell.match(/(\w+?)(\d+)/);
+      if (!dayMatch) continue;
+      const day = parseInt(dayMatch[2], 10);
+      if (isNaN(day) || day < 1 || day > 31) continue;
+      const dateKey = `${year}-${monthStr}-${String(day).padStart(2, "0")}`;
+
+      const timeRegex = /(\d{1,2}:\d{2}\s*[AP]M)/i;
+      const extractTime = (cell: string): string => {
+        const m = cell.match(timeRegex);
+        return m ? m[1].replace(/\s+/g, " ").trim() : "";
+      };
+
+      const fajrIqama = extractTime(cells[3]);
+      const dhuhrIqama = extractTime(cells[6]);
+      const asrIqama = extractTime(cells[8]);
+      const maghribIqama = extractTime(cells[10]);
+      const ishaIqama = extractTime(cells[12]);
+
+      if (!fajrIqama || !ishaIqama) continue;
+
+      placeholders.push(`($${idx}, $${idx + 1}, $${idx + 2}, $${idx + 3}, $${idx + 4}, $${idx + 5}, $${idx + 6})`);
+      values.push("MCA", dateKey, fajrIqama, dhuhrIqama, asrIqama, maghribIqama, ishaIqama);
+      idx += 7;
+    }
+
+    if (placeholders.length > 0) {
+      await pool.query(
+        `INSERT INTO iqama_schedules (masjid, date, fajr, dhuhr, asr, maghrib, isha) VALUES ${placeholders.join(", ")}
+         ON CONFLICT (masjid, date) DO UPDATE SET fajr=EXCLUDED.fajr, dhuhr=EXCLUDED.dhuhr, asr=EXCLUDED.asr, maghrib=EXCLUDED.maghrib, isha=EXCLUDED.isha, updated_at=NOW()`,
+        values
+      );
+      console.log(`[Iqama] Synced ${placeholders.length} MCA days for month ${monthStr}`);
+    }
+  } catch (err: any) {
+    console.error("[Iqama] Error syncing MCA:", err.message);
+  }
+}
+
 const MONTH_ABBRS: Record<string, number> = {
   Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6,
   Jul: 7, Aug: 8, Sep: 9, Oct: 10, Nov: 11, Dec: 12,
@@ -314,6 +386,7 @@ export async function syncExternalIqama(pool: pg.Pool): Promise<void> {
     fetchAndStoreIAR(pool, year, month),
     fetchAndStoreICMNC(pool),
     fetchAndStoreSRVIC(pool),
+    fetchAndStoreMCA(pool),
     fetchAndStoreAlNoor(pool),
   ]);
 
@@ -323,6 +396,8 @@ export async function syncExternalIqama(pool: pg.Pool): Promise<void> {
   const daysLeft = new Date(year, month, 0).getDate() - raleighNow.getDate();
   if (daysLeft <= 7) {
     await fetchAndStoreIAR(pool, nextMonthDate.getFullYear(), nextMonthDate.getMonth() + 1);
+    const nextMonth = (month % 12) + 1;
+    await fetchAndStoreMCA(pool, nextMonth);
   }
 }
 
