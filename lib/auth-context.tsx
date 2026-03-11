@@ -89,10 +89,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    if (sessionToken) {
+      try {
+        const baseUrl = getApiUrl();
+        await fetch(new URL("/api/auth/signout", baseUrl).toString(), {
+          method: "POST",
+          headers: { Authorization: `Bearer ${sessionToken}` },
+        });
+      } catch {}
+    }
     setUser(null);
     setSessionToken(null);
     await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
-  }, []);
+  }, [sessionToken]);
 
   const getAuthHeaders = useCallback((): Record<string, string> => {
     if (!sessionToken) return {};

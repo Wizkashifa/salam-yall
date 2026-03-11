@@ -898,6 +898,14 @@ async function ensureUserAccountsTable(pool: pg.Pool) {
     );
   `);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_accounts_apple ON user_accounts(apple_id);`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_sessions (
+      token VARCHAR(128) PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES user_accounts(id) ON DELETE CASCADE,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions(user_id);`);
 }
 
 async function ensureUserRatingsTable(pool: pg.Pool) {
@@ -2313,7 +2321,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const crypto = await import("crypto");
-  const userSessions = new Map<string, number>();
+  async function getSessionUserId(token: string): Promise<number | null> {
+    try {
+      const result = await pool.query("SELECT user_id FROM user_sessions WHERE token = $1", [token]);
+      return result.rows.length > 0 ? result.rows[0].user_id : null;
+    } catch {
+      return null;
+    }
+  }
 
   app.post("/api/auth/apple", async (req, res) => {
     try {
@@ -2364,7 +2379,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const sessionToken = crypto.randomBytes(32).toString("hex");
-      userSessions.set(sessionToken, userId);
+      await pool.query("INSERT INTO user_sessions (token, user_id) VALUES ($1, $2)", [sessionToken, userId]);
 
       res.json({ token: sessionToken, user: { id: userId, email: userEmail, displayName: userName } });
     } catch (error: any) {
@@ -2378,7 +2393,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const authHeader = req.headers.authorization;
       if (!authHeader) return res.status(401).json({ error: "Not authenticated" });
       const token = authHeader.replace("Bearer ", "");
-      const userId = userSessions.get(token);
+      const userId = await getSessionUserId(token);
       if (!userId) return res.status(401).json({ error: "Invalid session" });
 
       const result = await pool.query("SELECT id, email, display_name FROM user_accounts WHERE id = $1", [userId]);
@@ -2392,16 +2407,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  function getUserIdFromRequest(req: any): number | null {
+  app.post("/api/auth/signout", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (authHeader) {
+        const token = authHeader.replace("Bearer ", "");
+        await pool.query("DELETE FROM user_sessions WHERE token = $1", [token]);
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[Auth] Sign-out error:", error.message);
+      res.json({ success: true });
+    }
+  });
+
+  async function getUserIdFromRequest(req: any): Promise<number | null> {
     const authHeader = req.headers.authorization;
     if (!authHeader) return null;
     const token = authHeader.replace("Bearer ", "");
-    return userSessions.get(token) || null;
+    return await getSessionUserId(token);
   }
 
   app.post("/api/ratings", async (req, res) => {
     try {
-      const userId = getUserIdFromRequest(req);
+      const userId = await getUserIdFromRequest(req);
       if (!userId) return res.status(401).json({ error: "Sign in required" });
 
       const { entityType, entityId, rating } = req.body;
@@ -2441,7 +2470,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/ratings/:entityType/:entityId", async (req, res) => {
     try {
       const { entityType, entityId } = req.params;
-      const userId = getUserIdFromRequest(req);
+      const userId = await getUserIdFromRequest(req);
 
       const avgResult = await pool.query(
         "SELECT AVG(rating)::NUMERIC(3,2) as avg_rating, COUNT(*) as count FROM user_ratings WHERE entity_type = $1 AND entity_id = $2",
@@ -2472,7 +2501,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/checkins", async (req, res) => {
     try {
-      const userId = getUserIdFromRequest(req);
+      const userId = await getUserIdFromRequest(req);
       if (!userId) return res.status(401).json({ error: "Sign in required" });
 
       const { restaurantId, comment } = req.body;
