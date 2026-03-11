@@ -35,14 +35,23 @@ export function MasjidMap({ masjids, preferredMasjid, region, hasUserLocation, o
         {masjids.map((entry, i) => {
           const m = entry.masjid;
           const isPreferred = preferredMasjid === m.name;
-          const pinColor = isPreferred ? "#D4AF37" : m.hasIqama ? "#D4A843" : "#047857";
+          const markerBg = isPreferred ? "#D4AF37" : m.hasIqama ? "#D4A843" : "#047857";
           return (
             <Marker
               key={i}
               coordinate={{ latitude: m.latitude, longitude: m.longitude }}
-              pinColor={pinColor}
               onCalloutPress={() => onSelectMasjid(m)}
             >
+              <View style={styles.customMarker}>
+                <View style={[styles.markerCircle, { backgroundColor: markerBg }]}>
+                  <MaterialCommunityIcons name="mosque" size={14} color="#fff" />
+                </View>
+                {isPreferred && (
+                  <View style={styles.starBadge}>
+                    <MaterialCommunityIcons name="star" size={10} color="#D4AF37" />
+                  </View>
+                )}
+              </View>
               <Callout tooltip={false}>
                 <View style={styles.callout}>
                   <Text style={styles.calloutTitle} numberOfLines={1}>{m.name}</Text>
@@ -82,5 +91,31 @@ const styles = StyleSheet.create({
   calloutSub: {
     fontSize: 11,
     color: "#6B7280",
+  },
+  customMarker: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: 32,
+    height: 32,
+  },
+  markerCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
+  starBadge: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    backgroundColor: "#fff",
+    borderRadius: 7,
+    width: 14,
+    height: 14,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
