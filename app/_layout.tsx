@@ -13,8 +13,10 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as Linking from "expo-linking";
+import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useEffect, useState, useCallback } from "react";
+import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -36,6 +38,7 @@ const DEEP_LINK_TAB_MAP: Record<string, string> = {
   event: "/(tabs)/events",
   restaurant: "/(tabs)/halal",
   business: "/(tabs)/businesses",
+  janaza: "/(tabs)/settings",
 };
 
 function DeepLinkListener() {
@@ -73,6 +76,29 @@ function DeepLinkListener() {
   return null;
 }
 
+function PushNotificationHandler() {
+  const { setPendingTarget } = useDeepLink();
+
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data;
+      if (data?.type === "janaza") {
+        setPendingTarget({ type: "janaza", id: "" });
+        setTimeout(() => router.replace("/(tabs)/settings"), 100);
+      } else if (data?.type === "event" && data?.eventId) {
+        setPendingTarget({ type: "event", id: String(data.eventId) });
+        setTimeout(() => router.replace("/(tabs)/events"), 100);
+      }
+    });
+
+    return () => sub.remove();
+  }, [setPendingTarget]);
+
+  return null;
+}
+
 function RootLayoutNav() {
   useEffect(() => {
     registerPushToken();
@@ -81,6 +107,7 @@ function RootLayoutNav() {
   return (
     <>
       <DeepLinkListener />
+      <PushNotificationHandler />
       <Stack screenOptions={{ headerBackTitle: "Back" }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>

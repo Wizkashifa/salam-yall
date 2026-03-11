@@ -613,6 +613,21 @@ async function ensurePushTokensTable(pool: pg.Pool) {
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
+  await pool.query(`ALTER TABLE push_tokens ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION`);
+  await pool.query(`ALTER TABLE push_tokens ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION`);
+}
+
+async function ensureJanazaAlertsTable(pool: pg.Pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS janaza_alerts (
+      id SERIAL PRIMARY KEY,
+      masjid_name VARCHAR(255) NOT NULL,
+      masjid_lat DOUBLE PRECISION NOT NULL,
+      masjid_lng DOUBLE PRECISION NOT NULL,
+      details TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
 }
 
 async function ensureHalalRestaurantsTable(pool: pg.Pool) {
@@ -928,6 +943,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await ensureBusinessesTable(pool).catch(err => console.error("[DB] Init error:", err.message));
   await ensureIqamaTable(pool).catch(err => console.error("[DB] Iqama table init error:", err.message));
   await seedJIARData(pool).catch(err => console.error("[DB] JIAR seed error:", err.message));
+  await ensureJanazaAlertsTable(pool).catch(err => console.error("[DB] Janaza alerts table init error:", err.message));
   await ensureUserAccountsTable(pool).catch(err => console.error("[DB] User accounts table init error:", err.message));
   await ensureUserRatingsTable(pool).catch(err => console.error("[DB] User ratings table init error:", err.message));
   await ensureHalalCheckinsTable(pool).catch(err => console.error("[DB] Halal checkins table init error:", err.message));
@@ -2544,7 +2560,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/push-token", async (req, res) => {
     try {
-      const { token } = req.body;
+      const { token, lat, lng } = req.body;
       if (!token || typeof token !== "string") {
         return res.status(400).json({ error: "Token is required" });
       }
@@ -2552,10 +2568,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!isExpoToken) {
         return res.status(400).json({ error: "Invalid push token format" });
       }
-      await pool.query(
-        `INSERT INTO push_tokens (token) VALUES ($1) ON CONFLICT (token) DO NOTHING`,
-        [token]
-      );
+      if (lat != null && lng != null && typeof lat === "number" && typeof lng === "number") {
+        await pool.query(
+          `INSERT INTO push_tokens (token, lat, lng) VALUES ($1, $2, $3)
+           ON CONFLICT (token) DO UPDATE SET lat = $2, lng = $3`,
+          [token, lat, lng]
+        );
+      } else {
+        await pool.query(
+          `INSERT INTO push_tokens (token) VALUES ($1) ON CONFLICT (token) DO NOTHING`,
+          [token]
+        );
+      }
       res.json({ success: true });
     } catch (error: any) {
       console.error("Error saving push token:", error.message);
@@ -2577,52 +2601,139 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!tokens.length) {
         return res.json({ sent: 0, message: "No devices registered for push notifications" });
       }
-
-      let sent = 0;
-      const expiredTokens: string[] = [];
-      const chunks: string[][] = [];
-      for (let i = 0; i < tokens.length; i += 100) {
-        chunks.push(tokens.slice(i, i + 100));
-      }
-
-      for (const chunk of chunks) {
-        try {
-          const messages = chunk.map((token: string) => ({
-            to: token,
-            sound: "default",
-            title,
-            body,
-          }));
-          const response = await fetch("https://exp.host/--/api/v2/push/send", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(messages),
-          });
-          const data = await response.json() as any;
-          const tickets = data.data || [];
-          for (let i = 0; i < tickets.length; i++) {
-            if (tickets[i].status === "ok") {
-              sent++;
-            } else if (tickets[i].details?.error === "DeviceNotRegistered") {
-              expiredTokens.push(chunk[i]);
-            }
-          }
-        } catch (err: any) {
-          console.error("Push send error:", err.message);
-        }
-      }
-
-      if (expiredTokens.length > 0) {
-        await pool.query(
-          "DELETE FROM push_tokens WHERE token = ANY($1)",
-          [expiredTokens]
-        );
-      }
-
-      res.json({ sent, total: tokens.length });
+      const pushResult = await sendPushToTokens(tokens, title, body);
+      res.json(pushResult);
     } catch (error: any) {
       console.error("Error sending push:", error.message);
       res.status(500).json({ error: "Failed to send notifications" });
+    }
+  });
+
+  function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+    const R = 3958.8;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  async function sendPushToTokens(tokens: string[], title: string, body: string, data?: Record<string, string>) {
+    let sent = 0;
+    const expiredTokens: string[] = [];
+    const chunks: string[][] = [];
+    for (let i = 0; i < tokens.length; i += 100) {
+      chunks.push(tokens.slice(i, i + 100));
+    }
+    for (const chunk of chunks) {
+      try {
+        const messages = chunk.map((token: string) => ({
+          to: token,
+          sound: "default",
+          title,
+          body,
+          data: data || undefined,
+        }));
+        const response = await fetch("https://exp.host/--/api/v2/push/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(messages),
+        });
+        const respData = await response.json() as any;
+        const tickets = respData.data || [];
+        for (let i = 0; i < tickets.length; i++) {
+          if (tickets[i].status === "ok") sent++;
+          else if (tickets[i].details?.error === "DeviceNotRegistered") expiredTokens.push(chunk[i]);
+        }
+      } catch (err: any) {
+        console.error("Push send error:", err.message);
+      }
+    }
+    if (expiredTokens.length > 0) {
+      await pool.query("DELETE FROM push_tokens WHERE token = ANY($1)", [expiredTokens]);
+    }
+    return { sent, total: tokens.length };
+  }
+
+  app.post("/api/admin/push/janaza", async (req, res) => {
+    try {
+      if (!isAdminAuthorized(req)) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const { masjidName, masjidLat, masjidLng, details } = req.body;
+      if (!masjidName || !details || masjidLat == null || masjidLng == null) {
+        return res.status(400).json({ error: "Masjid name, location, and details are required" });
+      }
+
+      await pool.query(
+        "INSERT INTO janaza_alerts (masjid_name, masjid_lat, masjid_lng, details) VALUES ($1, $2, $3, $4)",
+        [masjidName, masjidLat, masjidLng, details]
+      );
+
+      const result = await pool.query("SELECT token, lat, lng FROM push_tokens");
+      const nearbyTokens = result.rows
+        .filter((r: any) => {
+          if (r.lat == null || r.lng == null) return true;
+          return haversineDistance(r.lat, r.lng, masjidLat, masjidLng) <= 50;
+        })
+        .map((r: any) => r.token);
+
+      if (!nearbyTokens.length) {
+        return res.json({ sent: 0, total: 0, message: "Alert stored but no nearby devices" });
+      }
+
+      const pushResult = await sendPushToTokens(
+        nearbyTokens,
+        "Inna Lillahi wa Inna Ilayhi Raji'un",
+        `Janaza at ${masjidName}: ${details}`,
+        { type: "janaza" }
+      );
+
+      res.json(pushResult);
+    } catch (error: any) {
+      console.error("[Janaza] Push error:", error.message);
+      res.status(500).json({ error: "Failed to send Janaza alert" });
+    }
+  });
+
+  app.post("/api/admin/push/event", async (req, res) => {
+    try {
+      if (!isAdminAuthorized(req)) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const { eventId, eventTitle } = req.body;
+      if (!eventId || !eventTitle) {
+        return res.status(400).json({ error: "Event ID and title are required" });
+      }
+
+      const result = await pool.query("SELECT token FROM push_tokens");
+      const tokens = result.rows.map((r: any) => r.token);
+      if (!tokens.length) {
+        return res.json({ sent: 0, total: 0, message: "No devices registered" });
+      }
+
+      const pushResult = await sendPushToTokens(
+        tokens,
+        "Community Event",
+        eventTitle,
+        { type: "event", eventId: String(eventId) }
+      );
+
+      res.json(pushResult);
+    } catch (error: any) {
+      console.error("[Event Push] Error:", error.message);
+      res.status(500).json({ error: "Failed to send event alert" });
+    }
+  });
+
+  app.get("/api/janaza-history", async (_req, res) => {
+    try {
+      const { rows } = await pool.query(
+        "SELECT id, masjid_name, details, created_at FROM janaza_alerts ORDER BY created_at DESC LIMIT 5"
+      );
+      res.json(rows);
+    } catch (error: any) {
+      console.error("[Janaza] History error:", error.message);
+      res.status(500).json({ error: "Failed to fetch Janaza history" });
     }
   });
 

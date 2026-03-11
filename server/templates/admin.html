@@ -121,11 +121,40 @@
     <div class="tab-content active" id="tab-comms">
       <div class="section">
         <div class="section-title"><span class="icon">🔔</span> Send Push Notification</div>
-        <label>Title</label>
-        <input type="text" id="pushTitle" placeholder="Notification title">
-        <label>Body</label>
-        <textarea id="pushBody" placeholder="Notification message..."></textarea>
-        <button class="btn btn-gold" onclick="sendPush()" id="sendPushBtn">Send Notification</button>
+        <label>Notification Type</label>
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <button class="btn btn-sm push-type-btn active" data-push-type="general" onclick="switchPushType('general')" style="background:#2A2318;color:#D4A843;">General</button>
+          <button class="btn btn-sm push-type-btn" data-push-type="janaza" onclick="switchPushType('janaza')" style="background:#1E1E1E;color:#9CA3AF;">Janaza Alert</button>
+          <button class="btn btn-sm push-type-btn" data-push-type="event" onclick="switchPushType('event')" style="background:#1E1E1E;color:#9CA3AF;">Event Alert</button>
+        </div>
+
+        <div id="pushFormGeneral">
+          <label>Title</label>
+          <input type="text" id="pushTitle" placeholder="Notification title">
+          <label>Body</label>
+          <textarea id="pushBody" placeholder="Notification message..."></textarea>
+          <button class="btn btn-gold" onclick="sendPush()" id="sendPushBtn">Send Notification</button>
+        </div>
+
+        <div id="pushFormJanaza" style="display:none;">
+          <label>Masjid</label>
+          <select id="janazaMasjid" style="width:100%;padding:10px 14px;background:#1E1E1E;border:1px solid #333;border-radius:10px;color:#F5F5F5;font-size:14px;margin-bottom:14px;">
+            <option value="">Select masjid...</option>
+          </select>
+          <label>Details</label>
+          <textarea id="janazaDetails" placeholder="e.g. Janaza prayer for [name], after Dhuhr salah..."></textarea>
+          <p style="font-size:11px;color:#6B7280;margin-bottom:14px;">Only users within 50 miles of this masjid will receive the alert. Users without location data will also receive it.</p>
+          <button class="btn btn-gold" onclick="sendJanazaPush()" id="sendJanazaBtn">Send Janaza Alert</button>
+        </div>
+
+        <div id="pushFormEvent" style="display:none;">
+          <label>Event</label>
+          <select id="eventPushSelect" style="width:100%;padding:10px 14px;background:#1E1E1E;border:1px solid #333;border-radius:10px;color:#F5F5F5;font-size:14px;margin-bottom:14px;">
+            <option value="">Select event...</option>
+          </select>
+          <p style="font-size:11px;color:#6B7280;margin-bottom:14px;">All registered devices will receive this alert. Tapping the notification will deep-link to the event.</p>
+          <button class="btn btn-gold" onclick="sendEventPush()" id="sendEventBtn">Send Event Alert</button>
+        </div>
       </div>
 
       <div class="section">
@@ -680,23 +709,122 @@
       } catch { showToast('Connection error', true); }
     }
 
+    function switchPushType(type) {
+      document.getElementById('pushFormGeneral').style.display = type === 'general' ? 'block' : 'none';
+      document.getElementById('pushFormJanaza').style.display = type === 'janaza' ? 'block' : 'none';
+      document.getElementById('pushFormEvent').style.display = type === 'event' ? 'block' : 'none';
+      document.querySelectorAll('.push-type-btn').forEach(function(btn) {
+        if (btn.getAttribute('data-push-type') === type) {
+          btn.style.background = '#2A2318';
+          btn.style.color = '#D4A843';
+          btn.classList.add('active');
+        } else {
+          btn.style.background = '#1E1E1E';
+          btn.style.color = '#9CA3AF';
+          btn.classList.remove('active');
+        }
+      });
+      if (type === 'janaza') loadJanazaMasjids();
+      if (type === 'event') loadEventPushDropdown();
+    }
+
+    async function loadJanazaMasjids() {
+      try {
+        var res = await fetch('/api/masjids');
+        var masjids = await res.json();
+        var sel = document.getElementById('janazaMasjid');
+        sel.innerHTML = '<option value="">Select masjid...</option>';
+        masjids.forEach(function(m) {
+          sel.innerHTML += '<option value="' + m.name + '" data-lat="' + m.latitude + '" data-lng="' + m.longitude + '">' + m.name + '</option>';
+        });
+      } catch {}
+    }
+
+    async function loadEventPushDropdown() {
+      try {
+        var res = await fetch('/api/events');
+        var events = await res.json();
+        var sel = document.getElementById('eventPushSelect');
+        sel.innerHTML = '<option value="">Select event...</option>';
+        var now = new Date();
+        events.filter(function(e) { return new Date(e.end || e.start) >= now; })
+          .slice(0, 30)
+          .forEach(function(e) {
+            var d = new Date(e.start);
+            var label = e.title + ' — ' + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            sel.innerHTML += '<option value="' + e.id + '" data-title="' + e.title.replace(/"/g, '&quot;') + '">' + label + '</option>';
+          });
+      } catch {}
+    }
+
     async function sendPush() {
-      const title = document.getElementById('pushTitle').value.trim();
-      const body = document.getElementById('pushBody').value.trim();
+      var title = document.getElementById('pushTitle').value.trim();
+      var body = document.getElementById('pushBody').value.trim();
       if (!title || !body) { showToast('Title and body are required', true); return; }
-      const btn = document.getElementById('sendPushBtn');
+      var btn = document.getElementById('sendPushBtn');
       btn.disabled = true;
       try {
-        const res = await fetch('/api/admin/push', {
+        var res = await fetch('/api/admin/push', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
-          body: JSON.stringify({ title, body }),
+          body: JSON.stringify({ title: title, body: body }),
         });
-        const data = await res.json();
+        var data = await res.json();
         if (res.ok) {
           showToast('Notification sent to ' + (data.sent || 0) + ' device(s)');
           document.getElementById('pushTitle').value = '';
           document.getElementById('pushBody').value = '';
+        } else {
+          showToast(data.error || 'Failed to send', true);
+        }
+      } catch { showToast('Connection error', true); }
+      btn.disabled = false;
+    }
+
+    async function sendJanazaPush() {
+      var sel = document.getElementById('janazaMasjid');
+      var details = document.getElementById('janazaDetails').value.trim();
+      if (!sel.value || !details) { showToast('Select a masjid and enter details', true); return; }
+      var opt = sel.options[sel.selectedIndex];
+      var lat = parseFloat(opt.getAttribute('data-lat'));
+      var lng = parseFloat(opt.getAttribute('data-lng'));
+      var btn = document.getElementById('sendJanazaBtn');
+      btn.disabled = true;
+      try {
+        var res = await fetch('/api/admin/push/janaza', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify({ masjidName: sel.value, masjidLat: lat, masjidLng: lng, details: details }),
+        });
+        var data = await res.json();
+        if (res.ok) {
+          showToast('Janaza alert sent to ' + (data.sent || 0) + ' device(s)');
+          document.getElementById('janazaDetails').value = '';
+          sel.selectedIndex = 0;
+        } else {
+          showToast(data.error || 'Failed to send', true);
+        }
+      } catch { showToast('Connection error', true); }
+      btn.disabled = false;
+    }
+
+    async function sendEventPush() {
+      var sel = document.getElementById('eventPushSelect');
+      if (!sel.value) { showToast('Select an event', true); return; }
+      var opt = sel.options[sel.selectedIndex];
+      var eventTitle = opt.getAttribute('data-title');
+      var btn = document.getElementById('sendEventBtn');
+      btn.disabled = true;
+      try {
+        var res = await fetch('/api/admin/push/event', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify({ eventId: sel.value, eventTitle: eventTitle }),
+        });
+        var data = await res.json();
+        if (res.ok) {
+          showToast('Event alert sent to ' + (data.sent || 0) + ' device(s)');
+          sel.selectedIndex = 0;
         } else {
           showToast(data.error || 'Failed to send', true);
         }

@@ -30,6 +30,7 @@ import {
   type Masjid,
 } from "@/lib/prayer-utils";
 import { getApiUrl } from "@/lib/query-client";
+import { useDeepLink } from "@/lib/deeplink-context";
 import { getMonthLogs, cyclePrayerStatus, getMonthMissedFasts, toggleMissedFast, type DayLog, type PrayerName } from "@/lib/prayer-tracker";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 import { MasjidMap } from "@/components/MasjidMap";
@@ -47,7 +48,7 @@ interface CalendarEvent {
   registrationUrl: string;
 }
 
-type SettingsSection = "main" | "calcMethod" | "masjids" | "masjidDetail" | "feedback" | "prayerTracker";
+type SettingsSection = "main" | "calcMethod" | "masjids" | "masjidDetail" | "feedback" | "prayerTracker" | "janazaHistory";
 
 export default function SettingsScreen() {
   const { colors, isDark, themeMode, setThemeMode, ramadanMode, setRamadanMode } = useTheme();
@@ -59,7 +60,16 @@ export default function SettingsScreen() {
   const [feedbackText, setFeedbackText] = useState("");
   const [feedbackEmail, setFeedbackEmail] = useState("");
 
+  const { consumeTarget } = useDeepLink();
+
   useEffect(() => { trackScreenView("Settings"); }, []);
+
+  useEffect(() => {
+    const janazaTarget = consumeTarget("janaza");
+    if (janazaTarget !== null) {
+      setSection("janazaHistory");
+    }
+  }, [consumeTarget]);
 
   const now = new Date();
   const [trackerYear, setTrackerYear] = useState(now.getFullYear());
@@ -245,6 +255,20 @@ export default function SettingsScreen() {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={[styles.menuLabel, { color: colors.text }]}>Masjid Directory</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+      </Pressable>
+
+      <Pressable
+        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
+        onPress={() => { setSection("janazaHistory"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+      >
+        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
+          <Ionicons name="heart-outline" size={20} color={colors.emerald} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.menuLabel, { color: colors.text }]}>Janaza History</Text>
+          <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>Recent janaza announcements</Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
       </Pressable>
@@ -865,6 +889,52 @@ export default function SettingsScreen() {
     );
   };
 
+  const janazaHistoryQuery = useQuery<{ id: number; masjid_name: string; details: string; created_at: string }[]>({
+    queryKey: ["/api/janaza-history"],
+    enabled: section === "janazaHistory",
+  });
+
+  const renderJanazaHistory = () => (
+    <>
+      <Pressable
+        style={styles.backRow}
+        onPress={() => { setSection("main"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+      >
+        <Ionicons name="chevron-back" size={20} color={colors.emerald} />
+        <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 15, color: colors.emerald, marginLeft: 4 }}>Back</Text>
+      </Pressable>
+      <Text style={{ fontFamily: "PlayfairDisplay_700Bold", fontSize: 22, color: colors.text, marginBottom: 16 }}>Janaza History</Text>
+      <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: colors.textSecondary, marginBottom: 20, lineHeight: 18 }}>
+        Inna Lillahi wa Inna Ilayhi Raji'un. Recent janaza announcements from our community.
+      </Text>
+      {janazaHistoryQuery.isLoading && (
+        <Text style={{ color: colors.textSecondary, fontFamily: "Inter_400Regular", textAlign: "center", marginTop: 40 }}>Loading...</Text>
+      )}
+      {janazaHistoryQuery.data && janazaHistoryQuery.data.length === 0 && (
+        <View style={{ alignItems: "center", marginTop: 40 }}>
+          <Ionicons name="heart-outline" size={40} color={colors.textSecondary} />
+          <Text style={{ color: colors.textSecondary, fontFamily: "Inter_400Regular", fontSize: 14, marginTop: 12, textAlign: "center" }}>
+            No janaza announcements yet
+          </Text>
+        </View>
+      )}
+      {(janazaHistoryQuery.data || []).map((alert) => {
+        const date = new Date(alert.created_at);
+        const formatted = date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) + " at " + date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+        return (
+          <View key={alert.id} style={[styles.menuItem, { backgroundColor: colors.surface, borderColor: colors.border, flexDirection: "column", alignItems: "flex-start", paddingVertical: 14 }]}>
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 6 }}>
+              <MaterialCommunityIcons name="mosque" size={16} color={colors.emerald} />
+              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: colors.text, marginLeft: 8 }}>{alert.masjid_name}</Text>
+            </View>
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: colors.textSecondary, lineHeight: 18 }}>{alert.details}</Text>
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: colors.textSecondary, marginTop: 8 }}>{formatted}</Text>
+          </View>
+        );
+      })}
+    </>
+  );
+
   const [headerHeight, setHeaderHeight] = useState(0);
 
   return (
@@ -890,6 +960,7 @@ export default function SettingsScreen() {
         {section === "masjidDetail" && renderMasjidDetail()}
         {section === "feedback" && renderFeedback()}
         {section === "prayerTracker" && renderPrayerTracker()}
+        {section === "janazaHistory" && renderJanazaHistory()}
       </ScrollView>
     </View>
   );

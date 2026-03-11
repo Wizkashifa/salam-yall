@@ -1,14 +1,16 @@
 import { createContext, useContext, useState, useMemo, useCallback, ReactNode } from "react";
 
+export type DeepLinkType = "event" | "restaurant" | "business" | "janaza";
+
 export type DeepLinkTarget = {
-  type: "event" | "restaurant" | "business";
+  type: DeepLinkType;
   id: string;
 } | null;
 
 interface DeepLinkContextValue {
   pendingTarget: DeepLinkTarget;
   setPendingTarget: (target: DeepLinkTarget) => void;
-  consumeTarget: (type: "event" | "restaurant" | "business") => string | null;
+  consumeTarget: (type: DeepLinkType) => string | null;
 }
 
 const DeepLinkContext = createContext<DeepLinkContextValue | null>(null);
@@ -17,7 +19,7 @@ export function DeepLinkProvider({ children }: { children: ReactNode }) {
   const [pendingTarget, setPendingTarget] = useState<DeepLinkTarget>(null);
 
   const consumeTarget = useCallback(
-    (type: "event" | "restaurant" | "business"): string | null => {
+    (type: DeepLinkType): string | null => {
       if (pendingTarget && pendingTarget.type === type) {
         const id = pendingTarget.id;
         setPendingTarget(null);
@@ -55,11 +57,12 @@ export function parseDeepLinkUrl(url: string): DeepLinkTarget {
       { regex: /salamyall:\/\/event\/([^/?#]+)/, type: "event" as const },
       { regex: /salamyall:\/\/restaurant\/([^/?#]+)/, type: "restaurant" as const },
       { regex: /salamyall:\/\/business\/([^/?#]+)/, type: "business" as const },
+      { regex: /salamyall:\/\/janaza/, type: "janaza" as const },
     ];
     for (const { regex, type } of patterns) {
       const match = url.match(regex);
-      if (match && match[1]) {
-        return { type, id: decodeURIComponent(match[1]) };
+      if (match) {
+        return { type, id: match[1] ? decodeURIComponent(match[1]) : "" };
       }
     }
   } catch {}
