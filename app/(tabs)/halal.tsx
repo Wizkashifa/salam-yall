@@ -524,7 +524,7 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
                       }}
                     >
                       <Ionicons name="checkmark-circle-outline" size={16} color="#fff" />
-                      <Text style={styles.checkinBtnText}>Check In</Text>
+                      <Text style={styles.checkinBtnText}>Reverify</Text>
                     </Pressable>
                   ) : null}
                 </View>
