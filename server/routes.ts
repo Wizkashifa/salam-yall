@@ -2411,6 +2411,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let userEmail = email || null;
       let userName = displayName || null;
 
+      console.log("[Auth] Existing user lookup:", existing.rows.length > 0 ? JSON.stringify(existing.rows[0]) : "not found", "apple_sub:", verifiedSubject);
+
       if (existing.rows.length > 0) {
         userId = existing.rows[0].id;
         userEmail = existing.rows[0].email || userEmail;
@@ -2432,6 +2434,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sessionToken = crypto.randomBytes(32).toString("hex");
       await pool.query("INSERT INTO user_sessions (token, user_id) VALUES ($1, $2)", [sessionToken, userId]);
 
+      console.log("[Auth] Sign-in response: userId=" + userId + " email=" + userEmail + " displayName=" + userName);
       res.json({ token: sessionToken, user: { id: userId, email: userEmail, displayName: userName } });
     } catch (error: any) {
       console.error("[Auth] Apple sign-in error:", error.message);
