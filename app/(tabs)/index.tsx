@@ -381,7 +381,7 @@ function CountdownRing({ colors, isDark, progress, qiblaBearing, hasRealLocation
 export default function PrayerScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { calcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid } = useSettings();
+  const { calcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid, openMenu } = useSettings();
   const router = useRouter();
   const { setPendingTarget } = useDeepLink();
   const [prayers, setPrayers] = useState<PrayerTimeEntry[]>([]);
@@ -1092,6 +1092,60 @@ export default function PrayerScreen() {
           </ScrollView>
         </View>
 
+        {preferredMasjid && activeIqama ? (
+          <View style={[styles.glassCard, styles.iqamaCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
+            <View style={styles.iqamaCardHeader}>
+              <View style={styles.iqamaCardHeaderLeft}>
+                <MaterialCommunityIcons name="mosque" size={16} color={colors.gold} />
+                <Text style={[styles.iqamaCardLabel, { color: colors.gold }]}>MY MASJID, MY HOME</Text>
+              </View>
+              <Pressable onPress={() => { openMenu(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} hitSlop={8}>
+                <Text style={[styles.iqamaCardMasjidName, { color: colors.textSecondary }]} numberOfLines={1}>{preferredMasjid.replace(/\s*\(.*\)/, "")}</Text>
+              </Pressable>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.prayerPillRow, { borderTopColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)" }]} contentContainerStyle={styles.prayerPillRowContent}>
+              {prayers.filter(p => p.name !== "sunrise").map((prayer) => {
+                const isNext = nextPrayer?.name === prayer.name;
+                const isPast = prayer.time < now && !isNext;
+                const trackerKey = prayer.name as TrackerPrayerName;
+                const status = todayLog[trackerKey] ?? 0;
+                const isGold = status === 1;
+                const isGreen = status === 2;
+                const pillBg = isGold
+                  ? (isDark ? colors.gold + "20" : colors.gold + "15")
+                  : isGreen
+                    ? (isDark ? colors.emerald + "25" : colors.emerald + "12")
+                    : undefined;
+                const iqamaTime = activeIqama?.iqama?.[prayer.name as keyof typeof activeIqama.iqama];
+                return (
+                  <Pressable
+                    key={prayer.name}
+                    onPress={() => handlePrayerPillPress(prayer.name)}
+                    style={({ pressed }) => [
+                      styles.prayerPill,
+                      pillBg ? { backgroundColor: pillBg } : undefined,
+                      pressed && { opacity: 0.7 },
+                    ]}
+                  >
+                    <Text style={[
+                      styles.prayerPillName,
+                      { color: isPast ? colors.textTertiary : colors.textSecondary },
+                    ]} allowFontScaling={false}>
+                      {prayer.label}
+                    </Text>
+                    <Text style={[
+                      styles.prayerPillTime,
+                      { color: isPast ? colors.textTertiary : colors.text },
+                    ]} allowFontScaling={false}>
+                      {iqamaTime || formatTime(prayer.time)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        ) : null}
+
         <Pressable
           onPress={() => { setSearchVisible(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
           style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}
@@ -1701,6 +1755,35 @@ const styles = StyleSheet.create({
     height: 5,
     borderRadius: 2.5,
     marginTop: 4,
+  },
+  iqamaCard: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 0,
+    paddingBottom: 0,
+  },
+  iqamaCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 10,
+  },
+  iqamaCardHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  iqamaCardLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 0.8,
+  },
+  iqamaCardMasjidName: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    maxWidth: 160,
   },
   ramadanCard: {
     marginHorizontal: 16,
