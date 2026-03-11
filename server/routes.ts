@@ -2663,6 +2663,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!masjidName || !details || masjidLat == null || masjidLng == null) {
         return res.status(400).json({ error: "Masjid name, location, and details are required" });
       }
+      if (typeof masjidLat !== "number" || typeof masjidLng !== "number" || isNaN(masjidLat) || isNaN(masjidLng)) {
+        return res.status(400).json({ error: "Invalid masjid coordinates" });
+      }
 
       await pool.query(
         "INSERT INTO janaza_alerts (masjid_name, masjid_lat, masjid_lng, details) VALUES ($1, $2, $3, $4)",
@@ -2702,7 +2705,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Event ID is required" });
       }
 
-      const event = cachedEvents.find((e: CachedEvent) => e.id === String(eventId));
+      const overriddenEvents = await applyEventOverrides([...cachedEvents]);
+      const event = overriddenEvents.find((e: CachedEvent) => e.id === String(eventId));
       if (!event) {
         return res.status(404).json({ error: "Event not found" });
       }
