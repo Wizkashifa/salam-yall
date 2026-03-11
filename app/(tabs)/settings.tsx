@@ -407,7 +407,7 @@ export default function SettingsScreen() {
         </Pressable>
       </View>
 
-      <Text style={[styles.versionText, { color: colors.textTertiary }]}>Salam Y'all v1.0</Text>
+      <Text style={[styles.versionText, { color: colors.textTertiary }]}>Salam Y'all v1.1</Text>
     </>
   );
 
