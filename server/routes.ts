@@ -521,6 +521,7 @@ async function ensureMasjidsTable(pool: pg.Pool) {
       created_at TIMESTAMP DEFAULT NOW(),
       updated_at TIMESTAMP DEFAULT NOW()
     );
+    CREATE UNIQUE INDEX IF NOT EXISTS masjids_name_unique ON masjids (name);
   `);
   const { rows } = await pool.query("SELECT COUNT(*) as count FROM masjids");
   if (parseInt(rows[0].count) === 0) {
@@ -544,6 +545,36 @@ async function ensureMasjidsTable(pool: pg.Pool) {
         ('MCA Al-Noor', 37.3530, -121.9535, '1755 Catherine St, Santa Clara, CA 95050', 'https://www.mcabayarea.org', ARRAY['mca al-noor', 'mca alnoor', 'mca noor', 'catherine st'], true, 16);
     `);
     console.log("[DB] Seeded default masjids");
+  } else {
+    const masjidUpserts = [
+      { name: 'Al-Noor Islamic Center', lat: 35.7636, lng: -78.7443, addr: '1501 Buck Jones Rd, Raleigh, NC 27606', website: null, terms: ['al-noor', 'alnoor'], iqama: true, sort: 1 },
+      { name: 'Islamic Association of Raleigh (Atwater)', lat: 35.7898, lng: -78.6912, addr: '808 Atwater St, Raleigh, NC 27607', website: 'https://www.raleighmasjid.org', terms: ['iar', 'islamic association of raleigh', 'atwater'], iqama: true, sort: 2 },
+      { name: 'Islamic Association of Raleigh (Page Rd)', lat: 35.9067, lng: -78.8169, addr: '3104 Page Rd, Morrisville, NC 27560', website: 'https://www.raleighmasjid.org', terms: ['iar', 'islamic association of raleigh', 'page rd', 'page road'], iqama: true, sort: 3 },
+      { name: 'Islamic Center of Morrisville', lat: 35.8099, lng: -78.8228, addr: '107 Quail Fields Ct, Morrisville, NC 27560', website: 'https://www.icmorrisville.org', terms: ['icm', 'islamic center of morrisville', 'quail fields'], iqama: true, sort: 4 },
+      { name: 'Jamaat Ibad Ar-Rahman (Fayetteville)', lat: 35.9856, lng: -78.8977, addr: '3034 Fayetteville St, Durham, NC 27707', website: 'https://www.jiar.org', terms: ['jamaat ibad', 'jiar', 'fayetteville st'], iqama: true, sort: 5 },
+      { name: 'Jamaat Ibad Ar-Rahman (Parkwood)', lat: 35.8938, lng: -78.9109, addr: '5122 Revere Rd, Durham, NC 27713', website: 'https://www.jiar.org', terms: ['parkwood', 'revere rd'], iqama: true, sort: 6 },
+      { name: 'Apex Masjid', lat: 35.7294, lng: -78.8415, addr: '733 Center St, Apex, NC 27502', website: null, terms: ['apex masjid', 'center st, apex'], iqama: false, sort: 7 },
+      { name: 'Ar-Razzaq Islamic Center', lat: 35.9966, lng: -78.9155, addr: '1920 Chapel Hill Rd, Durham, NC 27707', website: null, terms: ['ar-razzaq', 'arrazzaq', 'chapel hill rd, durham'], iqama: false, sort: 8 },
+      { name: 'As-Salaam Islamic Center', lat: 35.7781, lng: -78.6075, addr: '110 Lord Anson Dr, Raleigh, NC 27610', website: 'https://www.assalaam.org', terms: ['as-salaam', 'assalaam', 'lord anson'], iqama: false, sort: 9 },
+      { name: 'Chapel Hill Islamic Society', lat: 35.9406, lng: -79.0164, addr: '1717 Legion Rd, Chapel Hill, NC 27517', website: 'https://www.chapelhillmasjid.org', terms: ['chapel hill islamic', 'legion rd'], iqama: false, sort: 10 },
+      { name: 'Islamic Center of Cary', lat: 35.7731, lng: -78.8028, addr: '1155 W Chatham St, Cary, NC 27511', website: 'https://www.icocary.org', terms: ['islamic center of cary', 'chatham st'], iqama: false, sort: 11 },
+      { name: 'Masjid King Khalid', lat: 35.7693, lng: -78.6383, addr: '130 Martin Luther King Jr Blvd, Raleigh, NC 27601', website: null, terms: ['king khalid', 'martin luther king'], iqama: false, sort: 12 },
+      { name: 'North Raleigh Masjid', lat: 35.8520, lng: -78.5571, addr: '7424 Deah Way, Raleigh, NC 27616', website: null, terms: ['north raleigh masjid', 'deah way', 'mycc', 'muslim youth community center'], iqama: false, sort: 13 },
+      { name: 'San Ramon Valley Islamic Center', lat: 37.7770, lng: -121.9691, addr: '2230 Camino Ramon, San Ramon, CA 94583', website: 'https://srvic.org', terms: ['srvic', 'san ramon valley islamic', 'camino ramon'], iqama: true, sort: 14 },
+      { name: 'Muslim Community Association', lat: 37.3769, lng: -121.9595, addr: '3003 Scott Blvd, Santa Clara, CA 95054', website: 'https://www.mcabayarea.org', terms: ['mca', 'muslim community association', 'scott blvd', 'mcabayarea'], iqama: true, sort: 15 },
+      { name: 'MCA Al-Noor', lat: 37.3530, lng: -121.9535, addr: '1755 Catherine St, Santa Clara, CA 95050', website: 'https://www.mcabayarea.org', terms: ['mca al-noor', 'mca alnoor', 'mca noor', 'catherine st'], iqama: true, sort: 16 },
+    ];
+    for (const m of masjidUpserts) {
+      await pool.query(
+        `INSERT INTO masjids (name, latitude, longitude, address, website, match_terms, has_iqama, sort_order)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (name) DO UPDATE SET latitude=EXCLUDED.latitude, longitude=EXCLUDED.longitude, address=EXCLUDED.address, website=EXCLUDED.website, match_terms=EXCLUDED.match_terms, has_iqama=EXCLUDED.has_iqama, sort_order=EXCLUDED.sort_order, updated_at=NOW()`,
+        [m.name, m.lat, m.lng, m.addr, m.website, m.terms, m.iqama, m.sort]
+      );
+    }
+    await pool.query(`UPDATE iqama_schedules SET masjid = 'MCA Al-Noor' WHERE masjid = 'MCA Noor'`);
+    await pool.query(`DELETE FROM masjids WHERE name = 'MCA Noor'`);
+    console.log("[DB] Upserted masjid data");
   }
 }
 
