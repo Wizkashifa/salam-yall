@@ -1032,7 +1032,7 @@ export default function SettingsScreen() {
       if (badgeShareRef.current) {
         const uri = await captureRef(badgeShareRef.current, { format: "png", quality: 1 });
         await Share.share({
-          message: `I earned the ${def.title} badge on Salam Y'all! ${def.description}\n\nDownload the app: https://apps.apple.com/us/app/salam-yall/id6760231963`,
+          message: `I earned the ${def.title} badge on Salam Y'all! ${def.description}\n\nTrack your prayer progress: https://apps.apple.com/us/app/salam-yall/id6760231963`,
           url: Platform.OS === "ios" ? uri : undefined,
         });
         trackEvent("badge_shared", { badge: badge.key });
