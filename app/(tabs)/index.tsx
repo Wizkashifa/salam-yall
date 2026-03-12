@@ -364,7 +364,7 @@ function CountdownRing({ colors, isDark, progress, qiblaBearing, hasRealLocation
         </View>
       )}
       {hasRealLocation ? (
-        <View style={{ transform: [{ rotate: `${qiblaBearing}deg` }] }}>
+        <View style={{ transform: [{ rotate: `${qiblaBearing - 45}deg` }] }}>
           <Ionicons name="navigate" size={24} color={fillColor} />
         </View>
       ) : (

@@ -201,20 +201,9 @@ export function getAllMasjidsByDistance(latitude: number, longitude: number, mas
   }).sort((a, b) => a.distanceMiles - b.distanceMiles);
 }
 
-const KAABA_LAT = 21.4225;
-const KAABA_LON = 39.8262;
-
 export function calculateQiblaBearing(latitude: number, longitude: number): number {
-  const lat1 = (latitude * Math.PI) / 180;
-  const lon1 = (longitude * Math.PI) / 180;
-  const lat2 = (KAABA_LAT * Math.PI) / 180;
-  const lon2 = (KAABA_LON * Math.PI) / 180;
-  const dLon = lon2 - lon1;
-
-  const y = Math.sin(dLon) * Math.cos(lat2);
-  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
-  let bearing = (Math.atan2(y, x) * 180) / Math.PI;
-  return (bearing + 360) % 360;
+  const { Qibla, Coordinates } = require("adhan");
+  return Qibla(new Coordinates(latitude, longitude));
 }
 
 export function isRamadan(): boolean {
