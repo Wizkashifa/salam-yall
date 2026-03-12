@@ -10,6 +10,7 @@ import {
   TextInput,
   Alert,
   Share,
+  Image,
 } from "react-native";
 
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -1381,11 +1382,18 @@ export default function SettingsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <GlassHeader onHeaderHeight={setHeaderHeight}>
-        <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14 }}>
-          <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>More</Text>
-          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
-            Customize your experience
-          </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14 }}>
+          <View>
+            <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>More</Text>
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
+              Customize your experience
+            </Text>
+          </View>
+          <Image
+            source={require("@/assets/images/splash-logo.png")}
+            style={{ width: 40, height: 40, borderRadius: 10, opacity: 0.9 }}
+            resizeMode="contain"
+          />
         </View>
         <TickerBanner />
       </GlassHeader>
