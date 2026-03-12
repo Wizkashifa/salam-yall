@@ -15,6 +15,7 @@ interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
   signInWithApple: () => Promise<string>;
+  devSignIn: () => Promise<string>;
   signOut: () => Promise<void>;
   getAuthHeaders: () => Record<string, string>;
 }
@@ -88,6 +89,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data.token;
   }, []);
 
+  const devSignIn = useCallback(async (): Promise<string> => {
+    const response = await apiRequest("POST", "/api/auth/dev-signin", {});
+    const data = await response.json();
+    setSessionToken(data.token);
+    setUser(data.user);
+    await AsyncStorage.setItem(AUTH_TOKEN_KEY, data.token);
+    return data.token;
+  }, []);
+
   const signOut = useCallback(async () => {
     if (sessionToken) {
       try {
@@ -109,7 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [sessionToken]);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, signInWithApple, signOut, getAuthHeaders }}>
+    <AuthContext.Provider value={{ user, isLoading, signInWithApple, devSignIn, signOut, getAuthHeaders }}>
       {children}
     </AuthContext.Provider>
   );

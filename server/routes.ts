@@ -2438,6 +2438,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  if (process.env.NODE_ENV === "development") {
+    app.post("/api/auth/dev-signin", async (req, res) => {
+      try {
+        const existing = await pool.query("SELECT id, email, display_name FROM user_accounts ORDER BY id LIMIT 1");
+        let userId: number;
+        let userEmail: string | null;
+        let userName: string | null;
+
+        if (existing.rows.length > 0) {
+          userId = existing.rows[0].id;
+          userEmail = existing.rows[0].email;
+          userName = existing.rows[0].display_name;
+        } else {
+          const result = await pool.query(
+            "INSERT INTO user_accounts (apple_id, email, display_name) VALUES ($1, $2, $3) RETURNING id",
+            ["dev-user-" + Date.now(), "dev@test.com", "Dev User"]
+          );
+          userId = result.rows[0].id;
+          userEmail = "dev@test.com";
+          userName = "Dev User";
+        }
+
+        const crypto = await import("crypto");
+        const sessionToken = crypto.randomBytes(32).toString("hex");
+        await pool.query("INSERT INTO user_sessions (token, user_id) VALUES ($1, $2)", [sessionToken, userId]);
+
+        res.json({ token: sessionToken, user: { id: userId, email: userEmail, displayName: userName } });
+      } catch (error: any) {
+        console.error("[Auth] Dev sign-in error:", error.message);
+        res.status(500).json({ error: "Dev sign-in failed" });
+      }
+    });
+  }
+
   app.get("/api/auth/me", async (req, res) => {
     try {
       const authHeader = req.headers.authorization;

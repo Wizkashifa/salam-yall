@@ -9,6 +9,7 @@ import {
   Linking,
   TextInput,
   Alert,
+  Share,
 } from "react-native";
 
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -35,6 +36,9 @@ import { useDeepLink } from "@/lib/deeplink-context";
 import { getMonthLogs, cyclePrayerStatus, getMonthMissedFasts, toggleMissedFast, type DayLog, type PrayerName } from "@/lib/prayer-tracker";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 import { MasjidMap } from "@/components/MasjidMap";
+import { computeBadges, BADGES, type BadgeState } from "@/lib/prayer-badges";
+import ViewShot, { captureRef } from "react-native-view-shot";
+import { useRef } from "react";
 
 interface CalendarEvent {
   id: string;
@@ -49,13 +53,13 @@ interface CalendarEvent {
   registrationUrl: string;
 }
 
-type SettingsSection = "main" | "calcMethod" | "masjids" | "masjidDetail" | "feedback" | "prayerTracker" | "janazaHistory" | "profile";
+type SettingsSection = "main" | "calcMethod" | "masjids" | "masjidDetail" | "feedback" | "prayerTracker" | "janazaHistory" | "profile" | "badges";
 
 export default function SettingsScreen() {
   const { colors, isDark, themeMode, setThemeMode, ramadanMode, setRamadanMode } = useTheme();
   const router = useRouter();
   const { calcMethod, setCalcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid, setPreferredMasjid } = useSettings();
-  const { user, signInWithApple, signOut, isLoading: authLoading, getAuthHeaders } = useAuth();
+  const { user, signInWithApple, devSignIn, signOut, isLoading: authLoading, getAuthHeaders } = useAuth();
   const qc = useQueryClient();
   const [section, setSection] = useState<SettingsSection>("main");
   const [selectedMasjid, setSelectedMasjid] = useState<Masjid | null>(null);
@@ -89,6 +93,10 @@ export default function SettingsScreen() {
   const [missedFasts, setMissedFasts] = useState<Set<string>>(new Set());
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationRequested, setLocationRequested] = useState(false);
+  const [badgeStates, setBadgeStates] = useState<BadgeState[]>([]);
+  const [newBadgeKey, setNewBadgeKey] = useState<string | null>(null);
+  const badgeShareRef = useRef<ViewShot | null>(null);
+  const [sharingBadgeKey, setSharingBadgeKey] = useState<string | null>(null);
 
   useEffect(() => {
     if (section === "masjids" && !locationRequested) {
@@ -124,6 +132,19 @@ export default function SettingsScreen() {
       getMonthMissedFasts(trackerYear, trackerMonth).then(setMissedFasts);
     }
   }, [section, trackerYear, trackerMonth]);
+
+  useEffect(() => {
+    if (section === "badges") {
+      computeBadges().then(({ badges, newlyEarned }) => {
+        setBadgeStates(badges);
+        if (newlyEarned.length > 0) {
+          setNewBadgeKey(newlyEarned[0]);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          setTimeout(() => setNewBadgeKey(null), 3000);
+        }
+      });
+    }
+  }, [section]);
 
   const { data: events } = useQuery<CalendarEvent[]>({
     queryKey: ["/api/events"],
@@ -295,15 +316,39 @@ export default function SettingsScreen() {
           </Text>
         </>
       ) : (
-        <View style={[styles.menuItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Pressable
+          style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
+          onPress={async () => {
+            if (__DEV__) {
+              try { await devSignIn(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch (e) { Alert.alert("Dev Sign-In Failed", String(e)); }
+            }
+          }}
+        >
           <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
-            <Ionicons name="phone-portrait-outline" size={20} color={colors.emerald} />
+            <Ionicons name={__DEV__ ? "code-slash" : "phone-portrait-outline"} size={20} color={colors.emerald} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.menuLabel, { color: colors.text }]}>Sign In</Text>
-            <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>Sign in to rate and add businesses/restaurants</Text>
+            <Text style={[styles.menuLabel, { color: colors.text }]}>{__DEV__ ? "Dev Sign In" : "Sign In"}</Text>
+            <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>{__DEV__ ? "Tap to sign in as dev user" : "Use the mobile app to sign in"}</Text>
           </View>
-        </View>
+          {__DEV__ && <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />}
+        </Pressable>
+      )}
+
+      {user && (
+        <Pressable
+          style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
+          onPress={() => { setSection("badges"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); trackEvent("badges_opened"); }}
+        >
+          <View style={[styles.menuIcon, { backgroundColor: colors.gold + "20" }]}>
+            <Ionicons name="trophy" size={20} color={colors.gold} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.menuLabel, { color: colors.text }]}>My Badges</Text>
+            <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>Prayer achievements & streaks</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+        </Pressable>
       )}
 
       <Pressable
@@ -966,6 +1011,143 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleShareBadge = async (badge: BadgeState) => {
+    const def = BADGES.find(b => b.key === badge.key);
+    if (!def || !badge.earned) return;
+    setSharingBadgeKey(badge.key);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      if (badgeShareRef.current) {
+        const uri = await captureRef(badgeShareRef.current, { format: "png", quality: 1 });
+        await Share.share({
+          message: `I earned the ${def.title} badge on Salam Y'all! ${def.description}`,
+          url: Platform.OS === "ios" ? uri : undefined,
+        });
+        trackEvent("badge_shared", { badge: badge.key });
+      }
+    } catch (e) {
+      // user cancelled share
+    } finally {
+      setSharingBadgeKey(null);
+    }
+  };
+
+  const renderBadges = () => {
+    const earnedCount = badgeStates.filter(b => b.earned).length;
+    return (
+      <>
+        <Pressable
+          style={styles.backRow}
+          onPress={() => { setSection("main"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+        >
+          <Ionicons name="arrow-back" size={20} color={colors.text} />
+          <Text style={[styles.backLabel, { color: colors.text }]}>My Badges</Text>
+        </Pressable>
+
+        <View style={{ alignItems: "center", marginBottom: 24 }}>
+          <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: colors.gold + "20", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+            <Ionicons name="trophy" size={32} color={colors.gold} />
+          </View>
+          <Text style={{ fontFamily: "Inter_700Bold", fontSize: 20, color: colors.text }}>{earnedCount} / {BADGES.length}</Text>
+          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: colors.textSecondary, marginTop: 4 }}>Badges Earned</Text>
+        </View>
+
+        {badgeStates.map((badge) => {
+          const def = BADGES.find(b => b.key === badge.key)!;
+          const isNew = newBadgeKey === badge.key;
+          return (
+            <View
+              key={badge.key}
+              style={[
+                {
+                  backgroundColor: badge.earned ? colors.surface : colors.surfaceSecondary,
+                  borderRadius: 16,
+                  borderWidth: 1,
+                  borderColor: isNew ? colors.gold : badge.earned ? colors.border : colors.border + "80",
+                  padding: 16,
+                  marginBottom: 12,
+                  opacity: badge.earned ? 1 : 0.6,
+                },
+                isNew && { shadowColor: colors.gold, shadowOpacity: 0.4, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 8 },
+              ]}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <View style={{
+                  width: 48, height: 48, borderRadius: 24,
+                  backgroundColor: badge.earned ? colors.gold + "20" : colors.textTertiary + "15",
+                  alignItems: "center", justifyContent: "center", marginRight: 14,
+                }}>
+                  <Ionicons
+                    name={def.icon as any}
+                    size={24}
+                    color={badge.earned ? colors.gold : colors.textTertiary}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: "Inter_700Bold", fontSize: 16, color: badge.earned ? colors.text : colors.textTertiary }}>
+                    {def.title}
+                    {isNew && <Text style={{ color: colors.gold }}> NEW!</Text>}
+                  </Text>
+                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: badge.earned ? colors.textSecondary : colors.textTertiary, marginTop: 2 }}>
+                    {def.description}
+                  </Text>
+                  {badge.earned && badge.earnedAt && (
+                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: colors.textTertiary, marginTop: 4 }}>
+                      Earned {badge.earnedAt}
+                    </Text>
+                  )}
+                </View>
+                {badge.earned ? (
+                  <Pressable
+                    onPress={() => handleShareBadge(badge)}
+                    hitSlop={8}
+                    style={{ padding: 6 }}
+                  >
+                    <Ionicons name="share-outline" size={20} color={colors.emerald} />
+                  </Pressable>
+                ) : (
+                  <View style={{ alignItems: "flex-end" }}>
+                    <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: colors.textTertiary }}>
+                      {badge.progress}/{badge.total}
+                    </Text>
+                    <View style={{ width: 48, height: 4, borderRadius: 2, backgroundColor: colors.textTertiary + "20", marginTop: 4, overflow: "hidden" }}>
+                      <View style={{ width: `${Math.min(100, (badge.progress / badge.total) * 100)}%` as any, height: "100%", backgroundColor: colors.gold, borderRadius: 2 }} />
+                    </View>
+                  </View>
+                )}
+              </View>
+            </View>
+          );
+        })}
+
+        {sharingBadgeKey && (() => {
+          const def = BADGES.find(b => b.key === sharingBadgeKey)!;
+          const badge = badgeStates.find(b => b.key === sharingBadgeKey);
+          return (
+            <View style={{ position: "absolute", left: -9999, top: 0 }}>
+              <ViewShot ref={badgeShareRef as any} options={{ format: "png", quality: 1 }}>
+                <View style={{ width: 400, padding: 32, backgroundColor: "#0A1A0F", alignItems: "center", borderRadius: 20 }}>
+                  <Text style={{ fontFamily: "Inter_700Bold", fontSize: 14, color: "#D4AF37", letterSpacing: 2, marginBottom: 16 }}>SALAM Y'ALL</Text>
+                  <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: "#D4AF3720", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+                    <Ionicons name={def.icon as any} size={40} color="#D4AF37" />
+                  </View>
+                  <Text style={{ fontFamily: "Inter_700Bold", fontSize: 24, color: "#FFFFFF", textAlign: "center" }}>{def.title}</Text>
+                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: "#FFFFFFAA", textAlign: "center", marginTop: 8 }}>{def.description}</Text>
+                  {user?.displayName && (
+                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: "#10B981", marginTop: 16 }}>Earned by {user.displayName}</Text>
+                  )}
+                  {badge?.earnedAt && (
+                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: "#FFFFFF66", marginTop: 6 }}>{badge.earnedAt}</Text>
+                  )}
+                </View>
+              </ViewShot>
+            </View>
+          );
+        })()}
+      </>
+    );
+  };
+
   const renderProfile = () => {
     const stats = userStatsQuery.data;
     const pending = (pendingSubmissionsQuery.data || []).filter(s => !s.user_vote);
@@ -1176,6 +1358,7 @@ export default function SettingsScreen() {
         {section === "prayerTracker" && renderPrayerTracker()}
         {section === "janazaHistory" && renderJanazaHistory()}
         {section === "profile" && renderProfile()}
+        {section === "badges" && renderBadges()}
       </ScrollView>
     </View>
   );
