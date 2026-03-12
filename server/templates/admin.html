@@ -204,7 +204,56 @@
 
     <div class="tab-content" id="tab-events">
       <div class="section">
-        <div class="section-title"><span class="icon">📅</span> Community Events</div>
+        <div class="section-title"><span class="icon">📸</span> Scan Event Flyer</div>
+        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Upload a flyer image to automatically extract event details using AI, or fill in manually.</p>
+        <div id="flyerUploadArea" style="border:2px dashed #333;border-radius:12px;padding:30px;text-align:center;cursor:pointer;margin-bottom:14px;transition:border-color 0.2s;" ondragover="event.preventDefault();this.style.borderColor='#D4A843';" ondragleave="this.style.borderColor='#333';" ondrop="handleFlyerDrop(event)" onclick="document.getElementById('flyerFileInput').click()">
+          <div style="font-size:28px;margin-bottom:8px;">📸</div>
+          <div style="font-size:14px;color:#9CA3AF;">Drop a flyer image here or click to upload</div>
+          <div style="font-size:11px;color:#6B7280;margin-top:4px;">JPG, PNG, or WebP</div>
+          <input type="file" id="flyerFileInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleFlyerSelect(event)">
+        </div>
+        <div id="flyerPreview" style="display:none;margin-bottom:14px;text-align:center;">
+          <img id="flyerPreviewImg" style="max-width:100%;max-height:300px;border-radius:10px;border:1px solid #333;">
+          <button class="btn btn-sm" onclick="clearFlyer()" style="margin-top:8px;background:#333;color:#9CA3AF;">Remove Image</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <button class="btn btn-gold" onclick="extractFlyer()" id="extractFlyerBtn" disabled>Extract Details with AI</button>
+          <button class="btn btn-sm" onclick="toggleManualEntry()" style="background:#1E1E1E;color:#9CA3AF;">Manual Entry</button>
+        </div>
+        <div id="extractStatus" style="display:none;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:14px;"></div>
+        <div id="flyerForm" style="display:none;">
+          <label>Title *</label>
+          <input type="text" id="flyerTitle" placeholder="Event title">
+          <label>Description</label>
+          <textarea id="flyerDescription" placeholder="Brief description of the event..."></textarea>
+          <label>Location</label>
+          <input type="text" id="flyerLocation" placeholder="Full address or venue name">
+          <label>Organizer</label>
+          <input type="text" id="flyerOrganizer" placeholder="Organization or group hosting">
+          <div class="row">
+            <div>
+              <label>Start Date & Time *</label>
+              <input type="datetime-local" id="flyerStartTime">
+            </div>
+            <div>
+              <label>End Date & Time</label>
+              <input type="datetime-local" id="flyerEndTime">
+            </div>
+          </div>
+          <label>Registration URL (optional)</label>
+          <input type="text" id="flyerRegUrl" placeholder="https://...">
+          <button class="btn btn-primary" onclick="publishCommunityEvent()" id="publishEventBtn" style="margin-top:8px;width:100%;">Publish Event</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="icon">🗓️</span> Community Events (Published)</div>
+        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Events you've published via the flyer scanner. These appear in the app alongside Google Calendar events.</p>
+        <div id="communityEventList"><div class="loading">Loading...</div></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="icon">📅</span> Google Calendar Events</div>
         <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Events synced from Google Calendar. Edit an event to override its details — overrides persist across syncs.</p>
         <div id="eventList"><div class="loading">Loading...</div></div>
       </div>
@@ -629,6 +678,7 @@
           loadBusinesses('pending');
           loadJumuah();
           loadEvents();
+          loadCommunityEvents();
         } else {
           document.getElementById('loginError').style.display = 'block';
         }
@@ -1163,6 +1213,197 @@
           loadEvents();
         } else {
           showToast('Failed to remove override', true);
+        }
+      } catch { showToast('Connection error', true); }
+    }
+
+    var flyerBase64 = null;
+    var flyerMime = null;
+
+    function handleFlyerDrop(e) {
+      e.preventDefault();
+      e.currentTarget.style.borderColor = '#333';
+      var file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) loadFlyerFile(file);
+    }
+
+    function handleFlyerSelect(e) {
+      var file = e.target.files[0];
+      if (file) loadFlyerFile(file);
+    }
+
+    function loadFlyerFile(file) {
+      flyerMime = file.type;
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var dataUrl = e.target.result;
+        flyerBase64 = dataUrl.split(',')[1];
+        document.getElementById('flyerPreviewImg').src = dataUrl;
+        document.getElementById('flyerPreview').style.display = 'block';
+        document.getElementById('flyerUploadArea').style.display = 'none';
+        document.getElementById('extractFlyerBtn').disabled = false;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearFlyer() {
+      flyerBase64 = null;
+      flyerMime = null;
+      document.getElementById('flyerPreview').style.display = 'none';
+      document.getElementById('flyerUploadArea').style.display = 'block';
+      document.getElementById('extractFlyerBtn').disabled = true;
+      document.getElementById('flyerFileInput').value = '';
+    }
+
+    function toggleManualEntry() {
+      var form = document.getElementById('flyerForm');
+      form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    }
+
+    async function extractFlyer() {
+      if (!flyerBase64) { showToast('Upload a flyer image first', true); return; }
+      var btn = document.getElementById('extractFlyerBtn');
+      var status = document.getElementById('extractStatus');
+      btn.disabled = true;
+      btn.textContent = 'Extracting...';
+      status.style.display = 'block';
+      status.style.background = '#1A2E22';
+      status.style.color = '#6EE7B7';
+      status.textContent = 'Sending image to AI for analysis...';
+      try {
+        var res = await fetch('/api/admin/events/extract-flyer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify({ image: flyerBase64, mimeType: flyerMime }),
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        var data = await res.json();
+        if (!res.ok) {
+          status.style.background = '#2A1818';
+          status.style.color = '#F87171';
+          status.textContent = data.error || 'Extraction failed';
+          return;
+        }
+        document.getElementById('flyerTitle').value = data.title || '';
+        document.getElementById('flyerDescription').value = data.description || '';
+        document.getElementById('flyerLocation').value = data.location || '';
+        document.getElementById('flyerOrganizer').value = data.organizer || '';
+        document.getElementById('flyerRegUrl').value = data.registrationUrl || '';
+        if (data.date) {
+          var startDT = data.date + 'T' + (data.startTime || '00:00');
+          document.getElementById('flyerStartTime').value = startDT;
+          if (data.endTime) {
+            document.getElementById('flyerEndTime').value = data.date + 'T' + data.endTime;
+          }
+        }
+        document.getElementById('flyerForm').style.display = 'block';
+        status.style.background = '#1A2E22';
+        status.style.color = '#6EE7B7';
+        status.textContent = 'Details extracted! Review and edit below, then publish.';
+      } catch(e) {
+        status.style.background = '#2A1818';
+        status.style.color = '#F87171';
+        status.textContent = 'Connection error';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Extract Details with AI';
+      }
+    }
+
+    async function publishCommunityEvent() {
+      var title = document.getElementById('flyerTitle').value.trim();
+      var startTime = document.getElementById('flyerStartTime').value;
+      if (!title) { showToast('Title is required', true); return; }
+      if (!startTime) { showToast('Start date & time is required', true); return; }
+      var btn = document.getElementById('publishEventBtn');
+      btn.disabled = true;
+      btn.textContent = 'Publishing...';
+      try {
+        var body = {
+          title: title,
+          description: document.getElementById('flyerDescription').value.trim(),
+          location: document.getElementById('flyerLocation').value.trim(),
+          organizer: document.getElementById('flyerOrganizer').value.trim(),
+          startTime: new Date(startTime).toISOString(),
+          endTime: document.getElementById('flyerEndTime').value ? new Date(document.getElementById('flyerEndTime').value).toISOString() : null,
+          registrationUrl: document.getElementById('flyerRegUrl').value.trim(),
+          image: flyerBase64,
+          imageMime: flyerMime,
+        };
+        var res = await fetch('/api/admin/events/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify(body),
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        var data = await res.json();
+        if (!res.ok) { showToast(data.error || 'Failed to publish', true); return; }
+        showToast('Event published! It will appear in the app immediately.');
+        document.getElementById('flyerTitle').value = '';
+        document.getElementById('flyerDescription').value = '';
+        document.getElementById('flyerLocation').value = '';
+        document.getElementById('flyerOrganizer').value = '';
+        document.getElementById('flyerStartTime').value = '';
+        document.getElementById('flyerEndTime').value = '';
+        document.getElementById('flyerRegUrl').value = '';
+        document.getElementById('flyerForm').style.display = 'none';
+        document.getElementById('extractStatus').style.display = 'none';
+        clearFlyer();
+        loadCommunityEvents();
+      } catch(e) { showToast('Connection error', true); }
+      finally {
+        btn.disabled = false;
+        btn.textContent = 'Publish Event';
+      }
+    }
+
+    async function loadCommunityEvents() {
+      var list = document.getElementById('communityEventList');
+      list.innerHTML = '<div class="loading">Loading...</div>';
+      try {
+        var res = await fetch('/api/admin/community-events', {
+          headers: { 'Authorization': 'Bearer ' + adminToken },
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        var events = await res.json();
+        if (!events.length) {
+          list.innerHTML = '<div class="empty-state">No community events published yet</div>';
+          return;
+        }
+        list.innerHTML = '<ul class="message-list">' + events.map(function(e) {
+          var startDate = new Date(e.start_time);
+          var dateStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+          var org = e.organizer ? '<div style="font-size:11px;color:#6B7280;margin-top:2px;">' + escHtml(e.organizer) + '</div>' : '';
+          var loc = e.location ? '<div style="font-size:11px;color:#6B7280;">' + escHtml(e.location) + '</div>' : '';
+          var imgBadge = e.has_image ? '<span style="font-size:10px;padding:2px 6px;background:#1A2E22;color:#6EE7B7;border-radius:4px;margin-left:6px;">IMAGE</span>' : '';
+          return '<li class="message-item" style="flex-direction:column;gap:8px;">' +
+            '<div style="display:flex;align-items:flex-start;gap:12px;width:100%;">' +
+              '<span class="message-badge badge-event" style="white-space:nowrap;">' + dateStr + '</span>' +
+              '<div style="flex:1;">' +
+                '<div style="font-size:14px;font-weight:600;color:#F5F5F5;">' + escHtml(e.title) + imgBadge + '</div>' +
+                org + loc +
+              '</div>' +
+            '</div>' +
+            '<div style="display:flex;gap:6px;">' +
+              '<button class="btn btn-danger btn-sm" onclick="deleteCommunityEvent(' + e.id + ')">Delete</button>' +
+            '</div>' +
+          '</li>';
+        }).join('') + '</ul>';
+      } catch { list.innerHTML = '<div class="empty-state">Failed to load community events</div>'; }
+    }
+
+    async function deleteCommunityEvent(id) {
+      if (!confirm('Delete this community event? It will be removed from the app immediately.')) return;
+      try {
+        var res = await fetch('/api/admin/community-events/' + id, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + adminToken },
+        });
+        if (res.ok) {
+          showToast('Event deleted');
+          loadCommunityEvents();
+        } else {
+          showToast('Failed to delete event', true);
         }
       } catch { showToast('Connection error', true); }
     }
@@ -1858,6 +2099,7 @@
             loadBusinesses('pending');
             loadJumuah();
             loadEvents();
+            loadCommunityEvents();
           } else {
             handleUnauthorized();
           }

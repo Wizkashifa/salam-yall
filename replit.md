@@ -26,13 +26,13 @@ The application follows a client-server architecture:
 - **API:** Serves various APIs for events, businesses, halal restaurants, weather, and administrative functions.
 - **Google Calendar Integration:** Manages community event fetching and processing, including image extraction, registration URL parsing, and organizer resolution.
 - **Business Enrichment:** Automatically enriches submitted businesses and halal restaurants with Google Places data.
-- **Admin Dashboard:** Provides an interface for managing ticker messages, sending push notifications, reviewing business submissions, overriding event details, overriding restaurant opening hours (periods), managing analytics, and managing the masjid directory. Has 6 tabs: Notifications & Ticker, Events, Business Submissions, Restaurants, Analytics, Masjids.
+- **Admin Dashboard:** Provides an interface for managing ticker messages, sending push notifications, reviewing business submissions, overriding event details, overriding restaurant opening hours (periods), managing analytics, managing the masjid directory, and a flyer scanner for publishing community events via AI extraction. Has 6 tabs: Notifications & Ticker, Events (with flyer scanner + community events + Google Calendar events), Business Submissions, Restaurants, Analytics, Masjids.
 - **Deep Linking:** Handles incoming deep links for events, restaurants, businesses, and janaza alerts, redirecting to the appropriate in-app content.
 - **Push Notifications:** Three types: General (broadcast to all), Janaza alerts (proximity-filtered within 50 miles using haversine distance), and Event alerts (deep-link to specific event). Admin dashboard has push type selector.
 - **Share Pages:** Generates shareable HTML pages with Open Graph meta tags for rich link previews of app content.
 
 **Database (PostgreSQL):**
-- Stores `ticker_messages`, `push_tokens`, `halal_restaurants`, `businesses`, `jumuah_schedules`, `iqama_schedules`, `event_overrides`, `restaurant_overrides`, and `janaza_alerts`.
+- Stores `ticker_messages`, `push_tokens`, `halal_restaurants`, `businesses`, `jumuah_schedules`, `iqama_schedules`, `event_overrides`, `restaurant_overrides`, `janaza_alerts`, and `community_events`.
 - `push_tokens` table: Has `lat`, `lng` columns for proximity-based push filtering. Location is sent from client during token registration.
 - `janaza_alerts` table: Stores masjid_name, masjid_lat, masjid_lng, details, created_at. Public endpoint: `GET /api/janaza-history` (last 5). Admin: `POST /api/admin/push/janaza`.
 - `iqama_schedules` table: UNIQUE(masjid, date) with columns for fajr, dhuhr, asr, maghrib, isha times. Supports 5 masjids: `"IAR"`, `"ICMNC"`, `"JIAR (Parkwood)"`, `"JIAR (Fayetteville)"`, `"Al Noor"`.
@@ -59,7 +59,7 @@ The application follows a client-server architecture:
 **Key Features:**
 - **Home Screen:** Displays prayer times, Qibla direction, weather, daily Quran verse (Arabic + Dr. Mustafa Khattab translation, tappable for Ibn Kathir tafsir modal with share), Jumu'ah card on Fridays, and "Tonight in the Community" events. Includes an interactive prayer tracker and a search bar. Time-sensitive logic (iqama date, event filtering) refreshes every 60 seconds via clockTick.
 - **Halal Eats:** A directory of halal restaurants with search, filters, and distance sorting. Action buttons: Call → Website → Directions.
-- **Events:** Integrates Google Calendar to display community events with registration options.
+- **Events:** Integrates Google Calendar to display community events with registration options. Also supports admin-published community events (via flyer scanner AI extraction) stored in `community_events` table, merged into the same feed sorted by start time. Flyer images are served via `/api/events/image/:id`.
 - **Directory:** A Muslim business directory with category filtering, Google Places integration, and enhanced submission form. Supports specialty (Healthcare), keyword tags (predefined per category), photo URL, and booking/appointment links. DB columns: `specialty VARCHAR(255)`, `keywords TEXT[]`, `photo_url TEXT`, `booking_url TEXT`.
 - **More Tab:** Access to prayer tracker, masjid directory, janaza history, prayer settings, appearance settings, feedback forms, and Apple Sign-In (mobile only; web shows informational message). Signed-in users see their account card with sign-out option.
 - **Prayer Features:** Configurable prayer calculation methods, local notifications, mosque proximity alerts, and Iqama times from various masjids.
@@ -77,3 +77,4 @@ The application follows a client-server architecture:
 - **pg:** PostgreSQL client for Node.js.
 - **@react-native-async-storage/async-storage:** React Native community package for AsyncStorage.
 - **@expo-google-fonts/playfair-display:** For custom font usage.
+- **@anthropic-ai/sdk:** Anthropic Claude API client (via Replit AI Integrations) for flyer image analysis and event data extraction.

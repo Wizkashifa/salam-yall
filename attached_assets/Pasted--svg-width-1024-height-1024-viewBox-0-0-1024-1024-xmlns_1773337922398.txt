@@ -1,0 +1,94 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bg" cx="40%" cy="30%" r="75%" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#1e5c38"/>
+      <stop offset="60%" stop-color="#0d2b1a"/>
+      <stop offset="100%" stop-color="#071610"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="rgba(201,168,76,0.22)"/>
+      <stop offset="100%" stop-color="rgba(201,168,76,0)"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <circle cx="512" cy="512" r="490" fill="url(#glow)"/>
+
+  <!-- Outer decorative rings -->
+
+  <circle cx="512" cy="512" r="444" fill="none" stroke="rgba(201,168,76,0.2)" stroke-width="3"/>
+  <circle cx="512" cy="512" r="436" fill="none" stroke="rgba(201,168,76,0.07)" stroke-width="2"/>
+
+  <!-- Outermost 8-point star -->
+
+<polygon
+points="512,136 589,344 792,285 698,462 882,512 698,562 792,739 589,680 512,888 435,680 232,739 326,562 142,512 326,462 232,285 435,344"
+fill="rgba(201,168,76,0.06)" stroke="#c9a84c" stroke-width="5" stroke-linejoin="round"/>
+
+  <!-- Mid 8-point star -->
+
+<polygon
+points="512,244 573,400 730,348 666,492 820,512 666,532 730,676 573,624 512,780 451,624 294,676 358,532 204,512 358,492 294,348 451,400"
+fill="rgba(201,168,76,0.09)" stroke="#c9a84c" stroke-width="6" stroke-linejoin="round"/>
+
+  <!-- Inner 8-point star -->
+
+<polygon
+points="512,330 558,440 676,404 632,512 740,512 632,520 676,628 558,592 512,702 466,592 348,628 392,520 284,512 392,504 348,404 466,440"
+fill="rgba(201,168,76,0.12)" stroke="#c9a84c" stroke-width="7" stroke-linejoin="round"/>
+
+  <!-- Subtle radial spokes -->
+
+  <g stroke="rgba(201,168,76,0.1)" stroke-width="2">
+    <line x1="512" y1="512" x2="512" y2="100"/>
+    <line x1="512" y1="512" x2="512" y2="924"/>
+    <line x1="512" y1="512" x2="100" y2="512"/>
+    <line x1="512" y1="512" x2="924" y2="512"/>
+    <line x1="512" y1="512" x2="803" y2="221"/>
+    <line x1="512" y1="512" x2="221" y2="221"/>
+    <line x1="512" y1="512" x2="803" y2="803"/>
+    <line x1="512" y1="512" x2="221" y2="803"/>
+  </g>
+
+  <!-- Rub el hizb: rotated square (diamond) -->
+
+<rect x="378" y="378" width="268" height="268"
+fill="rgba(201,168,76,0.16)" stroke="#c9a84c" stroke-width="7"
+transform="rotate(45 512 512)"/>
+
+  <!-- Rub el hizb: axis-aligned square -->
+
+<rect x="378" y="378" width="268" height="268"
+fill="rgba(7,22,14,0.92)" stroke="#c9a84c" stroke-width="7"/>
+
+  <!-- 4 corner accent dots at diamond points -->
+
+  <circle cx="512" cy="324" r="13" fill="#c9a84c" opacity="0.75"/>
+  <circle cx="512" cy="700" r="13" fill="#c9a84c" opacity="0.75"/>
+  <circle cx="324" cy="512" r="13" fill="#c9a84c" opacity="0.75"/>
+  <circle cx="700" cy="512" r="13" fill="#c9a84c" opacity="0.75"/>
+
+  <!-- "salam" — small spaced caps -->
+
+<text x="503" y="488"
+font-family="'DM Sans', 'Helvetica Neue', Arial, sans-serif"
+font-size="62"
+font-weight="400"
+fill="rgba(232,201,122,0.72)"
+text-anchor="middle"
+letter-spacing="14">salam</text>
+
+  <!-- "Y'all" — italic serif, slightly smaller -->
+
+<text x="512" y="568"
+font-family="'Playfair Display', Georgia, 'Times New Roman', serif"
+font-size="88"
+font-style="italic"
+font-weight="700"
+fill="#e8c97a"
+text-anchor="middle"
+letter-spacing="2">Y’all</text>
+
+</svg>

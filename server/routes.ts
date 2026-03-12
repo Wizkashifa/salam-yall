@@ -6,6 +6,7 @@ import * as path from "path";
 import { getUncachableGoogleCalendarClient } from "./google-calendar";
 import halalSeedData from "./halal-seed-data.json";
 import { ensureIqamaTable, seedJIARData, startIqamaSync, getIqamaSchedules } from "./iqama-scraper";
+import Anthropic from "@anthropic-ai/sdk";
 
 const CALENDAR_ID = "5c6138b3c670e90f28b9ec65a6650268569a070eff5ae0ae919129f763d216af@group.calendar.google.com";
 
@@ -486,6 +487,25 @@ async function ensureEventOverridesTable(pool: pg.Pool) {
       image_url TEXT,
       registration_url TEXT,
       updated_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+}
+
+async function ensureCommunityEventsTable(pool: pg.Pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS community_events (
+      id SERIAL PRIMARY KEY,
+      title VARCHAR(500) NOT NULL,
+      description TEXT,
+      location VARCHAR(500),
+      start_time TIMESTAMP NOT NULL,
+      end_time TIMESTAMP,
+      organizer VARCHAR(255),
+      registration_url TEXT,
+      image_data TEXT,
+      image_mime VARCHAR(50) DEFAULT 'image/jpeg',
+      status VARCHAR(20) DEFAULT 'approved',
+      created_at TIMESTAMP DEFAULT NOW()
     );
   `);
 }
@@ -986,6 +1006,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await ensureUserRatingsTable(pool).catch(err => console.error("[DB] User ratings table init error:", err.message));
   await ensureHalalCheckinsTable(pool).catch(err => console.error("[DB] Halal checkins table init error:", err.message));
   await ensureRestaurantSubmissionsTable(pool).catch(err => console.error("[DB] Restaurant submissions table init error:", err.message));
+  await ensureCommunityEventsTable(pool).catch(err => console.error("[DB] Community events table init error:", err.message));
 
   startHalalAutoSync(pool);
   startIqamaSync(pool);
@@ -1016,7 +1037,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
-  app.get("/api/events", async (_req, res) => {
+  async function getCommunityEvents(req: any): Promise<CachedEvent[]> {
+    try {
+      const { rows } = await pool.query(
+        "SELECT * FROM community_events WHERE status = 'approved' AND (end_time IS NULL OR end_time > NOW()) ORDER BY start_time ASC"
+      );
+      const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
+      const host = req.headers["host"] || "localhost:5000";
+      const baseUrl = `${protocol}://${host}`;
+      return rows.map((r: any) => ({
+        id: `community_${r.id}`,
+        title: r.title,
+        description: r.description || "",
+        location: r.location || "",
+        start: r.start_time ? new Date(r.start_time).toISOString() : "",
+        end: r.end_time ? new Date(r.end_time).toISOString() : "",
+        isAllDay: false,
+        organizer: r.organizer || "",
+        imageUrl: r.image_data ? `${baseUrl}/api/events/image/${r.id}` : "",
+        registrationUrl: r.registration_url || "",
+        speaker: "",
+      }));
+    } catch (err: any) {
+      console.error("[Events] Error fetching community events:", err.message);
+      return [];
+    }
+  }
+
+  app.get("/api/events/image/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { rows } = await pool.query("SELECT image_data, image_mime FROM community_events WHERE id = $1", [id]);
+      if (!rows.length || !rows[0].image_data) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+      const mime = rows[0].image_mime || "image/jpeg";
+      const buffer = Buffer.from(rows[0].image_data, "base64");
+      res.set("Content-Type", mime);
+      res.set("Cache-Control", "public, max-age=86400");
+      res.send(buffer);
+    } catch (error: any) {
+      console.error("Error serving community event image:", error.message);
+      res.status(500).json({ error: "Failed to serve image" });
+    }
+  });
+
+  app.get("/api/events", async (req, res) => {
     try {
       const now = Date.now();
       let events: CachedEvent[];
@@ -1026,7 +1092,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         events = await fetchAndCacheEvents();
       }
       const withOverrides = await applyEventOverrides(events);
-      res.json(withOverrides);
+      const communityEvents = await getCommunityEvents(req);
+      const allEvents = [...withOverrides, ...communityEvents].sort((a, b) => {
+        const aTime = new Date(a.start).getTime();
+        const bTime = new Date(b.start).getTime();
+        return aTime - bTime;
+      });
+      res.json(allEvents);
     } catch (error: any) {
       console.error("Error fetching calendar events:", error.message);
       res.status(500).json({ error: "Failed to fetch events" });
@@ -2963,7 +3035,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const overriddenEvents = await applyEventOverrides([...cachedEvents]);
-      const event = overriddenEvents.find((e: CachedEvent) => e.id === String(eventId));
+      let event = overriddenEvents.find((e: CachedEvent) => e.id === String(eventId));
+      if (!event && String(eventId).startsWith("community_")) {
+        const communityId = String(eventId).replace("community_", "");
+        const { rows } = await pool.query("SELECT * FROM community_events WHERE id = $1", [communityId]);
+        if (rows.length) {
+          const r = rows[0];
+          event = {
+            id: `community_${r.id}`,
+            title: r.title,
+            description: r.description || "",
+            location: r.location || "",
+            start: r.start_time ? new Date(r.start_time).toISOString() : "",
+            end: r.end_time ? new Date(r.end_time).toISOString() : "",
+            isAllDay: false,
+            organizer: r.organizer || "",
+            imageUrl: "",
+            registrationUrl: r.registration_url || "",
+            speaker: "",
+          };
+        }
+      }
       if (!event) {
         return res.status(404).json({ error: "Event not found" });
       }
@@ -3365,7 +3457,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/share/event/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const event = cachedEvents.find(e => e.id === id);
+      let event: CachedEvent | undefined = cachedEvents.find(e => e.id === id);
+      if (!event && id.startsWith("community_")) {
+        const communityId = id.replace("community_", "");
+        const { rows } = await pool.query("SELECT * FROM community_events WHERE id = $1", [communityId]);
+        if (rows.length) {
+          const r = rows[0];
+          const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
+          const hostHeader = req.headers["host"] || "localhost:5000";
+          const baseUrl = `${protocol}://${hostHeader}`;
+          event = {
+            id: `community_${r.id}`,
+            title: r.title,
+            description: r.description || "",
+            location: r.location || "",
+            start: r.start_time ? new Date(r.start_time).toISOString() : "",
+            end: r.end_time ? new Date(r.end_time).toISOString() : "",
+            isAllDay: false,
+            organizer: r.organizer || "",
+            imageUrl: r.image_data ? `${baseUrl}/api/events/image/${r.id}` : "",
+            registrationUrl: r.registration_url || "",
+            speaker: "",
+          };
+        }
+      }
       const title = event ? event.title : "Community Event";
       const description = event
         ? (event.description || "").substring(0, 200) || `Event at ${event.organizer || "Salam Y'all"}`
@@ -3556,6 +3671,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
 </html>`);
     } catch (error: any) {
       res.status(500).send("Error loading share page");
+    }
+  });
+
+  const anthropic = new Anthropic({
+    apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
+    baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
+  });
+
+  app.post("/api/admin/events/extract-flyer", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { image, mimeType } = req.body;
+      if (!image) return res.status(400).json({ error: "Image data is required" });
+
+      const mediaType = (mimeType || "image/jpeg") as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+
+      const message = await anthropic.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 1500,
+        messages: [{
+          role: "user",
+          content: [
+            {
+              type: "image",
+              source: {
+                type: "base64",
+                media_type: mediaType,
+                data: image,
+              },
+            },
+            {
+              type: "text",
+              text: `Extract event details from this flyer image. Return ONLY a JSON object with these fields (use null for any field you cannot determine):
+{
+  "title": "event title",
+  "date": "YYYY-MM-DD",
+  "startTime": "HH:MM" (24-hour format),
+  "endTime": "HH:MM" (24-hour format, null if not shown),
+  "location": "full address or venue name",
+  "description": "brief description of the event (2-3 sentences max)",
+  "organizer": "organization or group hosting the event",
+  "registrationUrl": "registration/RSVP URL if visible"
+}
+Return ONLY the JSON object, no markdown, no explanation.`,
+            },
+          ],
+        }],
+      });
+
+      const textContent = message.content.find((c: any) => c.type === "text");
+      if (!textContent || textContent.type !== "text") {
+        return res.status(500).json({ error: "No text response from AI" });
+      }
+
+      let extracted;
+      try {
+        let jsonStr = textContent.text.trim();
+        const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+        if (jsonMatch) jsonStr = jsonMatch[0];
+        extracted = JSON.parse(jsonStr);
+      } catch {
+        return res.status(500).json({ error: "Failed to parse AI response", raw: textContent.text });
+      }
+
+      res.json(extracted);
+    } catch (error: any) {
+      console.error("[Flyer Extract] Error:", error.message);
+      res.status(500).json({ error: "Failed to extract event details: " + error.message });
+    }
+  });
+
+  app.post("/api/admin/events/publish", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { title, description, location, startTime, endTime, organizer, registrationUrl, image, imageMime } = req.body;
+      if (!title || !startTime) return res.status(400).json({ error: "Title and start time are required" });
+
+      const result = await pool.query(
+        `INSERT INTO community_events (title, description, location, start_time, end_time, organizer, registration_url, image_data, image_mime, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'approved')
+         RETURNING id, title, start_time, status, created_at`,
+        [title, description || null, location || null, new Date(startTime), endTime ? new Date(endTime) : null, organizer || null, registrationUrl || null, image || null, imageMime || "image/jpeg"]
+      );
+      console.log(`[Community Events] Published: "${title}" (ID ${result.rows[0].id})`);
+      res.json(result.rows[0]);
+    } catch (error: any) {
+      console.error("[Community Events] Publish error:", error.message);
+      res.status(500).json({ error: "Failed to publish event" });
+    }
+  });
+
+  app.get("/api/admin/community-events", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { rows } = await pool.query(
+        "SELECT id, title, description, location, start_time, end_time, organizer, registration_url, status, created_at, CASE WHEN image_data IS NOT NULL THEN true ELSE false END as has_image FROM community_events ORDER BY created_at DESC"
+      );
+      res.json(rows);
+    } catch (error: any) {
+      console.error("[Community Events] List error:", error.message);
+      res.status(500).json({ error: "Failed to list community events" });
+    }
+  });
+
+  app.delete("/api/admin/community-events/:id", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { id } = req.params;
+      const result = await pool.query("DELETE FROM community_events WHERE id = $1 RETURNING id", [id]);
+      if (!result.rows.length) return res.status(404).json({ error: "Event not found" });
+      console.log(`[Community Events] Deleted event ID ${id}`);
+      res.json({ deleted: true });
+    } catch (error: any) {
+      console.error("[Community Events] Delete error:", error.message);
+      res.status(500).json({ error: "Failed to delete event" });
     }
   });
 
