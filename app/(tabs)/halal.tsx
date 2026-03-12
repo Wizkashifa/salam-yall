@@ -386,7 +386,7 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
             <Ionicons name="close" size={20} color={isDark ? "#fff" : "#374151"} />
           </Pressable>
           <Pressable onPress={() => {
-            const shareUrl = `${getApiUrl()}share/restaurant/${restaurant.id}`;
+            const shareUrl = `https://salamyall.net/share/restaurant/${restaurant.id}`;
             Share.share({ message: `Salam Y'all check out this restaurant - "${restaurant.name}" - ${shareUrl}` });
           }} hitSlop={8} style={[styles.closeButton, { backgroundColor: isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.85)" }]}>
             <Ionicons name="share-outline" size={18} color={isDark ? "#fff" : "#374151"} />
