@@ -3703,7 +3703,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             },
             {
               type: "text",
-              text: `Extract event details from this flyer image. Return ONLY a JSON object with these fields (use null for any field you cannot determine):
+              text: `Extract event details from this flyer image. IMPORTANT: Look carefully for any QR codes in the image — if you find one, decode it and use the URL as the registrationUrl. QR codes on event flyers typically link to registration or RSVP pages. If both a visible text URL and a QR code URL are present, prefer the QR code URL.
+
+Return ONLY a JSON object with these fields (use null for any field you cannot determine):
 {
   "title": "event title",
   "date": "YYYY-MM-DD",
@@ -3712,7 +3714,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   "location": "full address or venue name",
   "description": "brief description of the event (2-3 sentences max)",
   "organizer": "organization or group hosting the event",
-  "registrationUrl": "registration/RSVP URL if visible"
+  "registrationUrl": "decoded QR code URL, or visible registration/RSVP URL"
 }
 Return ONLY the JSON object, no markdown, no explanation.`,
             },
