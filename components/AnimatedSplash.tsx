@@ -16,12 +16,8 @@ interface AnimatedSplashProps {
 }
 
 export function AnimatedSplash({ onFinish }: AnimatedSplashProps) {
-  const salamsOpacity = useRef(new Animated.Value(0)).current;
-  const salamsTranslateY = useRef(new Animated.Value(18)).current;
-  const yallOpacity = useRef(new Animated.Value(0)).current;
-  const yallTranslateY = useRef(new Animated.Value(18)).current;
-  const crescentOpacity = useRef(new Animated.Value(0)).current;
-  const crescentScale = useRef(new Animated.Value(0.5)).current;
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const logoScale = useRef(new Animated.Value(0.7)).current;
   const subtitleOpacity = useRef(new Animated.Value(0)).current;
   const subtitleTranslateY = useRef(new Animated.Value(12)).current;
   const overallOpacity = useRef(new Animated.Value(1)).current;
@@ -32,45 +28,19 @@ export function AnimatedSplash({ onFinish }: AnimatedSplashProps) {
     const anim = Animated.sequence([
       Animated.delay(200),
       Animated.parallel([
-        Animated.timing(crescentOpacity, {
+        Animated.timing(logoOpacity, {
           toValue: 1,
           duration: 600,
           useNativeDriver: USE_NATIVE,
         }),
-        Animated.spring(crescentScale, {
+        Animated.spring(logoScale, {
           toValue: 1,
           friction: 6,
           tension: 40,
           useNativeDriver: USE_NATIVE,
         }),
       ]),
-      Animated.delay(150),
-      Animated.parallel([
-        Animated.timing(salamsOpacity, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: USE_NATIVE,
-        }),
-        Animated.timing(salamsTranslateY, {
-          toValue: 0,
-          duration: 500,
-          useNativeDriver: USE_NATIVE,
-        }),
-      ]),
-      Animated.delay(200),
-      Animated.parallel([
-        Animated.timing(yallOpacity, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: USE_NATIVE,
-        }),
-        Animated.timing(yallTranslateY, {
-          toValue: 0,
-          duration: 500,
-          useNativeDriver: USE_NATIVE,
-        }),
-      ]),
-      Animated.delay(200),
+      Animated.delay(300),
       Animated.parallel([
         Animated.timing(subtitleOpacity, {
           toValue: 1,
@@ -101,43 +71,19 @@ export function AnimatedSplash({ onFinish }: AnimatedSplashProps) {
       <View style={styles.content}>
         <Animated.View
           style={[
-            styles.crescentWrap,
+            styles.logoWrap,
             {
-              opacity: crescentOpacity,
-              transform: [{ scale: crescentScale }],
+              opacity: logoOpacity,
+              transform: [{ scale: logoScale }],
             },
           ]}
         >
           <Image
-            source={require("@/assets/images/splash-icon.png")}
-            style={styles.splashIcon}
+            source={require("@/assets/images/splash-logo.png")}
+            style={styles.logo}
+            resizeMode="contain"
           />
         </Animated.View>
-
-        <View style={styles.textRow}>
-          <Animated.Text
-            style={[
-              styles.salams,
-              {
-                opacity: salamsOpacity,
-                transform: [{ translateY: salamsTranslateY }],
-              },
-            ]}
-          >
-            Salams
-          </Animated.Text>
-          <Animated.Text
-            style={[
-              styles.yall,
-              {
-                opacity: yallOpacity,
-                transform: [{ translateY: yallTranslateY }],
-              },
-            ]}
-          >
-            {" y'all"}
-          </Animated.Text>
-        </View>
 
         <Animated.Text
           style={[
@@ -151,10 +97,6 @@ export function AnimatedSplash({ onFinish }: AnimatedSplashProps) {
           Triangle NC Muslim Community
         </Animated.Text>
       </View>
-
-      <Animated.Text style={[styles.appName, { opacity: subtitleOpacity }]}>
-        Salam Y'all
-      </Animated.Text>
     </Animated.View>
   );
 }
@@ -166,7 +108,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "#0F3D2B",
+    backgroundColor: "#0d2b1a",
     zIndex: 9999,
     alignItems: "center",
     justifyContent: "center",
@@ -174,45 +116,19 @@ const styles = StyleSheet.create({
   content: {
     alignItems: "center",
   },
-  crescentWrap: {
-    marginBottom: 28,
+  logoWrap: {
     alignItems: "center" as const,
   },
-  splashIcon: {
-    width: 120,
-    height: 120,
-    borderRadius: 16,
-  },
-  textRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
-  },
-  salams: {
-    fontFamily: "PlayfairDisplay_700Bold",
-    fontSize: 42,
-    color: "#FFFFFF",
-    letterSpacing: -0.5,
-  },
-  yall: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 42,
-    color: "#D4A843",
-    letterSpacing: -0.5,
+  logo: {
+    width: width * 0.6,
+    height: width * 0.6,
   },
   subtitle: {
     fontFamily: "Inter_400Regular",
     fontSize: 14,
     color: "rgba(255,255,255,0.6)",
-    marginTop: 12,
+    marginTop: 24,
     letterSpacing: 2,
     textTransform: "uppercase",
-  },
-  appName: {
-    position: "absolute",
-    bottom: 60,
-    fontFamily: "Inter_500Medium",
-    fontSize: 13,
-    color: "rgba(255,255,255,0.35)",
-    letterSpacing: 1,
   },
 });
