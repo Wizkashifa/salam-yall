@@ -53,7 +53,8 @@ interface CalendarEvent {
   registrationUrl: string;
 }
 
-type SettingsSection = "main" | "calcMethod" | "masjids" | "masjidDetail" | "feedback" | "prayerTracker" | "janazaHistory" | "profile" | "badges";
+type SettingsSection = "main" | "calcMethod" | "masjids" | "masjidDetail" | "feedback" | "prayerTracker" | "janazaHistory" | "profile";
+type TrackerTab = "calendar" | "badges";
 
 export default function SettingsScreen() {
   const { colors, isDark, themeMode, setThemeMode, ramadanMode, setRamadanMode } = useTheme();
@@ -97,6 +98,7 @@ export default function SettingsScreen() {
   const [newBadgeKey, setNewBadgeKey] = useState<string | null>(null);
   const badgeShareRef = useRef<ViewShot | null>(null);
   const [sharingBadgeKey, setSharingBadgeKey] = useState<string | null>(null);
+  const [trackerTab, setTrackerTab] = useState<TrackerTab>("calendar");
 
   useEffect(() => {
     if (section === "masjids" && !locationRequested) {
@@ -134,7 +136,7 @@ export default function SettingsScreen() {
   }, [section, trackerYear, trackerMonth]);
 
   useEffect(() => {
-    if (section === "badges") {
+    if (section === "prayerTracker" || section === "profile") {
       computeBadges().then(({ badges, newlyEarned }) => {
         setBadgeStates(badges);
         if (newlyEarned.length > 0) {
@@ -332,22 +334,6 @@ export default function SettingsScreen() {
             <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>{__DEV__ ? "Tap to sign in as dev user" : "Use the mobile app to sign in"}</Text>
           </View>
           {__DEV__ && <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />}
-        </Pressable>
-      )}
-
-      {user && (
-        <Pressable
-          style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
-          onPress={() => { setSection("badges"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); trackEvent("badges_opened"); }}
-        >
-          <View style={[styles.menuIcon, { backgroundColor: colors.gold + "20" }]}>
-            <Ionicons name="trophy" size={20} color={colors.gold} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.menuLabel, { color: colors.text }]}>My Badges</Text>
-            <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>Prayer achievements & streaks</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
         </Pressable>
       )}
 
@@ -874,13 +860,35 @@ export default function SettingsScreen() {
       <>
         <Pressable
           style={styles.backRow}
-          onPress={() => { setSection("main"); setSelectedDay(null); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+          onPress={() => { setSection("main"); setSelectedDay(null); setTrackerTab("calendar"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
         >
           <Ionicons name="arrow-back" size={20} color={colors.text} />
           <Text style={[styles.backLabel, { color: colors.text }]}>Prayer Tracker</Text>
         </Pressable>
 
-        {trackerStats.elapsedPrayers > 0 ? (
+        <View style={{ flexDirection: "row", backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 4, marginBottom: 16 }}>
+          {(["calendar", "badges"] as TrackerTab[]).map((tab) => (
+            <Pressable
+              key={tab}
+              onPress={() => { setTrackerTab(tab); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); if (tab === "badges") trackEvent("badges_opened"); }}
+              style={{
+                flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: "center",
+                backgroundColor: trackerTab === tab ? colors.emerald : "transparent",
+              }}
+            >
+              <Text style={{
+                fontFamily: "Inter_600SemiBold", fontSize: 14,
+                color: trackerTab === tab ? "#FFFFFF" : colors.textSecondary,
+              }}>
+                {tab === "calendar" ? "Calendar" : "Badges"}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {trackerTab === "badges" && renderBadgesContent()}
+
+        {trackerTab === "calendar" && trackerStats.elapsedPrayers > 0 && (
           <View style={[styles.statsRow, { marginBottom: 12 }]}>
             <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <View style={[styles.statCircle, { borderColor: colors.gold }]}>
@@ -897,116 +905,120 @@ export default function SettingsScreen() {
               <Text style={[styles.statSub, { color: colors.textSecondary }]}>{trackerStats.masjidCount} of {trackerStats.elapsedPrayers}</Text>
             </View>
           </View>
-        ) : null}
-
-        <View style={[styles.calMonthRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Pressable onPress={handlePrevMonth} hitSlop={12}>
-            <Ionicons name="chevron-back" size={22} color={colors.text} />
-          </Pressable>
-          <Text style={[styles.calMonthText, { color: colors.text }]}>
-            {MONTH_NAMES[trackerMonth - 1]} {trackerYear}
-          </Text>
-          <Pressable onPress={handleNextMonth} hitSlop={12}>
-            <Ionicons name="chevron-forward" size={22} color={colors.text} />
-          </Pressable>
-        </View>
-
-        <View style={[styles.calGrid, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          {DAY_HEADERS.map(d => (
-            <View key={d} style={styles.calHeaderCell}>
-              <Text style={[styles.calHeaderText, { color: colors.textSecondary }]}>{d}</Text>
-            </View>
-          ))}
-          {calendarDays.map((day, idx) => {
-            if (day === null) return <View key={`e${idx}`} style={styles.calCell} />;
-            const dateKey = `${trackerYear}-${String(trackerMonth).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-            const log = monthLogs[dateKey];
-            const isToday = dateKey === todayKey;
-            const isSelected = dateKey === selectedDay;
-            const isMissedFast = missedFasts.has(dateKey);
-            return (
-              <Pressable
-                key={dateKey}
-                style={[
-                  styles.calCell,
-                  isMissedFast && { backgroundColor: isDark ? "rgba(239,68,68,0.2)" : "rgba(239,68,68,0.12)", borderRadius: 8 },
-                  isToday && !isMissedFast && { backgroundColor: isDark ? colors.actionButtonBg : colors.prayerIconBg, borderRadius: 8 },
-                  isSelected && { backgroundColor: colors.emerald, borderRadius: 8 },
-                ]}
-                onPress={() => { setSelectedDay(isSelected ? null : dateKey); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-                onLongPress={async () => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-                  await toggleMissedFast(dateKey);
-                  const updated = await getMonthMissedFasts(trackerYear, trackerMonth);
-                  setMissedFasts(updated);
-                }}
-                delayLongPress={400}
-              >
-                <Text style={[styles.calDayText, { color: isSelected ? "#fff" : isMissedFast ? "#EF4444" : isToday ? colors.emerald : colors.text }]}>{day}</Text>
-                <View style={styles.calDots}>
-                  {isMissedFast ? (
-                    <View style={[styles.calDot, { backgroundColor: "#EF4444", width: 6, height: 6, borderRadius: 3 }]} />
-                  ) : log ? PRAYER_NAMES.map(p => {
-                    const s = log[p];
-                    if (s === 0) return <View key={p} style={[styles.calDot, { backgroundColor: "transparent" }]} />;
-                    return <View key={p} style={[styles.calDot, { backgroundColor: s === 1 ? colors.gold : colors.emerald }]} />;
-                  }) : <View style={{ height: 6 }} />}
-                </View>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        {selectedDay && (
-          <View style={[styles.dayDetail, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.dayDetailTitle, { color: colors.text }]}>
-              {new Date(trackerYear, trackerMonth - 1, parseInt(selectedDay.split("-")[2])).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-            </Text>
-            <Text style={[styles.dayDetailHint, { color: colors.textTertiary }]}>Tap a prayer to update its status</Text>
-            {PRAYER_NAMES.map(p => {
-              const status = selectedLog ? selectedLog[p] : 0;
-              const statusLabel = status === 0 ? "Not tracked" : status === 1 ? "Completed" : "At masjid";
-              const statusColor = status === 0 ? colors.textTertiary : status === 1 ? colors.gold : colors.emerald;
-              return (
-                <Pressable
-                  key={p}
-                  style={({ pressed }) => [styles.dayDetailRow, pressed && { opacity: 0.6 }]}
-                  onPress={async () => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    const parts = selectedDay.split("-");
-                    const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-                    await cyclePrayerStatus(date, p);
-                    const updated = await getMonthLogs(trackerYear, trackerMonth);
-                    setMonthLogs(updated);
-                  }}
-                >
-                  <View style={[styles.dayDetailDot, { backgroundColor: status === 0 ? colors.border : statusColor }]} />
-                  <Text style={[styles.dayDetailPrayer, { color: colors.text }]}>{PRAYER_LABELS[p]}</Text>
-                  <Text style={[styles.dayDetailStatus, { color: statusColor }]}>{statusLabel}</Text>
-                  <Ionicons name="chevron-forward" size={14} color={colors.textTertiary} />
-                </Pressable>
-              );
-            })}
-          </View>
         )}
 
-        <View style={[styles.calLegend, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={styles.calLegendItem}>
-            <View style={[styles.calLegendDot, { backgroundColor: colors.gold }]} />
-            <Text style={[styles.calLegendText, { color: colors.textSecondary }]}>Completed</Text>
-          </View>
-          <View style={styles.calLegendItem}>
-            <View style={[styles.calLegendDot, { backgroundColor: colors.emerald }]} />
-            <Text style={[styles.calLegendText, { color: colors.textSecondary }]}>At masjid</Text>
-          </View>
-          <View style={styles.calLegendItem}>
-            <View style={[styles.calLegendDot, { backgroundColor: "#EF4444" }]} />
-            <Text style={[styles.calLegendText, { color: colors.textSecondary }]}>Missed fast</Text>
-          </View>
-        </View>
-        <Text style={[styles.calLegendText, { color: colors.textTertiary, textAlign: "center", marginTop: 8, fontSize: 11 }]}>
-          Long-press a day to mark/unmark a missed fast
-        </Text>
+        {trackerTab === "calendar" && (
+          <>
+            <View style={[styles.calMonthRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Pressable onPress={handlePrevMonth} hitSlop={12}>
+                <Ionicons name="chevron-back" size={22} color={colors.text} />
+              </Pressable>
+              <Text style={[styles.calMonthText, { color: colors.text }]}>
+                {MONTH_NAMES[trackerMonth - 1]} {trackerYear}
+              </Text>
+              <Pressable onPress={handleNextMonth} hitSlop={12}>
+                <Ionicons name="chevron-forward" size={22} color={colors.text} />
+              </Pressable>
+            </View>
+
+            <View style={[styles.calGrid, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              {DAY_HEADERS.map(d => (
+                <View key={d} style={styles.calHeaderCell}>
+                  <Text style={[styles.calHeaderText, { color: colors.textSecondary }]}>{d}</Text>
+                </View>
+              ))}
+              {calendarDays.map((day, idx) => {
+                if (day === null) return <View key={`e${idx}`} style={styles.calCell} />;
+                const dateKey = `${trackerYear}-${String(trackerMonth).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                const log = monthLogs[dateKey];
+                const isToday = dateKey === todayKey;
+                const isSelected = dateKey === selectedDay;
+                const isMissedFast = missedFasts.has(dateKey);
+                return (
+                  <Pressable
+                    key={dateKey}
+                    style={[
+                      styles.calCell,
+                      isMissedFast && { backgroundColor: isDark ? "rgba(239,68,68,0.2)" : "rgba(239,68,68,0.12)", borderRadius: 8 },
+                      isToday && !isMissedFast && { backgroundColor: isDark ? colors.actionButtonBg : colors.prayerIconBg, borderRadius: 8 },
+                      isSelected && { backgroundColor: colors.emerald, borderRadius: 8 },
+                    ]}
+                    onPress={() => { setSelectedDay(isSelected ? null : dateKey); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                    onLongPress={async () => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                      await toggleMissedFast(dateKey);
+                      const updated = await getMonthMissedFasts(trackerYear, trackerMonth);
+                      setMissedFasts(updated);
+                    }}
+                    delayLongPress={400}
+                  >
+                    <Text style={[styles.calDayText, { color: isSelected ? "#fff" : isMissedFast ? "#EF4444" : isToday ? colors.emerald : colors.text }]}>{day}</Text>
+                    <View style={styles.calDots}>
+                      {isMissedFast ? (
+                        <View style={[styles.calDot, { backgroundColor: "#EF4444", width: 6, height: 6, borderRadius: 3 }]} />
+                      ) : log ? PRAYER_NAMES.map(p => {
+                        const s = log[p];
+                        if (s === 0) return <View key={p} style={[styles.calDot, { backgroundColor: "transparent" }]} />;
+                        return <View key={p} style={[styles.calDot, { backgroundColor: s === 1 ? colors.gold : colors.emerald }]} />;
+                      }) : <View style={{ height: 6 }} />}
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {selectedDay && (
+              <View style={[styles.dayDetail, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Text style={[styles.dayDetailTitle, { color: colors.text }]}>
+                  {new Date(trackerYear, trackerMonth - 1, parseInt(selectedDay.split("-")[2])).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+                </Text>
+                <Text style={[styles.dayDetailHint, { color: colors.textTertiary }]}>Tap a prayer to update its status</Text>
+                {PRAYER_NAMES.map(p => {
+                  const status = selectedLog ? selectedLog[p] : 0;
+                  const statusLabel = status === 0 ? "Not tracked" : status === 1 ? "Completed" : "At masjid";
+                  const statusColor = status === 0 ? colors.textTertiary : status === 1 ? colors.gold : colors.emerald;
+                  return (
+                    <Pressable
+                      key={p}
+                      style={({ pressed }) => [styles.dayDetailRow, pressed && { opacity: 0.6 }]}
+                      onPress={async () => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        const parts = selectedDay.split("-");
+                        const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                        await cyclePrayerStatus(date, p);
+                        const updated = await getMonthLogs(trackerYear, trackerMonth);
+                        setMonthLogs(updated);
+                      }}
+                    >
+                      <View style={[styles.dayDetailDot, { backgroundColor: status === 0 ? colors.border : statusColor }]} />
+                      <Text style={[styles.dayDetailPrayer, { color: colors.text }]}>{PRAYER_LABELS[p]}</Text>
+                      <Text style={[styles.dayDetailStatus, { color: statusColor }]}>{statusLabel}</Text>
+                      <Ionicons name="chevron-forward" size={14} color={colors.textTertiary} />
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+
+            <View style={[styles.calLegend, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={styles.calLegendItem}>
+                <View style={[styles.calLegendDot, { backgroundColor: colors.gold }]} />
+                <Text style={[styles.calLegendText, { color: colors.textSecondary }]}>Completed</Text>
+              </View>
+              <View style={styles.calLegendItem}>
+                <View style={[styles.calLegendDot, { backgroundColor: colors.emerald }]} />
+                <Text style={[styles.calLegendText, { color: colors.textSecondary }]}>At masjid</Text>
+              </View>
+              <View style={styles.calLegendItem}>
+                <View style={[styles.calLegendDot, { backgroundColor: "#EF4444" }]} />
+                <Text style={[styles.calLegendText, { color: colors.textSecondary }]}>Missed fast</Text>
+              </View>
+            </View>
+            <Text style={[styles.calLegendText, { color: colors.textTertiary, textAlign: "center", marginTop: 8, fontSize: 11 }]}>
+              Long-press a day to mark/unmark a missed fast
+            </Text>
+          </>
+        )}
       </>
     );
   };
@@ -1032,18 +1044,10 @@ export default function SettingsScreen() {
     }
   };
 
-  const renderBadges = () => {
+  const renderBadgesContent = () => {
     const earnedCount = badgeStates.filter(b => b.earned).length;
     return (
       <>
-        <Pressable
-          style={styles.backRow}
-          onPress={() => { setSection("main"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.text} />
-          <Text style={[styles.backLabel, { color: colors.text }]}>My Badges</Text>
-        </Pressable>
-
         <View style={{ alignItems: "center", marginBottom: 24 }}>
           <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: colors.gold + "20", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
             <Ionicons name="trophy" size={32} color={colors.gold} />
@@ -1189,6 +1193,47 @@ export default function SettingsScreen() {
             <Text style={{ fontFamily: "Inter_500Medium", fontSize: 11, color: colors.textSecondary, marginTop: 2 }}>Business Ratings</Text>
           </View>
         </View>
+
+        {badgeStates.length > 0 && (() => {
+          const earned = badgeStates.filter(b => b.earned);
+          return (
+            <>
+              <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>PRAYER BADGES</Text>
+              {earned.length > 0 ? (
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
+                  {earned.map((badge) => {
+                    const def = BADGES.find(b => b.key === badge.key)!;
+                    return (
+                      <View key={badge.key} style={{ alignItems: "center", width: 72 }}>
+                        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.gold + "20", alignItems: "center", justifyContent: "center", marginBottom: 4 }}>
+                          <Ionicons name={def.icon as any} size={22} color={colors.gold} />
+                        </View>
+                        <Text style={{ fontFamily: "Inter_500Medium", fontSize: 10, color: colors.text, textAlign: "center" }} numberOfLines={1}>{def.title}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              ) : (
+                <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: colors.textTertiary, marginBottom: 16 }}>
+                  No badges earned yet. Track prayers to unlock achievements!
+                </Text>
+              )}
+              <Pressable
+                style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border, marginBottom: 16 }]}
+                onPress={() => { setSection("prayerTracker"); setTrackerTab("badges"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+              >
+                <View style={[styles.menuIcon, { backgroundColor: colors.gold + "20" }]}>
+                  <Ionicons name="trophy" size={18} color={colors.gold} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.menuLabel, { color: colors.text }]}>View All Badges</Text>
+                  <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>{earned.length}/{BADGES.length} earned</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+              </Pressable>
+            </>
+          );
+        })()}
 
         {pending.length > 0 && (
           <>
@@ -1358,7 +1403,6 @@ export default function SettingsScreen() {
         {section === "prayerTracker" && renderPrayerTracker()}
         {section === "janazaHistory" && renderJanazaHistory()}
         {section === "profile" && renderProfile()}
-        {section === "badges" && renderBadges()}
       </ScrollView>
     </View>
   );
