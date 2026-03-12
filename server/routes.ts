@@ -3703,7 +3703,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             },
             {
               type: "text",
-              text: `Extract event details from this flyer image. IMPORTANT: Look carefully for any QR codes in the image — if you find one, decode it and use the URL as the registrationUrl. QR codes on event flyers typically link to registration or RSVP pages. If both a visible text URL and a QR code URL are present, prefer the QR code URL.
+              text: `Extract event details from this flyer image. Today's date is ${new Date().toISOString().split("T")[0]}. IMPORTANT: If the flyer does not specify a year, assume the next upcoming occurrence of that date (i.e. use ${new Date().getFullYear()} or ${new Date().getFullYear() + 1}, whichever makes the date in the future). Also look carefully for any QR codes in the image — if you find one, decode it and use the URL as the registrationUrl. QR codes on event flyers typically link to registration or RSVP pages. If both a visible text URL and a QR code URL are present, prefer the QR code URL.
 
 Return ONLY a JSON object with these fields (use null for any field you cannot determine):
 {
