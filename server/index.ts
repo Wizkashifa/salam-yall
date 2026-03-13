@@ -204,6 +204,15 @@ function configureExpoAndLanding(app: express.Application) {
   app.use("/assets", express.static(path.resolve(process.cwd(), "assets")));
   app.use(express.static(path.resolve(process.cwd(), "static-build")));
 
+  const webAppRoutes = ["/home", "/events", "/halal", "/businesses", "/settings", "/profile"];
+  const spaIndexPath = path.resolve(process.cwd(), "static-build", "index.html");
+  app.get(webAppRoutes, (req, res, next) => {
+    if (fs.existsSync(spaIndexPath)) {
+      return res.sendFile(spaIndexPath);
+    }
+    next();
+  });
+
   log("Expo routing: Checking expo-platform header on / and /manifest");
 }
 
