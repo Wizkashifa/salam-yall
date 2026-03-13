@@ -210,7 +210,7 @@ function configureExpoAndLanding(app: express.Application) {
     if (fs.existsSync(spaIndexPath)) {
       return res.sendFile(spaIndexPath);
     }
-    next();
+    return serveLandingPage({ req, res, landingPageTemplate, appName });
   });
 
   log("Expo routing: Checking expo-platform header on / and /manifest");
