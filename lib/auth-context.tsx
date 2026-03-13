@@ -15,6 +15,7 @@ interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
   signInWithApple: () => Promise<string>;
+  signInWithGoogle: (idToken: string) => Promise<string>;
   devSignIn: () => Promise<string>;
   signOut: () => Promise<void>;
   getAuthHeaders: () => Record<string, string>;
@@ -89,6 +90,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data.token;
   }, []);
 
+  const signInWithGoogle = useCallback(async (idToken: string): Promise<string> => {
+    const response = await apiRequest("POST", "/api/auth/google", { idToken });
+    const data = await response.json();
+    if (data.error) throw new Error(data.error);
+    setSessionToken(data.token);
+    setUser(data.user);
+    await AsyncStorage.setItem(AUTH_TOKEN_KEY, data.token);
+    return data.token;
+  }, []);
+
   const devSignIn = useCallback(async (): Promise<string> => {
     const response = await apiRequest("POST", "/api/auth/dev-signin", {});
     const data = await response.json();
@@ -119,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [sessionToken]);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, signInWithApple, devSignIn, signOut, getAuthHeaders }}>
+    <AuthContext.Provider value={{ user, isLoading, signInWithApple, signInWithGoogle, devSignIn, signOut, getAuthHeaders }}>
       {children}
     </AuthContext.Provider>
   );
