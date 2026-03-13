@@ -2307,7 +2307,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
          FROM analytics_events WHERE created_at >= $1::date AND created_at < ($2::date + interval '1 day')`,
         [from, to]
       );
-      res.json({ summary: result.rows, totals: totals.rows[0], from, to });
+      const platformBreakdown = await pool.query(
+        `SELECT COALESCE(NULLIF(platform, ''), 'unknown') as platform, COUNT(DISTINCT device_id)::int as unique_devices, COUNT(*)::int as total_events
+         FROM analytics_events WHERE created_at >= $1::date AND created_at < ($2::date + interval '1 day')
+         GROUP BY COALESCE(NULLIF(platform, ''), 'unknown') ORDER BY unique_devices DESC`,
+        [from, to]
+      );
+      res.json({ summary: result.rows, totals: totals.rows[0], platformBreakdown: platformBreakdown.rows, from, to });
     } catch (error: any) {
       console.error("[Analytics] Summary error:", error.message);
       res.status(500).json({ error: "Failed to fetch analytics" });
