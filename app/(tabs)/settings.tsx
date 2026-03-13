@@ -328,28 +328,38 @@ export default function SettingsScreen() {
   }, [user, signInWithGoogle]);
 
   const handleGoogleSignIn = useCallback(async () => {
-    if (Platform.OS !== "web") return;
-    const google = (window as any).google;
-    if (!google?.accounts?.id) {
-      Alert.alert("Error", "Google Sign-In is loading. Please try again in a moment.");
-      return;
-    }
-    google.accounts.id.prompt((notification: any) => {
-      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-        const container = document.getElementById("google-signin-btn");
-        if (container) {
-          container.innerHTML = "";
-          google.accounts.id.renderButton(container, {
-            theme: "outline",
-            size: "large",
-            width: 300,
-            text: "signin_with",
-          });
-          (container.querySelector("div[role=button]") as HTMLElement)?.click();
+    if (Platform.OS === "web") {
+      const google = (window as any).google;
+      if (!google?.accounts?.id) {
+        Alert.alert("Error", "Google Sign-In is loading. Please try again in a moment.");
+        return;
+      }
+      google.accounts.id.prompt((notification: any) => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          const container = document.getElementById("google-signin-btn");
+          if (container) {
+            container.innerHTML = "";
+            google.accounts.id.renderButton(container, {
+              theme: "outline",
+              size: "large",
+              width: 300,
+              text: "signin_with",
+            });
+            (container.querySelector("div[role=button]") as HTMLElement)?.click();
+          }
+        }
+      });
+    } else {
+      try {
+        await signInWithGoogle();
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch (err: any) {
+        if (err.code !== "ERR_REQUEST_CANCELED") {
+          Alert.alert("Sign In Failed", err.message || "Could not sign in with Google. Please try again.");
         }
       }
-    });
-  }, []);
+    }
+  }, [signInWithGoogle]);
 
   const handleSignOut = useCallback(() => {
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
@@ -385,6 +395,16 @@ export default function SettingsScreen() {
           >
             <Ionicons name="logo-apple" size={20} color="#FFFFFF" />
             <Text style={styles.appleSignInText}>Sign in with Apple</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.googleSignInButton, { opacity: pressed ? 0.85 : 1, marginTop: 10 }]}
+            onPress={handleGoogleSignIn}
+            disabled={authLoading}
+          >
+            <View style={styles.googleIconContainer}>
+              <Text style={{ fontSize: 18, fontWeight: "700" as const, color: "#4285F4" }}>G</Text>
+            </View>
+            <Text style={styles.googleSignInText}>Sign in with Google</Text>
           </Pressable>
           <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textTertiary, textAlign: "center", marginTop: 8, marginBottom: 4 }}>
             Sign in to rate and add businesses/restaurants

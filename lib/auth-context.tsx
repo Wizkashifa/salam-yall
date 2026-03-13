@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiRequest, getApiUrl } from "@/lib/query-client";
 
 const AUTH_TOKEN_KEY = "auth_session_token";
+const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || "";
 
 interface AuthUser {
   id: number;
@@ -15,7 +16,7 @@ interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
   signInWithApple: () => Promise<string>;
-  signInWithGoogle: (idToken: string) => Promise<string>;
+  signInWithGoogle: (idToken?: string) => Promise<string>;
   devSignIn: () => Promise<string>;
   signOut: () => Promise<void>;
   getAuthHeaders: () => Record<string, string>;
@@ -90,8 +91,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data.token;
   }, []);
 
-  const signInWithGoogle = useCallback(async (idToken: string): Promise<string> => {
-    const response = await apiRequest("POST", "/api/auth/google", { idToken });
+  const signInWithGoogle = useCallback(async (idToken?: string): Promise<string> => {
+    let tokenToSend = idToken;
+
+    if (!tokenToSend && Platform.OS !== "web") {
+      const AuthSession = await import("expo-auth-session");
+      const WebBrowser = await import("expo-web-browser");
+
+      WebBrowser.maybeCompleteAuthSession();
+
+      const discovery: AuthSession.DiscoveryDocument = {
+        authorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
+        tokenEndpoint: "https://oauth2.googleapis.com/token",
+      };
+
+      const redirectUri = AuthSession.makeRedirectUri({ scheme: "salamyall" });
+
+      const state = Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+
+      const authRequest = new AuthSession.AuthRequest({
+        clientId: GOOGLE_CLIENT_ID,
+        redirectUri,
+        scopes: ["openid", "profile", "email"],
+        responseType: "id_token" as any,
+        usePKCE: false,
+        extraParams: {
+          nonce: state,
+        },
+      });
+
+      const result = await authRequest.promptAsync(discovery);
+
+      if (result.type !== "success") {
+        if (result.type === "cancel" || result.type === "dismiss") {
+          const cancelErr = new Error("Sign in cancelled");
+          (cancelErr as any).code = "ERR_REQUEST_CANCELED";
+          throw cancelErr;
+        }
+        throw new Error("Google Sign-In failed");
+      }
+
+      tokenToSend = (result.params as any)?.id_token;
+      if (!tokenToSend) {
+        throw new Error("No ID token received from Google");
+      }
+    }
+
+    if (!tokenToSend) {
+      throw new Error("No Google ID token provided");
+    }
+
+    const response = await apiRequest("POST", "/api/auth/google", { idToken: tokenToSend });
     const data = await response.json();
     if (data.error) throw new Error(data.error);
     setSessionToken(data.token);
