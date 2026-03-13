@@ -1151,36 +1151,7 @@ export default function PrayerScreen() {
           </Pressable>
         ) : null}
 
-        {fridayMode ? (
-          <View style={[styles.glassCard, styles.dailyContentCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
-            <View style={styles.dailyContentHeader}>
-              <MaterialCommunityIcons name="mosque" size={18} color={colors.emerald} />
-              <Text style={[styles.dailyContentType, { color: colors.emerald }]}>Jumu'ah Prayer</Text>
-            </View>
-            <Text style={[styles.jumuahVerse, { color: colors.text }]}>
-              "O you who believe, when the call to prayer is made on Friday, hasten to the remembrance of Allah."
-            </Text>
-            <Text style={[styles.dailyContentSource, { color: colors.textTertiary, marginBottom: 12 }]}>
-              — Surah Al-Jumu'ah 62:9
-            </Text>
-            {jumuahSchedules.map((j, idx) => (
-              <View
-                key={j.id}
-                style={[
-                  styles.jumuahRow,
-                  idx < jumuahSchedules.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)" },
-                ]}
-              >
-                <Text style={[styles.jumuahMasjid, { color: colors.text }]} numberOfLines={1}>{j.masjid}</Text>
-                <View style={styles.jumuahTimesCol}>
-                  <Text style={[styles.jumuahTime, { color: colors.textSecondary }]}>{j.khutbah_time}</Text>
-                  <Text style={[styles.jumuahTimeLabel, { color: colors.textTertiary }]}>Khutbah</Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        ) : (
-          <Pressable
+        <Pressable
             onPress={openVerseModal}
             style={({ pressed }) => [styles.glassCard, styles.dailyContentCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder, opacity: pressed ? 0.85 : 1 }]}
           >
@@ -1197,8 +1168,7 @@ export default function PrayerScreen() {
             <Text style={[styles.dailyContentSource, { color: colors.textTertiary }]}>
               — {dailyVerse.source} · Dr. Mustafa Khattab
             </Text>
-          </Pressable>
-        )}
+        </Pressable>
 
         {masjidsExpanded ? (
           <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
