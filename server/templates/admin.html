@@ -430,13 +430,6 @@
       </div>
 
       <div class="section">
-        <div class="section-title"><span class="icon">📱</span> Users by Device</div>
-        <div id="analyticsDeviceBreakdown" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;">
-          <div class="loading">Loading...</div>
-        </div>
-      </div>
-
-      <div class="section">
         <div class="section-title"><span class="icon">👥</span> Community Stats</div>
         <div id="analyticsCommunity" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
           <div class="loading">Loading...</div>
@@ -1907,7 +1900,6 @@
         if (res.status === 401) { handleUnauthorized(); return; }
         var data = await res.json();
         renderOverview(data);
-        renderDeviceBreakdown(data.platformBreakdown || []);
         renderEventBreakdown(data.summary);
       } catch (e) {
         document.getElementById('analyticsOverview').innerHTML = '<div class="empty-state">Failed to load</div>';
@@ -1979,29 +1971,6 @@
         '<div style="' + cardStyle + '"><div style="' + numStyle + '">' + totals.total_events + '</div><div style="' + labelStyle + '">Total Events</div></div>' +
         '<div style="' + cardStyle + '"><div style="' + numStyle + '">' + totals.unique_devices + '</div><div style="' + labelStyle + '">Unique Devices</div></div>' +
         '<div style="' + cardStyle + '"><div style="' + numStyle + '">' + (data.summary ? data.summary.length : 0) + '</div><div style="' + labelStyle + '">Event Types</div></div>';
-    }
-
-    function renderDeviceBreakdown(platforms) {
-      var container = document.getElementById('analyticsDeviceBreakdown');
-      if (!platforms.length) { container.innerHTML = '<div class="empty-state">No device data</div>'; return; }
-      var platformLabels = { ios: 'iPhone', android: 'Android', web: 'Web', unknown: 'Unknown' };
-      var platformIcons = { ios: '📱', android: '🤖', web: '🌐', unknown: '❓' };
-      var totalDevices = platforms.reduce(function(sum, p) { return sum + p.unique_devices; }, 0);
-      var cardStyle = 'background:#1E1E1E;border:1px solid #333;border-radius:12px;padding:16px;text-align:center;';
-      var numStyle = 'font-size:28px;font-weight:800;color:#D4A843;margin-bottom:4px;';
-      var labelStyle = 'font-size:11px;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;';
-      var pctStyle = 'font-size:12px;color:#6B7280;margin-top:2px;';
-      container.innerHTML = platforms.map(function(p) {
-        var label = platformLabels[p.platform] || p.platform;
-        var icon = platformIcons[p.platform] || '📊';
-        var pct = totalDevices > 0 ? Math.round((p.unique_devices / totalDevices) * 100) : 0;
-        return '<div style="' + cardStyle + '">' +
-          '<div style="font-size:24px;margin-bottom:4px;">' + icon + '</div>' +
-          '<div style="' + numStyle + '">' + p.unique_devices + '</div>' +
-          '<div style="' + labelStyle + '">' + label + '</div>' +
-          '<div style="' + pctStyle + '">' + pct + '% of users</div>' +
-        '</div>';
-      }).join('');
     }
 
     function renderScreenViews(views) {

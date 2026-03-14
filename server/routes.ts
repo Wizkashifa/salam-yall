@@ -918,8 +918,6 @@ async function ensureUserAccountsTable(pool: pg.Pool) {
     );
   `);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_accounts_apple ON user_accounts(apple_id);`);
-  await pool.query(`ALTER TABLE user_accounts ADD COLUMN IF NOT EXISTS google_id VARCHAR(255) UNIQUE`);
-  await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_accounts_google ON user_accounts(google_id);`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS user_sessions (
       token VARCHAR(128) PRIMARY KEY,
@@ -2307,13 +2305,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
          FROM analytics_events WHERE created_at >= $1::date AND created_at < ($2::date + interval '1 day')`,
         [from, to]
       );
-      const platformBreakdown = await pool.query(
-        `SELECT COALESCE(NULLIF(platform, ''), 'unknown') as platform, COUNT(DISTINCT device_id)::int as unique_devices, COUNT(*)::int as total_events
-         FROM analytics_events WHERE created_at >= $1::date AND created_at < ($2::date + interval '1 day')
-         GROUP BY COALESCE(NULLIF(platform, ''), 'unknown') ORDER BY unique_devices DESC`,
-        [from, to]
-      );
-      res.json({ summary: result.rows, totals: totals.rows[0], platformBreakdown: platformBreakdown.rows, from, to });
+      res.json({ summary: result.rows, totals: totals.rows[0], from, to });
     } catch (error: any) {
       console.error("[Analytics] Summary error:", error.message);
       res.status(500).json({ error: "Failed to fetch analytics" });
@@ -2514,88 +2506,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ token: sessionToken, user: { id: userId, email: userEmail, displayName: userName } });
     } catch (error: any) {
       console.error("[Auth] Apple sign-in error:", error.message);
-      res.status(500).json({ error: "Authentication failed" });
-    }
-  });
-
-  app.post("/api/auth/google", async (req, res) => {
-    try {
-      const { idToken } = req.body;
-      if (!idToken || typeof idToken !== "string") {
-        return res.status(400).json({ error: "Google ID token is required" });
-      }
-
-      const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-      if (!GOOGLE_CLIENT_ID) {
-        return res.status(500).json({ error: "Google Sign-In not configured" });
-      }
-
-      let googlePayload: any;
-      try {
-        const { createRemoteJWKSet, jwtVerify } = await import("jose");
-        const GOOGLE_JWKS = createRemoteJWKSet(new URL("https://www.googleapis.com/oauth2/v3/certs"));
-        const { payload } = await jwtVerify(idToken, GOOGLE_JWKS, {
-          issuer: ["https://accounts.google.com", "accounts.google.com"],
-          audience: GOOGLE_CLIENT_ID,
-          clockTolerance: 30,
-        });
-        if (!payload.sub) {
-          return res.status(401).json({ error: "Invalid token: missing subject" });
-        }
-        googlePayload = payload;
-      } catch (verifyErr: any) {
-        console.error("[Auth] Google token verification failed:", verifyErr.message);
-        return res.status(401).json({ error: "Invalid or expired Google token" });
-      }
-
-      const googleId = googlePayload.sub as string;
-      const email = (googlePayload.email as string) || null;
-      const displayName = (googlePayload.name as string) || null;
-
-      const existing = await pool.query("SELECT id, email, display_name FROM user_accounts WHERE google_id = $1", [googleId]);
-      let userId: number;
-      let userEmail = email;
-      let userName = displayName;
-
-      if (existing.rows.length > 0) {
-        userId = existing.rows[0].id;
-        userEmail = existing.rows[0].email || userEmail;
-        userName = existing.rows[0].display_name || userName;
-        if (email || displayName) {
-          await pool.query(
-            "UPDATE user_accounts SET email = COALESCE($1, email), display_name = COALESCE($2, display_name) WHERE id = $3",
-            [email, displayName, userId]
-          );
-        }
-      } else {
-        if (email) {
-          const byEmail = await pool.query("SELECT id, email, display_name FROM user_accounts WHERE email = $1", [email]);
-          if (byEmail.rows.length > 0) {
-            userId = byEmail.rows[0].id;
-            userName = byEmail.rows[0].display_name || userName;
-            await pool.query("UPDATE user_accounts SET google_id = $1, display_name = COALESCE(display_name, $2) WHERE id = $3", [googleId, displayName, userId]);
-          } else {
-            const result = await pool.query(
-              "INSERT INTO user_accounts (google_id, email, display_name) VALUES ($1, $2, $3) RETURNING id",
-              [googleId, email, displayName]
-            );
-            userId = result.rows[0].id;
-          }
-        } else {
-          const result = await pool.query(
-            "INSERT INTO user_accounts (google_id, email, display_name) VALUES ($1, $2, $3) RETURNING id",
-            [googleId, email, displayName]
-          );
-          userId = result.rows[0].id;
-        }
-      }
-
-      const sessionToken = crypto.randomBytes(32).toString("hex");
-      await pool.query("INSERT INTO user_sessions (token, user_id) VALUES ($1, $2)", [sessionToken, userId]);
-
-      res.json({ token: sessionToken, user: { id: userId, email: userEmail, displayName: userName } });
-    } catch (error: any) {
-      console.error("[Auth] Google sign-in error:", error.message);
       res.status(500).json({ error: "Authentication failed" });
     }
   });

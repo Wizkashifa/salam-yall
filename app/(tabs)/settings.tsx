@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useMemo, useEffect, useRef } from "react";
+import { useCallback, useState, useMemo, useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -39,6 +39,7 @@ import { trackEvent, trackScreenView } from "@/lib/analytics";
 import { MasjidMap } from "@/components/MasjidMap";
 import { computeBadges, BADGES, type BadgeState } from "@/lib/prayer-badges";
 import ViewShot, { captureRef } from "react-native-view-shot";
+import { useRef } from "react";
 
 interface CalendarEvent {
   id: string;
@@ -60,7 +61,7 @@ export default function SettingsScreen() {
   const { colors, isDark, themeMode, setThemeMode, ramadanMode, setRamadanMode } = useTheme();
   const router = useRouter();
   const { calcMethod, setCalcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid, setPreferredMasjid } = useSettings();
-  const { user, signInWithApple, signInWithGoogle, devSignIn, signOut, isLoading: authLoading, getAuthHeaders } = useAuth();
+  const { user, signInWithApple, devSignIn, signOut, isLoading: authLoading, getAuthHeaders } = useAuth();
   const qc = useQueryClient();
   const [section, setSection] = useState<SettingsSection>("main");
   const [selectedMasjid, setSelectedMasjid] = useState<Masjid | null>(null);
@@ -71,19 +72,6 @@ export default function SettingsScreen() {
   const { consumeTarget, setPendingTarget } = useDeepLink();
 
   useEffect(() => { trackScreenView("Settings"); }, []);
-
-  useEffect(() => {
-    if (Platform.OS === "web" && !user && typeof document !== "undefined") {
-      const existing = document.getElementById("google-gsi-script");
-      if (!existing) {
-        const script = document.createElement("script");
-        script.id = "google-gsi-script";
-        script.src = "https://accounts.google.com/gsi/client";
-        script.async = true;
-        document.head.appendChild(script);
-      }
-    }
-  }, [user]);
 
   useEffect(() => {
     const janazaTarget = consumeTarget("janaza");
@@ -291,76 +279,6 @@ export default function SettingsScreen() {
     }
   }, [signInWithApple]);
 
-  const [googleReady, setGoogleReady] = useState(false);
-  const googleCallbackRef = useRef<((response: any) => void) | null>(null);
-
-  useEffect(() => {
-    if (Platform.OS !== "web" || user) return;
-    googleCallbackRef.current = async (response: any) => {
-      try {
-        await signInWithGoogle(response.credential);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } catch (err: any) {
-        Alert.alert("Sign In Failed", err.message || "Could not sign in with Google.");
-      }
-    };
-    (window as any).__googleSignInCallback = (response: any) => {
-      googleCallbackRef.current?.(response);
-    };
-    const tryInit = () => {
-      const google = (window as any).google;
-      if (google?.accounts?.id) {
-        google.accounts.id.initialize({
-          client_id: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || "439119101013-2ogotuvg6evspcnpgst4giditlg686rk.apps.googleusercontent.com",
-          callback: (window as any).__googleSignInCallback,
-        });
-        setGoogleReady(true);
-      }
-    };
-    tryInit();
-    if (!googleReady) {
-      const interval = setInterval(() => {
-        tryInit();
-        if ((window as any).google?.accounts?.id) clearInterval(interval);
-      }, 500);
-      return () => clearInterval(interval);
-    }
-  }, [user, signInWithGoogle]);
-
-  const handleGoogleSignIn = useCallback(async () => {
-    if (Platform.OS === "web") {
-      const google = (window as any).google;
-      if (!google?.accounts?.id) {
-        Alert.alert("Error", "Google Sign-In is loading. Please try again in a moment.");
-        return;
-      }
-      google.accounts.id.prompt((notification: any) => {
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          const container = document.getElementById("google-signin-btn");
-          if (container) {
-            container.innerHTML = "";
-            google.accounts.id.renderButton(container, {
-              theme: "outline",
-              size: "large",
-              width: 300,
-              text: "signin_with",
-            });
-            (container.querySelector("div[role=button]") as HTMLElement)?.click();
-          }
-        }
-      });
-    } else {
-      try {
-        await signInWithGoogle();
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } catch (err: any) {
-        if (err.code !== "ERR_REQUEST_CANCELED") {
-          Alert.alert("Sign In Failed", err.message || "Could not sign in with Google. Please try again.");
-        }
-      }
-    }
-  }, [signInWithGoogle]);
-
   const handleSignOut = useCallback(() => {
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
       { text: "Cancel", style: "cancel" },
@@ -381,7 +299,7 @@ export default function SettingsScreen() {
           <View style={{ flex: 1 }}>
             <Text style={[styles.menuLabel, { color: colors.text }]}>{user.displayName || "User"}</Text>
             <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>
-              {userStatsQuery.data ? `${userStatsQuery.data.totalRatings} rating${userStatsQuery.data.totalRatings !== 1 ? "s" : ""}` : user.email || "Signed in"}
+              {userStatsQuery.data ? `${userStatsQuery.data.totalRatings} rating${userStatsQuery.data.totalRatings !== 1 ? "s" : ""}` : user.email || "Signed in with Apple"}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
@@ -396,54 +314,28 @@ export default function SettingsScreen() {
             <Ionicons name="logo-apple" size={20} color="#FFFFFF" />
             <Text style={styles.appleSignInText}>Sign in with Apple</Text>
           </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.googleSignInButton, { opacity: pressed ? 0.85 : 1, marginTop: 10 }]}
-            onPress={handleGoogleSignIn}
-            disabled={authLoading}
-          >
-            <View style={styles.googleIconContainer}>
-              <Text style={{ fontSize: 18, fontWeight: "700" as const, color: "#4285F4" }}>G</Text>
-            </View>
-            <Text style={styles.googleSignInText}>Sign in with Google</Text>
-          </Pressable>
           <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textTertiary, textAlign: "center", marginTop: 8, marginBottom: 4 }}>
             Sign in to rate and add businesses/restaurants
           </Text>
         </>
       ) : (
-        <>
-          <Pressable
-            style={({ pressed }) => [styles.googleSignInButton, { opacity: pressed ? 0.85 : 1 }]}
-            onPress={handleGoogleSignIn}
-            disabled={authLoading}
-          >
-            <View style={styles.googleIconContainer}>
-              <Text style={{ fontSize: 18, fontWeight: "700" as const, color: "#4285F4" }}>G</Text>
-            </View>
-            <Text style={styles.googleSignInText}>Sign in with Google</Text>
-          </Pressable>
-          {Platform.OS === "web" && <View nativeID="google-signin-btn" style={{ alignSelf: "center" as const, minHeight: 1 }} />}
-          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textTertiary, textAlign: "center", marginTop: 8, marginBottom: 4 }}>
-            Sign in to rate and add businesses/restaurants
-          </Text>
-          {__DEV__ && (
-            <Pressable
-              style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border, marginTop: 8 }]}
-              onPress={async () => {
-                try { await devSignIn(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch (e) { Alert.alert("Dev Sign-In Failed", String(e)); }
-              }}
-            >
-              <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
-                <Ionicons name="code-slash" size={20} color={colors.emerald} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.menuLabel, { color: colors.text }]}>Dev Sign In</Text>
-                <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>Tap to sign in as dev user</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-            </Pressable>
-          )}
-        </>
+        <Pressable
+          style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
+          onPress={async () => {
+            if (__DEV__) {
+              try { await devSignIn(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch (e) { Alert.alert("Dev Sign-In Failed", String(e)); }
+            }
+          }}
+        >
+          <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
+            <Ionicons name={__DEV__ ? "code-slash" : "phone-portrait-outline"} size={20} color={colors.emerald} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.menuLabel, { color: colors.text }]}>{__DEV__ ? "Dev Sign In" : "Sign In"}</Text>
+            <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>{__DEV__ ? "Tap to sign in as dev user" : "Use the mobile app to sign in"}</Text>
+          </View>
+          {__DEV__ && <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />}
+        </Pressable>
       )}
 
       <Pressable
@@ -1285,7 +1177,7 @@ export default function SettingsScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.menuLabel, { color: colors.text }]}>{user?.displayName || "User"}</Text>
-            <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>{user?.email || "Signed in"}</Text>
+            <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>{user?.email || "Signed in with Apple"}</Text>
           </View>
           <Pressable onPress={handleSignOut} hitSlop={8} style={{ padding: 4 }}>
             <Ionicons name="log-out-outline" size={20} color={colors.textSecondary} />
@@ -2010,36 +1902,6 @@ const styles = StyleSheet.create({
   },
   appleSignInText: {
     color: "#FFFFFF",
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-  },
-  googleSignInButton: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    gap: 10,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#DADCE0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  googleIconContainer: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-  },
-  googleSignInText: {
-    color: "#3C4043",
     fontSize: 16,
     fontFamily: "Inter_600SemiBold",
   },
