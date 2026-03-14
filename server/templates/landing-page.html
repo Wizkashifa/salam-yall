@@ -1,7 +1,7 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
-    <title>APP_NAME_PLACEHOLDER</title>
+    <title>Salam Y'all — Your Triangle Muslim Community App</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="Salam Y'all connects the Triangle NC Muslim community with prayer times, halal restaurants, local businesses, events, and more." />
@@ -19,456 +19,487 @@
     <meta name="twitter:image" content="https://salamyall.net/assets/images/og-share.png" />
     <link rel="icon" type="image/png" sizes="48x48" href="/assets/images/favicon.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/apple-touch-icon.png" />
+    <meta name="apple-itunes-app" content="app-id=6760231963" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-      * {
-        box-sizing: border-box;
+      *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+      :root {
+        --emerald: #1B6B4A;
+        --emerald-dark: #0d2b1a;
+        --gold: #D4A843;
+        --gold-light: #E8C97A;
+        --bg: #0C0C0C;
+        --card-bg: #141414;
+        --card-border: #1E1E1E;
+        --text: #F5F5F5;
+        --text-secondary: #9CA3AF;
+        --text-tertiary: #6B7280;
       }
+      html { scroll-behavior: smooth; }
       body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        margin: 0;
-        padding: 32px 20px;
-        text-align: center;
-        background: #fff;
-        color: #222;
-        line-height: 1.5;
-        min-height: 100vh;
-      }
-      .wrapper {
-        max-width: 480px;
-        margin: 0 auto;
-      }
-      h1 {
-        font-size: 26px;
-        font-weight: 600;
-        margin: 0;
-        color: #111;
-      }
-      .subtitle {
-        font-size: 15px;
-        color: #666;
-        margin-top: 8px;
-        margin-bottom: 32px;
-      }
-      .loading {
-        display: none;
-        margin: 60px 0;
-      }
-      .spinner {
-        border: 2px solid #ddd;
-        border-top-color: #333;
-        border-radius: 50%;
-        width: 32px;
-        height: 32px;
-        animation: spin 0.8s linear infinite;
-        margin: 20px auto;
-      }
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
-      }
-      .loading-text {
-        font-size: 16px;
-        color: #444;
-      }
-      .content {
-        display: block;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
       }
 
-      .steps-container {
+      /* HERO */
+      .hero {
+        min-height: 100vh;
         display: flex;
         flex-direction: column;
-        gap: 20px;
-      }
-
-      .step {
-        padding: 24px;
-        border: 1px solid #ddd;
-        border-radius: 12px;
+        align-items: center;
+        justify-content: center;
         text-align: center;
-        background: #fafafa;
+        padding: 60px 24px 80px;
+        position: relative;
+        overflow: hidden;
       }
-      .step-header {
-        display: flex;
+      .hero::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(ellipse at 50% 30%, rgba(27,107,74,0.15) 0%, transparent 60%),
+                    radial-gradient(ellipse at 80% 70%, rgba(212,168,67,0.06) 0%, transparent 50%);
+        pointer-events: none;
+      }
+      .hero-logo {
+        width: 140px;
+        height: 140px;
+        margin-bottom: 32px;
+        position: relative;
+        z-index: 1;
+        animation: fadeInUp 0.8s ease-out;
+      }
+      .hero h1 {
+        font-family: 'Playfair Display', serif;
+        font-size: 56px;
+        font-weight: 700;
+        color: var(--gold);
+        letter-spacing: -1px;
+        margin-bottom: 16px;
+        position: relative;
+        z-index: 1;
+        animation: fadeInUp 0.8s ease-out 0.1s both;
+      }
+      .hero-tagline {
+        font-size: 20px;
+        color: var(--text-secondary);
+        max-width: 500px;
+        margin-bottom: 48px;
+        position: relative;
+        z-index: 1;
+        animation: fadeInUp 0.8s ease-out 0.2s both;
+      }
+      .hero-cta {
+        display: inline-flex;
         align-items: center;
-        justify-content: center;
-        gap: 10px;
-        margin-bottom: 12px;
-      }
-      .step-number {
-        width: 28px;
-        height: 28px;
-        border: 1px solid #999;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 600;
-        font-size: 14px;
-        flex-shrink: 0;
-        color: #555;
-      }
-      .step-title {
+        gap: 12px;
+        padding: 18px 36px;
+        background: var(--emerald);
+        color: #fff;
         font-size: 18px;
         font-weight: 600;
-        margin: 0;
-        color: #222;
+        border: none;
+        border-radius: 16px;
+        text-decoration: none;
+        transition: all 0.2s;
+        position: relative;
+        z-index: 1;
+        animation: fadeInUp 0.8s ease-out 0.3s both;
       }
-      .step-description {
-        font-size: 14px;
-        margin-bottom: 16px;
-        color: #666;
+      .hero-cta:hover { background: #14523A; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(27,107,74,0.3); }
+      .hero-cta svg { width: 24px; height: 24px; fill: currentColor; }
+      .hero-badge {
+        display: inline-block;
+        margin-top: 16px;
+        font-size: 13px;
+        color: var(--text-tertiary);
+        position: relative;
+        z-index: 1;
+        animation: fadeInUp 0.8s ease-out 0.4s both;
+      }
+      .scroll-hint {
+        position: absolute;
+        bottom: 32px;
+        left: 50%;
+        transform: translateX(-50%);
+        animation: bounce 2s infinite;
+        color: var(--text-tertiary);
+        z-index: 1;
       }
 
-      .store-buttons {
+      /* FEATURES */
+      .section {
+        padding: 100px 24px;
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+      .section-label {
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 3px;
+        color: var(--emerald);
+        margin-bottom: 16px;
+        text-align: center;
+      }
+      .section-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 40px;
+        font-weight: 700;
+        color: var(--text);
+        text-align: center;
+        margin-bottom: 16px;
+      }
+      .section-subtitle {
+        font-size: 18px;
+        color: var(--text-secondary);
+        text-align: center;
+        max-width: 600px;
+        margin: 0 auto 64px;
+      }
+      .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+      }
+      .feature-card {
+        padding: 32px 28px;
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 20px;
+        transition: all 0.25s;
+      }
+      .feature-card:hover { border-color: rgba(27,107,74,0.3); transform: translateY(-4px); }
+      .feature-icon {
+        width: 48px;
+        height: 48px;
+        background: rgba(27,107,74,0.12);
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        margin-bottom: 20px;
+      }
+      .feature-card h3 {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 8px;
+      }
+      .feature-card p {
+        font-size: 14px;
+        color: var(--text-secondary);
+        line-height: 1.6;
+      }
+
+      /* COMMUNITY STATS */
+      .stats-section {
+        background: linear-gradient(135deg, var(--emerald-dark) 0%, #0a1f14 100%);
+        padding: 80px 24px;
+        border-top: 1px solid rgba(27,107,74,0.2);
+        border-bottom: 1px solid rgba(27,107,74,0.2);
+      }
+      .stats-grid {
+        max-width: 900px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 32px;
+        text-align: center;
+      }
+      .stat-item h3 {
+        font-family: 'Playfair Display', serif;
+        font-size: 42px;
+        font-weight: 700;
+        color: var(--gold);
+        margin-bottom: 4px;
+      }
+      .stat-item p {
+        font-size: 14px;
+        color: rgba(255,255,255,0.6);
+        font-weight: 500;
+      }
+
+      /* FOR THE COMMUNITY */
+      .community-section {
+        padding: 100px 24px;
+        text-align: center;
+      }
+      .community-badges {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+        max-width: 700px;
+        margin: 0 auto 48px;
+      }
+      .community-badge {
+        padding: 10px 20px;
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 100px;
+        font-size: 14px;
+        color: var(--text-secondary);
+        font-weight: 500;
+      }
+
+      /* CTA */
+      .cta-section {
+        padding: 100px 24px;
+        text-align: center;
+        position: relative;
+      }
+      .cta-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(ellipse at 50% 50%, rgba(27,107,74,0.1) 0%, transparent 70%);
+        pointer-events: none;
+      }
+      .cta-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 36px;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 16px;
+        position: relative;
+      }
+      .cta-subtitle {
+        font-size: 18px;
+        color: var(--text-secondary);
+        margin-bottom: 40px;
+        position: relative;
+      }
+      .cta-buttons {
         display: flex;
         flex-direction: column;
-        gap: 6px;
-        justify-content: center;
-        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+        position: relative;
       }
-      .store-button {
+      .cta-btn-primary {
         display: inline-flex;
         align-items: center;
-        justify-content: center;
-        gap: 8px;
-        padding: 12px 20px;
-        font-size: 14px;
-        font-weight: 500;
-        border: 1px solid #ccc;
-        border-radius: 8px;
+        gap: 12px;
+        padding: 18px 36px;
+        background: var(--emerald);
+        color: #fff;
+        font-size: 17px;
+        font-weight: 600;
+        border-radius: 14px;
         text-decoration: none;
-        color: #333;
-        background: #fff;
-        transition: all 0.15s;
+        transition: all 0.2s;
       }
-      .store-button:hover {
-        background: #f5f5f5;
-        border-color: #999;
-      }
-      .store-link {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        padding: 8px 0;
-        font-size: 13px;
-        font-weight: 400;
-        text-decoration: underline;
-        text-underline-offset: 2px;
-        color: #666;
-        background: none;
-        border: none;
-        transition: color 0.15s;
-      }
-      .store-link:hover {
-        color: #333;
-      }
-      .store-link .store-icon {
-        width: 14px;
-        height: 14px;
-      }
-      .store-icon {
-        width: 18px;
-        height: 18px;
-      }
+      .cta-btn-primary:hover { background: #14523A; transform: translateY(-2px); }
+      .cta-btn-primary svg { width: 22px; height: 22px; fill: currentColor; }
 
-      .qr-section {
-        background: #333;
-        color: #fff;
-        border-color: #333;
+      /* FOOTER */
+      .footer {
+        padding: 40px 24px;
+        text-align: center;
+        border-top: 1px solid var(--card-border);
       }
-      .qr-section .step-number {
-        border-color: rgba(255, 255, 255, 0.5);
-        color: #fff;
-      }
-      .qr-section .step-title {
-        color: #fff;
-      }
-      .qr-section .step-description {
-        color: rgba(255, 255, 255, 0.7);
-      }
-      .qr-code {
-        width: 180px;
-        height: 180px;
+      .footer-logo {
+        width: 48px;
+        height: 48px;
         margin: 0 auto 16px;
-        background: #fff;
-        border-radius: 8px;
-        padding: 12px;
       }
-      .qr-code canvas {
-        width: 100%;
-        height: 100%;
+      .footer-links {
+        display: flex;
+        justify-content: center;
+        gap: 24px;
+        margin-bottom: 16px;
       }
-      .open-button {
-        display: inline-block;
-        padding: 12px 24px;
+      .footer-links a {
         font-size: 14px;
-        font-weight: 500;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        border-radius: 8px;
+        color: var(--text-tertiary);
         text-decoration: none;
-        color: #333;
-        background: #fff;
-        transition: opacity 0.15s;
+        transition: color 0.2s;
       }
-      .open-button:hover {
-        opacity: 0.9;
-      }
-
-      /* Desktop styles */
-      @media (min-width: 768px) {
-        body {
-          padding: 48px 32px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .wrapper {
-          max-width: 720px;
-        }
-        h1 {
-          font-size: 32px;
-          margin-bottom: 10px;
-        }
-        .subtitle {
-          font-size: 16px;
-          margin-bottom: 40px;
-        }
-        .steps-container {
-          flex-direction: row;
-          gap: 20px;
-          align-items: stretch;
-        }
-        .step {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          padding: 28px;
-        }
-        .step-description {
-          flex-grow: 1;
-        }
-        .store-buttons {
-          flex-direction: column;
-          gap: 10px;
-        }
-        .qr-code {
-          width: 200px;
-          height: 200px;
-        }
+      .footer-links a:hover { color: var(--text-secondary); }
+      .footer-copy {
+        font-size: 12px;
+        color: var(--text-tertiary);
       }
 
-      /* Large desktop */
-      @media (min-width: 1024px) {
-        .wrapper {
-          max-width: 800px;
-        }
-        h1 {
-          font-size: 36px;
-        }
-        .steps-container {
-          gap: 28px;
-        }
-        .step {
-          padding: 32px;
-        }
+      /* ANIMATIONS */
+      @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(24px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
+        40% { transform: translateX(-50%) translateY(-8px); }
+        60% { transform: translateX(-50%) translateY(-4px); }
       }
 
-      /* Dark mode */
-      @media (prefers-color-scheme: dark) {
-        body {
-          background: #0d0d0d;
-          color: #e0e0e0;
+      /* RESPONSIVE */
+      @media (max-width: 768px) {
+        .hero h1 { font-size: 40px; }
+        .hero-tagline { font-size: 17px; }
+        .hero-logo { width: 110px; height: 110px; }
+        .section-title { font-size: 30px; }
+        .section-subtitle { font-size: 16px; }
+        .stat-item h3 { font-size: 32px; }
+        .cta-title { font-size: 28px; }
+        .features-grid { grid-template-columns: 1fr; }
+        .section { padding: 64px 20px; }
+        .stats-section { padding: 56px 20px; }
+      }
+
+      /* LIGHT MODE */
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #FAFAF8;
+          --card-bg: #FFFFFF;
+          --card-border: #E8E8E5;
+          --text: #1a1a1a;
+          --text-secondary: #5A5A5A;
+          --text-tertiary: #9CA3AF;
         }
-        h1 {
-          color: #f5f5f5;
+        .hero::before {
+          background: radial-gradient(ellipse at 50% 30%, rgba(27,107,74,0.08) 0%, transparent 60%),
+                      radial-gradient(ellipse at 80% 70%, rgba(212,168,67,0.04) 0%, transparent 50%);
         }
-        .subtitle {
-          color: #999;
+        .feature-card:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.06); }
+        .stats-section {
+          background: linear-gradient(135deg, #0d2b1a 0%, #091a10 100%);
         }
-        .spinner {
-          border-color: #444;
-          border-top-color: #ccc;
-        }
-        .loading-text {
-          color: #aaa;
-        }
-        .step {
-          border-color: #333;
-          background: #1a1a1a;
-        }
-        .step-number {
-          border-color: #666;
-          color: #bbb;
-        }
-        .step-title {
-          color: #f0f0f0;
-        }
-        .step-description {
-          color: #888;
-        }
-        .store-button {
-          border-color: #444;
-          color: #e0e0e0;
-          background: #222;
-        }
-        .store-button:hover {
-          background: #2a2a2a;
-          border-color: #666;
-        }
-        .store-link {
-          color: #888;
-        }
-        .store-link:hover {
-          color: #ccc;
-        }
-        .qr-section {
-          background: #111;
-          border-color: #333;
-        }
-        .qr-section .step-number {
-          border-color: rgba(255, 255, 255, 0.4);
-        }
-        .qr-section .step-description {
-          color: rgba(255, 255, 255, 0.6);
-        }
-        .open-button {
-          background: #f0f0f0;
-          color: #111;
-        }
-        .open-button:hover {
-          background: #e0e0e0;
-        }
+        .stat-item p { color: rgba(255,255,255,0.7); }
+        .community-badge { background: #F3F3F0; border-color: #E0E0DD; color: #5A5A5A; }
       }
     </style>
   </head>
   <body>
-    <div class="wrapper">
-      <div class="loading" id="loading">
-        <div class="spinner"></div>
-        <div class="loading-text">Opening in Expo Go...</div>
+
+    <!-- HERO -->
+    <section class="hero">
+      <img src="/assets/images/splash-logo.png" alt="Salam Y'all" class="hero-logo" />
+      <h1>Salam Y'all</h1>
+      <p class="hero-tagline">The app for the Triangle NC Muslim community. Prayer times, halal eats, events, and more — all in one place.</p>
+      <a href="https://apps.apple.com/us/app/salam-yall/id6760231963" class="hero-cta">
+        <svg viewBox="0 0 24 24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+        Download Free on iOS
+      </a>
+      <span class="hero-badge">Available on the App Store</span>
+      <div class="scroll-hint">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 13l5 5 5-5M7 6l5 5 5-5"/></svg>
       </div>
+    </section>
 
-      <div class="content" id="content">
-        <h1>APP_NAME_PLACEHOLDER</h1>
-        <p class="subtitle">Preview this app on your phone</p>
-
-        <div class="steps-container">
-          <div class="step">
-            <div class="step-header">
-              <div class="step-number">1</div>
-              <h2 class="step-title">Download Expo Go</h2>
-            </div>
-            <p class="step-description">
-              Expo Go is a free app to test mobile apps
-            </p>
-            <div class="store-buttons" id="store-buttons">
-              <a
-                id="app-store-btn"
-                href="https://apps.apple.com/app/id982107779"
-                class="store-button"
-                target="_blank"
-              >
-                <svg class="store-icon" viewBox="0 0 24 24" fill="currentColor">
-                  <path
-                    d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"
-                  />
-                </svg>
-                App Store
-              </a>
-              <a
-                id="play-store-btn"
-                href="https://play.google.com/store/apps/details?id=host.exp.exponent"
-                class="store-button"
-                target="_blank"
-              >
-                <svg class="store-icon" viewBox="0 0 24 24" fill="currentColor">
-                  <path
-                    d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z"
-                  />
-                </svg>
-                Google Play
-              </a>
-            </div>
-          </div>
-
-          <div class="step qr-section">
-            <div class="step-header">
-              <div class="step-number">2</div>
-              <h2 class="step-title">Scan QR Code</h2>
-            </div>
-            <p class="step-description">Use your phone's camera or Expo Go</p>
-            <div class="qr-code" id="qr-code"></div>
-            <a href="exps://EXPS_URL_PLACEHOLDER" class="open-button"
-              >Open in Expo Go</a
-            >
-          </div>
+    <!-- FEATURES -->
+    <section class="section">
+      <p class="section-label">Everything You Need</p>
+      <h2 class="section-title">Built for Our Community</h2>
+      <p class="section-subtitle">From daily prayers to finding the best halal food — we've got you covered.</p>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🕌</div>
+          <h3>Prayer & Iqama Times</h3>
+          <p>Accurate prayer times with real iqama schedules from local masjids. Track your prayers and build consistency.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🍽️</div>
+          <h3>Halal Restaurants</h3>
+          <p>Find halal restaurants near you with ratings, hours, and directions. Community-verified and always up to date.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📅</div>
+          <h3>Community Events</h3>
+          <p>Never miss a gathering, lecture, or potluck. Browse upcoming events from masjids and organizations across the Triangle.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📒</div>
+          <h3>Muslim Directory</h3>
+          <p>Discover Muslim-owned businesses, doctors, lawyers, therapists, and more. Support your community.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🧭</div>
+          <h3>Qibla Compass</h3>
+          <p>Always know which direction to pray with the built-in Qibla compass, calibrated to your exact location.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📖</div>
+          <h3>Daily Quran Verse</h3>
+          <p>Start each day with a verse from the Quran — Arabic text with English translation and tafsir.</p>
         </div>
       </div>
-    </div>
+    </section>
 
-    <script src="https://unpkg.com/qr-code-styling@1.6.0/lib/qr-code-styling.js"></script>
-    <script>
-      (function () {
-        const ua = navigator.userAgent;
-        const loadingEl = document.getElementById("loading");
-        const contentEl = document.getElementById("content");
+    <!-- STATS -->
+    <section class="stats-section">
+      <div class="stats-grid">
+        <div class="stat-item">
+          <h3>7+</h3>
+          <p>Masjids with Iqama Times</p>
+        </div>
+        <div class="stat-item">
+          <h3>50+</h3>
+          <p>Halal Restaurants</p>
+        </div>
+        <div class="stat-item">
+          <h3>100+</h3>
+          <p>Local Businesses</p>
+        </div>
+        <div class="stat-item">
+          <h3>35+</h3>
+          <p>Muslim Therapists Listed</p>
+        </div>
+      </div>
+    </section>
 
-        const isAndroid = /Android/i.test(ua);
-        const isIOS =
-          /iPhone|iPad|iPod/i.test(ua) ||
-          (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    <!-- COMMUNITY -->
+    <section class="section community-section">
+      <p class="section-label">Serving the Triangle</p>
+      <h2 class="section-title">Made with Love for NC Muslims</h2>
+      <p class="section-subtitle">Covering Raleigh, Durham, Chapel Hill, Cary, and surrounding areas.</p>
+      <div class="community-badges">
+        <span class="community-badge">Raleigh</span>
+        <span class="community-badge">Durham</span>
+        <span class="community-badge">Chapel Hill</span>
+        <span class="community-badge">Cary</span>
+        <span class="community-badge">Wake Forest</span>
+        <span class="community-badge">Morrisville</span>
+        <span class="community-badge">Apex</span>
+        <span class="community-badge">Garner</span>
+        <span class="community-badge">Holly Springs</span>
+        <span class="community-badge">Knightdale</span>
+      </div>
+    </section>
 
-        const deepLink = "exps://EXPS_URL_PLACEHOLDER";
+    <!-- CTA -->
+    <section class="cta-section">
+      <h2 class="cta-title">Join the Community</h2>
+      <p class="cta-subtitle">Download Salam Y'all and stay connected.</p>
+      <div class="cta-buttons">
+        <a href="https://apps.apple.com/us/app/salam-yall/id6760231963" class="cta-btn-primary">
+          <svg viewBox="0 0 24 24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          Download on the App Store
+        </a>
+      </div>
+    </section>
 
-        // Adjust store buttons based on platform
-        const appStoreBtn = document.getElementById("app-store-btn");
-        const playStoreBtn = document.getElementById("play-store-btn");
-        const storeButtonsContainer = document.getElementById("store-buttons");
+    <!-- FOOTER -->
+    <footer class="footer">
+      <img src="/assets/images/favicon.png" alt="Salam Y'all" class="footer-logo" />
+      <div class="footer-links">
+        <a href="/privacy-policy">Privacy Policy</a>
+        <a href="/support">Support</a>
+      </div>
+      <p class="footer-copy">Salam Y'all. Made for the Triangle NC Muslim community.</p>
+    </footer>
 
-        if (isIOS) {
-          playStoreBtn.className = "store-link";
-          storeButtonsContainer.appendChild(playStoreBtn);
-        } else if (isAndroid) {
-          appStoreBtn.className = "store-link";
-          storeButtonsContainer.insertBefore(playStoreBtn, appStoreBtn);
-        }
-
-        const qrCode = new QRCodeStyling({
-          width: 400,
-          height: 400,
-          data: deepLink,
-          dotsOptions: {
-            color: "#333333",
-            type: "rounded",
-          },
-          backgroundOptions: {
-            color: "#ffffff",
-          },
-          cornersSquareOptions: {
-            type: "extra-rounded",
-          },
-          cornersDotOptions: {
-            type: "dot",
-          },
-          qrOptions: {
-            errorCorrectionLevel: "H",
-          },
-        });
-
-        qrCode.append(document.getElementById("qr-code"));
-
-        if (isAndroid || isIOS) {
-          loadingEl.style.display = "block";
-          contentEl.style.display = "none";
-          window.location.href = deepLink;
-          setTimeout(function () {
-            loadingEl.style.display = "none";
-            contentEl.style.display = "block";
-          }, 500);
-        }
-      })();
-    </script>
   </body>
 </html>
