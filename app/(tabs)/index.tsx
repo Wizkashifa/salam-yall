@@ -1715,7 +1715,7 @@ const styles = StyleSheet.create({
   },
   silenceAlert: {
     marginHorizontal: 16,
-    marginTop: 12,
+    marginTop: 10,
     borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 14,
@@ -1742,7 +1742,7 @@ const styles = StyleSheet.create({
   },
   prayerCard: {
     marginHorizontal: 16,
-    marginTop: 16,
+    marginTop: 10,
     padding: 0,
     paddingBottom: 0,
   },
@@ -1811,7 +1811,7 @@ const styles = StyleSheet.create({
   },
   iqamaCard: {
     marginHorizontal: 16,
-    marginTop: 12,
+    marginTop: 10,
     padding: 0,
     paddingBottom: 0,
   },
@@ -1840,7 +1840,7 @@ const styles = StyleSheet.create({
   },
   dailyContentCard: {
     marginHorizontal: 16,
-    marginTop: 18,
+    marginTop: 10,
     padding: 16,
   },
   dailyContentHeader: {
@@ -1900,7 +1900,7 @@ const styles = StyleSheet.create({
   },
   permissionBanner: {
     marginHorizontal: 16,
-    marginTop: 12,
+    marginTop: 10,
     borderRadius: 12,
     padding: 12,
     flexDirection: "row",
@@ -1908,7 +1908,7 @@ const styles = StyleSheet.create({
   },
   sectionCard: {
     marginHorizontal: 16,
-    marginTop: 18,
+    marginTop: 10,
     padding: 16,
   },
   sectionCardHeader: {
@@ -2034,8 +2034,8 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 8,
     marginHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 8,
+    marginTop: 10,
+    marginBottom: 0,
   },
   quickActionChip: {
     flexDirection: "row",
