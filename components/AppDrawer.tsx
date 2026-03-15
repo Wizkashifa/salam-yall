@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -17,59 +17,31 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as Notifications from "expo-notifications";
-import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@/lib/theme-context";
 import { useSettings } from "@/lib/settings-context";
 import {
-  NEARBY_MASJIDS,
   CALC_METHOD_LABELS,
-  matchEventsToMasjid,
   type CalcMethodKey,
-  type Masjid,
 } from "@/lib/prayer-utils";
-
-interface CalendarEvent {
-  id: string;
-  title: string;
-  description: string;
-  location: string;
-  start: string;
-  end: string;
-  isAllDay: boolean;
-  organizer: string;
-  imageUrl: string;
-  registrationUrl: string;
-}
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const DRAWER_WIDTH = Math.min(SCREEN_WIDTH * 0.85, 340);
 const USE_NATIVE_DRIVER = Platform.OS !== "web";
 
-type DrawerSection = "main" | "settings" | "masjids" | "feedback" | "calcMethod" | "masjidDetail";
+type DrawerSection = "main" | "feedback" | "calcMethod";
 
 export function AppDrawer() {
   const insets = useSafeAreaInsets();
-  const { colors, isDark, themeMode, setThemeMode } = useTheme();
+  const { colors, isDark, themeMode, setThemeMode, ramadanMode, setRamadanMode } = useTheme();
   const { calcMethod, setCalcMethod, notificationsEnabled, setNotificationsEnabled, menuOpen, closeMenu, consumePendingDrawerSection } = useSettings();
   const [section, setSection] = useState<DrawerSection>("main");
   const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const [visible, setVisible] = useState(false);
-  const [selectedMasjid, setSelectedMasjid] = useState<Masjid | null>(null);
-  const { data: fetchedMasjids } = useQuery<Masjid[]>({
-    queryKey: ["/api/masjids"],
-    staleTime: 60 * 60 * 1000,
-  });
-  const masjidList = fetchedMasjids && fetchedMasjids.length > 0 ? fetchedMasjids : NEARBY_MASJIDS;
 
   const [feedbackType, setFeedbackType] = useState<"bug" | "feature">("feature");
   const [feedbackText, setFeedbackText] = useState("");
   const [feedbackEmail, setFeedbackEmail] = useState("");
-
-  const { data: events } = useQuery<CalendarEvent[]>({
-    queryKey: ["/api/events"],
-    staleTime: 5 * 60 * 1000,
-  });
 
   useEffect(() => {
     if (menuOpen) {
@@ -87,6 +59,8 @@ export function AppDrawer() {
       ]).start(() => setVisible(false));
     }
   }, [menuOpen, slideAnim, overlayAnim]);
+
+
 
   const handleToggleNotifications = useCallback(async () => {
     if (!notificationsEnabled) {
@@ -106,21 +80,6 @@ export function AppDrawer() {
     }
   }, [notificationsEnabled, setNotificationsEnabled]);
 
-  const openMasjidDirections = useCallback(async (address: string) => {
-    const encoded = encodeURIComponent(address);
-    try {
-      if (Platform.OS === "ios") {
-        const mapsUrl = `maps://maps.apple.com/?daddr=${encoded}&dirflg=d`;
-        const canOpen = await Linking.canOpenURL(mapsUrl);
-        await Linking.openURL(canOpen ? mapsUrl : `https://www.google.com/maps/dir/?api=1&destination=${encoded}`);
-      } else {
-        await Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${encoded}`);
-      }
-    } catch {
-      Alert.alert("Unable to Open Maps", "Could not open a maps application.");
-    }
-  }, []);
-
   const handleSubmitFeedback = useCallback(() => {
     if (!feedbackText.trim()) {
       Alert.alert("Required", "Please describe your feedback");
@@ -138,64 +97,14 @@ export function AppDrawer() {
     closeMenu();
   }, [feedbackType, feedbackText, feedbackEmail, closeMenu]);
 
-  const masjidEvents = useMemo(() => {
-    if (!selectedMasjid || !events) return [];
-    const indices = matchEventsToMasjid(selectedMasjid, events);
-    return indices.map(i => events[i]);
-  }, [selectedMasjid, events]);
-
   if (!visible) return null;
 
   const renderMainMenu = () => (
     <>
       <Text style={[styles.drawerTitle, { color: colors.text }]}>Salam Y'all</Text>
 
-      <Pressable
-        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : "transparent" }]}
-        onPress={() => { setSection("settings"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-      >
-        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
-          <Ionicons name="settings-outline" size={20} color={colors.emerald} />
-        </View>
-        <Text style={[styles.menuLabel, { color: colors.text }]}>Settings</Text>
-        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-      </Pressable>
+      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>SETTINGS</Text>
 
-      <Pressable
-        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : "transparent" }]}
-        onPress={() => { setSection("masjids"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-      >
-        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
-          <MaterialCommunityIcons name="mosque" size={20} color={colors.emerald} />
-        </View>
-        <Text style={[styles.menuLabel, { color: colors.text }]}>Masjid Directory</Text>
-        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-      </Pressable>
-
-      <Pressable
-        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : "transparent" }]}
-        onPress={() => { setSection("feedback"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-      >
-        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
-          <Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.emerald} />
-        </View>
-        <Text style={[styles.menuLabel, { color: colors.text }]}>Bug / Feature Request</Text>
-        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-      </Pressable>
-    </>
-  );
-
-  const renderSettings = () => (
-    <>
-      <Pressable
-        style={styles.backRow}
-        onPress={() => { setSection("main"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-      >
-        <Ionicons name="arrow-back" size={20} color={colors.text} />
-        <Text style={[styles.backLabel, { color: colors.text }]}>Settings</Text>
-      </Pressable>
-
-      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>CALCULATION METHOD</Text>
       <Pressable
         style={[styles.settingRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
         onPress={() => { setSection("calcMethod"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
@@ -207,7 +116,6 @@ export function AppDrawer() {
         <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
       </Pressable>
 
-      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>NOTIFICATIONS</Text>
       <Pressable
         style={[styles.settingRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
         onPress={handleToggleNotifications}
@@ -239,6 +147,93 @@ export function AppDrawer() {
           );
         })}
       </View>
+
+      <Pressable
+        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : "transparent", marginTop: 10 }]}
+        onPress={() => { setRamadanMode(!ramadanMode); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); }}
+      >
+        <View style={[styles.menuIcon, { backgroundColor: ramadanMode ? "#6B3FA020" : colors.prayerIconBg }]}>
+          <MaterialCommunityIcons name="moon-waning-crescent" size={20} color={ramadanMode ? "#6B3FA0" : colors.emerald} />
+        </View>
+        <Text style={[styles.menuLabel, { color: colors.text, flex: 1 }]}>Ramadan Mode</Text>
+        <View style={[styles.toggle, ramadanMode ? { backgroundColor: "#6B3FA0" } : { backgroundColor: colors.border }]}>
+          <View style={[styles.toggleKnob, ramadanMode ? { transform: [{ translateX: 16 }] } : {}]} />
+        </View>
+      </Pressable>
+
+      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>LEGAL</Text>
+
+      <Pressable
+        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : "transparent" }]}
+        onPress={() => Linking.openURL("https://muslim-life-hub.replit.app/privacy")}
+      >
+        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
+          <Ionicons name="shield-checkmark-outline" size={20} color={colors.emerald} />
+        </View>
+        <Text style={[styles.menuLabel, { color: colors.text }]}>Privacy Policy</Text>
+        <Ionicons name="open-outline" size={16} color={colors.textSecondary} />
+      </Pressable>
+
+      <Pressable
+        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : "transparent" }]}
+        onPress={() => Linking.openURL("https://muslim-life-hub.replit.app/support")}
+      >
+        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
+          <Ionicons name="help-circle-outline" size={20} color={colors.emerald} />
+        </View>
+        <Text style={[styles.menuLabel, { color: colors.text }]}>Support</Text>
+        <Ionicons name="open-outline" size={16} color={colors.textSecondary} />
+      </Pressable>
+
+      <Pressable
+        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : "transparent" }]}
+        onPress={() => { setSection("feedback"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+      >
+        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
+          <Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.emerald} />
+        </View>
+        <Text style={[styles.menuLabel, { color: colors.text }]}>Bug / Feature Request</Text>
+        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+      </Pressable>
+
+      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>ATTRIBUTIONS</Text>
+
+      <View style={[styles.attributionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Pressable style={styles.attributionRow} onPress={() => Linking.openURL("https://halaleatsnc.com")}>
+          <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg, marginRight: 0 }]}>
+            <Ionicons name="restaurant-outline" size={18} color="#DC2626" />
+          </View>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={[styles.attributionName, { color: colors.text }]}>HalalEats NC</Text>
+            <Text style={[styles.attributionDesc, { color: colors.textSecondary }]}>Halal restaurant directory for North Carolina</Text>
+          </View>
+          <Ionicons name="open-outline" size={14} color={colors.textSecondary} />
+        </Pressable>
+        <View style={[styles.attributionDivider, { backgroundColor: colors.divider }]} />
+        <Pressable style={styles.attributionRow} onPress={() => Linking.openURL("https://www.nctrianglemuslims.org")}>
+          <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg, marginRight: 0 }]}>
+            <Ionicons name="calendar-outline" size={18} color={colors.emerald} />
+          </View>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={[styles.attributionName, { color: colors.text }]}>NC Triangle Muslims</Text>
+            <Text style={[styles.attributionDesc, { color: colors.textSecondary }]}>Community events and gatherings</Text>
+          </View>
+          <Ionicons name="open-outline" size={14} color={colors.textSecondary} />
+        </Pressable>
+        <View style={[styles.attributionDivider, { backgroundColor: colors.divider }]} />
+        <Pressable style={styles.attributionRow} onPress={() => Linking.openURL("https://github.com/batoulapps/adhan-js")}>
+          <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg, marginRight: 0 }]}>
+            <MaterialCommunityIcons name="mosque" size={18} color={colors.gold} />
+          </View>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={[styles.attributionName, { color: colors.text }]}>Adhan by Batoul Apps</Text>
+            <Text style={[styles.attributionDesc, { color: colors.textSecondary }]}>Prayer time calculation library</Text>
+          </View>
+          <Ionicons name="open-outline" size={14} color={colors.textSecondary} />
+        </Pressable>
+      </View>
+
+      <Text style={[styles.versionText, { color: colors.textTertiary }]}>Salam Y'all v1.1</Text>
     </>
   );
 
@@ -246,7 +241,7 @@ export function AppDrawer() {
     <>
       <Pressable
         style={styles.backRow}
-        onPress={() => { setSection("settings"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+        onPress={() => { setSection("main"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
       >
         <Ionicons name="arrow-back" size={20} color={colors.text} />
         <Text style={[styles.backLabel, { color: colors.text }]}>Calculation Method</Text>
@@ -258,7 +253,7 @@ export function AppDrawer() {
           <Pressable
             key={key}
             style={[styles.calcMethodRow, { backgroundColor: isActive ? colors.prayerIconBg : "transparent" }]}
-            onPress={() => { setCalcMethod(key); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSection("settings"); }}
+            onPress={() => { setCalcMethod(key); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSection("main"); }}
           >
             <Text style={[styles.calcMethodText, { color: isActive ? colors.emerald : colors.text }]}>
               {CALC_METHOD_LABELS[key]}
@@ -269,120 +264,6 @@ export function AppDrawer() {
       })}
     </>
   );
-
-  const renderMasjids = () => (
-    <>
-      <Pressable
-        style={styles.backRow}
-        onPress={() => { setSection("main"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-      >
-        <Ionicons name="arrow-back" size={20} color={colors.text} />
-        <Text style={[styles.backLabel, { color: colors.text }]}>Masjid Directory</Text>
-      </Pressable>
-
-      {masjidList.map((masjid, i) => (
-        <Pressable
-          key={i}
-          style={({ pressed }) => [styles.masjidRow, { backgroundColor: pressed ? colors.surfaceSecondary : "transparent" }]}
-          onPress={() => { setSelectedMasjid(masjid); setSection("masjidDetail"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-        >
-          <View style={[styles.masjidIcon, { backgroundColor: colors.prayerIconBg }]}>
-            <MaterialCommunityIcons name="mosque" size={16} color={colors.emerald} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.masjidName, { color: colors.text }]} numberOfLines={1}>{masjid.name}</Text>
-            <Text style={[styles.masjidAddr, { color: colors.textSecondary }]} numberOfLines={1}>{masjid.address}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
-        </Pressable>
-      ))}
-    </>
-  );
-
-  const renderMasjidDetail = () => {
-    if (!selectedMasjid) return null;
-
-    return (
-      <>
-        <Pressable
-          style={styles.backRow}
-          onPress={() => { setSection("masjids"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.text} />
-          <Text style={[styles.backLabel, { color: colors.text }]}>Back</Text>
-        </Pressable>
-
-        <View style={styles.masjidDetailHeader}>
-          <View style={[styles.masjidDetailIcon, { backgroundColor: colors.prayerIconBg }]}>
-            <MaterialCommunityIcons name="mosque" size={28} color={colors.emerald} />
-          </View>
-          <Text style={[styles.masjidDetailName, { color: colors.text }]}>{selectedMasjid.name}</Text>
-        </View>
-
-        <View style={[styles.masjidDetailCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Pressable
-            style={styles.masjidDetailRow}
-            onPress={() => openMasjidDirections(selectedMasjid.address)}
-          >
-            <Ionicons name="location-outline" size={18} color={colors.emerald} />
-            <Text style={[styles.masjidDetailText, { color: colors.text, flex: 1 }]}>{selectedMasjid.address}</Text>
-            <Ionicons name="navigate-outline" size={14} color={colors.gold} />
-          </Pressable>
-
-          {selectedMasjid.website ? (
-            <Pressable
-              style={styles.masjidDetailRow}
-              onPress={() => { Linking.openURL(selectedMasjid.website!).catch(() => {}); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-            >
-              <Ionicons name="globe-outline" size={18} color={colors.emerald} />
-              <Text style={[styles.masjidDetailText, { color: colors.gold, flex: 1 }]} numberOfLines={1}>
-                {selectedMasjid.website!.replace(/^https?:\/\/(www\.)?/, "")}
-              </Text>
-              <Ionicons name="open-outline" size={14} color={colors.gold} />
-            </Pressable>
-          ) : null}
-        </View>
-
-        <Text style={[styles.sectionLabel, { color: colors.textSecondary, marginTop: 20 }]}>UPCOMING EVENTS</Text>
-
-        {masjidEvents.length > 0 ? (
-          masjidEvents.map((ev) => {
-            const date = new Date(ev.start);
-            const day = date.getDate().toString();
-            const month = date.toLocaleDateString("en-US", { month: "short" });
-            const time = ev.isAllDay
-              ? "All Day"
-              : date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
-
-            return (
-              <Pressable
-                key={ev.id}
-                style={({ pressed }) => [styles.eventCard, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
-                onPress={() => {
-                  closeMenu();
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }}
-              >
-                <View style={[styles.eventDateBadge, { backgroundColor: colors.prayerIconBg }]}>
-                  <Text style={[styles.eventDateDay, { color: colors.emerald }]}>{day}</Text>
-                  <Text style={[styles.eventDateMonth, { color: colors.emerald }]}>{month}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={2}>{ev.title}</Text>
-                  <Text style={[styles.eventTime, { color: colors.textSecondary }]}>{time}</Text>
-                </View>
-              </Pressable>
-            );
-          })
-        ) : (
-          <View style={[styles.noEventsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Ionicons name="calendar-outline" size={24} color={colors.textSecondary} />
-            <Text style={[styles.noEventsText, { color: colors.textSecondary }]}>No upcoming events at this location</Text>
-          </View>
-        )}
-      </>
-    );
-  };
 
   const renderFeedback = () => (
     <>
@@ -474,10 +355,7 @@ export function AppDrawer() {
             keyboardShouldPersistTaps="handled"
           >
             {section === "main" && renderMainMenu()}
-            {section === "settings" && renderSettings()}
             {section === "calcMethod" && renderCalcMethodPicker()}
-            {section === "masjids" && renderMasjids()}
-            {section === "masjidDetail" && renderMasjidDetail()}
             {section === "feedback" && renderFeedback()}
           </ScrollView>
         </Animated.View>
@@ -578,6 +456,20 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     marginTop: 2,
   },
+  calcMethodRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    marginBottom: 2,
+  },
+  calcMethodText: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+    flex: 1,
+  },
   toggle: {
     width: 44,
     height: 26,
@@ -608,44 +500,6 @@ const styles = StyleSheet.create({
   themeOptionText: {
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
-  },
-  calcMethodRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    marginBottom: 2,
-  },
-  calcMethodText: {
-    fontSize: 14,
-    fontFamily: "Inter_500Medium",
-    flex: 1,
-  },
-  masjidRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    borderRadius: 10,
-    gap: 12,
-  },
-  masjidIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  masjidName: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-  },
-  masjidAddr: {
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
-    marginTop: 1,
   },
   feedbackTypeRow: {
     flexDirection: "row",
@@ -691,82 +545,34 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: "Inter_700Bold",
   },
-  masjidDetailHeader: {
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  masjidDetailIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  masjidDetailName: {
-    fontSize: 18,
-    fontFamily: "Inter_700Bold",
-    textAlign: "center" as const,
-  },
-  masjidDetailCard: {
+  attributionCard: {
     borderRadius: 12,
     borderWidth: 1,
-    overflow: "hidden",
+    overflow: "hidden" as const,
   },
-  masjidDetailRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+  attributionRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     padding: 14,
   },
-  masjidDetailText: {
+  attributionDivider: {
+    height: 1,
+    marginHorizontal: 14,
+  },
+  attributionName: {
     fontSize: 14,
-    fontFamily: "Inter_500Medium",
-  },
-  eventCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 8,
-  },
-  eventDateBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  eventDateDay: {
-    fontSize: 18,
-    fontFamily: "Inter_700Bold",
-  },
-  eventDateMonth: {
-    fontSize: 10,
-    fontFamily: "Inter_600SemiBold",
-    marginTop: -2,
-  },
-  eventTitle: {
-    fontSize: 13,
     fontFamily: "Inter_600SemiBold",
   },
-  eventTime: {
-    fontSize: 11,
+  attributionDesc: {
+    fontSize: 12,
     fontFamily: "Inter_400Regular",
     marginTop: 2,
   },
-  noEventsCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 20,
-    alignItems: "center",
-    gap: 8,
-  },
-  noEventsText: {
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
+  versionText: {
     textAlign: "center" as const,
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    marginTop: 30,
+    marginBottom: 10,
   },
 });

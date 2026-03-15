@@ -10,7 +10,6 @@ import {
   TextInput,
   Alert,
   Share,
-  Image,
 } from "react-native";
 
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -475,120 +474,6 @@ export default function SettingsScreen() {
         <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
       </Pressable>
 
-      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>APPEARANCE</Text>
-      <View style={[styles.themeRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        {(["system", "light", "dark"] as const).map((mode) => {
-          const isActive = themeMode === mode;
-          const icons = { system: "phone-portrait-outline", light: "sunny-outline", dark: "moon-outline" } as const;
-          const labels = { system: "System", light: "Light", dark: "Dark" };
-          return (
-            <Pressable
-              key={mode}
-              style={[styles.themeOption, isActive && { backgroundColor: colors.emerald }]}
-              onPress={() => { setThemeMode(mode); trackEvent("theme_changed", { theme: mode }); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-            >
-              <Ionicons name={icons[mode]} size={16} color={isActive ? "#fff" : colors.textSecondary} />
-              <Text style={[styles.themeOptionText, { color: isActive ? "#fff" : colors.text }]}>{labels[mode]}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      <Pressable
-        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border, marginTop: 10 }]}
-        onPress={() => { setRamadanMode(!ramadanMode); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); }}
-      >
-        <View style={[styles.menuIcon, { backgroundColor: ramadanMode ? "#6B3FA020" : colors.prayerIconBg }]}>
-          <MaterialCommunityIcons name="moon-waning-crescent" size={20} color={ramadanMode ? "#6B3FA0" : colors.emerald} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.menuLabel, { color: colors.text }]}>Ramadan Mode</Text>
-          <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>Purple theme for the blessed month</Text>
-        </View>
-        <View style={[styles.toggleTrack, ramadanMode && styles.toggleTrackActive, ramadanMode && { backgroundColor: "#6B3FA0" }]}>
-          <View style={[styles.toggleThumb, ramadanMode && styles.toggleThumbActive]} />
-        </View>
-      </Pressable>
-
-      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>LEGAL / APPLICATION</Text>
-
-      <Pressable
-        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
-        onPress={() => Linking.openURL("https://muslim-life-hub.replit.app/privacy")}
-      >
-        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
-          <Ionicons name="shield-checkmark-outline" size={20} color={colors.emerald} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.menuLabel, { color: colors.text }]}>Privacy Policy</Text>
-        </View>
-        <Ionicons name="open-outline" size={16} color={colors.textSecondary} />
-      </Pressable>
-
-      <Pressable
-        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
-        onPress={() => Linking.openURL("https://muslim-life-hub.replit.app/support")}
-      >
-        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
-          <Ionicons name="help-circle-outline" size={20} color={colors.emerald} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.menuLabel, { color: colors.text }]}>Support</Text>
-        </View>
-        <Ionicons name="open-outline" size={16} color={colors.textSecondary} />
-      </Pressable>
-
-      <Pressable
-        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
-        onPress={() => { setSection("feedback"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-      >
-        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
-          <Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.emerald} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.menuLabel, { color: colors.text }]}>Bug / Feature Request</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-      </Pressable>
-
-      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>ATTRIBUTIONS</Text>
-
-      <View style={[styles.attributionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <Pressable style={styles.attributionRow} onPress={() => Linking.openURL("https://halaleatsnc.com")}>
-          <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg, marginRight: 0 }]}>
-            <Ionicons name="restaurant-outline" size={18} color="#DC2626" />
-          </View>
-          <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={[styles.attributionName, { color: colors.text }]}>HalalEats NC</Text>
-            <Text style={[styles.attributionDesc, { color: colors.textSecondary }]}>Halal restaurant directory for North Carolina</Text>
-          </View>
-          <Ionicons name="open-outline" size={14} color={colors.textSecondary} />
-        </Pressable>
-        <View style={[styles.attributionDivider, { backgroundColor: colors.divider }]} />
-        <Pressable style={styles.attributionRow} onPress={() => Linking.openURL("https://www.nctrianglemuslims.org")}>
-          <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg, marginRight: 0 }]}>
-            <Ionicons name="calendar-outline" size={18} color={colors.emerald} />
-          </View>
-          <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={[styles.attributionName, { color: colors.text }]}>NC Triangle Muslims</Text>
-            <Text style={[styles.attributionDesc, { color: colors.textSecondary }]}>Community events and gatherings</Text>
-          </View>
-          <Ionicons name="open-outline" size={14} color={colors.textSecondary} />
-        </Pressable>
-        <View style={[styles.attributionDivider, { backgroundColor: colors.divider }]} />
-        <Pressable style={styles.attributionRow} onPress={() => Linking.openURL("https://github.com/batoulapps/adhan-js")}>
-          <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg, marginRight: 0 }]}>
-            <MaterialCommunityIcons name="mosque" size={18} color={colors.gold} />
-          </View>
-          <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={[styles.attributionName, { color: colors.text }]}>Adhan by Batoul Apps</Text>
-            <Text style={[styles.attributionDesc, { color: colors.textSecondary }]}>Prayer time calculation library</Text>
-          </View>
-          <Ionicons name="open-outline" size={14} color={colors.textSecondary} />
-        </Pressable>
-      </View>
-
-      <Text style={[styles.versionText, { color: colors.textTertiary }]}>Salam Y'all v1.1</Text>
     </>
   );
 
@@ -1714,16 +1599,11 @@ export default function SettingsScreen() {
           <>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14 }}>
               <View>
-                <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>More</Text>
+                <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>Worship</Text>
                 <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
-                  Customize your experience
+                  Your spiritual tools
                 </Text>
               </View>
-              <Image
-                source={require("@/assets/images/splash-logo.png")}
-                style={{ width: 40, height: 40, borderRadius: 10, opacity: 0.9 }}
-                resizeMode="contain"
-              />
             </View>
             <TickerBanner />
           </>

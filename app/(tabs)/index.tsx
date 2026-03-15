@@ -380,7 +380,7 @@ function CountdownRing({ colors, isDark, progress, qiblaBearing, hasRealLocation
 export default function PrayerScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { calcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid, openMenuToSection, setPendingSettingsSection, hijriOffset, asrCalc, iqamaAlertsEnabled } = useSettings();
+  const { calcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid, openMenu, setPendingSettingsSection, hijriOffset, asrCalc, iqamaAlertsEnabled } = useSettings();
   const router = useRouter();
   const { setPendingTarget } = useDeepLink();
   const [prayers, setPrayers] = useState<PrayerTimeEntry[]>([]);
@@ -995,15 +995,15 @@ export default function PrayerScreen() {
             ) : null}
           </View>
           <Pressable
-            onPress={toggleNotifications}
-            testID="notification-toggle"
+            onPress={openMenu}
+            testID="settings-gear"
             hitSlop={8}
             style={styles.headerNotifBtn}
           >
             <Ionicons
-              name={notificationsEnabled ? "notifications" : "notifications-outline"}
+              name="settings-outline"
               size={20}
-              color={notificationsEnabled ? colors.gold : "rgba(255,255,255,0.7)"}
+              color="rgba(255,255,255,0.7)"
             />
           </Pressable>
         </View>
@@ -1146,7 +1146,7 @@ export default function PrayerScreen() {
                 <MaterialCommunityIcons name="mosque" size={16} color={colors.gold} />
                 <Text style={[styles.iqamaCardLabel, { color: colors.gold }]}>MY MASJID, MY HOME</Text>
               </View>
-              <Pressable onPress={() => { openMenuToSection("masjids"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} hitSlop={8}>
+              <Pressable onPress={() => { setPendingSettingsSection("masjids"); router.navigate("/settings"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} hitSlop={8}>
                 <Text style={[styles.iqamaCardMasjidName, { color: colors.textSecondary }]} numberOfLines={1}>{preferredMasjid.replace(/\s*\(.*\)/, "")}</Text>
               </Pressable>
             </View>

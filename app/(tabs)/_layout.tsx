@@ -28,8 +28,8 @@ function NativeTabLayout() {
         <Label>Directory</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="settings">
-        <Icon sf={{ default: "ellipsis.circle", selected: "ellipsis.circle.fill" }} />
-        <Label>More</Label>
+        <Icon sf={{ default: "hands.and.sparkles", selected: "hands.and.sparkles.fill" }} />
+        <Label>Worship</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -123,9 +123,9 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: "More",
+          title: "Worship",
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? "ellipsis-horizontal-circle" : "ellipsis-horizontal-circle-outline"} size={size - 2} color={color} />
+            <Ionicons name={focused ? "moon" : "moon-outline"} size={size - 2} color={color} />
           ),
         }}
       />
