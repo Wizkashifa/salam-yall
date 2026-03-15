@@ -480,7 +480,7 @@ export default function EventsScreen() {
       setCalendarCollapsed(shouldCollapse);
       Animated.timing(calendarAnim, {
         toValue: shouldCollapse ? 0 : 1,
-        duration: 200,
+        duration: 400,
         useNativeDriver: false,
       }).start();
     }
