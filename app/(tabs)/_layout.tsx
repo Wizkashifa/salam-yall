@@ -28,7 +28,7 @@ function NativeTabLayout() {
         <Label>Directory</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="settings">
-        <Icon sf={{ default: "building.columns", selected: "building.columns.fill" }} />
+        <Icon sf={{ default: "moon.stars", selected: "moon.stars.fill" }} />
         <Label>Worship</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
