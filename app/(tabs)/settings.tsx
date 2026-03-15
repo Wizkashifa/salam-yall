@@ -55,13 +55,13 @@ interface CalendarEvent {
   registrationUrl: string;
 }
 
-type SettingsSection = "main" | "calcMethod" | "masjids" | "masjidDetail" | "feedback" | "prayerTracker" | "janazaHistory" | "profile" | "dhikrCounter";
+type SettingsSection = "main" | "calcMethod" | "masjids" | "masjidDetail" | "feedback" | "prayerTracker" | "janazaHistory" | "profile" | "dhikrCounter" | "athanAlerts";
 type TrackerTab = "calendar" | "badges";
 
 export default function SettingsScreen() {
   const { colors, isDark, themeMode, setThemeMode, ramadanMode, setRamadanMode } = useTheme();
   const router = useRouter();
-  const { calcMethod, setCalcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid, setPreferredMasjid, consumePendingSettingsSection } = useSettings();
+  const { calcMethod, setCalcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid, setPreferredMasjid, consumePendingSettingsSection, hijriOffset, setHijriOffset, asrCalc, setAsrCalc } = useSettings();
   const { user, signInWithApple, devSignIn, signOut, isLoading: authLoading, getAuthHeaders } = useAuth();
   const qc = useQueryClient();
   const [section, setSection] = useState<SettingsSection>("main");
@@ -384,6 +384,20 @@ export default function SettingsScreen() {
         <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
       </Pressable>
 
+      <Pressable
+        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
+        onPress={() => { setSection("athanAlerts"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+      >
+        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
+          <Ionicons name="notifications-outline" size={20} color={colors.emerald} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.menuLabel, { color: colors.text }]}>Athan & Alerts</Text>
+          <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>Notifications, calculation & Hijri settings</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+      </Pressable>
+
       <View style={[styles.menuItem, { backgroundColor: colors.surface, borderColor: colors.border, opacity: 0.5 }]}>
         <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
           <Ionicons name="sunny-outline" size={20} color={colors.emerald} />
@@ -422,38 +436,6 @@ export default function SettingsScreen() {
           <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>Recent janaza announcements</Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-      </Pressable>
-
-      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>PRAYER</Text>
-
-      <Pressable
-        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
-        onPress={() => { setSection("calcMethod"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-      >
-        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
-          <Ionicons name="calculator-outline" size={20} color={colors.emerald} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.menuLabel, { color: colors.text }]}>Calculation Method</Text>
-          <Text style={[styles.menuSublabel, { color: colors.gold }]}>{CALC_METHOD_LABELS[calcMethod]}</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-      </Pressable>
-
-      <Pressable
-        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
-        onPress={handleToggleNotifications}
-      >
-        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
-          <Ionicons name="notifications-outline" size={20} color={colors.emerald} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.menuLabel, { color: colors.text }]}>Adhan Alerts</Text>
-          <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>Get notified at prayer times</Text>
-        </View>
-        <View style={[styles.toggle, notificationsEnabled ? { backgroundColor: colors.emerald } : { backgroundColor: colors.border }]}>
-          <View style={[styles.toggleKnob, notificationsEnabled ? { transform: [{ translateX: 16 }] } : {}]} />
-        </View>
       </Pressable>
 
       <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>APPEARANCE</Text>
@@ -577,9 +559,9 @@ export default function SettingsScreen() {
     <>
       <Pressable
         style={styles.backRow}
-        onPress={() => { setSection("main"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+        onPress={() => { setSection("athanAlerts"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
       >
-        <Ionicons name="arrow-back" size={20} color={colors.text} />
+        <Ionicons name="chevron-back" size={22} color={colors.text} />
         <Text style={[styles.backLabel, { color: colors.text }]}>Calculation Method</Text>
       </Pressable>
 
@@ -589,7 +571,7 @@ export default function SettingsScreen() {
           <Pressable
             key={key}
             style={[styles.calcRow, { backgroundColor: isActive ? (isDark ? colors.actionButtonBg : colors.prayerIconBg) : colors.surface, borderColor: colors.border }]}
-            onPress={() => { setCalcMethod(key); trackEvent("calc_method_changed", { method: key }); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSection("main"); }}
+            onPress={() => { setCalcMethod(key); trackEvent("calc_method_changed", { method: key }); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSection("athanAlerts"); }}
           >
             <Text style={[styles.calcText, { color: isActive ? colors.emerald : colors.text }]}>
               {CALC_METHOD_LABELS[key]}
@@ -598,6 +580,101 @@ export default function SettingsScreen() {
           </Pressable>
         );
       })}
+    </>
+  );
+
+  const HIJRI_OPTIONS = [
+    { value: -1, label: "-1 Day" },
+    { value: 0, label: "Default" },
+    { value: 1, label: "+1 Day" },
+  ] as const;
+
+  const renderAthanAlerts = () => (
+    <>
+      <Pressable
+        style={styles.backRow}
+        onPress={() => { setSection("main"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+      >
+        <Ionicons name="chevron-back" size={22} color={colors.text} />
+        <Text style={[styles.backLabel, { color: colors.text }]}>Athan & Alerts</Text>
+      </Pressable>
+
+      <Text style={[styles.sectionLabel, { color: colors.textSecondary, marginTop: 4 }]}>NOTIFICATIONS</Text>
+
+      <Pressable
+        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
+        onPress={handleToggleNotifications}
+      >
+        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
+          <Ionicons name="notifications-outline" size={20} color={colors.emerald} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.menuLabel, { color: colors.text }]}>Adhan Alerts</Text>
+          <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>Get notified at prayer times</Text>
+        </View>
+        <View style={[styles.toggle, notificationsEnabled ? { backgroundColor: colors.emerald } : { backgroundColor: colors.border }]}>
+          <View style={[styles.toggleKnob, notificationsEnabled ? { transform: [{ translateX: 16 }] } : {}]} />
+        </View>
+      </Pressable>
+
+      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>PRAYER CALCULATION</Text>
+
+      <Pressable
+        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
+        onPress={() => { setSection("calcMethod"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+      >
+        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
+          <Ionicons name="calculator-outline" size={20} color={colors.emerald} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.menuLabel, { color: colors.text }]}>Calculation Method</Text>
+          <Text style={[styles.menuSublabel, { color: colors.gold }]}>{CALC_METHOD_LABELS[calcMethod]}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+      </Pressable>
+
+      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>ASR CALCULATION</Text>
+      <Text style={[styles.settingHint, { color: colors.textTertiary }]}>
+        Hanafi madhab uses a later Asr time. The standard method is used by Shafi'i, Maliki, and Hanbali madhabs.
+      </Text>
+
+      <View style={[styles.themeRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        {([
+          { key: "standard" as const, label: "Standard", sub: "Shafi'i / Maliki / Hanbali" },
+          { key: "hanafi" as const, label: "Hanafi", sub: "" },
+        ]).map(({ key, label }) => {
+          const isActive = asrCalc === key;
+          return (
+            <Pressable
+              key={key}
+              style={[styles.themeOption, isActive && { backgroundColor: colors.emerald }, { flex: 1 }]}
+              onPress={() => { setAsrCalc(key); trackEvent("asr_calc_changed", { method: key }); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+            >
+              <Text style={[styles.themeOptionText, { color: isActive ? "#fff" : colors.text }]}>{label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>HIJRI DATE OFFSET</Text>
+      <Text style={[styles.settingHint, { color: colors.textTertiary }]}>
+        Adjust the Hijri date if it doesn't match your local moon sighting.
+      </Text>
+
+      <View style={[styles.themeRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        {HIJRI_OPTIONS.map(({ value, label }) => {
+          const isActive = hijriOffset === value;
+          return (
+            <Pressable
+              key={value}
+              style={[styles.themeOption, isActive && { backgroundColor: colors.emerald }, { flex: 1 }]}
+              onPress={() => { setHijriOffset(value); trackEvent("hijri_offset_changed", { offset: value }); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+            >
+              <Text style={[styles.themeOptionText, { color: isActive ? "#fff" : colors.text }]}>{label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
     </>
   );
 
@@ -1591,6 +1668,7 @@ export default function SettingsScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {section === "main" && renderMain()}
+        {section === "athanAlerts" && renderAthanAlerts()}
         {section === "calcMethod" && renderCalcMethod()}
         {section === "masjids" && renderMasjids()}
         {section === "masjidDetail" && renderMasjidDetail()}
@@ -1646,6 +1724,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inter_500Medium",
     marginTop: 2,
+  },
+  settingHint: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 17,
+    marginBottom: 10,
+    marginTop: -4,
   },
   toggle: {
     width: 44,

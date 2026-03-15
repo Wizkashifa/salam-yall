@@ -380,7 +380,7 @@ function CountdownRing({ colors, isDark, progress, qiblaBearing, hasRealLocation
 export default function PrayerScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { calcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid, openMenuToSection, setPendingSettingsSection } = useSettings();
+  const { calcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid, openMenuToSection, setPendingSettingsSection, hijriOffset, asrCalc } = useSettings();
   const router = useRouter();
   const { setPendingTarget } = useDeepLink();
   const [prayers, setPrayers] = useState<PrayerTimeEntry[]>([]);
@@ -575,9 +575,10 @@ export default function PrayerScreen() {
 
   const loadDefaultPrayers = useCallback((lat = 35.7796, lon = -78.6382) => {
     const now = new Date();
-    const todayPrayers = getPrayerTimes(lat, lon, now, calcMethod);
+    const isHanafi = asrCalc === "hanafi";
+    const todayPrayers = getPrayerTimes(lat, lon, now, calcMethod, isHanafi);
     setPrayers(todayPrayers);
-    setHijriDate(toHijriDate(now));
+    setHijriDate(toHijriDate(now, hijriOffset));
     setUserCoords({ lat, lon });
 
     const nearMosqueCheck = checkNearMosque(lat, lon, masjidList);
@@ -590,11 +591,11 @@ export default function PrayerScreen() {
     } else {
       const tomorrow = new Date(now);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      const tomorrowPrayers = getPrayerTimes(lat, lon, tomorrow, calcMethod);
+      const tomorrowPrayers = getPrayerTimes(lat, lon, tomorrow, calcMethod, isHanafi);
       setNextPrayer(tomorrowPrayers[0]);
       setCountdown(getCountdown(tomorrowPrayers[0].time, now));
     }
-  }, [calcMethod, masjidList]);
+  }, [calcMethod, masjidList, asrCalc, hijriOffset]);
 
   const loadPrayerData = useCallback(async () => {
     try {
@@ -778,7 +779,7 @@ export default function PrayerScreen() {
 
       const tomorrow = new Date(now);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      const tomorrowPrayers = getPrayerTimes(lat, lon, tomorrow, calcMethod).filter(p => p.name !== "sunrise");
+      const tomorrowPrayers = getPrayerTimes(lat, lon, tomorrow, calcMethod, asrCalc === "hanafi").filter(p => p.name !== "sunrise");
 
       const allPrayers = [...todayPrayers, ...tomorrowPrayers];
 

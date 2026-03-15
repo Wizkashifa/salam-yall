@@ -3,6 +3,7 @@ import {
   CalculationMethod,
   Coordinates,
   SunnahTimes,
+  Madhab,
 } from "adhan";
 
 export type PrayerName = "fajr" | "sunrise" | "dhuhr" | "asr" | "maghrib" | "isha";
@@ -47,9 +48,12 @@ function getCalcParams(method: CalcMethodKey) {
   return CalculationMethod[method]();
 }
 
-export function getPrayerTimes(latitude: number, longitude: number, date: Date, method: CalcMethodKey = "NorthAmerica"): PrayerTimeEntry[] {
+export function getPrayerTimes(latitude: number, longitude: number, date: Date, method: CalcMethodKey = "NorthAmerica", asrHanafi: boolean = false): PrayerTimeEntry[] {
   const coordinates = new Coordinates(latitude, longitude);
   const params = getCalcParams(method);
+  if (asrHanafi) {
+    params.madhab = Madhab.Hanafi;
+  }
   const prayerTimes = new PrayerTimes(coordinates, date, params);
 
   return [
@@ -87,14 +91,15 @@ export function formatTime(date: Date): string {
   });
 }
 
-export function toHijriDate(date: Date): string {
+export function toHijriDate(date: Date, offsetDays: number = 0): string {
   try {
+    const d = offsetDays !== 0 ? new Date(date.getTime() + offsetDays * 86400000) : date;
     const formatter = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura", {
       day: "numeric",
       month: "long",
       year: "numeric",
     });
-    return formatter.format(date);
+    return formatter.format(d);
   } catch {
     return "";
   }

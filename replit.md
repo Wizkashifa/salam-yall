@@ -16,7 +16,7 @@ The application follows a client-server architecture:
 - **Routing:** Expo Router with file-based routing and a 5-tab layout: Halal Eats, Events, Home, Directory, and More.
 - **State Management:** React Query for server-side data fetching and caching, `useState` for local component state, and `AsyncStorage` for persistent user preferences.
 - **Theming:** A `ThemeProvider` context manages dark, light, system, and a special Ramadan mode, allowing user overrides. Color palettes are defined with a rich gold and elegant green, which shifts to purple during Ramadan mode.
-- **Settings:** A `SettingsProvider` context manages global settings like prayer calculation methods, notification preferences, and drawer state.
+- **Settings:** A `SettingsProvider` context manages global settings like prayer calculation methods, notification preferences, Hijri date offset, Asr madhab (standard/Hanafi), and drawer state.
 - **UI/UX:** Features glass-effect cards, skeleton loading for improved user experience, and a consistent gradient header design across screens.
 - **Components:** Includes a dynamic `TickerBanner` for community announcements and an `AppDrawer` for settings, masjid directory, and feedback.
 - **Onboarding:** A 5-screen onboarding flow guides new users through initial setup (location, notifications, prayer tracker intro, preferred masjid).

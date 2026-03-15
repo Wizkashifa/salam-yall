@@ -4,6 +4,8 @@ import { CALC_METHOD_LABELS, type CalcMethodKey } from "@/lib/prayer-utils";
 
 const VALID_METHODS = Object.keys(CALC_METHOD_LABELS) as CalcMethodKey[];
 
+export type AsrCalc = "standard" | "hanafi";
+
 interface SettingsContextValue {
   calcMethod: CalcMethodKey;
   setCalcMethod: (method: CalcMethodKey) => void;
@@ -11,6 +13,10 @@ interface SettingsContextValue {
   setNotificationsEnabled: (enabled: boolean) => void;
   preferredMasjid: string | null;
   setPreferredMasjid: (name: string | null) => void;
+  hijriOffset: number;
+  setHijriOffset: (offset: number) => void;
+  asrCalc: AsrCalc;
+  setAsrCalc: (calc: AsrCalc) => void;
   menuOpen: boolean;
   openMenu: () => void;
   openMenuToSection: (section: string) => void;
@@ -25,12 +31,16 @@ interface SettingsContextValue {
 const CALC_METHOD_KEY = "prayer_calc_method";
 const NOTIF_PREF_KEY = "prayer_notifications_enabled";
 const PREFERRED_MASJID_KEY = "preferred_masjid";
+const HIJRI_OFFSET_KEY = "hijri_offset";
+const ASR_CALC_KEY = "asr_calc";
 const SettingsContext = createContext<SettingsContextValue | null>(null);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [calcMethod, setCalcMethodState] = useState<CalcMethodKey>("NorthAmerica");
   const [notificationsEnabled, setNotificationsEnabledState] = useState(false);
   const [preferredMasjid, setPreferredMasjidState] = useState<string | null>(null);
+  const [hijriOffset, setHijriOffsetState] = useState(0);
+  const [asrCalc, setAsrCalcState] = useState<AsrCalc>("standard");
   const [menuOpen, setMenuOpen] = useState(false);
   const [pendingDrawerSection, setPendingDrawerSection] = useState<string | null>(null);
   const [pendingSettingsSection, setPendingSettingsSectionState] = useState<string | null>(null);
@@ -40,12 +50,19 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       AsyncStorage.getItem(CALC_METHOD_KEY),
       AsyncStorage.getItem(NOTIF_PREF_KEY),
       AsyncStorage.getItem(PREFERRED_MASJID_KEY),
-    ]).then(([method, notif, masjid]) => {
+      AsyncStorage.getItem(HIJRI_OFFSET_KEY),
+      AsyncStorage.getItem(ASR_CALC_KEY),
+    ]).then(([method, notif, masjid, offset, asr]) => {
       if (method && VALID_METHODS.includes(method as CalcMethodKey)) {
         setCalcMethodState(method as CalcMethodKey);
       }
       if (notif === "true") setNotificationsEnabledState(true);
       if (masjid) setPreferredMasjidState(masjid);
+      if (offset) {
+        const n = parseInt(offset, 10);
+        if (n === -1 || n === 0 || n === 1) setHijriOffsetState(n);
+      }
+      if (asr === "hanafi") setAsrCalcState("hanafi");
     });
   }, []);
 
@@ -66,6 +83,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     } else {
       AsyncStorage.removeItem(PREFERRED_MASJID_KEY);
     }
+  }, []);
+
+  const setHijriOffset = useCallback((offset: number) => {
+    setHijriOffsetState(offset);
+    AsyncStorage.setItem(HIJRI_OFFSET_KEY, String(offset));
+  }, []);
+
+  const setAsrCalc = useCallback((calc: AsrCalc) => {
+    setAsrCalcState(calc);
+    AsyncStorage.setItem(ASR_CALC_KEY, calc);
   }, []);
 
   const openMenu = useCallback(() => setMenuOpen(true), []);
@@ -97,6 +124,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setNotificationsEnabled,
       preferredMasjid,
       setPreferredMasjid,
+      hijriOffset,
+      setHijriOffset,
+      asrCalc,
+      setAsrCalc,
       menuOpen,
       openMenu,
       openMenuToSection,
