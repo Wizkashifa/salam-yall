@@ -1155,6 +1155,27 @@ export default function PrayerScreen() {
           <Text style={[styles.searchPlaceholder, { color: colors.textTertiary }]}>Search events, restaurants, businesses...</Text>
         </Pressable>
 
+        <View style={styles.quickActionsRow}>
+          <Pressable
+            onPress={() => { setPendingSettingsSection("prayerTracker"); router.push("/(tabs)/settings"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+            style={({ pressed }) => [styles.quickActionChip, { backgroundColor: colors.surface, borderColor: colors.border }, pressed && { opacity: 0.7 }]}
+          >
+            <Ionicons name="calendar" size={15} color={colors.emerald} />
+            <Text style={[styles.quickActionLabel, { color: colors.text }]}>Prayer Tracker</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => { setPendingSettingsSection("dhikrCounter"); router.push("/(tabs)/settings"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+            style={({ pressed }) => [styles.quickActionChip, { backgroundColor: colors.surface, borderColor: colors.border }, pressed && { opacity: 0.7 }]}
+          >
+            <MaterialCommunityIcons name="counter" size={15} color={colors.emerald} />
+            <Text style={[styles.quickActionLabel, { color: colors.text }]}>Dhikr</Text>
+          </Pressable>
+          <View style={[styles.quickActionChip, { backgroundColor: colors.surface, borderColor: colors.border, opacity: 0.45 }]}>
+            <Ionicons name="sunny-outline" size={15} color={colors.emerald} />
+            <Text style={[styles.quickActionLabel, { color: colors.text }]}>Adhkar</Text>
+          </View>
+        </View>
+
         {locationPermission === false ? (
           <Pressable
             style={[styles.permissionBanner, { backgroundColor: colors.bannerBg }]}
@@ -1186,48 +1207,6 @@ export default function PrayerScreen() {
             </Text>
         </Pressable>
 
-        <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
-          <View style={styles.sectionCardHeader}>
-            <Text style={[styles.sectionCardTitle, { color: colors.text }]}>Worship</Text>
-          </View>
-          <Pressable
-            onPress={() => { setPendingSettingsSection("prayerTracker"); router.push("/(tabs)/settings"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-            style={({ pressed }) => [styles.worshipRow, pressed && { opacity: 0.7 }]}
-          >
-            <View style={[styles.worshipIcon, { backgroundColor: colors.prayerIconBg }]}>
-              <Ionicons name="calendar" size={16} color={colors.emerald} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.worshipLabel, { color: colors.text }]}>Prayer Tracker</Text>
-              <Text style={[styles.worshipSub, { color: colors.textSecondary }]}>Track & view prayer history</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
-          </Pressable>
-          <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: colors.borderLight, marginLeft: 50 }} />
-          <Pressable
-            onPress={() => { setPendingSettingsSection("dhikrCounter"); router.push("/(tabs)/settings"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-            style={({ pressed }) => [styles.worshipRow, pressed && { opacity: 0.7 }]}
-          >
-            <View style={[styles.worshipIcon, { backgroundColor: colors.prayerIconBg }]}>
-              <MaterialCommunityIcons name="counter" size={16} color={colors.emerald} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.worshipLabel, { color: colors.text }]}>Dhikr Counter</Text>
-              <Text style={[styles.worshipSub, { color: colors.textSecondary }]}>Daily remembrance tracker</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
-          </Pressable>
-          <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: colors.borderLight, marginLeft: 50 }} />
-          <View style={[styles.worshipRow, { opacity: 0.45 }]}>
-            <View style={[styles.worshipIcon, { backgroundColor: colors.prayerIconBg }]}>
-              <Ionicons name="sunny-outline" size={16} color={colors.emerald} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.worshipLabel, { color: colors.text }]}>Morning & Evening Adhkar</Text>
-              <Text style={[styles.worshipSub, { color: colors.gold }]}>Coming Soon</Text>
-            </View>
-          </View>
-        </View>
 
         {masjidsExpanded ? (
           <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
@@ -1961,26 +1940,23 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: "Inter_400Regular",
   },
-  worshipRow: {
+  quickActionsRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 6,
+  },
+  quickActionChip: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
-    gap: 12,
-  },
-  worshipIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
     justifyContent: "center",
-    alignItems: "center",
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
   },
-  worshipLabel: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-  },
-  worshipSub: {
+  quickActionLabel: {
     fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    marginTop: 1,
+    fontFamily: "Inter_600SemiBold",
   },
 });
