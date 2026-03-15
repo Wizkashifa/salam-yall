@@ -41,6 +41,7 @@ import { MasjidMap } from "@/components/MasjidMap";
 import { computeBadges, BADGES, type BadgeState } from "@/lib/prayer-badges";
 import ViewShot, { captureRef } from "react-native-view-shot";
 import { useRef } from "react";
+import { QuranReader } from "@/components/QuranReader";
 
 interface CalendarEvent {
   id: string;
@@ -55,7 +56,7 @@ interface CalendarEvent {
   registrationUrl: string;
 }
 
-type SettingsSection = "main" | "calcMethod" | "masjids" | "masjidDetail" | "feedback" | "prayerTracker" | "janazaHistory" | "profile" | "dhikrCounter" | "athanAlerts";
+type SettingsSection = "main" | "calcMethod" | "masjids" | "masjidDetail" | "feedback" | "prayerTracker" | "janazaHistory" | "profile" | "dhikrCounter" | "athanAlerts" | "quranReader";
 type TrackerTab = "calendar" | "badges";
 
 export default function SettingsScreen() {
@@ -402,6 +403,20 @@ export default function SettingsScreen() {
         <View style={{ flex: 1 }}>
           <Text style={[styles.menuLabel, { color: colors.text }]}>Dhikr Counter</Text>
           <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>Track your daily remembrance</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+      </Pressable>
+
+      <Pressable
+        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
+        onPress={() => { setSection("quranReader"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+      >
+        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
+          <Ionicons name="book-outline" size={20} color={colors.emerald} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.menuLabel, { color: colors.text }]}>Quran</Text>
+          <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>Read, search & track daily reading</Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
       </Pressable>
@@ -1688,38 +1703,55 @@ export default function SettingsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <GlassHeader onHeaderHeight={setHeaderHeight}>
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14 }}>
-          <View>
-            <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>More</Text>
-            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
-              Customize your experience
-            </Text>
+        {section === "quranReader" ? (
+          <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: 10, paddingBottom: 8 }}>
+            <Pressable onPress={() => setSection("main")} style={{ marginRight: 8 }}>
+              <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
+            </Pressable>
+            <Text style={{ fontFamily: "Inter_700Bold", fontSize: 18, color: "#FFFFFF" }}>Quran</Text>
           </View>
-          <Image
-            source={require("@/assets/images/splash-logo.png")}
-            style={{ width: 40, height: 40, borderRadius: 10, opacity: 0.9 }}
-            resizeMode="contain"
-          />
-        </View>
-        <TickerBanner />
+        ) : (
+          <>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14 }}>
+              <View>
+                <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>More</Text>
+                <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
+                  Customize your experience
+                </Text>
+              </View>
+              <Image
+                source={require("@/assets/images/splash-logo.png")}
+                style={{ width: 40, height: 40, borderRadius: 10, opacity: 0.9 }}
+                resizeMode="contain"
+              />
+            </View>
+            <TickerBanner />
+          </>
+        )}
       </GlassHeader>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 20, paddingTop: headerHeight + 12, paddingBottom: Platform.OS === "web" ? 34 : 100 }}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {section === "main" && renderMain()}
-        {section === "athanAlerts" && renderAthanAlerts()}
-        {section === "calcMethod" && renderCalcMethod()}
-        {section === "masjids" && renderMasjids()}
-        {section === "masjidDetail" && renderMasjidDetail()}
-        {section === "feedback" && renderFeedback()}
-        {section === "prayerTracker" && renderPrayerTracker()}
-        {section === "dhikrCounter" && renderDhikrCounter()}
-        {section === "janazaHistory" && renderJanazaHistory()}
-        {section === "profile" && renderProfile()}
-      </ScrollView>
+      {section === "quranReader" ? (
+        <View style={{ flex: 1, padding: 20, paddingTop: headerHeight + 12, paddingBottom: Platform.OS === "web" ? 34 : 100 }}>
+          <QuranReader colors={colors} onBack={() => setSection("main")} />
+        </View>
+      ) : (
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: 20, paddingTop: headerHeight + 12, paddingBottom: Platform.OS === "web" ? 34 : 100 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {section === "main" && renderMain()}
+          {section === "athanAlerts" && renderAthanAlerts()}
+          {section === "calcMethod" && renderCalcMethod()}
+          {section === "masjids" && renderMasjids()}
+          {section === "masjidDetail" && renderMasjidDetail()}
+          {section === "feedback" && renderFeedback()}
+          {section === "prayerTracker" && renderPrayerTracker()}
+          {section === "dhikrCounter" && renderDhikrCounter()}
+          {section === "janazaHistory" && renderJanazaHistory()}
+          {section === "profile" && renderProfile()}
+        </ScrollView>
+      )}
     </View>
   );
 }

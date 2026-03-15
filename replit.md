@@ -61,7 +61,8 @@ The application follows a client-server architecture:
 - **Halal Eats:** A directory of halal restaurants with search, filters, and distance sorting. Action buttons: Call → Website → Directions.
 - **Events:** Integrates Google Calendar to display community events with registration options. Also supports admin-published community events (via flyer scanner AI extraction) stored in `community_events` table, merged into the same feed sorted by start time. Flyer images are served via `/api/events/image/:id`.
 - **Directory:** A Muslim business directory with category filtering, Google Places integration, and enhanced submission form. Supports specialty (Healthcare), keyword tags (predefined per category), photo URL, and booking/appointment links. DB columns: `specialty VARCHAR(255)`, `keywords TEXT[]`, `photo_url TEXT`, `booking_url TEXT`.
-- **More Tab:** Access to prayer tracker, masjid directory, janaza history, prayer settings, appearance settings, feedback forms, and Apple Sign-In (mobile only; web shows informational message). Signed-in users see their account card with sign-out option.
+- **More Tab:** Access to prayer tracker, Quran reader, masjid directory, janaza history, prayer settings, appearance settings, feedback forms, and Apple Sign-In (mobile only; web shows informational message). Signed-in users see their account card with sign-out option.
+- **Quran Reader:** Full Quran reader using Quran.com API v4. Browse 114 surahs, read Arabic text with transliteration and multiple selectable English translations (Sahih International, Dr. Mustafa Khattab, Pickthall, Mufti Taqi Usmani, Abdul Haleem). Multi-select dropdown for translations and transliteration toggle. Collapsing banner on scroll (arabic + english inline) with hidden controls for reading focus. Scrolled-past ayahs dim with checkmark to indicate read progress. Khatam tracking with surah-level completion (marks surah read only after scrolling past an ayah). Auto-resume reading position saved to AsyncStorage (`quran_reading_position` key). Full-text search with navigation. Auto-logs daily reading via AsyncStorage (`quran_reading_tracker` key).
 - **Prayer Features:** Configurable prayer calculation methods, local notifications, mosque proximity alerts, and Iqama times from various masjids.
 
 ## External Dependencies
@@ -70,6 +71,7 @@ The application follows a client-server architecture:
 - **Google Calendar API:** For fetching and managing community events.
 - **Open-Meteo API:** For weather data displayed on the home screen.
 - **Google Places API:** Used for enriching business and halal restaurant data (ratings, photos, hours, location).
+- **Quran.com API v4:** For Quran text, translations, transliteration, and search functionality.
 - **Adhan.js:** A JavaScript library for accurate Islamic prayer time calculations.
 - **Expo SDK:** Provides core functionalities like location services (`expo-location`) and notifications (`expo-notifications`).
 - **AsyncStorage:** For client-side persistent storage of user preferences.
