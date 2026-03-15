@@ -526,37 +526,6 @@ export default function SettingsScreen() {
     { value: 1, label: "+1 Day" },
   ] as const;
 
-  const [communityGoalInput, setCommunityGoalInput] = useState("");
-  const [communityGoalLoading, setCommunityGoalLoading] = useState(false);
-  const [communityGoalMessage, setCommunityGoalMessage] = useState("");
-
-  const handleUpdateCommunityGoal = useCallback(async () => {
-    const target = parseInt(communityGoalInput, 10);
-    if (!communityGoalInput.trim() || isNaN(target) || target < 100 || target > 100000) {
-      setCommunityGoalMessage("Must be 100–100,000");
-      return;
-    }
-    setCommunityGoalLoading(true);
-    try {
-      const headers = await getAuthHeaders();
-      const response = await fetch(new URL("/api/community-goal", getApiUrl()).toString(), {
-        method: "PUT",
-        headers: { ...headers, "Content-Type": "application/json" },
-        body: JSON.stringify({ target }),
-      });
-      if (!response.ok) throw new Error("Failed to update");
-      setCommunityGoalMessage("Updated!");
-      setCommunityGoalInput("");
-      setTimeout(() => setCommunityGoalMessage(""), 2000);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (e) {
-      setCommunityGoalMessage("Error updating");
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    } finally {
-      setCommunityGoalLoading(false);
-    }
-  }, [communityGoalInput, getAuthHeaders]);
-
   const renderAthanAlerts = () => (
     <>
       <Pressable
@@ -566,38 +535,6 @@ export default function SettingsScreen() {
         <Ionicons name="chevron-back" size={22} color={colors.text} />
         <Text style={[styles.backLabel, { color: colors.text }]}>Athan & Alerts</Text>
       </Pressable>
-
-      {user && user.email?.includes("@") && (user.email === "admin@salamyall.net" || user.email?.endsWith("@salamyall.net")) ? (
-        <>
-          <Text style={[styles.sectionLabel, { color: colors.textSecondary, marginTop: 4 }]}>ADMIN</Text>
-          <View style={[styles.menuItem, { backgroundColor: colors.surface, borderColor: colors.border, flexDirection: "column", alignItems: "stretch" }]}>
-            <Text style={[styles.menuLabel, { color: colors.text, marginBottom: 8 }]}>Community Monthly Goal</Text>
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              <TextInput
-                style={[styles.textInput, { flex: 1, backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.border }]}
-                placeholder="100–100,000"
-                placeholderTextColor={colors.textTertiary}
-                value={communityGoalInput}
-                onChangeText={setCommunityGoalInput}
-                keyboardType="number-pad"
-                editable={!communityGoalLoading}
-              />
-              <Pressable
-                style={[styles.actionButton, { opacity: communityGoalLoading ? 0.6 : 1 }]}
-                onPress={handleUpdateCommunityGoal}
-                disabled={communityGoalLoading}
-              >
-                <Text style={[styles.actionButtonText, { color: "#fff" }]}>Set</Text>
-              </Pressable>
-            </View>
-            {communityGoalMessage && (
-              <Text style={[styles.settingHint, { color: communityGoalMessage.includes("Error") ? colors.gold : colors.emerald, marginTop: 4 }]}>
-                {communityGoalMessage}
-              </Text>
-            )}
-          </View>
-        </>
-      ) : null}
 
       <Text style={[styles.sectionLabel, { color: colors.textSecondary, marginTop: 4 }]}>NOTIFICATIONS</Text>
 

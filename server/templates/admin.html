@@ -202,6 +202,16 @@
         <button class="btn btn-primary" onclick="addJumuah()" id="addJumuahBtn">Add Schedule</button>
         <div id="jumuahList" style="margin-top:14px;"><div class="loading">Loading...</div></div>
       </div>
+
+      <div class="section">
+        <div class="section-title"><span class="icon">🎯</span> Community Monthly Goal</div>
+        <p style="font-size:12px;color:#9CA3AF;margin-bottom:14px;">Set the target for prayers + Quran readings logged per month. Valid range: 100–100,000.</p>
+        <div class="row">
+          <input type="number" id="communityGoalInput" placeholder="e.g., 10000" min="100" max="100000" step="100">
+          <button class="btn btn-primary" onclick="updateCommunityGoal()" id="updateCommunityGoalBtn">Update Target</button>
+        </div>
+        <div id="communityGoalStatus" style="margin-top:12px;"></div>
+      </div>
     </div>
 
     <div class="tab-content" id="tab-events">
@@ -713,6 +723,34 @@
       document.getElementById('loginWrap').style.display = 'flex';
       document.getElementById('appWrap').style.display = 'none';
       document.getElementById('passwordInput').value = '';
+    }
+
+    async function updateCommunityGoal() {
+      const input = document.getElementById('communityGoalInput');
+      const statusEl = document.getElementById('communityGoalStatus');
+      const target = parseInt(input.value, 10);
+      
+      if (!input.value.trim() || isNaN(target) || target < 100 || target > 100000) {
+        statusEl.textContent = '❌ Must be 100–100,000';
+        statusEl.style.color = '#F87171';
+        return;
+      }
+      
+      try {
+        const res = await fetch('/api/community-goal', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify({ target })
+        });
+        if (!res.ok) throw new Error('Failed');
+        statusEl.textContent = '✓ Goal updated to ' + target.toLocaleString();
+        statusEl.style.color = '#6EE7B7';
+        input.value = '';
+        setTimeout(() => { statusEl.textContent = ''; }, 3000);
+      } catch(e) {
+        statusEl.textContent = '❌ Error updating goal';
+        statusEl.style.color = '#F87171';
+      }
     }
 
     async function loadTickers() {
