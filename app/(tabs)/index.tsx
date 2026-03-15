@@ -47,7 +47,7 @@ import {
   type Masjid,
 } from "@/lib/prayer-utils";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { cyclePrayerStatus, getPrayerLog, getMissedFastCount, logMakeupFast, type DayLog, type PrayerName as TrackerPrayerName } from "@/lib/prayer-tracker";
+import { cyclePrayerStatus, getPrayerLog, getMissedFastCount, logMakeupFast, getPrayerStreak, type DayLog, type PrayerName as TrackerPrayerName } from "@/lib/prayer-tracker";
 import { getDailyVerse, isFriday, type DailyVerse } from "@/lib/daily-content";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 import { expandSearchTerms } from "@/lib/search-synonyms";
@@ -397,6 +397,7 @@ export default function PrayerScreen() {
   const [masjidsExpanded, setMasjidsExpanded] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [todayLog, setTodayLog] = useState<DayLog>({ fajr: 0, dhuhr: 0, asr: 0, maghrib: 0, isha: 0 });
+  const [prayerStreak, setPrayerStreak] = useState(0);
   const [missedFastCount, setMissedFastCount] = useState(0);
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -681,10 +682,12 @@ export default function PrayerScreen() {
   useEffect(() => {
     getPrayerLog(new Date()).then(setTodayLog);
     getMissedFastCount().then(setMissedFastCount);
+    getPrayerStreak().then(setPrayerStreak);
   }, []);
 
   useFocusEffect(useCallback(() => {
     getMissedFastCount().then(setMissedFastCount);
+    getPrayerStreak().then(setPrayerStreak);
   }, []));
 
   const handlePrayerPillPress = useCallback(async (prayerName: string) => {
@@ -692,6 +695,7 @@ export default function PrayerScreen() {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const updated = await cyclePrayerStatus(new Date(), trackerName);
     setTodayLog(updated);
+    getPrayerStreak().then(setPrayerStreak);
     trackEvent("prayer_tracked", { prayer: prayerName, status: updated[trackerName] });
   }, []);
 
@@ -1005,6 +1009,17 @@ export default function PrayerScreen() {
                   </View>
                   <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: isDark ? colors.gold : colors.text, marginTop: 2 }}>{weatherData.temperature}°F</Text>
                 </View>
+              ) : null}
+              {prayerStreak > 0 ? (
+                <Pressable
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/settings"); }}
+                  style={{ alignItems: "center" }}
+                >
+                  <View style={{ height: 30, alignItems: "center", justifyContent: "center" }}>
+                    <MaterialCommunityIcons name="fire" size={26} color={isDark ? "#FF8C42" : "#E86B20"} />
+                  </View>
+                  <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: isDark ? "#FF8C42" : "#E86B20", marginTop: 2 }}>{prayerStreak}d</Text>
+                </Pressable>
               ) : null}
               {missedFastCount > 0 ? (
                 <Pressable

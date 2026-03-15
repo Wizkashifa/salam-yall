@@ -150,4 +150,30 @@ export async function getMonthMissedFasts(year: number, month: number): Promise<
   return new Set(dates.filter(d => d.startsWith(prefix)));
 }
 
+export async function getPrayerStreak(): Promise<number> {
+  const data = await loadAll();
+  let streak = 0;
+  const today = new Date();
+  const d = new Date(today);
+  d.setDate(d.getDate() - 1);
+
+  while (true) {
+    const key = formatDateKey(d);
+    const log = data[key];
+    if (!log) break;
+    const allPrayed = log.fajr >= 1 && log.dhuhr >= 1 && log.asr >= 1 && log.maghrib >= 1 && log.isha >= 1;
+    if (!allPrayed) break;
+    streak++;
+    d.setDate(d.getDate() - 1);
+  }
+
+  const todayLog = data[formatDateKey(today)];
+  if (todayLog) {
+    const allToday = todayLog.fajr >= 1 && todayLog.dhuhr >= 1 && todayLog.asr >= 1 && todayLog.maghrib >= 1 && todayLog.isha >= 1;
+    if (allToday) streak++;
+  }
+
+  return streak;
+}
+
 export { formatDateKey };

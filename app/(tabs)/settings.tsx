@@ -514,6 +514,17 @@ export default function SettingsScreen() {
           </View>
           <Ionicons name="open-outline" size={14} color={colors.textSecondary} />
         </Pressable>
+        <View style={[styles.attributionDivider, { backgroundColor: colors.divider }]} />
+        <Pressable style={styles.attributionRow} onPress={() => Linking.openURL("https://github.com/batoulapps/adhan-js")}>
+          <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg, marginRight: 0 }]}>
+            <MaterialCommunityIcons name="mosque" size={18} color={colors.gold} />
+          </View>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={[styles.attributionName, { color: colors.text }]}>Adhan by Batoul Apps</Text>
+            <Text style={[styles.attributionDesc, { color: colors.textSecondary }]}>Prayer time calculation library</Text>
+          </View>
+          <Ionicons name="open-outline" size={14} color={colors.textSecondary} />
+        </Pressable>
       </View>
 
       <Text style={[styles.versionText, { color: colors.textTertiary }]}>Salam Y'all v1.1</Text>
