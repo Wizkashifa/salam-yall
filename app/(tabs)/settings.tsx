@@ -633,28 +633,26 @@ export default function SettingsScreen() {
         <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
       </Pressable>
 
-      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>ASR CALCULATION</Text>
-      <Text style={[styles.settingHint, { color: colors.textTertiary }]}>
-        Hanafi madhab uses a later Asr time. The standard method is used by Shafi'i, Maliki, and Hanbali madhabs.
-      </Text>
+      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>SELECT A MADHAB</Text>
 
-      <View style={[styles.themeRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        {([
-          { key: "standard" as const, label: "Standard", sub: "Shafi'i / Maliki / Hanbali" },
-          { key: "hanafi" as const, label: "Hanafi", sub: "" },
-        ]).map(({ key, label }) => {
-          const isActive = asrCalc === key;
-          return (
-            <Pressable
-              key={key}
-              style={[styles.themeOption, isActive && { backgroundColor: colors.emerald }, { flex: 1 }]}
-              onPress={() => { setAsrCalc(key); trackEvent("asr_calc_changed", { method: key }); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-            >
-              <Text style={[styles.themeOptionText, { color: isActive ? "#fff" : colors.text }]}>{label}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      {([
+        { key: "standard" as const, label: "Shafi, Maliki, Hanbali" },
+        { key: "hanafi" as const, label: "Hanafi" },
+      ]).map(({ key, label }, idx) => {
+        const isActive = asrCalc === key;
+        return (
+          <Pressable
+            key={key}
+            style={[styles.calcRow, { backgroundColor: isActive ? (isDark ? colors.actionButtonBg : colors.prayerIconBg) : colors.surface, borderColor: colors.border }]}
+            onPress={() => { setAsrCalc(key); trackEvent("asr_calc_changed", { method: key }); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+          >
+            <Text style={[styles.calcText, { color: isActive ? colors.emerald : colors.text }]}>
+              {label}
+            </Text>
+            {isActive ? <Ionicons name="checkmark" size={20} color={colors.emerald} /> : null}
+          </Pressable>
+        );
+      })}
 
       <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>HIJRI DATE OFFSET</Text>
       <Text style={[styles.settingHint, { color: colors.textTertiary }]}>
