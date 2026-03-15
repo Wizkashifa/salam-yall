@@ -16,24 +16,19 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import * as Notifications from "expo-notifications";
 import { useTheme } from "@/lib/theme-context";
 import { useSettings } from "@/lib/settings-context";
-import {
-  CALC_METHOD_LABELS,
-  type CalcMethodKey,
-} from "@/lib/prayer-utils";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const DRAWER_WIDTH = Math.min(SCREEN_WIDTH * 0.85, 340);
 const USE_NATIVE_DRIVER = Platform.OS !== "web";
 
-type DrawerSection = "main" | "feedback" | "calcMethod";
+type DrawerSection = "main" | "feedback";
 
 export function AppDrawer() {
   const insets = useSafeAreaInsets();
   const { colors, isDark, themeMode, setThemeMode, ramadanMode, setRamadanMode } = useTheme();
-  const { calcMethod, setCalcMethod, notificationsEnabled, setNotificationsEnabled, menuOpen, closeMenu, consumePendingDrawerSection } = useSettings();
+  const { menuOpen, closeMenu, consumePendingDrawerSection } = useSettings();
   const [section, setSection] = useState<DrawerSection>("main");
   const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
@@ -60,26 +55,6 @@ export function AppDrawer() {
     }
   }, [menuOpen, slideAnim, overlayAnim]);
 
-
-
-  const handleToggleNotifications = useCallback(async () => {
-    if (!notificationsEnabled) {
-      try {
-        const { status } = await Notifications.requestPermissionsAsync();
-        if (status !== "granted") {
-          Alert.alert("Notifications Permission", "Please enable notifications in your device settings.");
-          return;
-        }
-        setNotificationsEnabled(true);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } catch {}
-    } else {
-      setNotificationsEnabled(false);
-      Notifications.cancelAllScheduledNotificationsAsync();
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-  }, [notificationsEnabled, setNotificationsEnabled]);
-
   const handleSubmitFeedback = useCallback(() => {
     if (!feedbackText.trim()) {
       Alert.alert("Required", "Please describe your feedback");
@@ -102,32 +77,6 @@ export function AppDrawer() {
   const renderMainMenu = () => (
     <>
       <Text style={[styles.drawerTitle, { color: colors.text }]}>Salam Y'all</Text>
-
-      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>SETTINGS</Text>
-
-      <Pressable
-        style={[styles.settingRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
-        onPress={() => { setSection("calcMethod"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-      >
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.settingTitle, { color: colors.text }]}>Prayer Calculation</Text>
-          <Text style={[styles.settingValue, { color: colors.gold }]}>{CALC_METHOD_LABELS[calcMethod]}</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-      </Pressable>
-
-      <Pressable
-        style={[styles.settingRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
-        onPress={handleToggleNotifications}
-      >
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.settingTitle, { color: colors.text }]}>Adhan Alerts</Text>
-          <Text style={[styles.settingSubtext, { color: colors.textSecondary }]}>Get notified at prayer times</Text>
-        </View>
-        <View style={[styles.toggle, notificationsEnabled ? { backgroundColor: colors.emerald } : { backgroundColor: colors.border }]}>
-          <View style={[styles.toggleKnob, notificationsEnabled ? { transform: [{ translateX: 16 }] } : {}]} />
-        </View>
-      </Pressable>
 
       <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>APPEARANCE</Text>
       <View style={[styles.themeRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -237,34 +186,6 @@ export function AppDrawer() {
     </>
   );
 
-  const renderCalcMethodPicker = () => (
-    <>
-      <Pressable
-        style={styles.backRow}
-        onPress={() => { setSection("main"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-      >
-        <Ionicons name="arrow-back" size={20} color={colors.text} />
-        <Text style={[styles.backLabel, { color: colors.text }]}>Calculation Method</Text>
-      </Pressable>
-
-      {(Object.keys(CALC_METHOD_LABELS) as CalcMethodKey[]).map((key) => {
-        const isActive = calcMethod === key;
-        return (
-          <Pressable
-            key={key}
-            style={[styles.calcMethodRow, { backgroundColor: isActive ? colors.prayerIconBg : "transparent" }]}
-            onPress={() => { setCalcMethod(key); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSection("main"); }}
-          >
-            <Text style={[styles.calcMethodText, { color: isActive ? colors.emerald : colors.text }]}>
-              {CALC_METHOD_LABELS[key]}
-            </Text>
-            {isActive ? <Ionicons name="checkmark" size={20} color={colors.emerald} /> : null}
-          </Pressable>
-        );
-      })}
-    </>
-  );
-
   const renderFeedback = () => (
     <>
       <Pressable
@@ -355,7 +276,6 @@ export function AppDrawer() {
             keyboardShouldPersistTaps="handled"
           >
             {section === "main" && renderMainMenu()}
-            {section === "calcMethod" && renderCalcMethodPicker()}
             {section === "feedback" && renderFeedback()}
           </ScrollView>
         </Animated.View>
@@ -433,42 +353,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginTop: 16,
     marginBottom: 8,
-  },
-  settingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 8,
-  },
-  settingTitle: {
-    fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
-  },
-  settingValue: {
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
-    marginTop: 2,
-  },
-  settingSubtext: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    marginTop: 2,
-  },
-  calcMethodRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    marginBottom: 2,
-  },
-  calcMethodText: {
-    fontSize: 14,
-    fontFamily: "Inter_500Medium",
-    flex: 1,
   },
   toggle: {
     width: 44,
