@@ -12,6 +12,9 @@ import {
   Share,
   LayoutAnimation,
   UIManager,
+  PanResponder,
+  Animated,
+  Dimensions,
 } from "react-native";
 
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -72,10 +75,58 @@ export default function SettingsScreen() {
   const { user, signInWithApple, devSignIn, signOut, isLoading: authLoading, getAuthHeaders } = useAuth();
   const qc = useQueryClient();
   const [section, setSectionRaw] = useState<SettingsSection>("main");
+  const sectionRef = useRef<SettingsSection>("main");
   const setSection = (s: SettingsSection) => {
+    sectionRef.current = s;
     LayoutAnimation.configureNext(LayoutAnimation.create(250, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity));
     setSectionRaw(s);
   };
+
+  const swipeAnim = useRef(new Animated.Value(0)).current;
+  const screenWidth = Dimensions.get("window").width;
+  const EDGE_WIDTH = 30;
+
+  const swipePanResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        if (Platform.OS !== "ios") return false;
+        if (sectionRef.current === "main") return false;
+        return evt.nativeEvent.pageX < EDGE_WIDTH && gestureState.dx > 10 && Math.abs(gestureState.dy) < Math.abs(gestureState.dx);
+      },
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dx > 0) {
+          swipeAnim.setValue(gestureState.dx);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx > screenWidth * 0.35 || gestureState.vx > 0.5) {
+          Animated.timing(swipeAnim, {
+            toValue: screenWidth,
+            duration: 200,
+            useNativeDriver: true,
+          }).start(() => {
+            swipeAnim.setValue(0);
+            setSection("main");
+          });
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        } else {
+          Animated.spring(swipeAnim, {
+            toValue: 0,
+            useNativeDriver: true,
+            tension: 65,
+            friction: 11,
+          }).start();
+        }
+      },
+      onPanResponderTerminate: () => {
+        Animated.spring(swipeAnim, {
+          toValue: 0,
+          useNativeDriver: true,
+        }).start();
+      },
+    })
+  ).current;
+
   const [growthTab, setGrowthTab] = useState<"statistics" | "badges">("statistics");
   const [selectedMasjid, setSelectedMasjid] = useState<Masjid | null>(null);
   const [feedbackType, setFeedbackType] = useState<"bug" | "feature">("feature");
@@ -1859,30 +1910,35 @@ export default function SettingsScreen() {
           </>
         )}
       </GlassHeader>
-      {section === "quranReader" ? (
-        <View style={{ flex: 1, padding: 20, paddingTop: headerHeight + 12, paddingBottom: Platform.OS === "web" ? 34 : 100 }}>
-          <QuranReader colors={colors} onBack={() => setSection("main")} />
-        </View>
-      ) : (
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ padding: 20, paddingTop: headerHeight + 12, paddingBottom: Platform.OS === "web" ? 34 : 100 }}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {section === "main" && renderMain()}
-          {section === "athanAlerts" && renderAthanAlerts()}
-          {section === "calcMethod" && renderCalcMethod()}
-          {section === "masjids" && renderMasjids()}
-          {section === "masjidDetail" && renderMasjidDetail()}
-          {section === "feedback" && renderFeedback()}
-          {section === "prayerTracker" && renderPrayerTracker()}
-          {section === "dhikrCounter" && renderDhikrCounter()}
-          {section === "janazaHistory" && renderJanazaHistory()}
-          {section === "profile" && renderProfile()}
-          {section === "personalGrowth" && renderPersonalGrowth()}
-        </ScrollView>
-      )}
+      <Animated.View
+        style={{ flex: 1, transform: [{ translateX: section !== "main" ? swipeAnim : 0 }] }}
+        {...(section !== "main" ? swipePanResponder.panHandlers : {})}
+      >
+        {section === "quranReader" ? (
+          <View style={{ flex: 1, padding: 20, paddingTop: headerHeight + 12, paddingBottom: Platform.OS === "web" ? 34 : 100 }}>
+            <QuranReader colors={colors} onBack={() => setSection("main")} />
+          </View>
+        ) : (
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ padding: 20, paddingTop: headerHeight + 12, paddingBottom: Platform.OS === "web" ? 34 : 100 }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {section === "main" && renderMain()}
+            {section === "athanAlerts" && renderAthanAlerts()}
+            {section === "calcMethod" && renderCalcMethod()}
+            {section === "masjids" && renderMasjids()}
+            {section === "masjidDetail" && renderMasjidDetail()}
+            {section === "feedback" && renderFeedback()}
+            {section === "prayerTracker" && renderPrayerTracker()}
+            {section === "dhikrCounter" && renderDhikrCounter()}
+            {section === "janazaHistory" && renderJanazaHistory()}
+            {section === "profile" && renderProfile()}
+            {section === "personalGrowth" && renderPersonalGrowth()}
+          </ScrollView>
+        )}
+      </Animated.View>
     </View>
   );
 }
