@@ -1224,6 +1224,13 @@ export default function PrayerScreen() {
             <Text style={[styles.quickActionLabel, { color: colors.text }]}>Prayer Tracker</Text>
           </Pressable>
           <Pressable
+            onPress={() => { setPendingSettingsSection("quranReader"); router.push("/(tabs)/settings"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+            style={({ pressed }) => [styles.quickActionChip, { backgroundColor: colors.surface, borderColor: colors.border }, pressed && { opacity: 0.7 }]}
+          >
+            <Ionicons name="book" size={15} color={colors.emerald} />
+            <Text style={[styles.quickActionLabel, { color: colors.text }]}>Quran</Text>
+          </Pressable>
+          <Pressable
             onPress={() => { setPendingSettingsSection("dhikrCounter"); router.push("/(tabs)/settings"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
             style={({ pressed }) => [styles.quickActionChip, { backgroundColor: colors.surface, borderColor: colors.border }, pressed && { opacity: 0.7 }]}
           >
