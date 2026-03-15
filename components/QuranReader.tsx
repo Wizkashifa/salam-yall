@@ -616,6 +616,87 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
     );
   }, [colors, showTransliteration, scrollToVerse, readUpToIndex]);
 
+  const bannerHeight = bannerAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 88],
+  });
+
+  const khatamHeight = khatamAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
+  const khatamOpacity = khatamAnim;
+
+  const surahListHeader = useMemo(() => (
+    <>
+      {resumePos && (
+        <Pressable
+          style={[qStyles.resumeCard, { backgroundColor: colors.emerald + "12", borderColor: colors.emerald + "40" }]}
+          onPress={handleResumeReading}
+        >
+          <View style={[qStyles.resumeIcon, { backgroundColor: colors.emerald + "20" }]}>
+            <Ionicons name="bookmark" size={18} color={colors.emerald} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[qStyles.resumeTitle, { color: colors.text }]}>Continue Reading</Text>
+            <Text style={[qStyles.resumeSub, { color: colors.textSecondary }]}>
+              {resumePos.surahName} · Ayah {resumePos.verseNumber} of {resumePos.totalVerses}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.emerald} />
+        </Pressable>
+      )}
+
+      {khatam && (
+        <Animated.View style={{ opacity: khatamOpacity, transform: [{ scaleY: khatamHeight }], overflow: "hidden" }}>
+          <View style={[qStyles.resumeCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <Text style={[qStyles.resumeTitle, { color: colors.text }]}>Khatam Progress</Text>
+                <Text style={{ fontSize: 14, fontFamily: "Inter_700Bold", color: colors.emerald }}>
+                  {Math.round((khatam.completedCount / khatam.totalSurahs) * 100)}%
+                </Text>
+              </View>
+              <Text style={[qStyles.resumeSub, { color: colors.textSecondary }]}>
+                {khatam.completedCount} of {khatam.totalSurahs} surahs read
+                {khatam.completedKhatams > 0 ? ` · ${khatam.completedKhatams} completed` : ""}
+              </Text>
+              <View style={[qStyles.progressTrack, { backgroundColor: colors.border, marginTop: 8 }]}>
+                <View
+                  style={[
+                    qStyles.progressFill,
+                    { backgroundColor: colors.emerald, width: `${Math.round((khatam.completedCount / khatam.totalSurahs) * 100)}%` },
+                  ]}
+                />
+              </View>
+              {khatam.completedCount > 0 && (
+                <Pressable
+                  onPress={() => {
+                    Alert.alert(
+                      "Reset Progress",
+                      "Start a new khatam? Your completed khatam count will be preserved.",
+                      [
+                        { text: "Cancel", style: "cancel" },
+                        {
+                          text: "Reset",
+                          style: "destructive",
+                          onPress: () => {
+                            resetKhatam().then(() => getKhatamProgress().then(setKhatam)).catch(() => {});
+                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                          },
+                        },
+                      ]
+                    );
+                  }}
+                >
+                  <Text style={[qStyles.khatamReset, { color: colors.textTertiary }]}>Reset progress</Text>
+                </Pressable>
+              )}
+            </View>
+          </View>
+        </Animated.View>
+      )}
+
+    </>
+  ), [resumePos, khatam, colors, khatamOpacity, khatamHeight, handleResumeReading]);
+
   if (qSection === "search") {
     return (
       <View style={{ flex: 1 }}>
@@ -692,11 +773,6 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
       </View>
     );
   }
-
-  const bannerHeight = bannerAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 88],
-  });
 
   if (qSection === "verseView" && selectedSurah) {
     return (
@@ -835,82 +911,6 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
       </View>
     );
   }
-
-  const khatamHeight = khatamAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
-  const khatamOpacity = khatamAnim;
-
-  const surahListHeader = useMemo(() => (
-    <>
-      {resumePos && (
-        <Pressable
-          style={[qStyles.resumeCard, { backgroundColor: colors.emerald + "12", borderColor: colors.emerald + "40" }]}
-          onPress={handleResumeReading}
-        >
-          <View style={[qStyles.resumeIcon, { backgroundColor: colors.emerald + "20" }]}>
-            <Ionicons name="bookmark" size={18} color={colors.emerald} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[qStyles.resumeTitle, { color: colors.text }]}>Continue Reading</Text>
-            <Text style={[qStyles.resumeSub, { color: colors.textSecondary }]}>
-              {resumePos.surahName} · Ayah {resumePos.verseNumber} of {resumePos.totalVerses}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.emerald} />
-        </Pressable>
-      )}
-
-      {khatam && (
-        <Animated.View style={{ opacity: khatamOpacity, transform: [{ scaleY: khatamHeight }], overflow: "hidden" }}>
-          <View style={[qStyles.resumeCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <Text style={[qStyles.resumeTitle, { color: colors.text }]}>Khatam Progress</Text>
-                <Text style={{ fontSize: 14, fontFamily: "Inter_700Bold", color: colors.emerald }}>
-                  {Math.round((khatam.completedCount / khatam.totalSurahs) * 100)}%
-                </Text>
-              </View>
-              <Text style={[qStyles.resumeSub, { color: colors.textSecondary }]}>
-                {khatam.completedCount} of {khatam.totalSurahs} surahs read
-                {khatam.completedKhatams > 0 ? ` · ${khatam.completedKhatams} completed` : ""}
-              </Text>
-              <View style={[qStyles.progressTrack, { backgroundColor: colors.border, marginTop: 8 }]}>
-                <View
-                  style={[
-                    qStyles.progressFill,
-                    { backgroundColor: colors.emerald, width: `${Math.round((khatam.completedCount / khatam.totalSurahs) * 100)}%` },
-                  ]}
-                />
-              </View>
-              {khatam.completedCount > 0 && (
-                <Pressable
-                  onPress={() => {
-                    Alert.alert(
-                      "Reset Progress",
-                      "Start a new khatam? Your completed khatam count will be preserved.",
-                      [
-                        { text: "Cancel", style: "cancel" },
-                        {
-                          text: "Reset",
-                          style: "destructive",
-                          onPress: () => {
-                            resetKhatam().then(() => getKhatamProgress().then(setKhatam)).catch(() => {});
-                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                          },
-                        },
-                      ]
-                    );
-                  }}
-                >
-                  <Text style={[qStyles.khatamReset, { color: colors.textTertiary }]}>Reset progress</Text>
-                </Pressable>
-              )}
-            </View>
-          </View>
-        </Animated.View>
-      )}
-
-    </>
-  ), [resumePos, khatam, colors, khatamOpacity, khatamHeight, handleResumeReading]);
 
   return (
     <View style={{ flex: 1 }}>
