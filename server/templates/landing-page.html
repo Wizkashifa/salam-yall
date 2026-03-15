@@ -150,7 +150,7 @@
 
       /* FEATURES */
       .section {
-        padding: 64px 24px;
+        padding: 48px 24px;
         max-width: 1100px;
         margin: 0 auto;
       }
@@ -176,7 +176,7 @@
         color: var(--text-secondary);
         text-align: center;
         max-width: 600px;
-        margin: 0 auto 40px;
+        margin: 0 auto 32px;
       }
       .features-grid {
         display: grid;
@@ -226,46 +226,10 @@
         color: var(--gold);
       }
 
-      /* WORSHIP SECTION */
-      .worship-section {
-        padding: 64px 24px;
-        max-width: 1100px;
-        margin: 0 auto;
-      }
-      .worship-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 20px;
-      }
-      .worship-card {
-        padding: 28px 22px;
-        background: var(--card-bg);
-        border: 1px solid var(--card-border);
-        border-radius: 20px;
-        text-align: center;
-        transition: all 0.25s;
-      }
-      .worship-card:hover { border-color: rgba(212,168,67,0.3); transform: translateY(-4px); }
-      .worship-card .worship-emoji {
-        font-size: 36px;
-        margin-bottom: 14px;
-      }
-      .worship-card h3 {
-        font-size: 17px;
-        font-weight: 600;
-        color: var(--text);
-        margin-bottom: 6px;
-      }
-      .worship-card p {
-        font-size: 13px;
-        color: var(--text-secondary);
-        line-height: 1.5;
-      }
-
       /* COMMUNITY STATS */
       .stats-section {
         background: rgba(0,0,0,0.2);
-        padding: 56px 24px;
+        padding: 40px 24px;
         border-top: 1px solid rgba(27,107,74,0.2);
         border-bottom: 1px solid rgba(27,107,74,0.2);
       }
@@ -292,7 +256,7 @@
 
       /* RAMADAN */
       .ramadan-banner {
-        padding: 48px 24px;
+        padding: 36px 24px;
         text-align: center;
         position: relative;
         overflow: hidden;
@@ -345,7 +309,7 @@
 
       /* FOR THE COMMUNITY */
       .community-section {
-        padding: 64px 24px;
+        padding: 40px 24px;
         text-align: center;
       }
       .community-badges {
@@ -368,7 +332,7 @@
 
       /* CTA */
       .cta-section {
-        padding: 64px 24px;
+        padding: 40px 24px;
         text-align: center;
         position: relative;
       }
@@ -469,13 +433,11 @@
         .stat-item h3 { font-size: 30px; }
         .cta-title { font-size: 26px; }
         .features-grid { grid-template-columns: 1fr; }
-        .worship-grid { grid-template-columns: repeat(2, 1fr); }
-        .section { padding: 48px 20px; }
-        .worship-section { padding: 48px 20px; }
-        .stats-section { padding: 40px 20px; }
-        .community-section { padding: 48px 20px; }
-        .cta-section { padding: 48px 20px; }
-        .ramadan-banner { padding: 36px 20px; }
+        .section { padding: 36px 20px; }
+        .stats-section { padding: 32px 20px; }
+        .community-section { padding: 36px 20px; }
+        .cta-section { padding: 36px 20px; }
+        .ramadan-banner { padding: 28px 20px; }
         .ramadan-banner h2 { font-size: 24px; }
       }
 
@@ -494,7 +456,6 @@
                       radial-gradient(ellipse at 80% 70%, rgba(212,168,67,0.04) 0%, transparent 50%);
         }
         .feature-card:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.06); }
-        .worship-card:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.06); }
         .feature-tag { background: rgba(212,168,67,0.12); }
         .stats-section {
           background: linear-gradient(135deg, #0d2b1a 0%, #091a10 100%);
@@ -542,52 +503,33 @@
         <div class="feature-card">
           <div class="feature-icon">📅</div>
           <h3>Community Events</h3>
-          <p>Browse upcoming events from masjids and organizations with an interactive calendar view. Never miss a gathering.</p>
+          <p>Browse upcoming events with an interactive calendar view. Never miss a gathering.</p>
           <span class="feature-tag">Calendar View</span>
         </div>
         <div class="feature-card">
           <div class="feature-icon">📒</div>
           <h3>Local Directory</h3>
-          <p>Discover Muslim-owned businesses, doctors, lawyers, therapists, and more. Support your community.</p>
+          <p>Discover Muslim-owned businesses, doctors, lawyers, therapists, and more.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📖</div>
+          <h3>Quran Reader</h3>
+          <p>Full Quran with Arabic script, English translation, surah navigation, and verse search.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📿</div>
+          <h3>Dhikr Counter</h3>
+          <p>Digital tasbeeh with haptic feedback. Track your daily dhikr with preset and custom phrases.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">✅</div>
+          <h3>Prayer Tracker</h3>
+          <p>Log your five daily prayers, build a streak, and see your consistency over time.</p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">🧭</div>
           <h3>Qibla Compass</h3>
-          <p>Always know which direction to pray with the built-in Qibla compass, calibrated to your exact location.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">📖</div>
-          <h3>Daily Quran Verse</h3>
-          <p>Start each day with a verse from the Quran — Arabic text with English translation on your home screen.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- WORSHIP TOOLS -->
-    <section class="worship-section">
-      <p class="section-label">Your Worship Companion</p>
-      <h2 class="section-title">Strengthen Your Deen</h2>
-      <p class="section-subtitle">Tools to help you build and maintain your spiritual practice, all in one tab.</p>
-      <div class="worship-grid">
-        <div class="worship-card">
-          <div class="worship-emoji">📖</div>
-          <h3>Quran Reader</h3>
-          <p>Full Quran with Arabic script, English translation, surah navigation, and verse search.</p>
-        </div>
-        <div class="worship-card">
-          <div class="worship-emoji">📿</div>
-          <h3>Dhikr Counter</h3>
-          <p>Digital tasbeeh with haptic feedback. Track your daily dhikr with preset and custom phrases.</p>
-        </div>
-        <div class="worship-card">
-          <div class="worship-emoji">✅</div>
-          <h3>Prayer Tracker</h3>
-          <p>Log your five daily prayers and build a streak. See your weekly and monthly consistency.</p>
-        </div>
-        <div class="worship-card">
-          <div class="worship-emoji">🧭</div>
-          <h3>Qibla & Settings</h3>
-          <p>Qibla compass, calculation method preferences, and prayer time adjustments.</p>
+          <p>Always know which direction to pray, calibrated to your exact location.</p>
         </div>
       </div>
     </section>
