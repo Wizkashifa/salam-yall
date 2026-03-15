@@ -595,7 +595,6 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
           <View style={[qStyles.verseNumBadge, { backgroundColor: colors.prayerIconBg }]}>
             <Text style={[qStyles.verseNumText, { color: colors.emerald }]}>{item.verse_number}</Text>
           </View>
-          <Text style={[qStyles.verseKey, { color: colors.textSecondary }]}>{item.verse_key}</Text>
           {(isRead || isCurrent) && (
             <View style={[qStyles.readDot, { backgroundColor: dotColor }]} />
           )}
@@ -621,8 +620,7 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
     outputRange: [0, 88],
   });
 
-  const khatamHeight = khatamAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
-  const khatamOpacity = khatamAnim;
+  const khatamCardHeight = khatamAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 120] });
 
   const surahListHeader = useMemo(() => (
     <>
@@ -645,7 +643,7 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
       )}
 
       {khatam && (
-        <Animated.View style={{ opacity: khatamOpacity, transform: [{ scaleY: khatamHeight }], overflow: "hidden" }}>
+        <Animated.View style={{ height: khatamCardHeight, overflow: "hidden" }}>
           <View style={[qStyles.resumeCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -695,7 +693,7 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
       )}
 
     </>
-  ), [resumePos, khatam, colors, khatamOpacity, khatamHeight, handleResumeReading]);
+  ), [resumePos, khatam, colors, khatamCardHeight, handleResumeReading]);
 
   if (qSection === "search") {
     return (
