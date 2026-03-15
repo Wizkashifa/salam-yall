@@ -46,7 +46,7 @@ import { computeBadges, BADGES, type BadgeState } from "@/lib/prayer-badges";
 import ViewShot, { captureRef } from "react-native-view-shot";
 import { useRef } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { QuranReader } from "@/components/QuranReader";
+import { QuranReader, type QuranReaderHandle } from "@/components/QuranReader";
 import { getReadingStreak, getReadingDates, getKhatamProgress } from "@/lib/quran-tracker";
 
 interface CalendarEvent {
@@ -85,6 +85,15 @@ export default function SettingsScreen() {
   const swipeAnim = useRef(new Animated.Value(0)).current;
   const screenWidth = Dimensions.get("window").width;
   const EDGE_WIDTH = 30;
+  const quranReaderRef = useRef<QuranReaderHandle>(null);
+
+  const handleSwipeBack = useCallback(() => {
+    if (sectionRef.current === "quranReader" && quranReaderRef.current) {
+      const consumed = quranReaderRef.current.goBack();
+      if (consumed) return;
+    }
+    setSection("main");
+  }, []);
 
   const swipePanResponder = useRef(
     PanResponder.create({
@@ -106,7 +115,7 @@ export default function SettingsScreen() {
             useNativeDriver: true,
           }).start(() => {
             swipeAnim.setValue(0);
-            setSection("main");
+            handleSwipeBack();
           });
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         } else {
@@ -1916,7 +1925,7 @@ export default function SettingsScreen() {
       >
         {section === "quranReader" ? (
           <View style={{ flex: 1, padding: 20, paddingTop: headerHeight + 12, paddingBottom: Platform.OS === "web" ? 34 : 100 }}>
-            <QuranReader colors={colors} onBack={() => setSection("main")} />
+            <QuranReader ref={quranReaderRef} colors={colors} onBack={() => setSection("main")} />
           </View>
         ) : (
           <ScrollView

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef, useImperativeHandle } from "react";
 import {
   StyleSheet,
   Text,
@@ -106,12 +106,16 @@ interface ApiSearchResult {
 
 type QuranSection = "surahList" | "verseView" | "search";
 
+export interface QuranReaderHandle {
+  goBack: () => boolean;
+}
+
 interface QuranReaderProps {
   colors: ThemeColors;
   onBack: () => void;
 }
 
-export function QuranReader({ colors, onBack }: QuranReaderProps) {
+export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>(function QuranReader({ colors, onBack }, ref) {
   const isDark = useColorScheme() === "dark";
   const [qSection, setQSection] = useState<QuranSection>("surahList");
   const [surahs, setSurahs] = useState<Surah[]>([]);
@@ -142,6 +146,20 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
   const lastVisibleVerseRef = useRef<{ key: string; number: number } | null>(null);
   const bannerAnim = useRef(new Animated.Value(1)).current;
   const bannerCollapsedRef = useRef(false);
+  const qSectionRef = useRef<QuranSection>("surahList");
+  const handleBackRef = useRef<() => void>(() => {});
+
+  useEffect(() => { qSectionRef.current = qSection; }, [qSection]);
+
+  useImperativeHandle(ref, () => ({
+    goBack: () => {
+      if (qSectionRef.current === "verseView" || qSectionRef.current === "search") {
+        handleBackRef.current();
+        return true;
+      }
+      return false;
+    },
+  }));
 
   useEffect(() => {
     selectedSurahRef.current = selectedSurah;
@@ -371,6 +389,8 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
     getKhatamProgress().then(setKhatam).catch(() => {});
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }, [saveCurrentPosition, bannerAnim]);
+
+  useEffect(() => { handleBackRef.current = handleBackFromVerses; }, [handleBackFromVerses]);
 
   const handleSearch = useCallback(async () => {
     const q = searchQuery.trim();
@@ -924,7 +944,7 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
       )}
     </View>
   );
-}
+});
 
 const qStyles = StyleSheet.create({
   backRow: {
