@@ -1035,7 +1035,7 @@ export default function PrayerScreen() {
             <View style={styles.silenceAlertContent}>
               <MaterialCommunityIcons name="volume-off" size={16} color={isDark ? "#F87171" : "#DC2626"} />
               <Text style={[styles.silenceAlertText, { color: isDark ? "#F87171" : "#DC2626" }]}>
-                Near {nearMosque.name} — silence your phone
+                Salams, you're near {nearMosque.name}. Please silence your phone.
               </Text>
               <Pressable onPress={dismissSilenceAlert} hitSlop={8}>
                 <Ionicons name="close" size={16} color={isDark ? "#FCA5A5" : "#991B1B"} />
