@@ -549,7 +549,7 @@ async function ensureMasjidsTable(pool: pg.Pool) {
   if (parseInt(rows[0].count) === 0) {
     await pool.query(`
       INSERT INTO masjids (name, latitude, longitude, address, website, match_terms, has_iqama, sort_order) VALUES
-        ('Al-Noor Islamic Center', 35.7636, -78.7443, '1501 Buck Jones Rd, Raleigh, NC 27606', NULL, ARRAY['al-noor', 'alnoor'], true, 1),
+        ('Al-Noor Islamic Center', 35.5843, -78.7706, '6317 Sunset Lake Rd, Fuquay-Varina, NC 27526', NULL, ARRAY['al-noor', 'alnoor', 'sunset lake', 'fuquay'], true, 1),
         ('Islamic Association of Raleigh (Atwater)', 35.7898, -78.6912, '808 Atwater St, Raleigh, NC 27607', 'https://www.raleighmasjid.org', ARRAY['iar', 'islamic association of raleigh', 'atwater'], true, 2),
         ('Islamic Association of Raleigh (Page Rd)', 35.9067, -78.8169, '3104 Page Rd, Morrisville, NC 27560', 'https://www.raleighmasjid.org', ARRAY['iar', 'islamic association of raleigh', 'page rd', 'page road'], true, 3),
         ('Islamic Center of Morrisville', 35.8099, -78.8228, '107 Quail Fields Ct, Morrisville, NC 27560', 'https://www.icmorrisville.org', ARRAY['icm', 'islamic center of morrisville', 'quail fields'], true, 4),
@@ -574,7 +574,7 @@ async function ensureMasjidsTable(pool: pg.Pool) {
     await pool.query(`DELETE FROM masjids WHERE name = 'MCA Noor'`);
     await pool.query(`UPDATE iqama_schedules SET masjid = 'MCA Al-Noor' WHERE masjid = 'MCA Noor'`);
     const masjidUpserts = [
-      { name: 'Al-Noor Islamic Center', lat: 35.7636, lng: -78.7443, addr: '1501 Buck Jones Rd, Raleigh, NC 27606', website: null, terms: ['al-noor', 'alnoor'], iqama: true, sort: 1 },
+      { name: 'Al-Noor Islamic Center', lat: 35.5843, lng: -78.7706, addr: '6317 Sunset Lake Rd, Fuquay-Varina, NC 27526', website: null, terms: ['al-noor', 'alnoor', 'sunset lake', 'fuquay'], iqama: true, sort: 1 },
       { name: 'Islamic Association of Raleigh (Atwater)', lat: 35.7898, lng: -78.6912, addr: '808 Atwater St, Raleigh, NC 27607', website: 'https://www.raleighmasjid.org', terms: ['iar', 'islamic association of raleigh', 'atwater'], iqama: true, sort: 2 },
       { name: 'Islamic Association of Raleigh (Page Rd)', lat: 35.9067, lng: -78.8169, addr: '3104 Page Rd, Morrisville, NC 27560', website: 'https://www.raleighmasjid.org', terms: ['iar', 'islamic association of raleigh', 'page rd', 'page road'], iqama: true, sort: 3 },
       { name: 'Islamic Center of Morrisville', lat: 35.8099, lng: -78.8228, addr: '107 Quail Fields Ct, Morrisville, NC 27560', website: 'https://www.icmorrisville.org', terms: ['icm', 'islamic center of morrisville', 'quail fields'], iqama: true, sort: 4 },
