@@ -152,7 +152,7 @@ export function generateMCCSchedule(): MCCDayRecord[] {
 
       const dateKey = `2026-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
       const maghribAdhan = MCC_MAGHRIB_TIMES_2026[dateKey];
-      const maghribIqama = maghribAdhan ? addMinutesToTime(maghribAdhan, 5) : "";
+      const maghribIqama = maghribAdhan ? addMinutesToTime(maghribAdhan, 3) : "";
 
       records.push({
         date: dateKey,
