@@ -565,7 +565,7 @@ async function ensureMasjidsTable(pool: pg.Pool) {
         ('San Ramon Valley Islamic Center', 37.7770, -121.9691, '2230 Camino Ramon, San Ramon, CA 94583', 'https://srvic.org', ARRAY['srvic', 'san ramon valley islamic', 'camino ramon'], true, 14),
         ('Muslim Community Association', 37.3769, -121.9595, '3003 Scott Blvd, Santa Clara, CA 95054', 'https://www.mcabayarea.org', ARRAY['mca', 'muslim community association', 'scott blvd', 'mcabayarea'], true, 15),
         ('MCA Al-Noor', 37.3530, -121.9535, '1755 Catherine St, Santa Clara, CA 95050', 'https://www.mcabayarea.org', ARRAY['mca al-noor', 'mca alnoor', 'mca noor', 'catherine st'], true, 16),
-        ('Muslim Community Center', 35.8195, -78.7591, '3521 Davis Dr, Morrisville, NC 27560', NULL, ARRAY['mcc', 'muslim community center', 'davis dr', 'morrisville'], true, 17);
+        ('Muslim Community Center of the East Bay', 37.6925, -121.9040, '5724 W Las Positas Blvd, Pleasanton, CA 94588', 'https://mcceastbay.org', ARRAY['mcc', 'mcc east bay', 'muslim community center', 'las positas', 'pleasanton'], true, 17);
     `);
     console.log("[DB] Seeded default masjids");
   } else {
@@ -590,7 +590,7 @@ async function ensureMasjidsTable(pool: pg.Pool) {
       { name: 'San Ramon Valley Islamic Center', lat: 37.7770, lng: -121.9691, addr: '2230 Camino Ramon, San Ramon, CA 94583', website: 'https://srvic.org', terms: ['srvic', 'san ramon valley islamic', 'camino ramon'], iqama: true, sort: 14 },
       { name: 'Muslim Community Association', lat: 37.3769, lng: -121.9595, addr: '3003 Scott Blvd, Santa Clara, CA 95054', website: 'https://www.mcabayarea.org', terms: ['mca', 'muslim community association', 'scott blvd', 'mcabayarea'], iqama: true, sort: 15 },
       { name: 'MCA Al-Noor', lat: 37.3530, lng: -121.9535, addr: '1755 Catherine St, Santa Clara, CA 95050', website: 'https://www.mcabayarea.org', terms: ['mca al-noor', 'mca alnoor', 'mca noor', 'catherine st'], iqama: true, sort: 16 },
-      { name: 'Muslim Community Center', lat: 35.8195, lng: -78.7591, addr: '3521 Davis Dr, Morrisville, NC 27560', website: null, terms: ['mcc', 'muslim community center', 'davis dr', 'morrisville'], iqama: true, sort: 17 },
+      { name: 'Muslim Community Center of the East Bay', lat: 37.6925, lng: -121.9040, addr: '5724 W Las Positas Blvd, Pleasanton, CA 94588', website: 'https://mcceastbay.org', terms: ['mcc', 'mcc east bay', 'muslim community center', 'las positas', 'pleasanton'], iqama: true, sort: 17 },
     ];
     for (const m of masjidUpserts) {
       await pool.query(
