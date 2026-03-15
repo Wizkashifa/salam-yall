@@ -17,6 +17,7 @@ import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useEffect, useState, useCallback } from "react";
 import { Platform } from "react-native";
+import Constants from "expo-constants";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -31,7 +32,7 @@ import { DeepLinkProvider, parseDeepLinkUrl, useDeepLink } from "@/lib/deeplink-
 import { AuthProvider } from "@/lib/auth-context";
 
 const ONBOARDING_VERSION_KEY = "onboarding_version";
-const CURRENT_APP_VERSION = "1.1.1";
+const APP_VERSION = Constants.expoConfig?.version ?? "1.0.0";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -131,7 +132,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     AsyncStorage.getItem(ONBOARDING_VERSION_KEY).then((val) => {
-      setShowOnboarding(val !== CURRENT_APP_VERSION);
+      setShowOnboarding(val !== APP_VERSION);
     });
   }, []);
 
@@ -142,7 +143,7 @@ export default function RootLayout() {
   }, [fontsLoaded, fontError]);
 
   const handleOnboardingComplete = useCallback(() => {
-    AsyncStorage.setItem(ONBOARDING_VERSION_KEY, CURRENT_APP_VERSION);
+    AsyncStorage.setItem(ONBOARDING_VERSION_KEY, APP_VERSION);
     setShowOnboarding(false);
   }, []);
 

@@ -165,12 +165,14 @@ function PrayerSettingsScreen({
   isActive,
   onCalcMethodChange,
   onAsrCalcChange,
+  onNotifGranted,
   initialCalcMethod,
   initialAsrCalc,
 }: {
   isActive: boolean;
   onCalcMethodChange: (m: CalcMethodKey) => void;
   onAsrCalcChange: (a: AsrCalc) => void;
+  onNotifGranted: () => void;
   initialCalcMethod: CalcMethodKey;
   initialAsrCalc: AsrCalc;
 }) {
@@ -185,11 +187,16 @@ function PrayerSettingsScreen({
     }
     try {
       const { status: permStatus } = await Notifications.requestPermissionsAsync();
-      setNotifStatus(permStatus === "granted" ? "granted" : "denied");
+      if (permStatus === "granted") {
+        setNotifStatus("granted");
+        onNotifGranted();
+      } else {
+        setNotifStatus("denied");
+      }
     } catch {
       setNotifStatus("denied");
     }
-  }, []);
+  }, [onNotifGranted]);
 
   const topMethods: CalcMethodKey[] = ["NorthAmerica", "MuslimWorldLeague", "Egyptian", "Karachi", "UmmAlQura"];
 
@@ -563,7 +570,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const flatListRef = useRef<FlatList>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const scrollX = useRef(new Animated.Value(0)).current;
-  const { setPreferredMasjid, setCalcMethod, setAsrCalc, calcMethod, asrCalc, preferredMasjid } = useSettings();
+  const { setPreferredMasjid, setCalcMethod, setAsrCalc, setNotificationsEnabled, calcMethod, asrCalc, preferredMasjid } = useSettings();
   const selectedMasjidRef = useRef<string | null>(preferredMasjid);
   const selectedCalcMethodRef = useRef<CalcMethodKey>(calcMethod);
   const selectedAsrCalcRef = useRef<AsrCalc>(asrCalc);
@@ -575,6 +582,10 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const handleMasjidSelect = useCallback((name: string | null) => {
     selectedMasjidRef.current = name;
   }, []);
+
+  const handleNotifGranted = useCallback(() => {
+    setNotificationsEnabled(true);
+  }, [setNotificationsEnabled]);
 
   const handleCalcMethodChange = useCallback((m: CalcMethodKey) => {
     selectedCalcMethodRef.current = m;
@@ -624,13 +635,13 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     switch (index) {
       case 0: return <WelcomeScreen isActive={isActive} />;
       case 1: return <LocationScreen isActive={isActive} />;
-      case 2: return <PrayerSettingsScreen isActive={isActive} onCalcMethodChange={handleCalcMethodChange} onAsrCalcChange={handleAsrCalcChange} initialCalcMethod={calcMethod} initialAsrCalc={asrCalc} />;
+      case 2: return <PrayerSettingsScreen isActive={isActive} onCalcMethodChange={handleCalcMethodChange} onAsrCalcChange={handleAsrCalcChange} onNotifGranted={handleNotifGranted} initialCalcMethod={calcMethod} initialAsrCalc={asrCalc} />;
       case 3: return <TrackerScreen isActive={isActive} />;
       case 4: return <CommunityScreen isActive={isActive} />;
       case 5: return <MasjidScreen isActive={isActive} onSelect={handleMasjidSelect} />;
       default: return null;
     }
-  }, [currentPage, handleMasjidSelect, handleCalcMethodChange, handleAsrCalcChange, calcMethod, asrCalc]);
+  }, [currentPage, handleMasjidSelect, handleCalcMethodChange, handleAsrCalcChange, handleNotifGranted, calcMethod, asrCalc]);
 
   const onMomentumScrollEnd = useCallback((e: any) => {
     const page = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
