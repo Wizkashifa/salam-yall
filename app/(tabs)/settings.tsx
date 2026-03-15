@@ -37,6 +37,7 @@ import {
 } from "@/lib/prayer-utils";
 import { getApiUrl } from "@/lib/query-client";
 import { useRouter, useFocusEffect } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { useDeepLink } from "@/lib/deeplink-context";
 import { getMonthLogs, cyclePrayerStatus, getMonthMissedFasts, toggleMissedFast, type DayLog, type PrayerName } from "@/lib/prayer-tracker";
 import { DHIKR_PRESETS, getDhikrCounts, incrementDhikr, resetDhikr, type DhikrDayData } from "@/lib/dhikr-tracker";
@@ -148,6 +149,8 @@ export default function SettingsScreen() {
 
   useEffect(() => { trackScreenView("Settings"); }, []);
 
+  const navigation = useNavigation();
+
   useEffect(() => {
     worshipResetRef.current = () => {
       if (sectionRef.current !== "main") {
@@ -158,6 +161,16 @@ export default function SettingsScreen() {
     };
     return () => { worshipResetRef.current = null; };
   }, [worshipResetRef]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("tabPress" as any, (e: any) => {
+      if (sectionRef.current !== "main") {
+        e.preventDefault();
+        setSection("main");
+      }
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   useFocusEffect(useCallback(() => {
     const pending = consumePendingSettingsSection();

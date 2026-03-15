@@ -3602,7 +3602,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;min-height:100vh;background:#0A1F16;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
     .brand{display:flex;align-items:center;gap:10px;margin-bottom:24px}
-    .brand svg{width:32px;height:32px}
+    .brand img{width:36px;height:36px;border-radius:8px}
     .brand-name{font-size:20px;font-weight:700;color:#D4A843;letter-spacing:0.5px}
     .card{max-width:420px;width:100%;background:linear-gradient(145deg,#142E22 0%,#0F2A1E 100%);border-radius:20px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.4),0 0 0 1px rgba(27,107,74,0.2)}
     .card-image{width:100%;height:200px;object-fit:cover}
@@ -3713,7 +3713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   <style>${sharePageStyles}</style>
 </head>
 <body>
-  <div class="brand">${crescentSvg}<span class="brand-name">Salam Y'all</span></div>
+  <div class="brand"><img src="/assets/images/icon.png" alt="Salam Y'all"><span class="brand-name">Salam Y'all</span></div>
   <div class="card">
     ${imageUrl ? `<img class="card-image" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}">` : `<div class="card-image-placeholder">📅</div>`}
     <div class="card-body">
@@ -3784,7 +3784,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   <style>${sharePageStyles}</style>
 </head>
 <body>
-  <div class="brand">${crescentSvg}<span class="brand-name">Salam Y'all</span></div>
+  <div class="brand"><img src="/assets/images/icon.png" alt="Salam Y'all"><span class="brand-name">Salam Y'all</span></div>
   <div class="card">
     <div class="card-image-placeholder">${escapeHtml(emoji)}</div>
     <div class="card-body">
@@ -3851,7 +3851,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   <style>${sharePageStyles}</style>
 </head>
 <body>
-  <div class="brand">${crescentSvg}<span class="brand-name">Salam Y'all</span></div>
+  <div class="brand"><img src="/assets/images/icon.png" alt="Salam Y'all"><span class="brand-name">Salam Y'all</span></div>
   <div class="card">
     <div class="card-image-placeholder">🏢</div>
     <div class="card-body">
