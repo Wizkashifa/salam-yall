@@ -1985,17 +1985,17 @@ const styles = StyleSheet.create({
   },
   quickActionsRow: {
     flexDirection: "row",
-    gap: 8,
+    justifyContent: "space-between",
     marginBottom: 6,
   },
   quickActionChip: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 12,
+    gap: 5,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 10,
     borderWidth: 1,
   },
   quickActionLabel: {
