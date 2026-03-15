@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode, MutableRefObject } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CALC_METHOD_LABELS, type CalcMethodKey } from "@/lib/prayer-utils";
 
@@ -28,6 +28,7 @@ interface SettingsContextValue {
   pendingSettingsSection: string | null;
   setPendingSettingsSection: (section: string | null) => void;
   consumePendingSettingsSection: () => string | null;
+  worshipResetRef: MutableRefObject<(() => boolean) | null>;
 }
 
 const CALC_METHOD_KEY = "prayer_calc_method";
@@ -48,6 +49,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [pendingDrawerSection, setPendingDrawerSection] = useState<string | null>(null);
   const [pendingSettingsSection, setPendingSettingsSectionState] = useState<string | null>(null);
+  const worshipResetRef = useRef<(() => boolean) | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -150,6 +152,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       pendingSettingsSection,
       setPendingSettingsSection,
       consumePendingSettingsSection,
+      worshipResetRef,
     }}>
       {children}
     </SettingsContext.Provider>

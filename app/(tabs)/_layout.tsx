@@ -7,6 +7,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Platform, StyleSheet, View } from "react-native";
 import React from "react";
 import { useTheme } from "@/lib/theme-context";
+import { useSettings } from "@/lib/settings-context";
 
 function NativeTabLayout() {
   return (
@@ -37,6 +38,7 @@ function NativeTabLayout() {
 
 function ClassicTabLayout() {
   const { colors, isDark, ramadanMode } = useTheme();
+  const { worshipResetRef } = useSettings();
   const isWeb = Platform.OS === "web";
   const isIOS = Platform.OS === "ios";
   const isDarkRamadan = isDark && ramadanMode;
@@ -127,6 +129,16 @@ function ClassicTabLayout() {
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="mosque" size={size - 2} color={color} />
           ),
+        }}
+        listeners={{
+          tabPress: (e) => {
+            if (worshipResetRef.current) {
+              const wasReset = worshipResetRef.current();
+              if (wasReset) {
+                e.preventDefault();
+              }
+            }
+          },
         }}
       />
     </Tabs>

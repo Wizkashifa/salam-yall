@@ -36,7 +36,7 @@ import {
   type Masjid,
 } from "@/lib/prayer-utils";
 import { getApiUrl } from "@/lib/query-client";
-import { useRouter, useFocusEffect, useNavigation } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { useDeepLink } from "@/lib/deeplink-context";
 import { getMonthLogs, cyclePrayerStatus, getMonthMissedFasts, toggleMissedFast, type DayLog, type PrayerName } from "@/lib/prayer-tracker";
 import { DHIKR_PRESETS, getDhikrCounts, incrementDhikr, resetDhikr, type DhikrDayData } from "@/lib/dhikr-tracker";
@@ -71,8 +71,7 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
 export default function SettingsScreen() {
   const { colors, isDark, themeMode, setThemeMode, ramadanMode, setRamadanMode } = useTheme();
   const router = useRouter();
-  const navigation = useNavigation();
-  const { calcMethod, setCalcMethod, notificationsEnabled, setNotificationsEnabled, iqamaAlertsEnabled, setIqamaAlertsEnabled, preferredMasjid, setPreferredMasjid, consumePendingSettingsSection, hijriOffset, setHijriOffset, asrCalc, setAsrCalc } = useSettings();
+  const { calcMethod, setCalcMethod, notificationsEnabled, setNotificationsEnabled, iqamaAlertsEnabled, setIqamaAlertsEnabled, preferredMasjid, setPreferredMasjid, consumePendingSettingsSection, hijriOffset, setHijriOffset, asrCalc, setAsrCalc, worshipResetRef } = useSettings();
   const { user, signInWithApple, devSignIn, signOut, isLoading: authLoading, getAuthHeaders } = useAuth();
   const qc = useQueryClient();
   const [section, setSectionRaw] = useState<SettingsSection>("main");
@@ -150,16 +149,15 @@ export default function SettingsScreen() {
   useEffect(() => { trackScreenView("Settings"); }, []);
 
   useEffect(() => {
-    const parent = navigation.getParent();
-    if (!parent) return;
-    const unsubscribe = parent.addListener("tabPress", (e) => {
+    worshipResetRef.current = () => {
       if (sectionRef.current !== "main") {
-        e.preventDefault();
         setSection("main");
+        return true;
       }
-    });
-    return unsubscribe;
-  }, [navigation]);
+      return false;
+    };
+    return () => { worshipResetRef.current = null; };
+  }, [worshipResetRef]);
 
   useFocusEffect(useCallback(() => {
     const pending = consumePendingSettingsSection();
