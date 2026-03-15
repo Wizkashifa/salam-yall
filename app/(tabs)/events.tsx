@@ -101,7 +101,7 @@ function getRelativeLabel(dateLabel: string): string {
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const CALENDAR_COLLAPSE_THRESHOLD = 40;
+const CALENDAR_COLLAPSE_THRESHOLD = 120;
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function getMonthDays(year: number, month: number) {
@@ -164,7 +164,7 @@ function EventCalendar({
   for (let i = 0; i < firstDay; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
-  const cellSize = Math.floor((SCREEN_WIDTH - 40) / 7);
+  const cellSize = Math.floor((SCREEN_WIDTH - 56) / 7);
 
   return (
     <View style={[calStyles.container, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
