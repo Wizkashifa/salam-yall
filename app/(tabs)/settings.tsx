@@ -150,7 +150,9 @@ export default function SettingsScreen() {
   useEffect(() => { trackScreenView("Settings"); }, []);
 
   useEffect(() => {
-    const unsubscribe = navigation.getParent()?.addListener("tabPress", (e: any) => {
+    const parent = navigation.getParent();
+    if (!parent) return;
+    const unsubscribe = parent.addListener("tabPress", (e) => {
       if (sectionRef.current !== "main") {
         e.preventDefault();
         setSection("main");
