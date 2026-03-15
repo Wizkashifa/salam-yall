@@ -13,7 +13,6 @@ import {
   Dimensions,
   Linking,
   Share,
-  Animated,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -101,7 +100,6 @@ function getRelativeLabel(dateLabel: string): string {
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const CALENDAR_COLLAPSE_THRESHOLD = 120;
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function getMonthDays(year: number, month: number) {
@@ -441,9 +439,6 @@ export default function EventsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [calendarCollapsed, setCalendarCollapsed] = useState(false);
-  const calendarCollapsedRef = useRef(false);
-  const calendarAnim = useRef(new Animated.Value(1)).current;
   const scrollRef = useRef<ScrollView>(null);
   const { pendingTarget, consumeTarget } = useDeepLink();
 
@@ -471,25 +466,6 @@ export default function EventsScreen() {
     await queryClient.invalidateQueries({ queryKey: ["/api/events"] });
     setRefreshing(false);
   }, [queryClient]);
-
-  const handleScroll = useCallback((e: { nativeEvent: { contentOffset: { y: number } } }) => {
-    const y = e.nativeEvent.contentOffset.y;
-    const shouldCollapse = y > CALENDAR_COLLAPSE_THRESHOLD;
-    if (shouldCollapse !== calendarCollapsedRef.current) {
-      calendarCollapsedRef.current = shouldCollapse;
-      setCalendarCollapsed(shouldCollapse);
-      Animated.timing(calendarAnim, {
-        toValue: shouldCollapse ? 0 : 1,
-        duration: 400,
-        useNativeDriver: false,
-      }).start();
-    }
-  }, [calendarAnim]);
-
-  const scrollToTop = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    scrollRef.current?.scrollTo({ y: 0, animated: true });
-  }, []);
 
   const onSelectDate = useCallback((dateKey: string | null) => {
     setSelectedDate(dateKey);
@@ -524,21 +500,6 @@ export default function EventsScreen() {
               {selectedDateLabel ? `Showing ${selectedDateLabel}` : "Programs and events in the local area"}
             </Text>
           </View>
-          {calendarCollapsed && (
-            <Pressable
-              onPress={scrollToTop}
-              style={({ pressed }) => ({
-                width: 36,
-                height: 36,
-                borderRadius: 10,
-                backgroundColor: pressed ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.12)",
-                alignItems: "center",
-                justifyContent: "center",
-              })}
-            >
-              <Ionicons name="calendar" size={20} color="#fff" />
-            </Pressable>
-          )}
         </View>
         <TickerBanner />
       </GlassHeader>
@@ -549,21 +510,19 @@ export default function EventsScreen() {
           paddingBottom: Platform.OS === "web" ? 34 : 100,
           paddingTop: headerHeight + 12,
         }}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />
         }
       >
         {!isLoading && !error && activeEvents.length > 0 && (
-          <Animated.View style={{ opacity: calendarAnim, maxHeight: calendarAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 500] }), overflow: "hidden", marginBottom: 8 }}>
+          <View style={{ marginBottom: 8 }}>
             <EventCalendar
               events={activeEvents}
               selectedDate={selectedDate}
               onSelectDate={onSelectDate}
               colors={colors}
             />
-          </Animated.View>
+          </View>
         )}
 
         {isLoading ? (
