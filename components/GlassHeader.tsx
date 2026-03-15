@@ -44,8 +44,8 @@ export function GlassHeader({ children, style, onHeaderHeight }: GlassHeaderProp
         />
         <LinearGradient
           colors={[
-            colors.gradientStart + (isDark ? "80" : "99"),
-            colors.gradientEnd + (isDark ? "66" : "80"),
+            colors.gradientStart + (isDark ? "80" : "E6"),
+            colors.gradientEnd + (isDark ? "66" : "CC"),
           ]}
           style={StyleSheet.absoluteFill}
         />
@@ -63,8 +63,8 @@ export function GlassHeader({ children, style, onHeaderHeight }: GlassHeaderProp
     <View style={[containerStyle, webBlurStyle]} onLayout={handleLayout}>
       <LinearGradient
         colors={[
-          colors.gradientStart + (isDark ? "B3" : "CC"),
-          colors.gradientEnd + (isDark ? "99" : "B3"),
+          colors.gradientStart + (isDark ? "B3" : "F2"),
+          colors.gradientEnd + (isDark ? "99" : "E6"),
         ]}
         style={StyleSheet.absoluteFill}
       />
