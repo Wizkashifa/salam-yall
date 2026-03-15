@@ -11,6 +11,8 @@ interface SettingsContextValue {
   setCalcMethod: (method: CalcMethodKey) => void;
   notificationsEnabled: boolean;
   setNotificationsEnabled: (enabled: boolean) => void;
+  iqamaAlertsEnabled: boolean;
+  setIqamaAlertsEnabled: (enabled: boolean) => void;
   preferredMasjid: string | null;
   setPreferredMasjid: (name: string | null) => void;
   hijriOffset: number;
@@ -33,11 +35,13 @@ const NOTIF_PREF_KEY = "prayer_notifications_enabled";
 const PREFERRED_MASJID_KEY = "preferred_masjid";
 const HIJRI_OFFSET_KEY = "hijri_offset";
 const ASR_CALC_KEY = "asr_calc";
+const IQAMA_ALERTS_KEY = "iqama_alerts_enabled";
 const SettingsContext = createContext<SettingsContextValue | null>(null);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [calcMethod, setCalcMethodState] = useState<CalcMethodKey>("NorthAmerica");
   const [notificationsEnabled, setNotificationsEnabledState] = useState(false);
+  const [iqamaAlertsEnabled, setIqamaAlertsEnabledState] = useState(false);
   const [preferredMasjid, setPreferredMasjidState] = useState<string | null>(null);
   const [hijriOffset, setHijriOffsetState] = useState(0);
   const [asrCalc, setAsrCalcState] = useState<AsrCalc>("standard");
@@ -52,11 +56,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       AsyncStorage.getItem(PREFERRED_MASJID_KEY),
       AsyncStorage.getItem(HIJRI_OFFSET_KEY),
       AsyncStorage.getItem(ASR_CALC_KEY),
-    ]).then(([method, notif, masjid, offset, asr]) => {
+      AsyncStorage.getItem(IQAMA_ALERTS_KEY),
+    ]).then(([method, notif, masjid, offset, asr, iqamaAlerts]) => {
       if (method && VALID_METHODS.includes(method as CalcMethodKey)) {
         setCalcMethodState(method as CalcMethodKey);
       }
       if (notif === "true") setNotificationsEnabledState(true);
+      if (iqamaAlerts === "true") setIqamaAlertsEnabledState(true);
       if (masjid) setPreferredMasjidState(masjid);
       if (offset) {
         const n = parseInt(offset, 10);
@@ -74,6 +80,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const setNotificationsEnabled = useCallback((enabled: boolean) => {
     setNotificationsEnabledState(enabled);
     AsyncStorage.setItem(NOTIF_PREF_KEY, enabled ? "true" : "false");
+  }, []);
+
+  const setIqamaAlertsEnabled = useCallback((enabled: boolean) => {
+    setIqamaAlertsEnabledState(enabled);
+    AsyncStorage.setItem(IQAMA_ALERTS_KEY, enabled ? "true" : "false");
   }, []);
 
   const setPreferredMasjid = useCallback((name: string | null) => {
@@ -122,6 +133,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setCalcMethod,
       notificationsEnabled,
       setNotificationsEnabled,
+      iqamaAlertsEnabled,
+      setIqamaAlertsEnabled,
       preferredMasjid,
       setPreferredMasjid,
       hijriOffset,

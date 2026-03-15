@@ -61,7 +61,7 @@ type TrackerTab = "calendar" | "badges";
 export default function SettingsScreen() {
   const { colors, isDark, themeMode, setThemeMode, ramadanMode, setRamadanMode } = useTheme();
   const router = useRouter();
-  const { calcMethod, setCalcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid, setPreferredMasjid, consumePendingSettingsSection, hijriOffset, setHijriOffset, asrCalc, setAsrCalc } = useSettings();
+  const { calcMethod, setCalcMethod, notificationsEnabled, setNotificationsEnabled, iqamaAlertsEnabled, setIqamaAlertsEnabled, preferredMasjid, setPreferredMasjid, consumePendingSettingsSection, hijriOffset, setHijriOffset, asrCalc, setAsrCalc } = useSettings();
   const { user, signInWithApple, devSignIn, signOut, isLoading: authLoading, getAuthHeaders } = useAuth();
   const qc = useQueryClient();
   const [section, setSection] = useState<SettingsSection>("main");
@@ -246,6 +246,28 @@ export default function SettingsScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
   }, [notificationsEnabled, setNotificationsEnabled]);
+
+  const handleToggleIqamaAlerts = useCallback(async () => {
+    if (!iqamaAlertsEnabled) {
+      if (!preferredMasjid) {
+        Alert.alert("No Masjid Selected", "Please select a preferred masjid with iqama timings first from the Masjid Directory.");
+        return;
+      }
+      try {
+        const { status } = await Notifications.requestPermissionsAsync();
+        if (status !== "granted") {
+          Alert.alert("Notifications Permission", "Please enable notifications in your device settings.");
+          return;
+        }
+        setIqamaAlertsEnabled(true);
+        trackEvent("iqama_alerts_enabled", { enabled: true });
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch {}
+    } else {
+      setIqamaAlertsEnabled(false);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  }, [iqamaAlertsEnabled, setIqamaAlertsEnabled, preferredMasjid]);
 
   const openMasjidDirections = useCallback(async (address: string) => {
     const encoded = encodeURIComponent(address);
@@ -616,6 +638,26 @@ export default function SettingsScreen() {
           <View style={[styles.toggleKnob, notificationsEnabled ? { transform: [{ translateX: 16 }] } : {}]} />
         </View>
       </Pressable>
+
+      <Pressable
+        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
+        onPress={handleToggleIqamaAlerts}
+      >
+        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
+          <MaterialCommunityIcons name="mosque" size={20} color={colors.emerald} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.menuLabel, { color: colors.text }]}>Iqama Alerts</Text>
+          <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>10 min before Dhuhr, Asr & Isha iqama</Text>
+        </View>
+        <View style={[styles.toggle, iqamaAlertsEnabled ? { backgroundColor: colors.emerald } : { backgroundColor: colors.border }]}>
+          <View style={[styles.toggleKnob, iqamaAlertsEnabled ? { transform: [{ translateX: 16 }] } : {}]} />
+        </View>
+      </Pressable>
+
+      <Text style={[styles.settingHint, { color: colors.textTertiary, marginTop: 4 }]}>
+        Requires a preferred masjid with iqama timings. Select one from the Masjid Directory.
+      </Text>
 
       <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>PRAYER CALCULATION</Text>
 

@@ -380,7 +380,7 @@ function CountdownRing({ colors, isDark, progress, qiblaBearing, hasRealLocation
 export default function PrayerScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { calcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid, openMenuToSection, setPendingSettingsSection, hijriOffset, asrCalc } = useSettings();
+  const { calcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid, openMenuToSection, setPendingSettingsSection, hijriOffset, asrCalc, iqamaAlertsEnabled } = useSettings();
   const router = useRouter();
   const { setPendingTarget } = useDeepLink();
   const [prayers, setPrayers] = useState<PrayerTimeEntry[]>([]);
@@ -783,29 +783,70 @@ export default function PrayerScreen() {
 
       const allPrayers = [...todayPrayers, ...tomorrowPrayers];
 
-      for (const prayer of allPrayers) {
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: `${prayer.label} Prayer Time`,
-            body: `It's time for ${prayer.label} prayer (${formatTime(prayer.time)})`,
-            sound: true,
-          },
-          trigger: {
-            type: Notifications.SchedulableTriggerInputTypes.DATE,
-            date: prayer.time,
-          },
-        });
+      if (notificationsEnabled) {
+        for (const prayer of allPrayers) {
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title: `${prayer.label} Prayer Time`,
+              body: `It's time for ${prayer.label} prayer (${formatTime(prayer.time)})`,
+              sound: true,
+            },
+            trigger: {
+              type: Notifications.SchedulableTriggerInputTypes.DATE,
+              date: prayer.time,
+            },
+          });
+        }
+      }
+
+      if (iqamaAlertsEnabled && activeIqama?.iqama) {
+        const iqamaPrayers: Array<{ name: string; label: string }> = [
+          { name: "dhuhr", label: "Dhuhr" },
+          { name: "asr", label: "Asr" },
+          { name: "isha", label: "Isha" },
+        ];
+        const masjidName = activeIqama.masjid || "your masjid";
+        for (const { name, label } of iqamaPrayers) {
+          const iqamaTimeStr = activeIqama.iqama[name as keyof typeof activeIqama.iqama];
+          if (!iqamaTimeStr) continue;
+          const trimmed = iqamaTimeStr.trim();
+          const isPM = /pm/i.test(trimmed);
+          const isAM = /am/i.test(trimmed);
+          const timePart = trimmed.replace(/\s*(am|pm)\s*/i, "");
+          const parts = timePart.split(":").map(Number);
+          if (parts.length < 2 || isNaN(parts[0]) || isNaN(parts[1])) continue;
+          let h = parts[0];
+          const m = parts[1];
+          if (isPM && h < 12) h += 12;
+          if (isAM && h === 12) h = 0;
+          if (!isPM && !isAM && h < 12 && name !== "fajr") h += 12;
+          const iqamaDate = new Date(now);
+          iqamaDate.setHours(h, m, 0, 0);
+          const alertDate = new Date(iqamaDate.getTime() - 10 * 60 * 1000);
+          if (alertDate <= now) continue;
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title: `${label} Iqama in 10 min`,
+              body: `${label} iqama at ${trimmed} at ${masjidName}`,
+              sound: true,
+            },
+            trigger: {
+              type: Notifications.SchedulableTriggerInputTypes.DATE,
+              date: alertDate,
+            },
+          });
+        }
       }
     } catch (err) {
       console.error("Error scheduling notifications:", err);
     }
-  }, [calcMethod]);
+  }, [calcMethod, notificationsEnabled, iqamaAlertsEnabled, activeIqama]);
 
   useEffect(() => {
-    if (notificationsEnabled && prayers.length > 0) {
+    if ((notificationsEnabled || iqamaAlertsEnabled) && prayers.length > 0) {
       schedulePrayerNotifications(prayers, userCoords.lat, userCoords.lon);
     }
-  }, [notificationsEnabled, prayers, schedulePrayerNotifications, userCoords]);
+  }, [notificationsEnabled, iqamaAlertsEnabled, prayers, schedulePrayerNotifications, userCoords, activeIqama]);
 
   const toggleNotifications = useCallback(async () => {
     if (!notificationsEnabled) {
