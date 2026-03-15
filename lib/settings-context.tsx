@@ -17,6 +17,9 @@ interface SettingsContextValue {
   pendingDrawerSection: string | null;
   consumePendingDrawerSection: () => string | null;
   closeMenu: () => void;
+  pendingSettingsSection: string | null;
+  setPendingSettingsSection: (section: string | null) => void;
+  consumePendingSettingsSection: () => string | null;
 }
 
 const CALC_METHOD_KEY = "prayer_calc_method";
@@ -30,6 +33,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [preferredMasjid, setPreferredMasjidState] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [pendingDrawerSection, setPendingDrawerSection] = useState<string | null>(null);
+  const [pendingSettingsSection, setPendingSettingsSectionState] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -76,6 +80,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [pendingDrawerSection]);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
 
+  const setPendingSettingsSection = useCallback((section: string | null) => {
+    setPendingSettingsSectionState(section);
+  }, []);
+  const consumePendingSettingsSection = useCallback(() => {
+    const s = pendingSettingsSection;
+    setPendingSettingsSectionState(null);
+    return s;
+  }, [pendingSettingsSection]);
+
   return (
     <SettingsContext.Provider value={{
       calcMethod,
@@ -90,6 +103,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       pendingDrawerSection,
       consumePendingDrawerSection,
       closeMenu,
+      pendingSettingsSection,
+      setPendingSettingsSection,
+      consumePendingSettingsSection,
     }}>
       {children}
     </SettingsContext.Provider>

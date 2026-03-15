@@ -32,9 +32,10 @@ import {
   type Masjid,
 } from "@/lib/prayer-utils";
 import { getApiUrl } from "@/lib/query-client";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { useDeepLink } from "@/lib/deeplink-context";
 import { getMonthLogs, cyclePrayerStatus, getMonthMissedFasts, toggleMissedFast, type DayLog, type PrayerName } from "@/lib/prayer-tracker";
+import { DHIKR_PRESETS, getDhikrCounts, incrementDhikr, resetDhikr, type DhikrDayData } from "@/lib/dhikr-tracker";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 import { MasjidMap } from "@/components/MasjidMap";
 import { computeBadges, BADGES, type BadgeState } from "@/lib/prayer-badges";
@@ -54,13 +55,13 @@ interface CalendarEvent {
   registrationUrl: string;
 }
 
-type SettingsSection = "main" | "calcMethod" | "masjids" | "masjidDetail" | "feedback" | "prayerTracker" | "janazaHistory" | "profile";
+type SettingsSection = "main" | "calcMethod" | "masjids" | "masjidDetail" | "feedback" | "prayerTracker" | "janazaHistory" | "profile" | "dhikrCounter";
 type TrackerTab = "calendar" | "badges";
 
 export default function SettingsScreen() {
   const { colors, isDark, themeMode, setThemeMode, ramadanMode, setRamadanMode } = useTheme();
   const router = useRouter();
-  const { calcMethod, setCalcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid, setPreferredMasjid } = useSettings();
+  const { calcMethod, setCalcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid, setPreferredMasjid, consumePendingSettingsSection } = useSettings();
   const { user, signInWithApple, devSignIn, signOut, isLoading: authLoading, getAuthHeaders } = useAuth();
   const qc = useQueryClient();
   const [section, setSection] = useState<SettingsSection>("main");
@@ -68,10 +69,19 @@ export default function SettingsScreen() {
   const [feedbackType, setFeedbackType] = useState<"bug" | "feature">("feature");
   const [feedbackText, setFeedbackText] = useState("");
   const [feedbackEmail, setFeedbackEmail] = useState("");
+  const [selectedDhikrId, setSelectedDhikrId] = useState(DHIKR_PRESETS[0].id);
+  const [dhikrCounts, setDhikrCounts] = useState<DhikrDayData>({});
 
   const { consumeTarget, setPendingTarget } = useDeepLink();
 
   useEffect(() => { trackScreenView("Settings"); }, []);
+
+  useFocusEffect(useCallback(() => {
+    const pending = consumePendingSettingsSection();
+    if (pending) {
+      setSection(pending as SettingsSection);
+    }
+  }, [consumePendingSettingsSection]));
 
   useEffect(() => {
     const janazaTarget = consumeTarget("janaza");
@@ -86,6 +96,12 @@ export default function SettingsScreen() {
       setSection("profile");
     }
   }, [consumeTarget]);
+
+  useEffect(() => {
+    if (section === "dhikrCounter") {
+      getDhikrCounts(new Date()).then(setDhikrCounts).catch(() => {});
+    }
+  }, [section]);
 
   const now = new Date();
   const [trackerYear, setTrackerYear] = useState(now.getFullYear());
@@ -338,6 +354,8 @@ export default function SettingsScreen() {
         </Pressable>
       )}
 
+      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>WORSHIP</Text>
+
       <Pressable
         style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
         onPress={() => { setSection("prayerTracker"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
@@ -351,6 +369,30 @@ export default function SettingsScreen() {
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
       </Pressable>
+
+      <Pressable
+        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
+        onPress={() => { setSection("dhikrCounter"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+      >
+        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
+          <MaterialCommunityIcons name="counter" size={20} color={colors.emerald} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.menuLabel, { color: colors.text }]}>Dhikr Counter</Text>
+          <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>Track your daily remembrance</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+      </Pressable>
+
+      <View style={[styles.menuItem, { backgroundColor: colors.surface, borderColor: colors.border, opacity: 0.5 }]}>
+        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
+          <Ionicons name="sunny-outline" size={20} color={colors.emerald} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.menuLabel, { color: colors.text }]}>Morning & Evening Adhkar</Text>
+          <Text style={[styles.menuSublabel, { color: colors.gold }]}>Coming Soon</Text>
+        </View>
+      </View>
 
       <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>COMMUNITY</Text>
 
@@ -1164,6 +1206,140 @@ export default function SettingsScreen() {
     );
   };
 
+  const renderDhikrCounter = () => {
+    const selected = DHIKR_PRESETS.find(d => d.id === selectedDhikrId) || DHIKR_PRESETS[0];
+    const count = dhikrCounts[selectedDhikrId] ?? 0;
+    const goalReached = selected.goal ? count >= selected.goal : false;
+    const progress = selected.goal ? Math.min(count / selected.goal, 1) : 0;
+
+    const handleTap = async () => {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      try {
+        const updated = await incrementDhikr(new Date(), selectedDhikrId);
+        setDhikrCounts(updated);
+        trackEvent("dhikr_increment", { dhikr: selectedDhikrId });
+      } catch {
+        setDhikrCounts(prev => ({ ...prev, [selectedDhikrId]: (prev[selectedDhikrId] ?? 0) + 1 }));
+      }
+    };
+
+    const handleReset = () => {
+      Alert.alert("Reset Counter", `Reset ${selected.transliteration} count to 0?`, [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Reset",
+          style: "destructive",
+          onPress: async () => {
+            await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            try {
+              const updated = await resetDhikr(new Date(), selectedDhikrId);
+              setDhikrCounts(updated);
+            } catch {
+              setDhikrCounts(prev => ({ ...prev, [selectedDhikrId]: 0 }));
+            }
+          },
+        },
+      ]);
+    };
+
+    return (
+      <>
+        <Pressable
+          style={styles.backRow}
+          onPress={() => { setSection("main"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+        >
+          <Ionicons name="chevron-back" size={22} color={colors.text} />
+          <Text style={[styles.backLabel, { color: colors.text }]}>Dhikr Counter</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={handleTap}
+          onLongPress={handleReset}
+          style={({ pressed }) => [
+            {
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 32,
+              borderRadius: 24,
+              backgroundColor: goalReached ? colors.emerald + "15" : colors.surface,
+              borderWidth: 1,
+              borderColor: goalReached ? colors.emerald + "40" : colors.border,
+              marginBottom: 24,
+            },
+            pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+          ]}
+        >
+          <Text style={{ fontSize: 24, color: colors.text, marginBottom: 8, textAlign: "center" as const }}>
+            {selected.arabic}
+          </Text>
+          <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: colors.textSecondary, marginBottom: 20 }}>
+            {selected.transliteration}
+          </Text>
+          <Text style={{ fontSize: 64, fontFamily: "Inter_700Bold", color: goalReached ? colors.emerald : colors.gold, marginBottom: 4 }}>
+            {count}
+          </Text>
+          {selected.goal ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <View style={{ width: 120, height: 6, borderRadius: 3, backgroundColor: colors.border, overflow: "hidden" as const }}>
+                <View style={{ width: `${progress * 100}%` as any, height: 6, borderRadius: 3, backgroundColor: goalReached ? colors.emerald : colors.gold }} />
+              </View>
+              <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: colors.textTertiary }}>
+                {goalReached ? "Done!" : `${count}/${selected.goal}`}
+              </Text>
+            </View>
+          ) : (
+            <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: colors.textTertiary }}>Free count</Text>
+          )}
+          <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: colors.textTertiary, marginTop: 16 }}>
+            Tap to count · Long press to reset
+          </Text>
+        </Pressable>
+
+        <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.textSecondary, textAlign: "center" as const, marginBottom: 16 }}>
+          {selected.translation}
+        </Text>
+
+        <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>SELECT DHIKR</Text>
+        {DHIKR_PRESETS.map((item) => {
+          const itemCount = dhikrCounts[item.id] ?? 0;
+          const isActive = item.id === selectedDhikrId;
+          const itemGoalReached = item.goal ? itemCount >= item.goal : false;
+          return (
+            <Pressable
+              key={item.id}
+              style={({ pressed }) => [
+                styles.menuItem,
+                {
+                  backgroundColor: isActive ? (isDark ? colors.emerald + "15" : colors.emerald + "08") : (pressed ? colors.surfaceSecondary : colors.surface),
+                  borderColor: isActive ? colors.emerald + "40" : colors.border,
+                },
+              ]}
+              onPress={() => {
+                setSelectedDhikrId(item.id);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+            >
+              <View style={[styles.menuIcon, { backgroundColor: itemGoalReached ? colors.emerald + "20" : colors.prayerIconBg }]}>
+                {itemGoalReached ? (
+                  <Ionicons name="checkmark-circle" size={20} color={colors.emerald} />
+                ) : (
+                  <MaterialCommunityIcons name="counter" size={20} color={colors.emerald} />
+                )}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.menuLabel, { color: colors.text }]}>{item.transliteration}</Text>
+                <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>
+                  {item.goal ? `${itemCount}/${item.goal}` : `${itemCount} counted`}
+                </Text>
+              </View>
+              {isActive && <Ionicons name="radio-button-on" size={20} color={colors.emerald} />}
+            </Pressable>
+          );
+        })}
+      </>
+    );
+  };
+
   const renderProfile = () => {
     const stats = userStatsQuery.data;
     const pending = (pendingSubmissionsQuery.data || []).filter(s => !s.user_vote);
@@ -1420,6 +1596,7 @@ export default function SettingsScreen() {
         {section === "masjidDetail" && renderMasjidDetail()}
         {section === "feedback" && renderFeedback()}
         {section === "prayerTracker" && renderPrayerTracker()}
+        {section === "dhikrCounter" && renderDhikrCounter()}
         {section === "janazaHistory" && renderJanazaHistory()}
         {section === "profile" && renderProfile()}
       </ScrollView>

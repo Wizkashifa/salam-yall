@@ -380,7 +380,7 @@ function CountdownRing({ colors, isDark, progress, qiblaBearing, hasRealLocation
 export default function PrayerScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
-  const { calcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid, openMenuToSection } = useSettings();
+  const { calcMethod, notificationsEnabled, setNotificationsEnabled, preferredMasjid, openMenuToSection, setPendingSettingsSection } = useSettings();
   const router = useRouter();
   const { setPendingTarget } = useDeepLink();
   const [prayers, setPrayers] = useState<PrayerTimeEntry[]>([]);
@@ -1012,7 +1012,7 @@ export default function PrayerScreen() {
               ) : null}
               {prayerStreak > 0 ? (
                 <Pressable
-                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/settings"); }}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setPendingSettingsSection("prayerTracker"); router.push("/(tabs)/settings"); }}
                   style={{ alignItems: "center" }}
                 >
                   <View style={{ height: 30, alignItems: "center", justifyContent: "center" }}>
@@ -1184,6 +1184,49 @@ export default function PrayerScreen() {
               — {dailyVerse.source} · Dr. Mustafa Khattab
             </Text>
         </Pressable>
+
+        <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
+          <View style={styles.sectionCardHeader}>
+            <Text style={[styles.sectionCardTitle, { color: colors.text }]}>Worship</Text>
+          </View>
+          <Pressable
+            onPress={() => { setPendingSettingsSection("prayerTracker"); router.push("/(tabs)/settings"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+            style={({ pressed }) => [styles.worshipRow, pressed && { opacity: 0.7 }]}
+          >
+            <View style={[styles.worshipIcon, { backgroundColor: colors.prayerIconBg }]}>
+              <Ionicons name="calendar" size={16} color={colors.emerald} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.worshipLabel, { color: colors.text }]}>Prayer Tracker</Text>
+              <Text style={[styles.worshipSub, { color: colors.textSecondary }]}>Track & view prayer history</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+          </Pressable>
+          <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: colors.borderLight, marginLeft: 50 }} />
+          <Pressable
+            onPress={() => { setPendingSettingsSection("dhikrCounter"); router.push("/(tabs)/settings"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+            style={({ pressed }) => [styles.worshipRow, pressed && { opacity: 0.7 }]}
+          >
+            <View style={[styles.worshipIcon, { backgroundColor: colors.prayerIconBg }]}>
+              <MaterialCommunityIcons name="counter" size={16} color={colors.emerald} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.worshipLabel, { color: colors.text }]}>Dhikr Counter</Text>
+              <Text style={[styles.worshipSub, { color: colors.textSecondary }]}>Daily remembrance tracker</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+          </Pressable>
+          <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: colors.borderLight, marginLeft: 50 }} />
+          <View style={[styles.worshipRow, { opacity: 0.45 }]}>
+            <View style={[styles.worshipIcon, { backgroundColor: colors.prayerIconBg }]}>
+              <Ionicons name="sunny-outline" size={16} color={colors.emerald} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.worshipLabel, { color: colors.text }]}>Morning & Evening Adhkar</Text>
+              <Text style={[styles.worshipSub, { color: colors.gold }]}>Coming Soon</Text>
+            </View>
+          </View>
+        </View>
 
         {masjidsExpanded ? (
           <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
@@ -1916,5 +1959,27 @@ const styles = StyleSheet.create({
   halalRatingCount: {
     fontSize: 10,
     fontFamily: "Inter_400Regular",
+  },
+  worshipRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    gap: 12,
+  },
+  worshipIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  worshipLabel: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+  },
+  worshipSub: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    marginTop: 1,
   },
 });
