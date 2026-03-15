@@ -909,6 +909,11 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
         </Animated.View>
       )}
 
+    </>
+  ), [resumePos, khatam, colors, khatamOpacity, khatamHeight, handleResumeReading]);
+
+  return (
+    <View style={{ flex: 1 }}>
       <Pressable
         style={[qStyles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}
         onPress={() => { setQSection("search"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
@@ -917,11 +922,7 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
         <Ionicons name="search" size={18} color={colors.textSecondary} />
         <Text style={[qStyles.searchPlaceholder, { color: colors.textTertiary }]}>Search verses...</Text>
       </Pressable>
-    </>
-  ), [resumePos, khatam, colors, khatamOpacity, khatamHeight, handleResumeReading]);
 
-  return (
-    <View style={{ flex: 1 }}>
       {surahsLoading ? (
         <ActivityIndicator size="small" color={colors.emerald} style={{ marginTop: 24 }} />
       ) : errorMsg && surahs.length === 0 ? (
