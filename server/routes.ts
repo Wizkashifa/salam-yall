@@ -3741,7 +3741,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/share/restaurant/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const result = await pool.query("SELECT id, name, formatted_address, halal_comment, is_halal, rating, user_ratings_total, cuisine_types, emoji FROM halal_restaurants WHERE id = $1", [id]);
+      const result = await pool.query("SELECT id, name, formatted_address, halal_comment, is_halal, rating, user_ratings_total, cuisine_types, emoji, photo_reference FROM halal_restaurants WHERE id = $1", [id]);
       const restaurant = result.rows[0];
       const title = restaurant ? restaurant.name : "Halal Restaurant";
       const description = restaurant
@@ -3759,6 +3759,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isHalal = restaurant?.is_halal === "IS_HALAL";
       const cuisines = restaurant?.cuisine_types || [];
       const cuisineLabel = cuisines.length > 0 ? cuisines[0].replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()) : "";
+      const restaurantImageUrl = restaurant?.photo_reference ? `https://${host}/api/halal-restaurants/${safeId}/photo` : "";
 
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(`<!DOCTYPE html>
@@ -3774,19 +3775,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   <meta property="og:type" content="website">
   <meta property="og:url" content="${pageUrl}">
   <meta property="og:site_name" content="Salam Y'all">
-  <meta property="og:image" content="https://${host}/assets/images/og-share.png">
+  <meta property="og:image" content="${restaurantImageUrl || `https://${host}/assets/images/og-share.png`}">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="675">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${escapeHtml(title)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
-  <meta name="twitter:image" content="https://${host}/assets/images/og-share.png">
+  <meta name="twitter:image" content="${restaurantImageUrl || `https://${host}/assets/images/og-share.png`}">
   <style>${sharePageStyles}</style>
 </head>
 <body>
   <div class="brand"><img src="/assets/images/icon.png" alt="Salam Y'all"><span class="brand-name">Salam Y'all</span></div>
   <div class="card">
-    <div class="card-image-placeholder">${escapeHtml(emoji)}</div>
+    ${restaurantImageUrl ? `<img class="card-image" src="${restaurantImageUrl}" alt="${escapeHtml(title)}">` : `<div class="card-image-placeholder">${escapeHtml(emoji)}</div>`}
     <div class="card-body">
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
         <span class="badge badge-restaurant">${escapeHtml(cuisineLabel || "Restaurant")}</span>
@@ -3813,7 +3814,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/share/business/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const result = await pool.query("SELECT id, name, category, description, address, phone, website FROM businesses WHERE id = $1 AND status = 'approved'", [id]);
+      const result = await pool.query("SELECT id, name, category, description, address, phone, website, photo_reference, photo_url FROM businesses WHERE id = $1 AND status = 'approved'", [id]);
       const business = result.rows[0];
       const title = business ? business.name : "Local Business";
       const description = business
@@ -3826,6 +3827,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const category = business?.category || "Business";
       const address = business?.address || "";
+      const businessImageUrl = business?.photo_reference ? `https://${host}/api/businesses/${safeId}/photo` : (business?.photo_url || "");
 
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.send(`<!DOCTYPE html>
@@ -3841,19 +3843,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   <meta property="og:type" content="website">
   <meta property="og:url" content="${pageUrl}">
   <meta property="og:site_name" content="Salam Y'all">
-  <meta property="og:image" content="https://${host}/assets/images/og-share.png">
+  <meta property="og:image" content="${businessImageUrl || `https://${host}/assets/images/og-share.png`}">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="675">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${escapeHtml(title)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
-  <meta name="twitter:image" content="https://${host}/assets/images/og-share.png">
+  <meta name="twitter:image" content="${businessImageUrl || `https://${host}/assets/images/og-share.png`}">
   <style>${sharePageStyles}</style>
 </head>
 <body>
   <div class="brand"><img src="/assets/images/icon.png" alt="Salam Y'all"><span class="brand-name">Salam Y'all</span></div>
   <div class="card">
-    <div class="card-image-placeholder">🏢</div>
+    ${businessImageUrl ? `<img class="card-image" src="${escapeHtml(businessImageUrl)}" alt="${escapeHtml(title)}">` : `<div class="card-image-placeholder">🏢</div>`}
     <div class="card-body">
       <span class="badge badge-business">${escapeHtml(category)}</span>
       <h1>${escapeHtml(title)}</h1>
