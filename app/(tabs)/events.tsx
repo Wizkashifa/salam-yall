@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect, useRef, useMemo } from "react";
 import {
   StyleSheet,
   Text,
@@ -13,6 +13,7 @@ import {
   Dimensions,
   Linking,
   Share,
+  Animated,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -100,6 +101,212 @@ function getRelativeLabel(dateLabel: string): string {
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const CALENDAR_COLLAPSE_THRESHOLD = 40;
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function getMonthDays(year: number, month: number) {
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  return { firstDay, daysInMonth };
+}
+
+function toDateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function buildEventDateMap(events: CalendarEvent[]): Record<string, number> {
+  const map: Record<string, number> = {};
+  for (const ev of events) {
+    const d = new Date(ev.start);
+    const key = toDateKey(d);
+    map[key] = (map[key] || 0) + 1;
+  }
+  return map;
+}
+
+function EventCalendar({
+  events,
+  selectedDate,
+  onSelectDate,
+  colors,
+}: {
+  events: CalendarEvent[];
+  selectedDate: string | null;
+  onSelectDate: (dateKey: string | null) => void;
+  colors: ReturnType<typeof useTheme>["colors"];
+}) {
+  const [viewMonth, setViewMonth] = useState(() => {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() };
+  });
+
+  const eventDateMap = useMemo(() => buildEventDateMap(events), [events]);
+  const { firstDay, daysInMonth } = getMonthDays(viewMonth.year, viewMonth.month);
+  const todayKey = toDateKey(new Date());
+  const monthLabel = new Date(viewMonth.year, viewMonth.month).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+  const prevMonth = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setViewMonth((prev) => {
+      const m = prev.month - 1;
+      return m < 0 ? { year: prev.year - 1, month: 11 } : { year: prev.year, month: m };
+    });
+  };
+  const nextMonth = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setViewMonth((prev) => {
+      const m = prev.month + 1;
+      return m > 11 ? { year: prev.year + 1, month: 0 } : { year: prev.year, month: m };
+    });
+  };
+
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  const cellSize = Math.floor((SCREEN_WIDTH - 40) / 7);
+
+  return (
+    <View style={[calStyles.container, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
+      <View style={calStyles.header}>
+        <Pressable onPress={prevMonth} hitSlop={12}>
+          <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
+        </Pressable>
+        <Pressable onPress={() => {
+          const now = new Date();
+          setViewMonth({ year: now.getFullYear(), month: now.getMonth() });
+        }}>
+          <Text style={[calStyles.monthLabel, { color: colors.text }]}>{monthLabel}</Text>
+        </Pressable>
+        <Pressable onPress={nextMonth} hitSlop={12}>
+          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+        </Pressable>
+      </View>
+
+      <View style={calStyles.weekdayRow}>
+        {WEEKDAYS.map((wd) => (
+          <View key={wd} style={[calStyles.weekdayCell, { width: cellSize }]}>
+            <Text style={[calStyles.weekdayText, { color: colors.textTertiary }]}>{wd}</Text>
+          </View>
+        ))}
+      </View>
+
+      <View style={calStyles.grid}>
+        {cells.map((day, i) => {
+          if (day === null) {
+            return <View key={`empty-${i}`} style={{ width: cellSize, height: cellSize }} />;
+          }
+          const dateKey = `${viewMonth.year}-${String(viewMonth.month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+          const hasEvents = !!eventDateMap[dateKey];
+          const isSelected = selectedDate === dateKey;
+          const isToday = dateKey === todayKey;
+
+          return (
+            <Pressable
+              key={dateKey}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onSelectDate(isSelected ? null : dateKey);
+              }}
+              style={[
+                calStyles.dayCell,
+                { width: cellSize, height: cellSize },
+                isSelected && { backgroundColor: colors.emerald, borderRadius: cellSize / 2 },
+                isToday && !isSelected && { borderWidth: 1.5, borderColor: colors.emerald, borderRadius: cellSize / 2 },
+              ]}
+            >
+              <Text style={[
+                calStyles.dayText,
+                { color: isSelected ? "#fff" : colors.text },
+                !hasEvents && !isToday && { color: colors.textTertiary },
+              ]}>
+                {day}
+              </Text>
+              {hasEvents && (
+                <View style={[calStyles.eventDot, { backgroundColor: isSelected ? "#fff" : colors.gold }]} />
+              )}
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {selectedDate && (
+        <Pressable
+          onPress={() => onSelectDate(null)}
+          style={[calStyles.clearFilter, { backgroundColor: colors.emerald + "18" }]}
+        >
+          <Text style={[calStyles.clearFilterText, { color: colors.emerald }]}>Show all events</Text>
+        </Pressable>
+      )}
+    </View>
+  );
+}
+
+const calStyles = StyleSheet.create({
+  container: {
+    marginHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingBottom: 8,
+    overflow: "hidden",
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  monthLabel: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 15,
+  },
+  weekdayRow: {
+    flexDirection: "row",
+    paddingHorizontal: 6,
+  },
+  weekdayCell: {
+    alignItems: "center",
+    paddingBottom: 4,
+  },
+  weekdayText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 11,
+    textTransform: "uppercase",
+  },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    paddingHorizontal: 6,
+  },
+  dayCell: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dayText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 14,
+  },
+  eventDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    position: "absolute",
+    bottom: 6,
+  },
+  clearFilter: {
+    marginHorizontal: 14,
+    marginTop: 4,
+    marginBottom: 4,
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  clearFilterText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
+  },
+});
 
 function EventDetailModal({ event, visible, onClose }: { event: CalendarEvent | null; visible: boolean; onClose: () => void }) {
   const insets = useSafeAreaInsets();
@@ -233,6 +440,11 @@ export default function EventsScreen() {
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [calendarCollapsed, setCalendarCollapsed] = useState(false);
+  const calendarCollapsedRef = useRef(false);
+  const calendarAnim = useRef(new Animated.Value(1)).current;
+  const scrollRef = useRef<ScrollView>(null);
   const { pendingTarget, consumeTarget } = useDeepLink();
 
   useEffect(() => { trackScreenView("Events"); }, []);
@@ -260,6 +472,29 @@ export default function EventsScreen() {
     setRefreshing(false);
   }, [queryClient]);
 
+  const handleScroll = useCallback((e: { nativeEvent: { contentOffset: { y: number } } }) => {
+    const y = e.nativeEvent.contentOffset.y;
+    const shouldCollapse = y > CALENDAR_COLLAPSE_THRESHOLD;
+    if (shouldCollapse !== calendarCollapsedRef.current) {
+      calendarCollapsedRef.current = shouldCollapse;
+      setCalendarCollapsed(shouldCollapse);
+      Animated.timing(calendarAnim, {
+        toValue: shouldCollapse ? 0 : 1,
+        duration: 200,
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [calendarAnim]);
+
+  const scrollToTop = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  }, []);
+
+  const onSelectDate = useCallback((dateKey: string | null) => {
+    setSelectedDate(dateKey);
+  }, []);
+
   const now = new Date();
   const activeEvents = events
     ? events.filter((ev) => {
@@ -267,31 +502,70 @@ export default function EventsScreen() {
         return end >= now;
       })
     : [];
-  const grouped = groupEventsByDate(activeEvents);
+
+  const filteredEvents = selectedDate
+    ? activeEvents.filter((ev) => toDateKey(new Date(ev.start)) === selectedDate)
+    : activeEvents;
+  const grouped = groupEventsByDate(filteredEvents);
 
   const [headerHeight, setHeaderHeight] = useState(0);
+
+  const selectedDateLabel = selectedDate
+    ? new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    : null;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <GlassHeader onHeaderHeight={setHeaderHeight}>
-        <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14 }}>
-          <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>Community Events</Text>
-          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
-            Programs and events in the local area
-          </Text>
+        <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <View>
+            <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>Community Events</Text>
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
+              {selectedDateLabel ? `Showing ${selectedDateLabel}` : "Programs and events in the local area"}
+            </Text>
+          </View>
+          {calendarCollapsed && (
+            <Pressable
+              onPress={scrollToTop}
+              style={({ pressed }) => ({
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                backgroundColor: pressed ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.12)",
+                alignItems: "center",
+                justifyContent: "center",
+              })}
+            >
+              <Ionicons name="calendar" size={20} color="#fff" />
+            </Pressable>
+          )}
         </View>
         <TickerBanner />
       </GlassHeader>
       <ScrollView
+        ref={scrollRef}
         style={[styles.container, { backgroundColor: colors.background }]}
         contentContainerStyle={{
           paddingBottom: Platform.OS === "web" ? 34 : 100,
           paddingTop: headerHeight + 12,
         }}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />
         }
       >
+        {!isLoading && !error && activeEvents.length > 0 && (
+          <Animated.View style={{ opacity: calendarAnim, maxHeight: calendarAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 500] }), overflow: "hidden", marginBottom: 8 }}>
+            <EventCalendar
+              events={activeEvents}
+              selectedDate={selectedDate}
+              onSelectDate={onSelectDate}
+              colors={colors}
+            />
+          </Animated.View>
+        )}
+
         {isLoading ? (
           <View style={styles.centerContainer}>
             <ActivityIndicator size="large" color={colors.emerald} />
@@ -310,10 +584,20 @@ export default function EventsScreen() {
         ) : grouped.length === 0 ? (
           <View style={styles.centerContainer}>
             <Ionicons name="calendar-outline" size={36} color={colors.textSecondary} />
-            <Text style={[styles.emptyText, { color: colors.text }]}>No upcoming events</Text>
-            <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-              Pull down to refresh
+            <Text style={[styles.emptyText, { color: colors.text }]}>
+              {selectedDate ? "No events on this day" : "No upcoming events"}
             </Text>
+            <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
+              {selectedDate ? "Tap another day or clear the filter" : "Pull down to refresh"}
+            </Text>
+            {selectedDate && (
+              <Pressable
+                onPress={() => setSelectedDate(null)}
+                style={({ pressed }) => [styles.retryButton, { backgroundColor: colors.emerald, opacity: pressed ? 0.8 : 1, marginTop: 12 }]}
+              >
+                <Text style={styles.retryButtonText}>Show All</Text>
+              </Pressable>
+            )}
           </View>
         ) : (
           grouped.map((group, groupIdx) => {
