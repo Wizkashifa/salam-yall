@@ -7,7 +7,12 @@ const BATCH_SIZE = 10;
 const FLUSH_INTERVAL = 30000;
 
 let deviceId: string | null = null;
-let queue: Array<{ event_name: string; event_data?: any; device_id?: string; platform?: string }> = [];
+let currentUserId: number | null = null;
+let queue: Array<{ event_name: string; event_data?: any; device_id?: string; platform?: string; user_id?: number | null }> = [];
+
+export function setAnalyticsUserId(userId: number | null) {
+  currentUserId = userId;
+}
 let flushTimer: ReturnType<typeof setInterval> | null = null;
 
 async function getDeviceId(): Promise<string> {
@@ -60,6 +65,7 @@ export async function trackEvent(eventName: string, eventData?: Record<string, a
       event_data: eventData || undefined,
       device_id: id,
       platform: Platform.OS,
+      user_id: currentUserId,
     });
     startFlushTimer();
     if (queue.length >= BATCH_SIZE) {

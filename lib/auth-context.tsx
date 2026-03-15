@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiRequest, getApiUrl } from "@/lib/query-client";
+import { setAnalyticsUserId } from "@/lib/analytics";
 
 const AUTH_TOKEN_KEY = "auth_session_token";
 
@@ -40,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const data = await res.json();
             setUser(data);
             setSessionToken(token);
+            setAnalyticsUserId(data.id);
           } else {
             await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
           }
@@ -85,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await response.json();
     setSessionToken(data.token);
     setUser(data.user);
+    setAnalyticsUserId(data.user.id);
     await AsyncStorage.setItem(AUTH_TOKEN_KEY, data.token);
     return data.token;
   }, []);
@@ -94,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await response.json();
     setSessionToken(data.token);
     setUser(data.user);
+    setAnalyticsUserId(data.user.id);
     await AsyncStorage.setItem(AUTH_TOKEN_KEY, data.token);
     return data.token;
   }, []);
@@ -110,6 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setUser(null);
     setSessionToken(null);
+    setAnalyticsUserId(null);
     await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
   }, [sessionToken]);
 

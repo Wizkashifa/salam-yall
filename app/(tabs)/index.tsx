@@ -1079,6 +1079,7 @@ export default function PrayerScreen() {
                             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                             const remaining = await logMakeupFast();
                             setMissedFastCount(remaining);
+                            trackEvent("makeup_fast_logged", { remaining });
                           },
                         },
                       ]

@@ -518,11 +518,13 @@ async function ensureAnalyticsTable(pool: pg.Pool) {
       event_data JSONB,
       device_id VARCHAR(100),
       platform VARCHAR(20),
+      user_id INTEGER,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
   `);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_analytics_event_created ON analytics_events(event_name, created_at);`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_analytics_device ON analytics_events(device_id);`);
+  await pool.query(`ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS user_id INTEGER;`).catch(() => {});
 }
 
 async function ensureMasjidsTable(pool: pg.Pool) {
@@ -1386,13 +1388,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/analytics/event", async (req, res) => {
     try {
-      const { event_name, event_data, device_id, platform } = req.body;
+      const { event_name, event_data, device_id, platform, user_id } = req.body;
       if (!event_name || typeof event_name !== "string") {
         return res.status(400).json({ error: "event_name required" });
       }
       await pool.query(
-        "INSERT INTO analytics_events (event_name, event_data, device_id, platform) VALUES ($1, $2, $3, $4)",
-        [event_name.slice(0, 100), event_data || null, device_id?.slice(0, 100) || null, platform?.slice(0, 20) || null]
+        "INSERT INTO analytics_events (event_name, event_data, device_id, platform, user_id) VALUES ($1, $2, $3, $4, $5)",
+        [event_name.slice(0, 100), event_data || null, device_id?.slice(0, 100) || null, platform?.slice(0, 20) || null, user_id || null]
       );
       res.status(201).json({ ok: true });
     } catch (error: any) {
@@ -1413,12 +1415,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const evt of limited) {
         if (!evt.event_name) continue;
         const i = params.length;
-        values.push(`($${i + 1}, $${i + 2}, $${i + 3}, $${i + 4})`);
-        params.push(evt.event_name.slice(0, 100), evt.event_data || null, evt.device_id?.slice(0, 100) || null, evt.platform?.slice(0, 20) || null);
+        values.push(`($${i + 1}, $${i + 2}, $${i + 3}, $${i + 4}, $${i + 5})`);
+        params.push(evt.event_name.slice(0, 100), evt.event_data || null, evt.device_id?.slice(0, 100) || null, evt.platform?.slice(0, 20) || null, evt.user_id || null);
       }
       if (values.length > 0) {
         await pool.query(
-          `INSERT INTO analytics_events (event_name, event_data, device_id, platform) VALUES ${values.join(", ")}`,
+          `INSERT INTO analytics_events (event_name, event_data, device_id, platform, user_id) VALUES ${values.join(", ")}`,
           params
         );
       }
@@ -2416,6 +2418,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("[Analytics] Community stats error:", error.message);
       res.status(500).json({ error: "Failed to fetch community stats" });
+    }
+  });
+
+  app.get("/api/admin/analytics/users", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const excludeDemo = req.query.excludeDemo === "true";
+      const demoDeviceIds = (req.query.demoDevices as string || "").split(",").filter(Boolean);
+
+      let excludeClause = "";
+      const params: any[] = [];
+
+      if (excludeDemo && demoDeviceIds.length > 0) {
+        const placeholders = demoDeviceIds.map((_, i) => `$${i + 1}`).join(",");
+        excludeClause = `AND ae.device_id NOT IN (${placeholders})`;
+        params.push(...demoDeviceIds);
+      }
+
+      const userStats = await pool.query(`
+        WITH prayer_data AS (
+          SELECT 
+            COALESCE(ae.user_id, ua.id) as uid,
+            COUNT(*) FILTER (WHERE ae.event_name = 'prayer_tracked' AND (ae.event_data->>'status')::int > 0) as prayers_tracked,
+            COUNT(*) FILTER (WHERE ae.event_name = 'makeup_fast_logged') as fasts_made_up,
+            COUNT(DISTINCT ae.device_id) as device_count,
+            MAX(ae.created_at) as last_active
+          FROM analytics_events ae
+          LEFT JOIN user_accounts ua ON ae.user_id = ua.id
+          WHERE ae.event_name IN ('prayer_tracked', 'makeup_fast_logged')
+          ${excludeClause}
+          GROUP BY COALESCE(ae.user_id, ua.id)
+        ),
+        device_users AS (
+          SELECT 
+            ae.device_id,
+            COUNT(*) FILTER (WHERE ae.event_name = 'prayer_tracked' AND (ae.event_data->>'status')::int > 0) as prayers_tracked,
+            COUNT(*) FILTER (WHERE ae.event_name = 'makeup_fast_logged') as fasts_made_up,
+            MAX(ae.created_at) as last_active
+          FROM analytics_events ae
+          WHERE ae.event_name IN ('prayer_tracked', 'makeup_fast_logged')
+          AND ae.user_id IS NULL
+          ${excludeClause}
+          GROUP BY ae.device_id
+        )
+        SELECT 
+          ua.id as user_id,
+          ua.display_name,
+          ua.email,
+          ua.created_at as joined,
+          COALESCE(pd.prayers_tracked, 0)::int as prayers_tracked,
+          COALESCE(pd.fasts_made_up, 0)::int as fasts_made_up,
+          pd.last_active
+        FROM user_accounts ua
+        LEFT JOIN prayer_data pd ON pd.uid = ua.id
+        WHERE ua.apple_id NOT LIKE 'test_%'
+        ORDER BY COALESCE(pd.prayers_tracked, 0) DESC, ua.created_at DESC
+      `, params);
+
+      const anonymousDevices = await pool.query(`
+        SELECT 
+          ae.device_id,
+          COUNT(*) FILTER (WHERE ae.event_name = 'prayer_tracked' AND (ae.event_data->>'status')::int > 0)::int as prayers_tracked,
+          COUNT(*) FILTER (WHERE ae.event_name = 'makeup_fast_logged')::int as fasts_made_up,
+          MAX(ae.created_at) as last_active
+        FROM analytics_events ae
+        WHERE ae.event_name IN ('prayer_tracked', 'makeup_fast_logged')
+        AND ae.user_id IS NULL
+        ${excludeClause}
+        GROUP BY ae.device_id
+        HAVING COUNT(*) FILTER (WHERE ae.event_name = 'prayer_tracked' AND (ae.event_data->>'status')::int > 0) > 0
+           OR COUNT(*) FILTER (WHERE ae.event_name = 'makeup_fast_logged') > 0
+        ORDER BY prayers_tracked DESC
+      `, params);
+
+      res.json({
+        users: userStats.rows,
+        anonymousDevices: anonymousDevices.rows,
+      });
+    } catch (error: any) {
+      console.error("[Analytics] Users stats error:", error.message);
+      res.status(500).json({ error: "Failed to fetch user stats" });
     }
   });
 
