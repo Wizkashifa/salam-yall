@@ -1034,7 +1034,7 @@ export default function PrayerScreen() {
           <View style={[styles.silenceAlert, { backgroundColor: isDark ? "#2A1818" : "#FEF2F2", borderColor: isDark ? "#3D2323" : "#FECACA" }]}>
             <View style={styles.silenceAlertContent}>
               <MaterialCommunityIcons name="volume-off" size={16} color={isDark ? "#F87171" : "#DC2626"} />
-              <Text style={[styles.silenceAlertText, { color: isDark ? "#F87171" : "#DC2626" }]} numberOfLines={1}>
+              <Text style={[styles.silenceAlertText, { color: isDark ? "#F87171" : "#DC2626" }]}>
                 Near {nearMosque.name} — silence your phone
               </Text>
               <Pressable onPress={dismissSilenceAlert} hitSlop={8}>
