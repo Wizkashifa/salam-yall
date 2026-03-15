@@ -840,11 +840,13 @@ export default function PrayerScreen() {
     } catch (err) {
       console.error("Error scheduling notifications:", err);
     }
-  }, [calcMethod, notificationsEnabled, iqamaAlertsEnabled, activeIqama]);
+  }, [calcMethod, asrCalc, notificationsEnabled, iqamaAlertsEnabled, activeIqama]);
 
   useEffect(() => {
     if ((notificationsEnabled || iqamaAlertsEnabled) && prayers.length > 0) {
       schedulePrayerNotifications(prayers, userCoords.lat, userCoords.lon);
+    } else if (!notificationsEnabled && !iqamaAlertsEnabled) {
+      Notifications.cancelAllScheduledNotificationsAsync().catch(() => {});
     }
   }, [notificationsEnabled, iqamaAlertsEnabled, prayers, schedulePrayerNotifications, userCoords, activeIqama]);
 
