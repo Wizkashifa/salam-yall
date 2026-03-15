@@ -1110,7 +1110,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/events/refresh", async (_req, res) => {
+  app.post("/api/events/refresh", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {
       const events = await fetchAndCacheEvents();
       const withOverrides = await applyEventOverrides(events);
@@ -3273,12 +3274,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/jumuah-schedules", async (_req, res) => {
     try {
-      const pool = getDbPool();
       const result = await pool.query(
         "SELECT id, masjid, khutbah_time, iqama_time, speaker, topic FROM jumuah_schedules WHERE active = true ORDER BY sort_order ASC"
       );
       res.json(result.rows);
-      pool.end();
     } catch (error: any) {
       console.error("Error fetching jumuah schedules:", error.message);
       res.status(500).json({ error: "Failed to fetch jumuah schedules" });
@@ -3289,10 +3288,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const token = req.headers.authorization?.replace("Bearer ", "");
     if (!token || !adminSessions.has(token)) return res.status(401).json({ error: "Unauthorized" });
     try {
-      const pool = getDbPool();
       const result = await pool.query("SELECT * FROM jumuah_schedules ORDER BY sort_order ASC");
       res.json(result.rows);
-      pool.end();
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -3306,13 +3303,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!masjid || !khutbah_time || !iqama_time) {
         return res.status(400).json({ error: "masjid, khutbah_time, and iqama_time are required" });
       }
-      const pool = getDbPool();
       const result = await pool.query(
         "INSERT INTO jumuah_schedules (masjid, khutbah_time, iqama_time, speaker, topic, sort_order) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
         [masjid, khutbah_time, iqama_time, speaker || null, topic || null, sort_order || 0]
       );
       res.json(result.rows[0]);
-      pool.end();
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -3324,7 +3319,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { masjid, khutbah_time, iqama_time, speaker, topic, active, sort_order } = req.body;
-      const pool = getDbPool();
       const setClauses: string[] = ["updated_at = NOW()"];
       const params: any[] = [];
       let paramIdx = 1;
@@ -3342,7 +3336,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       if (result.rows.length === 0) return res.status(404).json({ error: "Not found" });
       res.json(result.rows[0]);
-      pool.end();
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -3352,10 +3345,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const token = req.headers.authorization?.replace("Bearer ", "");
     if (!token || !adminSessions.has(token)) return res.status(401).json({ error: "Unauthorized" });
     try {
-      const pool = getDbPool();
       await pool.query("DELETE FROM jumuah_schedules WHERE id = $1", [req.params.id]);
       res.json({ success: true });
-      pool.end();
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -3440,6 +3431,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   let weatherCache: { data: any; timestamp: number; key: string } | null = null;
   const tafsirCache = new Map<string, { data: any; timestamp: number }>();
   const TAFSIR_CACHE_MS = 24 * 60 * 60 * 1000;
+  const TAFSIR_CACHE_MAX = 500;
 
   app.get("/api/tafsir/:surah/:ayah", async (req, res) => {
     try {
@@ -3456,6 +3448,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const json = await resp.json();
       const tafsirText = json.tafsir?.text || json.tafsirs?.[0]?.text || "";
       const result = { surah: parseInt(surah), ayah: parseInt(ayah), text: tafsirText };
+      if (tafsirCache.size >= TAFSIR_CACHE_MAX) {
+        const oldest = tafsirCache.keys().next().value;
+        if (oldest) tafsirCache.delete(oldest);
+      }
       tafsirCache.set(cacheKey, { data: result, timestamp: Date.now() });
       res.json(result);
     } catch (err) {
