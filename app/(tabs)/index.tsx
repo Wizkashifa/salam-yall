@@ -799,7 +799,7 @@ export default function PrayerScreen() {
         }
       }
 
-      if (iqamaAlertsEnabled && activeIqama?.iqama) {
+      if (iqamaAlertsEnabled && activeIqama?.iqama && preferredMasjid) {
         const iqamaPrayers: Array<{ name: string; label: string }> = [
           { name: "dhuhr", label: "Dhuhr" },
           { name: "asr", label: "Asr" },
@@ -840,7 +840,7 @@ export default function PrayerScreen() {
     } catch (err) {
       console.error("Error scheduling notifications:", err);
     }
-  }, [calcMethod, asrCalc, notificationsEnabled, iqamaAlertsEnabled, activeIqama]);
+  }, [calcMethod, asrCalc, notificationsEnabled, iqamaAlertsEnabled, activeIqama, preferredMasjid]);
 
   useEffect(() => {
     if ((notificationsEnabled || iqamaAlertsEnabled) && prayers.length > 0) {
