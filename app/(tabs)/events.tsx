@@ -440,6 +440,8 @@ export default function EventsScreen() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
+  const [calendarScrolledPast, setCalendarScrolledPast] = useState(false);
+  const calendarScrolledPastRef = useRef(false);
   const { pendingTarget, consumeTarget } = useDeepLink();
 
   useEffect(() => { trackScreenView("Events"); }, []);
@@ -466,6 +468,19 @@ export default function EventsScreen() {
     await queryClient.invalidateQueries({ queryKey: ["/api/events"] });
     setRefreshing(false);
   }, [queryClient]);
+
+  const handleScroll = useCallback((e: { nativeEvent: { contentOffset: { y: number } } }) => {
+    const scrolledPast = e.nativeEvent.contentOffset.y > 120;
+    if (scrolledPast !== calendarScrolledPastRef.current) {
+      calendarScrolledPastRef.current = scrolledPast;
+      setCalendarScrolledPast(scrolledPast);
+    }
+  }, []);
+
+  const scrollToTop = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  }, []);
 
   const onSelectDate = useCallback((dateKey: string | null) => {
     setSelectedDate(dateKey);
@@ -500,6 +515,21 @@ export default function EventsScreen() {
               {selectedDateLabel ? `Showing ${selectedDateLabel}` : "Programs and events in the local area"}
             </Text>
           </View>
+          {calendarScrolledPast && (
+            <Pressable
+              onPress={scrollToTop}
+              style={({ pressed }) => ({
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                backgroundColor: pressed ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.12)",
+                alignItems: "center",
+                justifyContent: "center",
+              })}
+            >
+              <Ionicons name="calendar" size={20} color="#fff" />
+            </Pressable>
+          )}
         </View>
         <TickerBanner />
       </GlassHeader>
@@ -510,6 +540,8 @@ export default function EventsScreen() {
           paddingBottom: Platform.OS === "web" ? 34 : 100,
           paddingTop: headerHeight + 12,
         }}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />
         }
