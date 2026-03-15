@@ -255,7 +255,7 @@ const calStyles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 8,
   },
   monthLabel: {
     fontFamily: "Inter_600SemiBold",
@@ -285,14 +285,14 @@ const calStyles = StyleSheet.create({
   },
   dayText: {
     fontFamily: "Inter_500Medium",
-    fontSize: 14,
+    fontSize: 13,
   },
   eventDot: {
     width: 4,
     height: 4,
     borderRadius: 2,
     position: "absolute",
-    bottom: 6,
+    bottom: 4,
   },
   clearFilter: {
     marginHorizontal: 14,
