@@ -72,10 +72,10 @@ export default function SettingsScreen() {
   const { user, signInWithApple, devSignIn, signOut, isLoading: authLoading, getAuthHeaders } = useAuth();
   const qc = useQueryClient();
   const [section, setSectionRaw] = useState<SettingsSection>("main");
-  const setSection = useCallback((s: SettingsSection) => {
+  const setSection = (s: SettingsSection) => {
     LayoutAnimation.configureNext(LayoutAnimation.create(250, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity));
     setSectionRaw(s);
-  }, []);
+  };
   const [growthTab, setGrowthTab] = useState<"statistics" | "badges">("statistics");
   const [selectedMasjid, setSelectedMasjid] = useState<Masjid | null>(null);
   const [feedbackType, setFeedbackType] = useState<"bug" | "feature">("feature");
