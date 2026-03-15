@@ -4,9 +4,9 @@
     <title>Salam Y'all — Your Triangle Muslim Community App</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Salam Y'all connects the Triangle NC Muslim community with prayer times, halal restaurants, local businesses, events, and more." />
+    <meta name="description" content="Salam Y'all connects the Triangle NC Muslim community with prayer times, halal restaurants, local businesses, events, Quran reader, dhikr counter, and more." />
     <meta property="og:title" content="Salam Y'all" />
-    <meta property="og:description" content="Your Triangle Muslim Community App — Prayer times, halal eats, events, and local directory all in one place." />
+    <meta property="og:description" content="Your Triangle Muslim Community App — Prayer times, halal eats, events, Quran, and local directory all in one place." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://salamyall.net" />
     <meta property="og:site_name" content="Salam Y'all" />
@@ -91,7 +91,7 @@
       .hero-tagline {
         font-size: 18px;
         color: var(--text-secondary);
-        max-width: 500px;
+        max-width: 520px;
         margin-bottom: 36px;
         position: relative;
         z-index: 1;
@@ -213,6 +213,54 @@
         color: var(--text-secondary);
         line-height: 1.6;
       }
+      .feature-tag {
+        display: inline-block;
+        margin-top: 10px;
+        padding: 3px 10px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border-radius: 6px;
+        background: rgba(212,168,67,0.15);
+        color: var(--gold);
+      }
+
+      /* WORSHIP SECTION */
+      .worship-section {
+        padding: 64px 24px;
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+      .worship-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+      }
+      .worship-card {
+        padding: 28px 22px;
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 20px;
+        text-align: center;
+        transition: all 0.25s;
+      }
+      .worship-card:hover { border-color: rgba(212,168,67,0.3); transform: translateY(-4px); }
+      .worship-card .worship-emoji {
+        font-size: 36px;
+        margin-bottom: 14px;
+      }
+      .worship-card h3 {
+        font-size: 17px;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 6px;
+      }
+      .worship-card p {
+        font-size: 13px;
+        color: var(--text-secondary);
+        line-height: 1.5;
+      }
 
       /* COMMUNITY STATS */
       .stats-section {
@@ -239,6 +287,59 @@
       .stat-item p {
         font-size: 14px;
         color: rgba(255,255,255,0.6);
+        font-weight: 500;
+      }
+
+      /* RAMADAN */
+      .ramadan-banner {
+        padding: 48px 24px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        background: linear-gradient(135deg, #2E1850 0%, #1A0E30 100%);
+        border-top: 1px solid rgba(107,63,160,0.3);
+        border-bottom: 1px solid rgba(107,63,160,0.3);
+      }
+      .ramadan-banner::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(ellipse at 50% 50%, rgba(107,63,160,0.12) 0%, transparent 60%);
+        pointer-events: none;
+      }
+      .ramadan-banner h2 {
+        font-family: 'Playfair Display', serif;
+        font-size: 32px;
+        font-weight: 700;
+        color: #C9A0E8;
+        margin-bottom: 12px;
+        position: relative;
+      }
+      .ramadan-banner p {
+        font-size: 16px;
+        color: rgba(255,255,255,0.7);
+        max-width: 520px;
+        margin: 0 auto;
+        position: relative;
+      }
+      .ramadan-features {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+        margin-top: 24px;
+        position: relative;
+      }
+      .ramadan-feature-pill {
+        padding: 8px 18px;
+        background: rgba(107,63,160,0.2);
+        border: 1px solid rgba(107,63,160,0.3);
+        border-radius: 100px;
+        font-size: 14px;
+        color: rgba(255,255,255,0.8);
         font-weight: 500;
       }
 
@@ -368,10 +469,14 @@
         .stat-item h3 { font-size: 30px; }
         .cta-title { font-size: 26px; }
         .features-grid { grid-template-columns: 1fr; }
+        .worship-grid { grid-template-columns: repeat(2, 1fr); }
         .section { padding: 48px 20px; }
+        .worship-section { padding: 48px 20px; }
         .stats-section { padding: 40px 20px; }
         .community-section { padding: 48px 20px; }
         .cta-section { padding: 48px 20px; }
+        .ramadan-banner { padding: 36px 20px; }
+        .ramadan-banner h2 { font-size: 24px; }
       }
 
       /* LIGHT MODE */
@@ -389,6 +494,8 @@
                       radial-gradient(ellipse at 80% 70%, rgba(212,168,67,0.04) 0%, transparent 50%);
         }
         .feature-card:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.06); }
+        .worship-card:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.06); }
+        .feature-tag { background: rgba(212,168,67,0.12); }
         .stats-section {
           background: linear-gradient(135deg, #0d2b1a 0%, #091a10 100%);
         }
@@ -404,7 +511,7 @@
     <section class="hero">
       <img src="/assets/images/splash-logo.png" alt="Salam Y'all" class="hero-logo" />
       <h1>Salam Y'all</h1>
-      <p class="hero-tagline">The app for the Triangle NC Muslim community. Prayer times, halal eats, events, and more — all in one place.</p>
+      <p class="hero-tagline">The all-in-one app for the Triangle NC Muslim community. Prayer times, Quran, halal eats, events, and more.</p>
       <a href="https://apps.apple.com/us/app/salam-yall/id6760231963" class="hero-cta">
         <svg viewBox="0 0 24 24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
         Download Free on iOS
@@ -425,7 +532,7 @@
         <div class="feature-card">
           <div class="feature-icon">🕌</div>
           <h3>Prayer & Iqama Times</h3>
-          <p>Accurate prayer times with real iqama schedules from local masjids. Track your prayers and build consistency.</p>
+          <p>Accurate prayer times with real iqama schedules from local masjids. See what's coming next at a glance.</p>
         </div>
         <div class="feature-card">
           <div class="feature-icon">🍽️</div>
@@ -435,11 +542,12 @@
         <div class="feature-card">
           <div class="feature-icon">📅</div>
           <h3>Community Events</h3>
-          <p>Never miss a gathering, lecture, or potluck. Browse upcoming events from masjids and organizations across the Triangle.</p>
+          <p>Browse upcoming events from masjids and organizations with an interactive calendar view. Never miss a gathering.</p>
+          <span class="feature-tag">Calendar View</span>
         </div>
         <div class="feature-card">
           <div class="feature-icon">📒</div>
-          <h3>Muslim Directory</h3>
+          <h3>Local Directory</h3>
           <p>Discover Muslim-owned businesses, doctors, lawyers, therapists, and more. Support your community.</p>
         </div>
         <div class="feature-card">
@@ -450,7 +558,36 @@
         <div class="feature-card">
           <div class="feature-icon">📖</div>
           <h3>Daily Quran Verse</h3>
-          <p>Start each day with a verse from the Quran — Arabic text with English translation and tafsir.</p>
+          <p>Start each day with a verse from the Quran — Arabic text with English translation on your home screen.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- WORSHIP TOOLS -->
+    <section class="worship-section">
+      <p class="section-label">Your Worship Companion</p>
+      <h2 class="section-title">Strengthen Your Deen</h2>
+      <p class="section-subtitle">Tools to help you build and maintain your spiritual practice, all in one tab.</p>
+      <div class="worship-grid">
+        <div class="worship-card">
+          <div class="worship-emoji">📖</div>
+          <h3>Quran Reader</h3>
+          <p>Full Quran with Arabic script, English translation, surah navigation, and verse search.</p>
+        </div>
+        <div class="worship-card">
+          <div class="worship-emoji">📿</div>
+          <h3>Dhikr Counter</h3>
+          <p>Digital tasbeeh with haptic feedback. Track your daily dhikr with preset and custom phrases.</p>
+        </div>
+        <div class="worship-card">
+          <div class="worship-emoji">✅</div>
+          <h3>Prayer Tracker</h3>
+          <p>Log your five daily prayers and build a streak. See your weekly and monthly consistency.</p>
+        </div>
+        <div class="worship-card">
+          <div class="worship-emoji">🧭</div>
+          <h3>Qibla & Settings</h3>
+          <p>Qibla compass, calculation method preferences, and prayer time adjustments.</p>
         </div>
       </div>
     </section>
@@ -474,6 +611,19 @@
           <h3>35+</h3>
           <p>Muslim Therapists Listed</p>
         </div>
+      </div>
+    </section>
+
+    <!-- RAMADAN MODE -->
+    <section class="ramadan-banner">
+      <h2>Ramadan Mode</h2>
+      <p>When Ramadan arrives, the app transforms. A rich purple theme, fasting tracker, suhoor and iftar countdowns, and makeup fast logging — all built in.</p>
+      <div class="ramadan-features">
+        <span class="ramadan-feature-pill">Purple Theme</span>
+        <span class="ramadan-feature-pill">Iftar Countdown</span>
+        <span class="ramadan-feature-pill">Fasting Tracker</span>
+        <span class="ramadan-feature-pill">Makeup Fast Log</span>
+        <span class="ramadan-feature-pill">Suhoor Reminders</span>
       </div>
     </section>
 
