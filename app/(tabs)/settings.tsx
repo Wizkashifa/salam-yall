@@ -40,7 +40,9 @@ import { MasjidMap } from "@/components/MasjidMap";
 import { computeBadges, BADGES, type BadgeState } from "@/lib/prayer-badges";
 import ViewShot, { captureRef } from "react-native-view-shot";
 import { useRef } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { QuranReader } from "@/components/QuranReader";
+import { getReadingStreak, getReadingDates, getKhatamProgress } from "@/lib/quran-tracker";
 
 interface CalendarEvent {
   id: string;
@@ -55,8 +57,7 @@ interface CalendarEvent {
   registrationUrl: string;
 }
 
-type SettingsSection = "main" | "calcMethod" | "masjids" | "masjidDetail" | "feedback" | "prayerTracker" | "janazaHistory" | "profile" | "dhikrCounter" | "athanAlerts" | "quranReader";
-type TrackerTab = "calendar" | "badges";
+type SettingsSection = "main" | "calcMethod" | "masjids" | "masjidDetail" | "feedback" | "prayerTracker" | "janazaHistory" | "profile" | "dhikrCounter" | "athanAlerts" | "quranReader" | "personalGrowth";
 
 export default function SettingsScreen() {
   const { colors, isDark, themeMode, setThemeMode, ramadanMode, setRamadanMode } = useTheme();
@@ -65,6 +66,7 @@ export default function SettingsScreen() {
   const { user, signInWithApple, devSignIn, signOut, isLoading: authLoading, getAuthHeaders } = useAuth();
   const qc = useQueryClient();
   const [section, setSection] = useState<SettingsSection>("main");
+  const [growthTab, setGrowthTab] = useState<"statistics" | "badges">("statistics");
   const [selectedMasjid, setSelectedMasjid] = useState<Masjid | null>(null);
   const [feedbackType, setFeedbackType] = useState<"bug" | "feature">("feature");
   const [feedbackText, setFeedbackText] = useState("");
@@ -115,7 +117,6 @@ export default function SettingsScreen() {
   const [newBadgeKey, setNewBadgeKey] = useState<string | null>(null);
   const badgeShareRef = useRef<ViewShot | null>(null);
   const [sharingBadgeKey, setSharingBadgeKey] = useState<string | null>(null);
-  const [trackerTab, setTrackerTab] = useState<TrackerTab>("calendar");
 
   useEffect(() => {
     if (section === "masjids" && !locationRequested) {
@@ -153,7 +154,7 @@ export default function SettingsScreen() {
   }, [section, trackerYear, trackerMonth]);
 
   useEffect(() => {
-    if (section === "prayerTracker" || section === "profile") {
+    if (section === "prayerTracker" || section === "profile" || section === "personalGrowth") {
       computeBadges().then(({ badges, newlyEarned }) => {
         setBadgeStates(badges);
         if (newlyEarned.length > 0) {
@@ -416,6 +417,20 @@ export default function SettingsScreen() {
         <View style={{ flex: 1 }}>
           <Text style={[styles.menuLabel, { color: colors.text }]}>Quran</Text>
           <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>Read, search & track daily reading</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+      </Pressable>
+
+      <Pressable
+        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
+        onPress={() => { setSection("personalGrowth"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+      >
+        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
+          <Ionicons name="trending-up" size={20} color={colors.emerald} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.menuLabel, { color: colors.text }]}>Personal Growth</Text>
+          <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>Prayer trends & Quran reading insights</Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
       </Pressable>
@@ -931,35 +946,13 @@ export default function SettingsScreen() {
       <>
         <Pressable
           style={styles.backRow}
-          onPress={() => { setSection("main"); setSelectedDay(null); setTrackerTab("calendar"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+          onPress={() => { setSection("main"); setSelectedDay(null); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
         >
           <Ionicons name="arrow-back" size={20} color={colors.text} />
           <Text style={[styles.backLabel, { color: colors.text }]}>Prayer Tracker</Text>
         </Pressable>
 
-        <View style={{ flexDirection: "row", backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 4, marginBottom: 16 }}>
-          {(["calendar", "badges"] as TrackerTab[]).map((tab) => (
-            <Pressable
-              key={tab}
-              onPress={() => { setTrackerTab(tab); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); if (tab === "badges") trackEvent("badges_opened"); }}
-              style={{
-                flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: "center",
-                backgroundColor: trackerTab === tab ? colors.emerald : "transparent",
-              }}
-            >
-              <Text style={{
-                fontFamily: "Inter_600SemiBold", fontSize: 14,
-                color: trackerTab === tab ? "#FFFFFF" : colors.textSecondary,
-              }}>
-                {tab === "calendar" ? "Calendar" : "Badges"}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        {trackerTab === "badges" && renderBadgesContent()}
-
-        {trackerTab === "calendar" && trackerStats.elapsedPrayers > 0 && (
+        {trackerStats.elapsedPrayers > 0 && (
           <View style={[styles.statsRow, { marginBottom: 12 }]}>
             <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <View style={[styles.statCircle, { borderColor: colors.gold }]}>
@@ -978,8 +971,7 @@ export default function SettingsScreen() {
           </View>
         )}
 
-        {trackerTab === "calendar" && (
-          <>
+        <>
             <View style={[styles.calMonthRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Pressable onPress={handlePrevMonth} hitSlop={12}>
                 <Ionicons name="chevron-back" size={22} color={colors.text} />
@@ -1089,7 +1081,6 @@ export default function SettingsScreen() {
               Long-press a day to mark/unmark a missed fast
             </Text>
           </>
-        )}
       </>
     );
   };
@@ -1427,7 +1418,7 @@ export default function SettingsScreen() {
               )}
               <Pressable
                 style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border, marginBottom: 16 }]}
-                onPress={() => { setSection("prayerTracker"); setTrackerTab("badges"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                onPress={() => { setSection("personalGrowth"); setGrowthTab("badges"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
               >
                 <View style={[styles.menuIcon, { backgroundColor: colors.gold + "20" }]}>
                   <Ionicons name="trophy" size={18} color={colors.gold} />
@@ -1583,6 +1574,255 @@ export default function SettingsScreen() {
     </>
   );
 
+  const [growthData, setGrowthData] = useState<{
+    thisWeekPrayers: number[];
+    lastWeekPrayers: number[];
+    quranStreak: number;
+    quranConsistency: number;
+    quranTotalDays: number;
+    khatamProgress: number;
+    nextBadge: { title: string; progress: number; total: number; remaining: number } | null;
+    improvementPct: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (section === "personalGrowth") {
+      (async () => {
+        try {
+          const prayerRaw = await AsyncStorage.getItem("prayer_tracker");
+          const prayerData: { [dateKey: string]: DayLog } = prayerRaw ? JSON.parse(prayerRaw) : {};
+
+          const today = new Date();
+          const thisWeekPrayers: number[] = [];
+          const lastWeekPrayers: number[] = [];
+
+          for (let i = 6; i >= 0; i--) {
+            const d = new Date(today);
+            d.setDate(d.getDate() - i);
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+            const log = prayerData[key];
+            const count = log ? [log.fajr, log.dhuhr, log.asr, log.maghrib, log.isha].filter(s => s > 0).length : 0;
+            thisWeekPrayers.push(count);
+          }
+
+          for (let i = 13; i >= 7; i--) {
+            const d = new Date(today);
+            d.setDate(d.getDate() - i);
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+            const log = prayerData[key];
+            const count = log ? [log.fajr, log.dhuhr, log.asr, log.maghrib, log.isha].filter(s => s > 0).length : 0;
+            lastWeekPrayers.push(count);
+          }
+
+          const thisWeekTotal = thisWeekPrayers.reduce((a, b) => a + b, 0);
+          const lastWeekTotal = lastWeekPrayers.reduce((a, b) => a + b, 0);
+          const improvementPct = lastWeekTotal > 0 ? Math.round(((thisWeekTotal - lastWeekTotal) / lastWeekTotal) * 100) : 0;
+
+          const quranStreak = await getReadingStreak();
+          const quranDates = await getReadingDates();
+          const last30 = new Set<string>();
+          for (let i = 0; i < 30; i++) {
+            const d = new Date(today);
+            d.setDate(d.getDate() - i);
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+            if (quranDates.includes(key)) last30.add(key);
+          }
+          const quranConsistency = Math.round((last30.size / 30) * 100);
+
+          const khatam = await getKhatamProgress();
+          const khatamProgress = khatam.completedCount;
+
+          const { badges } = await computeBadges();
+          const unearnedBadges = badges.filter(b => !b.earned && b.total > 0);
+          let nextBadge: { title: string; progress: number; total: number; remaining: number } | null = null;
+          if (unearnedBadges.length > 0) {
+            const closest = unearnedBadges.reduce((best, b) => {
+              const ratio = b.progress / b.total;
+              const bestRatio = best.progress / best.total;
+              return ratio > bestRatio ? b : best;
+            });
+            const def = BADGES.find(b => b.key === closest.key);
+            if (def) {
+              nextBadge = {
+                title: def.title,
+                progress: closest.progress,
+                total: closest.total,
+                remaining: closest.total - closest.progress,
+              };
+            }
+          }
+
+          setGrowthData({
+            thisWeekPrayers,
+            lastWeekPrayers,
+            quranStreak,
+            quranConsistency,
+            quranTotalDays: quranDates.length,
+            khatamProgress,
+            nextBadge,
+            improvementPct,
+          });
+        } catch {}
+      })();
+    }
+  }, [section]);
+
+  const renderPersonalGrowth = () => {
+    const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+    return (
+      <>
+        <Pressable
+          style={styles.backRow}
+          onPress={() => { setSection("main"); setGrowthTab("statistics"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+        >
+          <Ionicons name="chevron-back" size={22} color={colors.text} />
+          <Text style={[styles.backLabel, { color: colors.text }]}>Personal Growth</Text>
+        </Pressable>
+
+        <View style={{ flexDirection: "row", backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 4, marginBottom: 16 }}>
+          {(["statistics", "badges"] as const).map((tab) => (
+            <Pressable
+              key={tab}
+              onPress={() => { setGrowthTab(tab); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); if (tab === "badges") trackEvent("badges_opened"); }}
+              style={{
+                flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: "center",
+                backgroundColor: growthTab === tab ? colors.emerald : "transparent",
+              }}
+            >
+              <Text style={{
+                fontFamily: "Inter_600SemiBold", fontSize: 14,
+                color: growthTab === tab ? "#FFFFFF" : colors.textSecondary,
+              }}>
+                {tab === "statistics" ? "Statistics" : "Badges"}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {growthTab === "badges" && renderBadgesContent()}
+
+        {growthTab === "statistics" && (
+          !growthData ? (
+            <View style={{ alignItems: "center", paddingVertical: 40 }}>
+              <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: colors.textSecondary }}>Loading insights...</Text>
+            </View>
+          ) : (
+            <>
+              <View style={{ backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16, marginBottom: 16 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                  <Ionicons name="bar-chart" size={18} color={colors.emerald} />
+                  <Text style={{ fontFamily: "Inter_700Bold", fontSize: 16, color: colors.text }}>Weekly Prayer Trend</Text>
+                </View>
+
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", height: 120, marginBottom: 8 }}>
+                  {growthData.thisWeekPrayers.map((count, i) => {
+                    const lastWeekCount = growthData.lastWeekPrayers[i];
+                    const maxHeight = 100;
+                    const thisHeight = Math.max(4, (count / 5) * maxHeight);
+                    const lastHeight = Math.max(4, (lastWeekCount / 5) * maxHeight);
+                    return (
+                      <View key={i} style={{ alignItems: "center", flex: 1 }}>
+                        <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 2, height: maxHeight }}>
+                          <View style={{ width: 12, height: lastHeight, borderRadius: 4, backgroundColor: colors.textTertiary + "40" }} />
+                          <View style={{ width: 12, height: thisHeight, borderRadius: 4, backgroundColor: count >= 5 ? colors.emerald : colors.gold }} />
+                        </View>
+                        <Text style={{ fontFamily: "Inter_500Medium", fontSize: 10, color: colors.textSecondary, marginTop: 4 }}>{dayLabels[i]}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+
+                <View style={{ flexDirection: "row", justifyContent: "center", gap: 16, marginTop: 8 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                    <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: colors.textTertiary + "40" }} />
+                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: colors.textSecondary }}>Last week</Text>
+                  </View>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                    <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: colors.emerald }} />
+                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: colors.textSecondary }}>This week</Text>
+                  </View>
+                </View>
+
+                {growthData.improvementPct !== 0 && (
+                  <View style={{ marginTop: 12, padding: 10, borderRadius: 10, backgroundColor: growthData.improvementPct > 0 ? colors.emerald + "15" : colors.gold + "15" }}>
+                    <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: growthData.improvementPct > 0 ? colors.emerald : colors.gold, textAlign: "center" }}>
+                      {growthData.improvementPct > 0
+                        ? `You've improved ${growthData.improvementPct}% this week!`
+                        : `Down ${Math.abs(growthData.improvementPct)}% from last week — keep pushing!`}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={{ backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16, marginBottom: 16 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                  <Ionicons name="book-outline" size={18} color={colors.gold} />
+                  <Text style={{ fontFamily: "Inter_700Bold", fontSize: 16, color: colors.text }}>Quran Reading</Text>
+                </View>
+
+                <View style={{ flexDirection: "row", gap: 12 }}>
+                  <View style={{ flex: 1, padding: 12, borderRadius: 12, backgroundColor: colors.surfaceSecondary, alignItems: "center" }}>
+                    <Text style={{ fontFamily: "Inter_700Bold", fontSize: 24, color: colors.gold }}>{growthData.quranStreak}</Text>
+                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 11, color: colors.textSecondary, marginTop: 2 }}>Day Streak</Text>
+                  </View>
+                  <View style={{ flex: 1, padding: 12, borderRadius: 12, backgroundColor: colors.surfaceSecondary, alignItems: "center" }}>
+                    <Text style={{ fontFamily: "Inter_700Bold", fontSize: 24, color: colors.emerald }}>{growthData.quranConsistency}%</Text>
+                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 11, color: colors.textSecondary, marginTop: 2 }}>30-Day Consistency</Text>
+                  </View>
+                  <View style={{ flex: 1, padding: 12, borderRadius: 12, backgroundColor: colors.surfaceSecondary, alignItems: "center" }}>
+                    <Text style={{ fontFamily: "Inter_700Bold", fontSize: 24, color: colors.text }}>{growthData.quranTotalDays}</Text>
+                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 11, color: colors.textSecondary, marginTop: 2 }}>Total Days</Text>
+                  </View>
+                </View>
+
+                <View style={{ marginTop: 12, padding: 10, borderRadius: 10, backgroundColor: colors.surfaceSecondary }}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+                    <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: colors.text }}>Khatm Progress</Text>
+                    <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: colors.gold }}>{growthData.khatamProgress}/114</Text>
+                  </View>
+                  <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.textTertiary + "20", overflow: "hidden" }}>
+                    <View style={{ height: "100%", width: `${Math.min(100, (growthData.khatamProgress / 114) * 100)}%` as any, backgroundColor: colors.gold, borderRadius: 3 }} />
+                  </View>
+                </View>
+              </View>
+
+              {growthData.nextBadge && (
+                <View style={{ backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16, marginBottom: 16 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                    <Ionicons name="ribbon" size={18} color={colors.gold} />
+                    <Text style={{ fontFamily: "Inter_700Bold", fontSize: 16, color: colors.text }}>Next Badge</Text>
+                  </View>
+                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 15, color: colors.text, marginBottom: 8 }}>
+                    {growthData.nextBadge.title}
+                  </Text>
+                  <View style={{ height: 8, borderRadius: 4, backgroundColor: colors.textTertiary + "20", overflow: "hidden", marginBottom: 8 }}>
+                    <View style={{ height: "100%", width: `${Math.min(100, (growthData.nextBadge.progress / growthData.nextBadge.total) * 100)}%` as any, backgroundColor: colors.gold, borderRadius: 4 }} />
+                  </View>
+                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: colors.textSecondary }}>
+                    {growthData.nextBadge.progress}/{growthData.nextBadge.total} — {growthData.nextBadge.remaining} more to go!
+                  </Text>
+                </View>
+              )}
+
+              <View style={{ padding: 16, borderRadius: 16, backgroundColor: colors.emerald + "12", marginBottom: 16 }}>
+                <Text style={{ fontFamily: "Inter_500Medium", fontSize: 14, color: colors.emerald, textAlign: "center", lineHeight: 20 }}>
+                  {growthData.quranStreak >= 7
+                    ? "MashaAllah! Your consistency with the Quran is inspiring."
+                    : growthData.quranStreak >= 3
+                      ? `Keep going — ${7 - growthData.quranStreak} more days to your Daily Reader badge!`
+                      : growthData.thisWeekPrayers.reduce((a, b) => a + b, 0) > 0
+                        ? "Every prayer counts. You're building a beautiful habit."
+                        : "Start tracking today — small steps lead to great rewards."}
+                </Text>
+              </View>
+            </>
+          )
+        )}
+      </>
+    );
+  };
+
   const [headerHeight, setHeaderHeight] = useState(0);
 
   return (
@@ -1630,6 +1870,7 @@ export default function SettingsScreen() {
           {section === "dhikrCounter" && renderDhikrCounter()}
           {section === "janazaHistory" && renderJanazaHistory()}
           {section === "profile" && renderProfile()}
+          {section === "personalGrowth" && renderPersonalGrowth()}
         </ScrollView>
       )}
     </View>

@@ -1435,6 +1435,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const COMMUNITY_MONTHLY_TARGET = parseInt(process.env.COMMUNITY_MONTHLY_TARGET || "10000", 10);
+
+  app.get("/api/community-goal", async (req, res) => {
+    try {
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+
+      const prayerResult = await pool.query(
+        `SELECT COUNT(*) as count FROM analytics_events WHERE event_name = 'prayer_tracked' AND created_at >= $1 AND created_at < $2`,
+        [monthStart, monthEnd]
+      );
+      const quranResult = await pool.query(
+        `SELECT COUNT(*) as count FROM analytics_events WHERE event_name = 'quran_read' AND created_at >= $1 AND created_at < $2`,
+        [monthStart, monthEnd]
+      );
+
+      const prayerCount = parseInt(prayerResult.rows[0]?.count || "0");
+      const quranCount = parseInt(quranResult.rows[0]?.count || "0");
+      const totalCount = prayerCount + quranCount;
+
+      const monthName = now.toLocaleString("en-US", { month: "long" });
+
+      res.json({
+        prayerCount,
+        quranCount,
+        totalCount,
+        target: COMMUNITY_MONTHLY_TARGET,
+        progress: Math.min(1, totalCount / COMMUNITY_MONTHLY_TARGET),
+        month: monthName,
+      });
+    } catch (error: any) {
+      console.error("[Community Goal] Error:", error.message);
+      res.status(500).json({ error: "Failed to fetch community goal" });
+    }
+  });
+
   const lookupLimiter: Record<string, { count: number; resetAt: number }> = {};
   app.post("/api/businesses/lookup", async (req, res) => {
     try {

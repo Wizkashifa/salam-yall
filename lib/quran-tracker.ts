@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { trackEvent } from "@/lib/analytics";
 
 const STORAGE_KEY = "quran_reading_tracker";
 const KHATAM_KEY = "quran_khatam_tracker";
@@ -32,6 +33,7 @@ export async function logQuranRead(date?: Date): Promise<void> {
     dates.push(key);
     await saveDates(dates);
   }
+  trackEvent("quran_read", { date: key });
 }
 
 export async function hasReadToday(): Promise<boolean> {

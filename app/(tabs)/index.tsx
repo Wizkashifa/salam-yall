@@ -453,6 +453,20 @@ export default function PrayerScreen() {
 
   const iqamaData = fetchedIqama || cachedIqama;
 
+  interface CommunityGoalData {
+    prayerCount: number;
+    quranCount: number;
+    totalCount: number;
+    target: number;
+    progress: number;
+    month: string;
+  }
+
+  const { data: communityGoal } = useQuery<CommunityGoalData>({
+    queryKey: ["/api/community-goal"],
+    staleTime: 10 * 60 * 1000,
+  });
+
   const { data: weatherData } = useQuery<{ temperature: number; weatherCode: number; isDay: boolean }>({
     queryKey: [`/api/weather?lat=${userCoords.lat.toFixed(2)}&lon=${userCoords.lon.toFixed(2)}`],
     staleTime: 30 * 60 * 1000,
@@ -1253,6 +1267,29 @@ export default function PrayerScreen() {
             </Text>
         </Pressable>
 
+
+        <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
+          <View style={styles.dailyContentHeader}>
+            <Ionicons name="people" size={16} color={colors.emerald} />
+            <Text style={[styles.dailyContentType, { color: colors.emerald }]}>Community Goal</Text>
+          </View>
+          <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 15, color: colors.text, marginBottom: 8 }}>
+            {communityGoal
+              ? `Our community has logged ${communityGoal.totalCount.toLocaleString()} acts of worship this ${communityGoal.month}`
+              : "Loading community progress\u2026"}
+          </Text>
+          <View style={{ height: 8, borderRadius: 4, backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)", overflow: "hidden", marginBottom: 8 }}>
+            <View style={{ height: "100%", width: `${Math.min(100, (communityGoal?.progress ?? 0) * 100)}%` as any, backgroundColor: colors.emerald, borderRadius: 4 }} />
+          </View>
+          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textSecondary }}>
+              {communityGoal ? `${communityGoal.prayerCount.toLocaleString()} prayers · ${communityGoal.quranCount.toLocaleString()} readings` : ""}
+            </Text>
+            <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: colors.emerald }}>
+              {Math.round((communityGoal?.progress ?? 0) * 100)}%
+            </Text>
+          </View>
+        </View>
 
         {masjidsExpanded ? (
           <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
