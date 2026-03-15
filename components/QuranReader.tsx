@@ -142,8 +142,6 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
   const lastVisibleVerseRef = useRef<{ key: string; number: number } | null>(null);
   const bannerAnim = useRef(new Animated.Value(1)).current;
   const bannerCollapsedRef = useRef(false);
-  const khatamAnim = useRef(new Animated.Value(1)).current;
-  const khatamCollapsedRef = useRef(false);
 
   useEffect(() => {
     selectedSurahRef.current = selectedSurah;
@@ -305,8 +303,6 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
     setBannerCollapsed(false);
     bannerCollapsedRef.current = false;
     bannerAnim.setValue(1);
-    khatamAnim.setValue(1);
-    khatamCollapsedRef.current = false;
     setShowDropdown(false);
 
     getSurahProgress(surah.id).then((saved) => {
@@ -368,15 +364,13 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
     setBannerCollapsed(false);
     bannerCollapsedRef.current = false;
     bannerAnim.setValue(1);
-    khatamAnim.setValue(1);
-    khatamCollapsedRef.current = false;
     setShowDropdown(false);
     setScrollToVerse(null);
     setQSection("surahList");
     getReadingPosition().then(setResumePos).catch(() => {});
     getKhatamProgress().then(setKhatam).catch(() => {});
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  }, [saveCurrentPosition, bannerAnim, khatamAnim]);
+  }, [saveCurrentPosition, bannerAnim]);
 
   const handleSearch = useCallback(async () => {
     const q = searchQuery.trim();
@@ -449,19 +443,6 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
       }).start();
     }
   }, [bannerAnim]);
-
-  const handleSurahListScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const y = e.nativeEvent.contentOffset.y;
-    const shouldCollapse = y > BANNER_COLLAPSE_THRESHOLD;
-    if (shouldCollapse !== khatamCollapsedRef.current) {
-      khatamCollapsedRef.current = shouldCollapse;
-      Animated.timing(khatamAnim, {
-        toValue: shouldCollapse ? 0 : 1,
-        duration: 200,
-        useNativeDriver: false,
-      }).start();
-    }
-  }, [khatamAnim]);
 
   const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
 
@@ -620,8 +601,6 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
     outputRange: [0, 88],
   });
 
-  const khatamCardHeight = khatamAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 120] });
-
   const surahListHeader = useMemo(() => (
     <>
       {resumePos && (
@@ -643,7 +622,6 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
       )}
 
       {khatam && (
-        <Animated.View style={{ height: khatamCardHeight, overflow: "hidden" }}>
           <View style={[qStyles.resumeCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -689,11 +667,10 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
               )}
             </View>
           </View>
-        </Animated.View>
       )}
 
     </>
-  ), [resumePos, khatam, colors, khatamCardHeight, handleResumeReading]);
+  ), [resumePos, khatam, colors, handleResumeReading]);
 
   if (qSection === "search") {
     return (
@@ -940,8 +917,6 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
           keyExtractor={(item) => item.id.toString()}
           renderItem={renderSurahItem}
           ListHeaderComponent={surahListHeader}
-          onScroll={handleSurahListScroll}
-          scrollEventThrottle={16}
           contentContainerStyle={{ paddingBottom: 40 }}
           scrollEnabled={surahs.length > 0}
           testID="surah-list"
