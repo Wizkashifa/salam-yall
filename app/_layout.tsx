@@ -30,7 +30,8 @@ import { registerPushToken } from "@/lib/push-utils";
 import { DeepLinkProvider, parseDeepLinkUrl, useDeepLink } from "@/lib/deeplink-context";
 import { AuthProvider } from "@/lib/auth-context";
 
-const ONBOARDING_KEY = "onboarding_complete";
+const ONBOARDING_VERSION_KEY = "onboarding_version";
+const CURRENT_APP_VERSION = "1.1.1";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -129,8 +130,8 @@ export default function RootLayout() {
   const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
 
   useEffect(() => {
-    AsyncStorage.getItem(ONBOARDING_KEY).then((val) => {
-      setShowOnboarding(val !== "true");
+    AsyncStorage.getItem(ONBOARDING_VERSION_KEY).then((val) => {
+      setShowOnboarding(val !== CURRENT_APP_VERSION);
     });
   }, []);
 
@@ -141,7 +142,7 @@ export default function RootLayout() {
   }, [fontsLoaded, fontError]);
 
   const handleOnboardingComplete = useCallback(() => {
-    AsyncStorage.setItem(ONBOARDING_KEY, "true");
+    AsyncStorage.setItem(ONBOARDING_VERSION_KEY, CURRENT_APP_VERSION);
     setShowOnboarding(false);
   }, []);
 

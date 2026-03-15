@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,14 +9,15 @@ import {
   FlatList,
   Animated,
   Linking,
+  ScrollView,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { TriangleCrescentIcon } from "@/components/TriangleCrescentIcon";
 import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { NEARBY_MASJIDS, type Masjid } from "@/lib/prayer-utils";
-import { useSettings } from "@/lib/settings-context";
+import { NEARBY_MASJIDS, CALC_METHOD_LABELS, type Masjid, type CalcMethodKey } from "@/lib/prayer-utils";
+import { useSettings, type AsrCalc } from "@/lib/settings-context";
 import { useQuery } from "@tanstack/react-query";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -29,28 +30,77 @@ interface OnboardingFlowProps {
   onComplete: () => void;
 }
 
-function WelcomeScreen() {
+function AnimatedContent({ isActive, children }: { isActive: boolean; children: React.ReactNode }) {
+  const anims = useRef(
+    Array.from({ length: 4 }, () => ({
+      opacity: new Animated.Value(0),
+      translateY: new Animated.Value(24),
+    }))
+  ).current;
+
+  useEffect(() => {
+    if (isActive) {
+      anims.forEach((a, i) => {
+        Animated.parallel([
+          Animated.timing(a.opacity, {
+            toValue: 1,
+            duration: 400,
+            delay: i * 120,
+            useNativeDriver: true,
+          }),
+          Animated.spring(a.translateY, {
+            toValue: 0,
+            tension: 50,
+            friction: 8,
+            delay: i * 120,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      });
+    } else {
+      anims.forEach((a) => {
+        a.opacity.setValue(0);
+        a.translateY.setValue(24);
+      });
+    }
+  }, [isActive]);
+
+  const childArray = React.Children.toArray(children);
+  return (
+    <>
+      {childArray.map((child, i) => {
+        const anim = anims[Math.min(i, anims.length - 1)];
+        return (
+          <Animated.View
+            key={i}
+            style={{ opacity: anim.opacity, transform: [{ translateY: anim.translateY }] }}
+          >
+            {child}
+          </Animated.View>
+        );
+      })}
+    </>
+  );
+}
+
+function WelcomeScreen({ isActive }: { isActive: boolean }) {
   return (
     <View style={screenStyles.container}>
-      <View style={screenStyles.iconWrap}>
-        <TriangleCrescentIcon size={48} color={richGold} />
-      </View>
-      <Text style={screenStyles.title}>Salams y'all</Text>
-      <Text style={screenStyles.subtitle}>Welcome to Salam Y'all</Text>
-      <Text style={screenStyles.body}>
-        Your companion for the Triangle NC Muslim community — prayer times, events, halal restaurants, and local businesses all in one place.
-      </Text>
-      <View style={screenStyles.disclaimerWrap}>
-        <Ionicons name="information-circle-outline" size={14} color="rgba(255,255,255,0.4)" />
-        <Text style={screenStyles.disclaimerText}>
-          Halal status is community-sourced. We encourage you to trust but verify.
+      <AnimatedContent isActive={isActive}>
+        <View style={screenStyles.iconWrap}>
+          <TriangleCrescentIcon size={48} color={richGold} />
+        </View>
+        <Text style={screenStyles.title}>Salams y'all</Text>
+        <Text style={screenStyles.subtitle}>Triangle NC Muslim Community</Text>
+        <Text style={screenStyles.body}>
+          Your companion for the Triangle NC Muslim community — prayer times, events, halal restaurants, and local businesses all in one place.
         </Text>
-      </View>
+      </AnimatedContent>
     </View>
   );
 }
 
-function LocationScreen() {
+function LocationScreen({ isActive }: { isActive: boolean }) {
   const [status, setStatus] = useState<"idle" | "granted" | "denied">("idle");
 
   const requestLocation = useCallback(async () => {
@@ -70,128 +120,279 @@ function LocationScreen() {
 
   return (
     <View style={screenStyles.container}>
-      <View style={screenStyles.iconWrap}>
-        <Ionicons name="location" size={48} color={richGold} />
-      </View>
-      <Text style={screenStyles.title}>Enable Location</Text>
-      <Text style={screenStyles.body}>
-        We use your location to show accurate prayer times, find nearby masjids, and calculate distances to halal restaurants and businesses.
-      </Text>
-      {status === "idle" && (
-        <Pressable style={screenStyles.actionBtn} onPress={requestLocation}>
-          <Ionicons name="location" size={20} color="#FFF" />
-          <Text style={screenStyles.actionBtnText}>Allow Location Access</Text>
-        </Pressable>
-      )}
-      {status === "granted" && (
-        <View style={screenStyles.statusRow}>
-          <Ionicons name="checkmark-circle" size={24} color={emerald} />
-          <Text style={[screenStyles.statusText, { color: emerald }]}>Location enabled</Text>
+      <AnimatedContent isActive={isActive}>
+        <View style={screenStyles.iconWrap}>
+          <Ionicons name="location" size={48} color={richGold} />
         </View>
-      )}
-      {status === "denied" && (
-        <>
-          <View style={screenStyles.statusRow}>
-            <Ionicons name="close-circle" size={24} color="#EF4444" />
-            <Text style={[screenStyles.statusText, { color: "#EF4444" }]}>Permission denied</Text>
-          </View>
-          {Platform.OS !== "web" && (
-            <Pressable style={[screenStyles.actionBtn, { backgroundColor: "#374151" }]} onPress={openSettings}>
-              <Ionicons name="settings" size={20} color="#FFF" />
-              <Text style={screenStyles.actionBtnText}>Open Settings</Text>
+        <Text style={screenStyles.title}>Enable Location</Text>
+        <Text style={screenStyles.body}>
+          We use your location to show accurate prayer times, find nearby masjids, and calculate distances to halal restaurants and businesses.
+        </Text>
+        <View>
+          {status === "idle" && (
+            <Pressable style={screenStyles.actionBtn} onPress={requestLocation}>
+              <Ionicons name="location" size={20} color="#FFF" />
+              <Text style={screenStyles.actionBtnText}>Allow Location Access</Text>
             </Pressable>
           )}
-        </>
-      )}
+          {status === "granted" && (
+            <View style={screenStyles.statusRow}>
+              <Ionicons name="checkmark-circle" size={24} color={emerald} />
+              <Text style={[screenStyles.statusText, { color: emerald }]}>Location enabled</Text>
+            </View>
+          )}
+          {status === "denied" && (
+            <>
+              <View style={screenStyles.statusRow}>
+                <Ionicons name="close-circle" size={24} color="#EF4444" />
+                <Text style={[screenStyles.statusText, { color: "#EF4444" }]}>Permission denied</Text>
+              </View>
+              {Platform.OS !== "web" && (
+                <Pressable style={[screenStyles.actionBtn, { backgroundColor: "#374151", marginTop: 12 }]} onPress={openSettings}>
+                  <Ionicons name="settings" size={20} color="#FFF" />
+                  <Text style={screenStyles.actionBtnText}>Open Settings</Text>
+                </Pressable>
+              )}
+            </>
+          )}
+        </View>
+      </AnimatedContent>
     </View>
   );
 }
 
-function NotificationScreen() {
-  const [status, setStatus] = useState<"idle" | "granted" | "denied">("idle");
+function PrayerSettingsScreen({
+  isActive,
+  onCalcMethodChange,
+  onAsrCalcChange,
+  initialCalcMethod,
+  initialAsrCalc,
+}: {
+  isActive: boolean;
+  onCalcMethodChange: (m: CalcMethodKey) => void;
+  onAsrCalcChange: (a: AsrCalc) => void;
+  initialCalcMethod: CalcMethodKey;
+  initialAsrCalc: AsrCalc;
+}) {
+  const [notifStatus, setNotifStatus] = useState<"idle" | "granted" | "denied">("idle");
+  const [selectedMethod, setSelectedMethod] = useState<CalcMethodKey>(initialCalcMethod);
+  const [selectedAsr, setSelectedAsr] = useState<AsrCalc>(initialAsrCalc);
 
   const requestNotifications = useCallback(async () => {
     if (Platform.OS === "web") {
-      setStatus("denied");
+      setNotifStatus("denied");
       return;
     }
     try {
       const { status: permStatus } = await Notifications.requestPermissionsAsync();
-      setStatus(permStatus === "granted" ? "granted" : "denied");
+      setNotifStatus(permStatus === "granted" ? "granted" : "denied");
     } catch {
-      setStatus("denied");
+      setNotifStatus("denied");
     }
   }, []);
 
+  const topMethods: CalcMethodKey[] = ["NorthAmerica", "MuslimWorldLeague", "Egyptian", "Karachi", "UmmAlQura"];
+
   return (
     <View style={screenStyles.container}>
-      <View style={screenStyles.iconWrap}>
-        <Ionicons name="notifications" size={48} color={richGold} />
-      </View>
-      <Text style={screenStyles.title}>Prayer Alerts</Text>
-      <Text style={screenStyles.body}>
-        Get notified when it's time to pray. We'll send gentle reminders for each prayer so you never miss a salah.
-      </Text>
-      {status === "idle" && (
-        <Pressable style={screenStyles.actionBtn} onPress={requestNotifications}>
-          <Ionicons name="notifications" size={20} color="#FFF" />
-          <Text style={screenStyles.actionBtnText}>Enable Notifications</Text>
-        </Pressable>
-      )}
-      {status === "granted" && (
-        <View style={screenStyles.statusRow}>
-          <Ionicons name="checkmark-circle" size={24} color={emerald} />
-          <Text style={[screenStyles.statusText, { color: emerald }]}>Notifications enabled</Text>
+      <AnimatedContent isActive={isActive}>
+        <View style={screenStyles.iconWrap}>
+          <Ionicons name="notifications" size={48} color={richGold} />
         </View>
-      )}
-      {status === "denied" && (
-        <View style={screenStyles.statusRow}>
-          <Ionicons name="close-circle" size={24} color="#EF4444" />
-          <Text style={[screenStyles.statusText, { color: "#EF4444" }]}>Not available</Text>
-        </View>
-      )}
+        <Text style={screenStyles.title}>Prayer Settings</Text>
+        <ScrollView
+          style={{ maxHeight: 380, width: "100%" }}
+          contentContainerStyle={{ alignItems: "center", paddingBottom: 12 }}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={[screenStyles.body, { marginBottom: 16 }]}>
+            Get notified when it's time to pray.
+          </Text>
+          {notifStatus === "idle" && (
+            <Pressable style={[screenStyles.actionBtn, { marginBottom: 20 }]} onPress={requestNotifications}>
+              <Ionicons name="notifications" size={20} color="#FFF" />
+              <Text style={screenStyles.actionBtnText}>Enable Notifications</Text>
+            </Pressable>
+          )}
+          {notifStatus === "granted" && (
+            <View style={[screenStyles.statusRow, { marginBottom: 20 }]}>
+              <Ionicons name="checkmark-circle" size={24} color={emerald} />
+              <Text style={[screenStyles.statusText, { color: emerald }]}>Notifications enabled</Text>
+            </View>
+          )}
+          {notifStatus === "denied" && (
+            <View style={[screenStyles.statusRow, { marginBottom: 20 }]}>
+              <Ionicons name="close-circle" size={24} color="#EF4444" />
+              <Text style={[screenStyles.statusText, { color: "#EF4444" }]}>Not available</Text>
+            </View>
+          )}
+
+          <Text style={settingsStyles.sectionLabel}>Calculation Method</Text>
+          <View style={settingsStyles.optionsWrap}>
+            {topMethods.map((key) => {
+              const isSelected = selectedMethod === key;
+              return (
+                <Pressable
+                  key={key}
+                  style={[settingsStyles.optionRow, isSelected && settingsStyles.optionRowSelected]}
+                  onPress={() => { setSelectedMethod(key); onCalcMethodChange(key); }}
+                >
+                  <Text style={[settingsStyles.optionText, isSelected && settingsStyles.optionTextSelected]} numberOfLines={1}>
+                    {CALC_METHOD_LABELS[key]}
+                  </Text>
+                  {isSelected && <Ionicons name="checkmark" size={18} color={richGold} />}
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <Text style={[settingsStyles.sectionLabel, { marginTop: 16 }]}>Asr Calculation</Text>
+          <View style={settingsStyles.toggleRow}>
+            <Pressable
+              style={[settingsStyles.toggleBtn, selectedAsr === "standard" && settingsStyles.toggleBtnActive]}
+              onPress={() => { setSelectedAsr("standard"); onAsrCalcChange("standard"); }}
+            >
+              <Text style={[settingsStyles.toggleText, selectedAsr === "standard" && settingsStyles.toggleTextActive]}>
+                Standard (Shafi'i)
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[settingsStyles.toggleBtn, selectedAsr === "hanafi" && settingsStyles.toggleBtnActive]}
+              onPress={() => { setSelectedAsr("hanafi"); onAsrCalcChange("hanafi"); }}
+            >
+              <Text style={[settingsStyles.toggleText, selectedAsr === "hanafi" && settingsStyles.toggleTextActive]}>
+                Hanafi
+              </Text>
+            </Pressable>
+          </View>
+        </ScrollView>
+      </AnimatedContent>
     </View>
   );
 }
 
-function TrackerScreen() {
+const settingsStyles = StyleSheet.create({
+  sectionLabel: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+    color: "rgba(255,255,255,0.5)",
+    textTransform: "uppercase" as const,
+    letterSpacing: 1,
+    marginBottom: 10,
+    alignSelf: "flex-start" as const,
+    paddingHorizontal: 4,
+  },
+  optionsWrap: {
+    width: "100%" as const,
+    gap: 6,
+    marginBottom: 8,
+  },
+  optionRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1.5,
+    borderColor: "transparent",
+  },
+  optionRowSelected: {
+    borderColor: emerald,
+    backgroundColor: "rgba(27,107,74,0.15)",
+  },
+  optionText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 14,
+    color: "rgba(255,255,255,0.8)",
+    flex: 1,
+    marginRight: 8,
+  },
+  optionTextSelected: {
+    color: richGold,
+  },
+  toggleRow: {
+    flexDirection: "row" as const,
+    width: "100%" as const,
+    gap: 8,
+  },
+  toggleBtn: {
+    flex: 1,
+    alignItems: "center" as const,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderWidth: 1.5,
+    borderColor: "transparent",
+  },
+  toggleBtnActive: {
+    borderColor: emerald,
+    backgroundColor: "rgba(27,107,74,0.15)",
+  },
+  toggleText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 14,
+    color: "rgba(255,255,255,0.6)",
+  },
+  toggleTextActive: {
+    color: richGold,
+  },
+});
+
+function TrackerScreen({ isActive }: { isActive: boolean }) {
   return (
     <View style={screenStyles.container}>
-      <View style={screenStyles.iconWrap}>
-        <Ionicons name="checkmark-done" size={48} color={richGold} />
-      </View>
-      <Text style={screenStyles.title}>Prayer Tracker</Text>
-      <Text style={screenStyles.body}>
-        Tap any prayer on the home screen to track your salah. Each tap cycles through three states:
-      </Text>
-      <View style={trackerStyles.statesWrap}>
-        <View style={trackerStyles.stateRow}>
-          <View style={[trackerStyles.dot, { backgroundColor: "rgba(255,255,255,0.15)" }]} />
-          <Text style={trackerStyles.stateLabel}>Not tracked</Text>
+      <AnimatedContent isActive={isActive}>
+        <View style={screenStyles.iconWrap}>
+          <Ionicons name="checkmark-done" size={48} color={richGold} />
         </View>
-        <View style={trackerStyles.stateRow}>
-          <View style={[trackerStyles.dot, { backgroundColor: richGold }]} />
-          <Text style={trackerStyles.stateLabel}>Prayed</Text>
+        <Text style={screenStyles.title}>Track Your Ibadah</Text>
+        <View>
+          <Text style={[screenStyles.body, { marginBottom: 16 }]}>
+            Tap any prayer on the home screen to track your salah. Each tap cycles through:
+          </Text>
+          <View style={trackerStyles.statesWrap}>
+            <View style={trackerStyles.stateRow}>
+              <View style={[trackerStyles.dot, { backgroundColor: "rgba(255,255,255,0.15)" }]} />
+              <Text style={trackerStyles.stateLabel}>Not tracked</Text>
+            </View>
+            <View style={trackerStyles.stateRow}>
+              <View style={[trackerStyles.dot, { backgroundColor: richGold }]} />
+              <Text style={trackerStyles.stateLabel}>Prayed</Text>
+            </View>
+            <View style={trackerStyles.stateRow}>
+              <View style={[trackerStyles.dot, { backgroundColor: emerald }]} />
+              <Text style={trackerStyles.stateLabel}>Prayed at the Masjid</Text>
+            </View>
+          </View>
+
+          <View style={trackerStyles.divider} />
+
+          <View style={trackerStyles.featureRow}>
+            <Ionicons name="calendar-outline" size={20} color={richGold} />
+            <Text style={trackerStyles.featureText}>
+              Track missed Ramadan fasts — tap any date on your prayer calendar to log it
+            </Text>
+          </View>
+
+          <Text style={[screenStyles.body, { marginBottom: 0, marginTop: 12, fontSize: 13, opacity: 0.5 }]}>
+            View your full history anytime in the Worship tab.
+          </Text>
         </View>
-        <View style={trackerStyles.stateRow}>
-          <View style={[trackerStyles.dot, { backgroundColor: emerald }]} />
-          <Text style={trackerStyles.stateLabel}>Prayed at the Masjid</Text>
-        </View>
-      </View>
-      <Text style={[screenStyles.body, { marginBottom: 0, marginTop: 8, fontSize: 14, opacity: 0.6 }]}>
-        View your monthly history anytime in the More tab.
-      </Text>
+      </AnimatedContent>
     </View>
   );
 }
 
 const trackerStyles = StyleSheet.create({
   statesWrap: {
-    gap: 14,
-    marginBottom: 20,
+    gap: 12,
+    marginBottom: 16,
     alignItems: "flex-start" as const,
     width: "100%" as const,
     maxWidth: 260,
+    alignSelf: "center" as const,
   },
   stateRow: {
     flexDirection: "row" as const,
@@ -208,9 +409,89 @@ const trackerStyles = StyleSheet.create({
     fontSize: 15,
     color: "rgba(255,255,255,0.8)",
   },
+  divider: {
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    marginVertical: 14,
+    width: "100%" as const,
+  },
+  featureRow: {
+    flexDirection: "row" as const,
+    alignItems: "flex-start" as const,
+    gap: 10,
+    paddingHorizontal: 4,
+  },
+  featureText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: "rgba(255,255,255,0.7)",
+    lineHeight: 20,
+    flex: 1,
+  },
 });
 
-function MasjidScreen({ onSelect }: { onSelect: (name: string | null) => void }) {
+function CommunityScreen({ isActive }: { isActive: boolean }) {
+  return (
+    <View style={screenStyles.container}>
+      <AnimatedContent isActive={isActive}>
+        <View style={screenStyles.iconWrap}>
+          <Ionicons name="people" size={48} color={richGold} />
+        </View>
+        <Text style={screenStyles.title}>Community-Powered</Text>
+        <View>
+          <View style={communityStyles.card}>
+            <View style={communityStyles.cardHeader}>
+              <Ionicons name="information-circle" size={20} color={richGold} />
+              <Text style={communityStyles.cardTitle}>Halal Disclaimer</Text>
+            </View>
+            <Text style={communityStyles.cardBody}>
+              Halal status is community-sourced. We encourage you to trust but verify with the restaurant directly.
+            </Text>
+          </View>
+
+          <View style={[communityStyles.card, { marginTop: 12 }]}>
+            <View style={communityStyles.cardHeader}>
+              <Ionicons name="add-circle" size={20} color={richGold} />
+              <Text style={communityStyles.cardTitle}>Add a Business</Text>
+            </View>
+            <Text style={communityStyles.cardBody}>
+              Know a halal restaurant or Muslim-owned business that should be listed? Submit it through the feedback form in the Worship tab and we'll review it.
+            </Text>
+          </View>
+        </View>
+      </AnimatedContent>
+    </View>
+  );
+}
+
+const communityStyles = StyleSheet.create({
+  card: {
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderRadius: 14,
+    padding: 16,
+    width: "100%" as const,
+    maxWidth: 320,
+  },
+  cardHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    marginBottom: 8,
+  },
+  cardTitle: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 15,
+    color: "#FFFFFF",
+  },
+  cardBody: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: "rgba(255,255,255,0.6)",
+    lineHeight: 20,
+  },
+});
+
+function MasjidScreen({ isActive, onSelect }: { isActive: boolean; onSelect: (name: string | null) => void }) {
   const [selected, setSelected] = useState<string | null>(null);
   const { data: fetchedMasjids } = useQuery<Masjid[]>({
     queryKey: ["/api/masjids"],
@@ -226,13 +507,15 @@ function MasjidScreen({ onSelect }: { onSelect: (name: string | null) => void })
 
   return (
     <View style={screenStyles.container}>
-      <View style={screenStyles.iconWrap}>
-        <MaterialCommunityIcons name="mosque" size={48} color={richGold} />
-      </View>
-      <Text style={screenStyles.title}>Your Masjid</Text>
-      <Text style={screenStyles.body}>
-        Select your preferred masjid to see its iqama times on the home screen. You can change this anytime in settings.
-      </Text>
+      <AnimatedContent isActive={isActive}>
+        <View style={screenStyles.iconWrap}>
+          <MaterialCommunityIcons name="mosque" size={48} color={richGold} />
+        </View>
+        <Text style={screenStyles.title}>Your Masjid</Text>
+        <Text style={screenStyles.body}>
+          Select your preferred masjid to see its iqama times on the home screen. You can change this anytime.
+        </Text>
+      </AnimatedContent>
       <FlatList
         data={masjidList}
         keyExtractor={(item) => item.name}
@@ -280,26 +563,50 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const flatListRef = useRef<FlatList>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const scrollX = useRef(new Animated.Value(0)).current;
-  const { setPreferredMasjid } = useSettings();
-  const selectedMasjidRef = useRef<string | null>(null);
+  const { setPreferredMasjid, setCalcMethod, setAsrCalc, calcMethod, asrCalc, preferredMasjid } = useSettings();
+  const selectedMasjidRef = useRef<string | null>(preferredMasjid);
+  const selectedCalcMethodRef = useRef<CalcMethodKey>(calcMethod);
+  const selectedAsrCalcRef = useRef<AsrCalc>(asrCalc);
+  const calcMethodChangedRef = useRef(false);
+  const asrCalcChangedRef = useRef(false);
 
-  const totalPages = 5;
+  const totalPages = 6;
 
   const handleMasjidSelect = useCallback((name: string | null) => {
     selectedMasjidRef.current = name;
   }, []);
+
+  const handleCalcMethodChange = useCallback((m: CalcMethodKey) => {
+    selectedCalcMethodRef.current = m;
+    calcMethodChangedRef.current = true;
+  }, []);
+
+  const handleAsrCalcChange = useCallback((a: AsrCalc) => {
+    selectedAsrCalcRef.current = a;
+    asrCalcChangedRef.current = true;
+  }, []);
+
+  const applySettingsAndComplete = useCallback(() => {
+    if (selectedMasjidRef.current) {
+      setPreferredMasjid(selectedMasjidRef.current);
+    }
+    if (calcMethodChangedRef.current) {
+      setCalcMethod(selectedCalcMethodRef.current);
+    }
+    if (asrCalcChangedRef.current) {
+      setAsrCalc(selectedAsrCalcRef.current);
+    }
+    onComplete();
+  }, [onComplete, setPreferredMasjid, setCalcMethod, setAsrCalc]);
 
   const goNext = useCallback(() => {
     if (currentPage < totalPages - 1) {
       flatListRef.current?.scrollToIndex({ index: currentPage + 1, animated: true });
       setCurrentPage(currentPage + 1);
     } else {
-      if (selectedMasjidRef.current) {
-        setPreferredMasjid(selectedMasjidRef.current);
-      }
-      onComplete();
+      applySettingsAndComplete();
     }
-  }, [currentPage, onComplete, setPreferredMasjid]);
+  }, [currentPage, applySettingsAndComplete]);
 
   const goBack = useCallback(() => {
     if (currentPage > 0) {
@@ -309,19 +616,21 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   }, [currentPage]);
 
   const skip = useCallback(() => {
-    onComplete();
-  }, [onComplete]);
+    applySettingsAndComplete();
+  }, [applySettingsAndComplete]);
 
   const renderPage = useCallback(({ index }: { item: number; index: number }) => {
+    const isActive = currentPage === index;
     switch (index) {
-      case 0: return <WelcomeScreen />;
-      case 1: return <LocationScreen />;
-      case 2: return <NotificationScreen />;
-      case 3: return <TrackerScreen />;
-      case 4: return <MasjidScreen onSelect={handleMasjidSelect} />;
+      case 0: return <WelcomeScreen isActive={isActive} />;
+      case 1: return <LocationScreen isActive={isActive} />;
+      case 2: return <PrayerSettingsScreen isActive={isActive} onCalcMethodChange={handleCalcMethodChange} onAsrCalcChange={handleAsrCalcChange} initialCalcMethod={calcMethod} initialAsrCalc={asrCalc} />;
+      case 3: return <TrackerScreen isActive={isActive} />;
+      case 4: return <CommunityScreen isActive={isActive} />;
+      case 5: return <MasjidScreen isActive={isActive} onSelect={handleMasjidSelect} />;
       default: return null;
     }
-  }, [handleMasjidSelect]);
+  }, [currentPage, handleMasjidSelect, handleCalcMethodChange, handleAsrCalcChange, calcMethod, asrCalc]);
 
   const onMomentumScrollEnd = useCallback((e: any) => {
     const page = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
@@ -348,7 +657,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
       <FlatList
         ref={flatListRef}
-        data={[0, 1, 2, 3, 4]}
+        data={[0, 1, 2, 3, 4, 5]}
         renderItem={renderPage}
         keyExtractor={(item) => item.toString()}
         horizontal
@@ -463,6 +772,7 @@ const screenStyles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 14,
     gap: 10,
+    alignSelf: "center" as const,
   },
   actionBtnText: {
     fontFamily: "Inter_600SemiBold",
@@ -473,6 +783,7 @@ const screenStyles = StyleSheet.create({
     flexDirection: "row" as const,
     alignItems: "center" as const,
     gap: 8,
+    alignSelf: "center" as const,
   },
   statusText: {
     fontFamily: "Inter_500Medium",
