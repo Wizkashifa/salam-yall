@@ -36,7 +36,7 @@ import {
   type Masjid,
 } from "@/lib/prayer-utils";
 import { getApiUrl } from "@/lib/query-client";
-import { useRouter, useFocusEffect } from "expo-router";
+import { useRouter, useFocusEffect, useNavigation } from "expo-router";
 import { useDeepLink } from "@/lib/deeplink-context";
 import { getMonthLogs, cyclePrayerStatus, getMonthMissedFasts, toggleMissedFast, type DayLog, type PrayerName } from "@/lib/prayer-tracker";
 import { DHIKR_PRESETS, getDhikrCounts, incrementDhikr, resetDhikr, type DhikrDayData } from "@/lib/dhikr-tracker";
@@ -71,6 +71,7 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
 export default function SettingsScreen() {
   const { colors, isDark, themeMode, setThemeMode, ramadanMode, setRamadanMode } = useTheme();
   const router = useRouter();
+  const navigation = useNavigation();
   const { calcMethod, setCalcMethod, notificationsEnabled, setNotificationsEnabled, iqamaAlertsEnabled, setIqamaAlertsEnabled, preferredMasjid, setPreferredMasjid, consumePendingSettingsSection, hijriOffset, setHijriOffset, asrCalc, setAsrCalc } = useSettings();
   const { user, signInWithApple, devSignIn, signOut, isLoading: authLoading, getAuthHeaders } = useAuth();
   const qc = useQueryClient();
@@ -147,6 +148,16 @@ export default function SettingsScreen() {
   const { consumeTarget, setPendingTarget } = useDeepLink();
 
   useEffect(() => { trackScreenView("Settings"); }, []);
+
+  useEffect(() => {
+    const unsubscribe = navigation.getParent()?.addListener("tabPress", (e: any) => {
+      if (sectionRef.current !== "main") {
+        e.preventDefault();
+        setSection("main");
+      }
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   useFocusEffect(useCallback(() => {
     const pending = consumePendingSettingsSection();
