@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import type { DhikrDayData } from "./dhikr-tracker";
 
 const BADGES_KEY = "prayer_badges_earned";
 
@@ -27,6 +28,7 @@ export const BADGES: BadgeDefinition[] = [
   { key: "masjid_regular", title: "Masjid Regular", description: "Pray at the masjid daily for a week", icon: "home", requirement: "7 days with masjid prayer", threshold: 7 },
   { key: "monthly_champion", title: "Monthly Champion", description: "90%+ completion in a month", icon: "trophy", requirement: "90% prayers in a month", threshold: 90 },
   { key: "iron_streak", title: "Iron Streak", description: "All 5 prayers daily for 30 days", icon: "shield-checkmark", requirement: "30 days of 5/5 prayers", threshold: 30 },
+  { key: "tasbeeh_fatima", title: "Tasbeeh Fatima", description: "Complete SubhanAllah ×33, Alhamdulillah ×33, Allahu Akbar ×34", icon: "sparkles", requirement: "Complete Tasbeeh Fatima", threshold: 1 },
 ];
 
 interface DayLog {
@@ -118,6 +120,25 @@ function findBestMonthCompletion(data: TrackerData): { pct: number; month: strin
   return best;
 }
 
+interface DhikrStorageData {
+  [dateKey: string]: DhikrDayData;
+}
+
+function countTasbeehFatimaCompletions(dhikrData: DhikrStorageData): { count: number; firstDate: string | null } {
+  let count = 0;
+  let firstDate: string | null = null;
+  for (const [dateKey, day] of Object.entries(dhikrData)) {
+    const subhan = day["subhanallah"] ?? 0;
+    const alhamd = day["alhamdulillah"] ?? 0;
+    const akbar = day["allahuakbar"] ?? 0;
+    if (subhan >= 33 && alhamd >= 33 && akbar >= 34) {
+      count++;
+      if (!firstDate || dateKey < firstDate) firstDate = dateKey;
+    }
+  }
+  return { count, firstDate };
+}
+
 function hasAnyPrayer(data: TrackerData): boolean {
   for (const log of Object.values(data)) {
     if (log.fajr > 0 || log.dhuhr > 0 || log.asr > 0 || log.maghrib > 0 || log.isha > 0) return true;
@@ -149,6 +170,8 @@ async function saveEarned(earned: EarnedBadges): Promise<void> {
 export async function computeBadges(): Promise<{ badges: BadgeState[]; newlyEarned: string[] }> {
   const raw = await AsyncStorage.getItem("prayer_tracker");
   const data: TrackerData = raw ? JSON.parse(raw) : {};
+  const dhikrRaw = await AsyncStorage.getItem("dhikr_tracker");
+  const dhikrData: DhikrStorageData = dhikrRaw ? JSON.parse(dhikrRaw) : {};
   const earned = await loadEarned();
   const today = formatDateKey(new Date());
   const newlyEarned: string[] = [];
@@ -157,6 +180,7 @@ export async function computeBadges(): Promise<{ badges: BadgeState[]; newlyEarn
   const fajrStreak = countConsecutiveFajr(data);
   const masjidStreak = countConsecutiveMasjidDays(data);
   const bestMonth = findBestMonthCompletion(data);
+  const tasbeehFatima = countTasbeehFatimaCompletions(dhikrData);
 
   const checks: { key: string; isEarned: boolean; progress: number; total: number; earnDate: string }[] = [
     { key: "first_step", isEarned: hasAnyPrayer(data), progress: hasAnyPrayer(data) ? 1 : 0, total: 1, earnDate: Object.keys(data).sort()[0] || today },
@@ -166,6 +190,7 @@ export async function computeBadges(): Promise<{ badges: BadgeState[]; newlyEarn
     { key: "masjid_regular", isEarned: masjidStreak.streak >= 7, progress: Math.min(masjidStreak.streak, 7), total: 7, earnDate: today },
     { key: "monthly_champion", isEarned: bestMonth.pct >= 90, progress: bestMonth.pct, total: 90, earnDate: bestMonth.month ? bestMonth.month + "-01" : today },
     { key: "iron_streak", isEarned: fullDayStreak.streak >= 30, progress: Math.min(fullDayStreak.streak, 30), total: 30, earnDate: today },
+    { key: "tasbeeh_fatima", isEarned: tasbeehFatima.count >= 1, progress: tasbeehFatima.count, total: 1, earnDate: tasbeehFatima.firstDate || today },
   ];
 
   for (const check of checks) {

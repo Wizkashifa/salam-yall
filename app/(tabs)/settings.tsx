@@ -1268,7 +1268,9 @@ export default function SettingsScreen() {
                   </Text>
                   {badge.earned && badge.earnedAt && (
                     <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: colors.textTertiary, marginTop: 4 }}>
-                      Earned {badge.earnedAt}
+                      {badge.key === "tasbeeh_fatima" && badge.progress > 0
+                        ? `Completed ${badge.progress} time${badge.progress === 1 ? "" : "s"} · First on ${badge.earnedAt}`
+                        : `Earned ${badge.earnedAt}`}
                     </Text>
                   )}
                 </View>
