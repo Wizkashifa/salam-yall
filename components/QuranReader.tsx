@@ -127,7 +127,6 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [surahFilter, setSurahFilter] = useState("");
   const [scrollToVerse, setScrollToVerse] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [khatam, setKhatam] = useState<KhatamProgress | null>(null);
@@ -143,6 +142,7 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
   const lastVisibleVerseRef = useRef<{ key: string; number: number } | null>(null);
   const bannerAnim = useRef(new Animated.Value(1)).current;
   const bannerCollapsedRef = useRef(false);
+  const headerSlideAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     selectedSurahRef.current = selectedSurah;
@@ -304,6 +304,12 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
     setBannerCollapsed(false);
     bannerCollapsedRef.current = false;
     bannerAnim.setValue(1);
+    headerSlideAnim.setValue(0);
+    Animated.timing(headerSlideAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
     setShowDropdown(false);
 
     getSurahProgress(surah.id).then((saved) => {
@@ -359,14 +365,20 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
   }, [versesHasMore, versesLoading, selectedSurah, versesPage, selectedTranslationIds, fetchVerses]);
 
   const handleBackFromVerses = useCallback(() => {
-    saveCurrentPosition();
-    setQSection("surahList");
-    setScrollToVerse(null);
+    try {
+      saveCurrentPosition();
+    } catch {}
     setBannerCollapsed(false);
+    bannerCollapsedRef.current = false;
+    bannerAnim.setValue(1);
+    headerSlideAnim.setValue(0);
     setShowDropdown(false);
+    setScrollToVerse(null);
+    setQSection("surahList");
     getReadingPosition().then(setResumePos).catch(() => {});
+    getKhatamProgress().then(setKhatam).catch(() => {});
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  }, [saveCurrentPosition]);
+  }, [saveCurrentPosition, bannerAnim, headerSlideAnim]);
 
   const handleSearch = useCallback(async () => {
     const q = searchQuery.trim();
@@ -409,6 +421,14 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
       setVerses([]);
       surahMarkedRef.current = false;
       setBannerCollapsed(false);
+      bannerCollapsedRef.current = false;
+      bannerAnim.setValue(1);
+      headerSlideAnim.setValue(0);
+      Animated.timing(headerSlideAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
       setShowDropdown(false);
 
       getSurahProgress(surah.id).then((saved) => {
@@ -513,15 +533,6 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
     }
   }).current;
 
-  const filteredSurahs = useMemo(() => {
-    if (!surahFilter.trim()) return surahs;
-    const q = surahFilter.toLowerCase();
-    return surahs.filter(s =>
-      s.name_simple.toLowerCase().includes(q) ||
-      s.translated_name.name.toLowerCase().includes(q) ||
-      s.id.toString() === q
-    );
-  }, [surahs, surahFilter]);
 
   const selectedTranslationLabels = useMemo(() => {
     return TRANSLATIONS.filter(t => selectedTranslationIds.includes(t.id)).map(t => t.label);
@@ -685,7 +696,7 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
   if (qSection === "verseView" && selectedSurah) {
     return (
       <View style={{ flex: 1 }}>
-        <View style={qStyles.verseViewHeader}>
+        <Animated.View style={[qStyles.verseViewHeader, { opacity: headerSlideAnim, transform: [{ translateY: headerSlideAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
           <Pressable style={qStyles.backBtn} onPress={handleBackFromVerses}>
             <Ionicons name="chevron-back" size={22} color={colors.text} />
           </Pressable>
@@ -715,7 +726,7 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
             <Ionicons name="options-outline" size={18} color={colors.emerald} />
             <Ionicons name="chevron-down" size={14} color={colors.textSecondary} />
           </Pressable>
-        </View>
+        </Animated.View>
 
         <Animated.View style={[qStyles.bannerAnimWrap, { height: bannerHeight, backgroundColor: colors.emerald, borderColor: colors.emerald }]}>
           <View style={qStyles.surahBannerInner}>
@@ -841,50 +852,50 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
       )}
 
       {khatam && (
-        <View style={[qStyles.khatamCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={qStyles.khatamHeader}>
-            <View style={{ flex: 1 }}>
-              <Text style={[qStyles.khatamTitle, { color: colors.text }]}>Khatam Progress</Text>
-              <Text style={[qStyles.khatamSub, { color: colors.textSecondary }]}>
-                {khatam.completedCount} of {khatam.totalSurahs} surahs read
-                {khatam.completedKhatams > 0 ? ` · ${khatam.completedKhatams} completed` : ""}
+        <View style={[qStyles.resumeCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <Text style={[qStyles.resumeTitle, { color: colors.text }]}>Khatam Progress</Text>
+              <Text style={{ fontSize: 14, fontFamily: "Inter_700Bold", color: colors.emerald }}>
+                {Math.round((khatam.completedCount / khatam.totalSurahs) * 100)}%
               </Text>
             </View>
-            <Text style={[qStyles.khatamPct, { color: colors.emerald }]}>
-              {Math.round((khatam.completedCount / khatam.totalSurahs) * 100)}%
+            <Text style={[qStyles.resumeSub, { color: colors.textSecondary }]}>
+              {khatam.completedCount} of {khatam.totalSurahs} surahs read
+              {khatam.completedKhatams > 0 ? ` · ${khatam.completedKhatams} completed` : ""}
             </Text>
-          </View>
-          <View style={[qStyles.progressTrack, { backgroundColor: colors.border }]}>
-            <View
-              style={[
-                qStyles.progressFill,
-                { backgroundColor: colors.emerald, width: `${Math.round((khatam.completedCount / khatam.totalSurahs) * 100)}%` },
-              ]}
-            />
-          </View>
-          {khatam.completedCount > 0 && (
-            <Pressable
-              onPress={() => {
-                Alert.alert(
-                  "Reset Progress",
-                  "Start a new khatam? Your completed khatam count will be preserved.",
-                  [
-                    { text: "Cancel", style: "cancel" },
-                    {
-                      text: "Reset",
-                      style: "destructive",
-                      onPress: () => {
-                        resetKhatam().then(() => getKhatamProgress().then(setKhatam)).catch(() => {});
-                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            <View style={[qStyles.progressTrack, { backgroundColor: colors.border, marginTop: 8 }]}>
+              <View
+                style={[
+                  qStyles.progressFill,
+                  { backgroundColor: colors.emerald, width: `${Math.round((khatam.completedCount / khatam.totalSurahs) * 100)}%` },
+                ]}
+              />
+            </View>
+            {khatam.completedCount > 0 && (
+              <Pressable
+                onPress={() => {
+                  Alert.alert(
+                    "Reset Progress",
+                    "Start a new khatam? Your completed khatam count will be preserved.",
+                    [
+                      { text: "Cancel", style: "cancel" },
+                      {
+                        text: "Reset",
+                        style: "destructive",
+                        onPress: () => {
+                          resetKhatam().then(() => getKhatamProgress().then(setKhatam)).catch(() => {});
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        },
                       },
-                    },
-                  ]
-                );
-              }}
-            >
-              <Text style={[qStyles.khatamReset, { color: colors.textTertiary }]}>Reset progress</Text>
-            </Pressable>
-          )}
+                    ]
+                  );
+                }}
+              >
+                <Text style={[qStyles.khatamReset, { color: colors.textTertiary }]}>Reset progress</Text>
+              </Pressable>
+            )}
+          </View>
         </View>
       )}
 
@@ -896,23 +907,6 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
         <Ionicons name="search" size={18} color={colors.textSecondary} />
         <Text style={[qStyles.searchPlaceholder, { color: colors.textTertiary }]}>Search verses...</Text>
       </Pressable>
-
-      <View style={[qStyles.filterBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <Ionicons name="filter" size={16} color={colors.textSecondary} />
-        <TextInput
-          style={[qStyles.filterInput, { color: colors.text }]}
-          value={surahFilter}
-          onChangeText={setSurahFilter}
-          placeholder="Filter surahs..."
-          placeholderTextColor={colors.textTertiary}
-          testID="surah-filter-input"
-        />
-        {surahFilter.length > 0 && (
-          <Pressable onPress={() => setSurahFilter("")}>
-            <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
-          </Pressable>
-        )}
-      </View>
 
       {surahsLoading ? (
         <ActivityIndicator size="small" color={colors.emerald} style={{ marginTop: 24 }} />
@@ -929,11 +923,11 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
         </View>
       ) : (
         <FlatList
-          data={filteredSurahs}
+          data={surahs}
           keyExtractor={(item) => item.id.toString()}
           renderItem={renderSurahItem}
           contentContainerStyle={{ paddingBottom: 40 }}
-          scrollEnabled={filteredSurahs.length > 0}
+          scrollEnabled={surahs.length > 0}
           testID="surah-list"
         />
       )}
@@ -1017,22 +1011,6 @@ const qStyles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     fontFamily: "Inter_400Regular",
-  },
-  filterBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: 10,
-    marginBottom: 12,
-  },
-  filterInput: {
-    flex: 1,
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    padding: 0,
   },
   surahItem: {
     flexDirection: "row",
@@ -1266,30 +1244,6 @@ const qStyles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inter_400Regular",
     marginTop: 2,
-  },
-  khatamCard: {
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 12,
-  },
-  khatamHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  khatamTitle: {
-    fontSize: 15,
-    fontFamily: "Inter_700Bold",
-  },
-  khatamSub: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    marginTop: 2,
-  },
-  khatamPct: {
-    fontSize: 22,
-    fontFamily: "Inter_700Bold",
   },
   progressTrack: {
     height: 6,
