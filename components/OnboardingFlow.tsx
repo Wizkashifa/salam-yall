@@ -10,9 +10,9 @@ import {
   Animated,
   Linking,
   ScrollView,
+  Image,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { TriangleCrescentIcon } from "@/components/TriangleCrescentIcon";
 import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -88,7 +88,10 @@ function WelcomeScreen({ isActive }: { isActive: boolean }) {
     <View style={screenStyles.container}>
       <AnimatedContent isActive={isActive}>
         <View style={screenStyles.iconWrap}>
-          <TriangleCrescentIcon size={48} color={richGold} />
+          <Image
+            source={require("@/assets/images/icon.png")}
+            style={{ width: 96, height: 96, borderRadius: 20 }}
+          />
         </View>
         <Text style={screenStyles.title}>Salams y'all</Text>
         <Text style={screenStyles.subtitle}>Triangle NC Muslim Community</Text>
