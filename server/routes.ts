@@ -1472,6 +1472,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/community-goal", async (req, res) => {
+    try {
+      if (!isAdminAuthorized(req)) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const { target } = req.body;
+      if (!target || typeof target !== "number" || target < 100 || target > 100000) {
+        return res.status(400).json({ error: "Target must be a number between 100 and 100,000" });
+      }
+      process.env.COMMUNITY_MONTHLY_TARGET = String(target);
+      res.json({ success: true, target, message: `Community goal updated to ${target.toLocaleString()}` });
+    } catch (error: any) {
+      console.error("[Community Goal Update] Error:", error.message);
+      res.status(500).json({ error: "Failed to update community goal" });
+    }
+  });
+
   const lookupLimiter: Record<string, { count: number; resetAt: number }> = {};
   app.post("/api/businesses/lookup", async (req, res) => {
     try {

@@ -1248,84 +1248,6 @@ export default function PrayerScreen() {
           </Pressable>
         ) : null}
 
-        <Pressable
-            onPress={openVerseModal}
-            style={({ pressed }) => [styles.glassCard, styles.dailyContentCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder, opacity: pressed ? 0.85 : 1 }]}
-          >
-            <View style={styles.dailyContentHeader}>
-              <Ionicons name="book" size={16} color={colors.gold} />
-              <Text style={[styles.dailyContentType, { color: colors.gold }]}>Daily Verse</Text>
-            </View>
-            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 22, color: colors.text, textAlign: "right" as const, lineHeight: 38, marginBottom: 12, writingDirection: "rtl" as const }}>
-              {dailyVerse.arabic}
-            </Text>
-            <Text style={[styles.dailyContentText, { color: colors.text }]}>
-              "{dailyVerse.translation}"
-            </Text>
-            <Text style={[styles.dailyContentSource, { color: colors.textTertiary }]}>
-              — {dailyVerse.source} · Dr. Mustafa Khattab
-            </Text>
-        </Pressable>
-
-
-        <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
-          <View style={styles.dailyContentHeader}>
-            <Ionicons name="people" size={16} color={colors.emerald} />
-            <Text style={[styles.dailyContentType, { color: colors.emerald }]}>Community Goal</Text>
-          </View>
-          <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 15, color: colors.text, marginBottom: 8 }}>
-            {communityGoal
-              ? `Our community has logged ${communityGoal.totalCount.toLocaleString()} acts of worship this ${communityGoal.month}`
-              : "Loading community progress\u2026"}
-          </Text>
-          <View style={{ height: 8, borderRadius: 4, backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)", overflow: "hidden", marginBottom: 8 }}>
-            <View style={{ height: "100%", width: `${Math.min(100, (communityGoal?.progress ?? 0) * 100)}%` as any, backgroundColor: colors.emerald, borderRadius: 4 }} />
-          </View>
-          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textSecondary }}>
-              {communityGoal ? `${communityGoal.prayerCount.toLocaleString()} prayers · ${communityGoal.quranCount.toLocaleString()} readings` : ""}
-            </Text>
-            <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: colors.emerald }}>
-              {Math.round((communityGoal?.progress ?? 0) * 100)}%
-            </Text>
-          </View>
-        </View>
-
-        {masjidsExpanded ? (
-          <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
-            <View style={styles.sectionCardHeader}>
-              <Text style={[styles.sectionCardTitle, { color: colors.text }]}>Masjids Nearby</Text>
-              <Pressable onPress={() => setMasjidsExpanded(false)} hitSlop={8}>
-                <Ionicons name="close" size={18} color={colors.textSecondary} />
-              </Pressable>
-            </View>
-            {nearbyMasjids.map((item, idx) => (
-              <Pressable
-                key={item.masjid.name}
-                style={({ pressed }) => [
-                  styles.masjidRow,
-                  idx < nearbyMasjids.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight },
-                  pressed && { opacity: 0.7 },
-                ]}
-                onPress={() => openMasjidNav(item.masjid)}
-              >
-                <View style={[styles.masjidIcon, { backgroundColor: colors.prayerIconBg }]}>
-                  <MaterialCommunityIcons name="mosque" size={18} color={colors.emerald} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.masjidName, { color: colors.text }]} numberOfLines={1}>
-                    {item.masjid.name.replace(/\s*\(.*\)/, "")}
-                  </Text>
-                  <Text style={[styles.masjidDist, { color: colors.textSecondary }]}>
-                    {item.distanceMiles.toFixed(1)} mi
-                  </Text>
-                </View>
-                <Ionicons name="navigate-outline" size={16} color={colors.emerald} />
-              </Pressable>
-            ))}
-          </View>
-        ) : null}
-
         {communityEvents.length > 0 ? (
           <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
             <View style={styles.sectionCardHeader}>
@@ -1392,6 +1314,83 @@ export default function PrayerScreen() {
                 </Pressable>
               );
             })}
+          </View>
+        ) : null}
+
+        <Pressable
+            onPress={openVerseModal}
+            style={({ pressed }) => [styles.glassCard, styles.dailyContentCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder, opacity: pressed ? 0.85 : 1 }]}
+          >
+            <View style={styles.dailyContentHeader}>
+              <Ionicons name="book" size={16} color={colors.gold} />
+              <Text style={[styles.dailyContentType, { color: colors.gold }]}>Daily Verse</Text>
+            </View>
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 22, color: colors.text, textAlign: "right" as const, lineHeight: 38, marginBottom: 12, writingDirection: "rtl" as const }}>
+              {dailyVerse.arabic}
+            </Text>
+            <Text style={[styles.dailyContentText, { color: colors.text }]}>
+              "{dailyVerse.translation}"
+            </Text>
+            <Text style={[styles.dailyContentSource, { color: colors.textTertiary }]}>
+              — {dailyVerse.source} · Dr. Mustafa Khattab
+            </Text>
+        </Pressable>
+
+        <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
+          <View style={styles.dailyContentHeader}>
+            <Ionicons name="people" size={16} color={colors.emerald} />
+            <Text style={[styles.dailyContentType, { color: colors.emerald }]}>Community Goal</Text>
+          </View>
+          <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 15, color: colors.text, marginBottom: 8 }}>
+            {communityGoal
+              ? `Our community has logged ${communityGoal.totalCount.toLocaleString()} acts of worship this ${communityGoal.month}`
+              : "Loading community progress\u2026"}
+          </Text>
+          <View style={{ height: 8, borderRadius: 4, backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)", overflow: "hidden", marginBottom: 8 }}>
+            <View style={{ height: "100%", width: `${Math.min(100, (communityGoal?.progress ?? 0) * 100)}%` as any, backgroundColor: colors.emerald, borderRadius: 4 }} />
+          </View>
+          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textSecondary }}>
+              {communityGoal ? `${communityGoal.prayerCount.toLocaleString()} prayers · ${communityGoal.quranCount.toLocaleString()} readings` : ""}
+            </Text>
+            <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: colors.emerald }}>
+              {Math.round((communityGoal?.progress ?? 0) * 100)}%
+            </Text>
+          </View>
+        </View>
+
+        {masjidsExpanded ? (
+          <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
+            <View style={styles.sectionCardHeader}>
+              <Text style={[styles.sectionCardTitle, { color: colors.text }]}>Masjids Nearby</Text>
+              <Pressable onPress={() => setMasjidsExpanded(false)} hitSlop={8}>
+                <Ionicons name="close" size={18} color={colors.textSecondary} />
+              </Pressable>
+            </View>
+            {nearbyMasjids.map((item, idx) => (
+              <Pressable
+                key={item.masjid.name}
+                style={({ pressed }) => [
+                  styles.masjidRow,
+                  idx < nearbyMasjids.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight },
+                  pressed && { opacity: 0.7 },
+                ]}
+                onPress={() => openMasjidNav(item.masjid)}
+              >
+                <View style={[styles.masjidIcon, { backgroundColor: colors.prayerIconBg }]}>
+                  <MaterialCommunityIcons name="mosque" size={18} color={colors.emerald} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.masjidName, { color: colors.text }]} numberOfLines={1}>
+                    {item.masjid.name.replace(/\s*\(.*\)/, "")}
+                  </Text>
+                  <Text style={[styles.masjidDist, { color: colors.textSecondary }]}>
+                    {item.distanceMiles.toFixed(1)} mi
+                  </Text>
+                </View>
+                <Ionicons name="navigate-outline" size={16} color={colors.emerald} />
+              </Pressable>
+            ))}
           </View>
         ) : null}
 
