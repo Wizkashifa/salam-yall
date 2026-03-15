@@ -1986,6 +1986,8 @@ const styles = StyleSheet.create({
   quickActionsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    marginHorizontal: 16,
+    marginTop: 10,
     marginBottom: 6,
   },
   quickActionChip: {
