@@ -5,11 +5,19 @@ import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Platform, StyleSheet, View } from "react-native";
-import React from "react";
+import React, { useCallback } from "react";
 import { useTheme } from "@/lib/theme-context";
 import { useSettings } from "@/lib/settings-context";
 
 function NativeTabLayout() {
+  const { worshipResetRef } = useSettings();
+
+  const handleWorshipPress = useCallback(() => {
+    if (worshipResetRef.current) {
+      worshipResetRef.current();
+    }
+  }, [worshipResetRef]);
+
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="halal">
@@ -28,7 +36,7 @@ function NativeTabLayout() {
         <Icon sf={{ default: "storefront", selected: "storefront.fill" }} />
         <Label>Directory</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="settings">
+      <NativeTabs.Trigger name="settings" onPress={handleWorshipPress}>
         <Icon sf={{ default: "moon.stars", selected: "moon.stars.fill" }} />
         <Label>Worship</Label>
       </NativeTabs.Trigger>
@@ -36,9 +44,21 @@ function NativeTabLayout() {
   );
 }
 
+function useWorshipTabPress() {
+  const { worshipResetRef } = useSettings();
+  return useCallback((e: { target?: string; preventDefault: () => void }, navigation: { isFocused: () => boolean }) => {
+    if (navigation.isFocused() && worshipResetRef.current) {
+      const wasReset = worshipResetRef.current();
+      if (wasReset) {
+        e.preventDefault();
+      }
+    }
+  }, [worshipResetRef]);
+}
+
 function ClassicTabLayout() {
   const { colors, isDark, ramadanMode } = useTheme();
-  const { worshipResetRef } = useSettings();
+  const handleWorshipTabPress = useWorshipTabPress();
   const isWeb = Platform.OS === "web";
   const isIOS = Platform.OS === "ios";
   const isDarkRamadan = isDark && ramadanMode;
@@ -130,16 +150,9 @@ function ClassicTabLayout() {
             <MaterialCommunityIcons name="mosque" size={size - 2} color={color} />
           ),
         }}
-        listeners={{
-          tabPress: (e) => {
-            if (worshipResetRef.current) {
-              const wasReset = worshipResetRef.current();
-              if (wasReset) {
-                e.preventDefault();
-              }
-            }
-          },
-        }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => handleWorshipTabPress(e, navigation),
+        })}
       />
     </Tabs>
   );
