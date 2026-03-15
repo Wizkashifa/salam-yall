@@ -2959,6 +2959,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/admin/restaurant-submissions", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const status = (req.query.status as string) || "pending";
+      const submissions = await pool.query(
+        `SELECT rs.*,
+          (SELECT COUNT(*) FROM halal_verification_votes WHERE submission_id = rs.id) as vote_count
+         FROM restaurant_submissions rs WHERE rs.status = $1 ORDER BY rs.created_at DESC`,
+        [status]
+      );
+      res.json(submissions.rows);
+    } catch (error: any) {
+      console.error("[Admin Restaurant Submissions] Error:", error.message);
+      res.status(500).json({ error: "Failed to fetch submissions" });
+    }
+  });
+
+  app.post("/api/admin/restaurant-submissions/:id/approve", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const submissionId = parseInt(req.params.id);
+      if (isNaN(submissionId)) return res.status(400).json({ error: "Invalid ID" });
+
+      const sub = await pool.query("SELECT * FROM restaurant_submissions WHERE id = $1", [submissionId]);
+      if (sub.rows.length === 0) return res.status(404).json({ error: "Submission not found" });
+      const s = sub.rows[0];
+
+      const halalStatus = (req.body.halalStatus as string) || "IS_HALAL";
+
+      await pool.query(
+        `INSERT INTO halal_restaurants (name, formatted_address, url, lat, lng, is_halal, place_id, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
+        [s.name || "Community Submitted", s.address, s.google_maps_url, s.lat, s.lng, halalStatus, s.place_id]
+      );
+      await pool.query("UPDATE restaurant_submissions SET status = 'approved' WHERE id = $1", [submissionId]);
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[Admin Approve Restaurant] Error:", error.message);
+      res.status(500).json({ error: "Failed to approve" });
+    }
+  });
+
+  app.post("/api/admin/restaurant-submissions/:id/reject", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const submissionId = parseInt(req.params.id);
+      if (isNaN(submissionId)) return res.status(400).json({ error: "Invalid ID" });
+
+      await pool.query("UPDATE restaurant_submissions SET status = 'rejected' WHERE id = $1", [submissionId]);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("[Admin Reject Restaurant] Error:", error.message);
+      res.status(500).json({ error: "Failed to reject" });
+    }
+  });
+
   app.get("/api/user/stats", async (req, res) => {
     try {
       const userId = await getUserIdFromRequest(req);

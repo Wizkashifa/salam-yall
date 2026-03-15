@@ -410,6 +410,11 @@
         </div>
       </div>
       <div class="section">
+        <div class="section-title"><span class="icon">⏳</span> Restaurants Waiting Approval</div>
+        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Community-submitted halal restaurants awaiting your review. Approve to add to the halal directory or reject.</p>
+        <div id="restSubmissionList"><div class="loading">Loading...</div></div>
+      </div>
+      <div class="section">
         <div class="section-title"><span class="icon">🍽️</span> Restaurant Hours Overrides</div>
         <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Search for a restaurant and override its opening hours periods. Overrides persist across Google Places syncs.</p>
         <input type="text" id="restaurantSearch" placeholder="Search by name or address..." style="margin-bottom:14px;" oninput="debounceRestaurantSearch()">
@@ -673,6 +678,9 @@
         initAnalyticsDateRange();
         initDemoDevices();
         loadAnalytics();
+      }
+      if (tab === 'restaurants') {
+        loadRestSubmissions();
       }
       if (tab === 'masjids') {
         loadMasjids();
@@ -1672,6 +1680,86 @@
       } finally {
         btn.disabled = false;
         btn.textContent = 'Lookup';
+      }
+    }
+
+    async function loadRestSubmissions() {
+      var el = document.getElementById('restSubmissionList');
+      el.innerHTML = '<div class="loading">Loading...</div>';
+      try {
+        var resp = await fetch('/api/admin/restaurant-submissions?status=pending', { headers: { 'Authorization': 'Bearer ' + adminToken } });
+        if (!resp.ok) throw new Error('Failed');
+        var subs = await resp.json();
+        if (subs.length === 0) {
+          el.innerHTML = '<div class="empty-state">No restaurants waiting for approval</div>';
+          return;
+        }
+        var html = '<ul class="message-list">';
+        subs.forEach(function(s) {
+          var dateStr = s.created_at ? new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+          var mapsLink = s.google_maps_url ? '<a href="' + s.google_maps_url + '" target="_blank" style="color:#D4A843;text-decoration:underline;font-size:12px;">View on Maps</a>' : '';
+          var votes = s.vote_count ? ' · ' + s.vote_count + ' vote' + (parseInt(s.vote_count) !== 1 ? 's' : '') : '';
+          html += '<li class="message-item" id="restSub-' + s.id + '">';
+          html += '<div class="message-badge badge-event">NEW</div>';
+          html += '<div class="message-text" style="flex:1;">';
+          html += '<div style="font-weight:600;color:#F5F5F5;">' + (s.name || 'Unnamed Restaurant') + '</div>';
+          html += '<div style="font-size:12px;color:#9CA3AF;margin-top:2px;">' + (s.address || 'No address') + '</div>';
+          html += '<div style="font-size:11px;color:#6B7280;margin-top:4px;">' + dateStr + votes + ' ' + mapsLink + '</div>';
+          html += '<div style="margin-top:8px;display:flex;gap:8px;align-items:center;">';
+          html += '<select id="restSubHalal-' + s.id + '" style="padding:5px 10px;background:#1E1E1E;border:1px solid #333;border-radius:8px;color:#F5F5F5;font-size:12px;">';
+          html += '<option value="IS_HALAL">Fully Halal</option>';
+          html += '<option value="PARTIALLY_HALAL">Partially Halal</option>';
+          html += '<option value="UNKNOWN">Unknown</option>';
+          html += '</select>';
+          html += '<button class="btn btn-sm btn-primary" onclick="approveRestSub(' + s.id + ')">Approve</button>';
+          html += '<button class="btn btn-sm btn-danger" onclick="rejectRestSub(' + s.id + ')">Reject</button>';
+          html += '</div></div></li>';
+        });
+        html += '</ul>';
+        el.innerHTML = html;
+      } catch (e) {
+        el.innerHTML = '<div class="empty-state">Failed to load submissions</div>';
+      }
+    }
+
+    async function approveRestSub(id) {
+      var halalStatus = document.getElementById('restSubHalal-' + id).value;
+      try {
+        var resp = await fetch('/api/admin/restaurant-submissions/' + id + '/approve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify({ halalStatus: halalStatus })
+        });
+        if (!resp.ok) throw new Error('Failed');
+        showToast('Restaurant approved and added to directory');
+        var row = document.getElementById('restSub-' + id);
+        if (row) row.remove();
+        var list = document.getElementById('restSubmissionList');
+        if (!list.querySelector('.message-item')) {
+          list.innerHTML = '<div class="empty-state">No restaurants waiting for approval</div>';
+        }
+      } catch (e) {
+        showToast('Failed to approve restaurant', true);
+      }
+    }
+
+    async function rejectRestSub(id) {
+      if (!confirm('Reject this restaurant submission?')) return;
+      try {
+        var resp = await fetch('/api/admin/restaurant-submissions/' + id + '/reject', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken }
+        });
+        if (!resp.ok) throw new Error('Failed');
+        showToast('Restaurant submission rejected');
+        var row = document.getElementById('restSub-' + id);
+        if (row) row.remove();
+        var list = document.getElementById('restSubmissionList');
+        if (!list.querySelector('.message-item')) {
+          list.innerHTML = '<div class="empty-state">No restaurants waiting for approval</div>';
+        }
+      } catch (e) {
+        showToast('Failed to reject restaurant', true);
       }
     }
 
