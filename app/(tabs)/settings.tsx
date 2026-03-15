@@ -10,6 +10,8 @@ import {
   TextInput,
   Alert,
   Share,
+  LayoutAnimation,
+  UIManager,
 } from "react-native";
 
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -59,13 +61,21 @@ interface CalendarEvent {
 
 type SettingsSection = "main" | "calcMethod" | "masjids" | "masjidDetail" | "feedback" | "prayerTracker" | "janazaHistory" | "profile" | "dhikrCounter" | "athanAlerts" | "quranReader" | "personalGrowth";
 
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 export default function SettingsScreen() {
   const { colors, isDark, themeMode, setThemeMode, ramadanMode, setRamadanMode } = useTheme();
   const router = useRouter();
   const { calcMethod, setCalcMethod, notificationsEnabled, setNotificationsEnabled, iqamaAlertsEnabled, setIqamaAlertsEnabled, preferredMasjid, setPreferredMasjid, consumePendingSettingsSection, hijriOffset, setHijriOffset, asrCalc, setAsrCalc } = useSettings();
   const { user, signInWithApple, devSignIn, signOut, isLoading: authLoading, getAuthHeaders } = useAuth();
   const qc = useQueryClient();
-  const [section, setSection] = useState<SettingsSection>("main");
+  const [section, setSectionRaw] = useState<SettingsSection>("main");
+  const setSection = useCallback((s: SettingsSection) => {
+    LayoutAnimation.configureNext(LayoutAnimation.create(250, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity));
+    setSectionRaw(s);
+  }, []);
   const [growthTab, setGrowthTab] = useState<"statistics" | "badges">("statistics");
   const [selectedMasjid, setSelectedMasjid] = useState<Masjid | null>(null);
   const [feedbackType, setFeedbackType] = useState<"bug" | "feature">("feature");

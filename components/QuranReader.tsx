@@ -142,7 +142,6 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
   const lastVisibleVerseRef = useRef<{ key: string; number: number } | null>(null);
   const bannerAnim = useRef(new Animated.Value(1)).current;
   const bannerCollapsedRef = useRef(false);
-  const headerSlideAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     selectedSurahRef.current = selectedSurah;
@@ -304,12 +303,6 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
     setBannerCollapsed(false);
     bannerCollapsedRef.current = false;
     bannerAnim.setValue(1);
-    headerSlideAnim.setValue(0);
-    Animated.timing(headerSlideAnim, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
     setShowDropdown(false);
 
     getSurahProgress(surah.id).then((saved) => {
@@ -371,14 +364,13 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
     setBannerCollapsed(false);
     bannerCollapsedRef.current = false;
     bannerAnim.setValue(1);
-    headerSlideAnim.setValue(0);
     setShowDropdown(false);
     setScrollToVerse(null);
     setQSection("surahList");
     getReadingPosition().then(setResumePos).catch(() => {});
     getKhatamProgress().then(setKhatam).catch(() => {});
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  }, [saveCurrentPosition, bannerAnim, headerSlideAnim]);
+  }, [saveCurrentPosition, bannerAnim]);
 
   const handleSearch = useCallback(async () => {
     const q = searchQuery.trim();
@@ -423,12 +415,6 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
       setBannerCollapsed(false);
       bannerCollapsedRef.current = false;
       bannerAnim.setValue(1);
-      headerSlideAnim.setValue(0);
-      Animated.timing(headerSlideAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
       setShowDropdown(false);
 
       getSurahProgress(surah.id).then((saved) => {
@@ -696,7 +682,7 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
   if (qSection === "verseView" && selectedSurah) {
     return (
       <View style={{ flex: 1 }}>
-        <Animated.View style={[qStyles.verseViewHeader, { opacity: headerSlideAnim, transform: [{ translateY: headerSlideAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }] }]}>
+        <View style={qStyles.verseViewHeader}>
           <Pressable style={qStyles.backBtn} onPress={handleBackFromVerses}>
             <Ionicons name="chevron-back" size={22} color={colors.text} />
           </Pressable>
@@ -726,7 +712,7 @@ export function QuranReader({ colors, onBack }: QuranReaderProps) {
             <Ionicons name="options-outline" size={18} color={colors.emerald} />
             <Ionicons name="chevron-down" size={14} color={colors.textSecondary} />
           </Pressable>
-        </Animated.View>
+        </View>
 
         <Animated.View style={[qStyles.bannerAnimWrap, { height: bannerHeight, backgroundColor: colors.emerald, borderColor: colors.emerald }]}>
           <View style={qStyles.surahBannerInner}>
