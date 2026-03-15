@@ -3,7 +3,7 @@ import { Tabs } from "expo-router";
 import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Platform, StyleSheet, View } from "react-native";
 import React from "react";
 import { useTheme } from "@/lib/theme-context";
@@ -124,8 +124,8 @@ function ClassicTabLayout() {
         name="settings"
         options={{
           title: "Worship",
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? "moon" : "moon-outline"} size={size - 2} color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="mosque" size={size - 2} color={color} />
           ),
         }}
       />
