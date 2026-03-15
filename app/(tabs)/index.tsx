@@ -499,6 +499,8 @@ export default function PrayerScreen() {
         targetMasjid = "MCA Al-Noor";
       } else if (pref.includes("mca") || pref.includes("muslim community association") || pref.includes("scott blvd")) {
         targetMasjid = "MCA";
+      } else if (pref.includes("muslim community center") || pref.includes("davis dr") || pref === "mcc") {
+        targetMasjid = "MCC";
       }
     }
 

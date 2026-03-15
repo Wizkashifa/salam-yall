@@ -1,5 +1,6 @@
 import pg from "pg";
 import { generateJIARSchedule } from "./jiar-iqama-data";
+import { generateMCCSchedule } from "./mcc-iqama-data";
 
 const IAR_API_URL = "https://raleighmasjid.org/API/prayer/month/";
 const ICMNC_API_URL = "https://www.icmnc.org/wp-json/dpt/v1/prayertime";
@@ -105,6 +106,38 @@ export async function seedJIARData(pool: pg.Pool) {
   }
 
   console.log(`[Iqama] Seeded JIAR Parkwood + Fayetteville schedules (${schedule.length} days each)`);
+}
+
+export async function seedMCCData(pool: pg.Pool) {
+  const { rows } = await pool.query(
+    "SELECT COUNT(*) as count FROM iqama_schedules WHERE masjid = 'MCC'"
+  );
+  if (parseInt(rows[0].count) > 0) return;
+
+  const schedule = generateMCCSchedule();
+  console.log(`[Iqama] Seeding ${schedule.length} days of MCC schedule data...`);
+
+  const batchSize = 50;
+  for (let i = 0; i < schedule.length; i += batchSize) {
+    const batch = schedule.slice(i, i + batchSize);
+    const values: any[] = [];
+    const placeholders: string[] = [];
+    let idx = 1;
+
+    for (const day of batch) {
+      placeholders.push(`($${idx}, $${idx + 1}, $${idx + 2}, $${idx + 3}, $${idx + 4}, $${idx + 5}, $${idx + 6})`);
+      values.push("MCC", day.date, day.fajr, day.dhuhr, day.asr, day.maghrib, day.isha);
+      idx += 7;
+    }
+
+    await pool.query(
+      `INSERT INTO iqama_schedules (masjid, date, fajr, dhuhr, asr, maghrib, isha) VALUES ${placeholders.join(", ")}
+       ON CONFLICT (masjid, date) DO NOTHING`,
+      values
+    );
+  }
+
+  console.log(`[Iqama] Seeded MCC schedule (${schedule.length} days)`);
 }
 
 async function fetchAndStoreIAR(pool: pg.Pool, year: number, month: number): Promise<void> {

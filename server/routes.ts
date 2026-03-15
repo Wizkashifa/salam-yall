@@ -5,7 +5,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { getUncachableGoogleCalendarClient } from "./google-calendar";
 import halalSeedData from "./halal-seed-data.json";
-import { ensureIqamaTable, seedJIARData, startIqamaSync, getIqamaSchedules } from "./iqama-scraper";
+import { ensureIqamaTable, seedJIARData, seedMCCData, startIqamaSync, getIqamaSchedules } from "./iqama-scraper";
 import Anthropic from "@anthropic-ai/sdk";
 
 const CALENDAR_ID = "5c6138b3c670e90f28b9ec65a6650268569a070eff5ae0ae919129f763d216af@group.calendar.google.com";
@@ -564,7 +564,8 @@ async function ensureMasjidsTable(pool: pg.Pool) {
         ('North Raleigh Masjid', 35.8520, -78.5571, '7424 Deah Way, Raleigh, NC 27616', NULL, ARRAY['north raleigh masjid', 'deah way', 'mycc', 'muslim youth community center'], false, 13),
         ('San Ramon Valley Islamic Center', 37.7770, -121.9691, '2230 Camino Ramon, San Ramon, CA 94583', 'https://srvic.org', ARRAY['srvic', 'san ramon valley islamic', 'camino ramon'], true, 14),
         ('Muslim Community Association', 37.3769, -121.9595, '3003 Scott Blvd, Santa Clara, CA 95054', 'https://www.mcabayarea.org', ARRAY['mca', 'muslim community association', 'scott blvd', 'mcabayarea'], true, 15),
-        ('MCA Al-Noor', 37.3530, -121.9535, '1755 Catherine St, Santa Clara, CA 95050', 'https://www.mcabayarea.org', ARRAY['mca al-noor', 'mca alnoor', 'mca noor', 'catherine st'], true, 16);
+        ('MCA Al-Noor', 37.3530, -121.9535, '1755 Catherine St, Santa Clara, CA 95050', 'https://www.mcabayarea.org', ARRAY['mca al-noor', 'mca alnoor', 'mca noor', 'catherine st'], true, 16),
+        ('Muslim Community Center', 35.8195, -78.7591, '3521 Davis Dr, Morrisville, NC 27560', NULL, ARRAY['mcc', 'muslim community center', 'davis dr', 'morrisville'], true, 17);
     `);
     console.log("[DB] Seeded default masjids");
   } else {
@@ -589,6 +590,7 @@ async function ensureMasjidsTable(pool: pg.Pool) {
       { name: 'San Ramon Valley Islamic Center', lat: 37.7770, lng: -121.9691, addr: '2230 Camino Ramon, San Ramon, CA 94583', website: 'https://srvic.org', terms: ['srvic', 'san ramon valley islamic', 'camino ramon'], iqama: true, sort: 14 },
       { name: 'Muslim Community Association', lat: 37.3769, lng: -121.9595, addr: '3003 Scott Blvd, Santa Clara, CA 95054', website: 'https://www.mcabayarea.org', terms: ['mca', 'muslim community association', 'scott blvd', 'mcabayarea'], iqama: true, sort: 15 },
       { name: 'MCA Al-Noor', lat: 37.3530, lng: -121.9535, addr: '1755 Catherine St, Santa Clara, CA 95050', website: 'https://www.mcabayarea.org', terms: ['mca al-noor', 'mca alnoor', 'mca noor', 'catherine st'], iqama: true, sort: 16 },
+      { name: 'Muslim Community Center', lat: 35.8195, lng: -78.7591, addr: '3521 Davis Dr, Morrisville, NC 27560', website: null, terms: ['mcc', 'muslim community center', 'davis dr', 'morrisville'], iqama: true, sort: 17 },
     ];
     for (const m of masjidUpserts) {
       await pool.query(
@@ -1003,6 +1005,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await ensureBusinessesTable(pool).catch(err => console.error("[DB] Init error:", err.message));
   await ensureIqamaTable(pool).catch(err => console.error("[DB] Iqama table init error:", err.message));
   await seedJIARData(pool).catch(err => console.error("[DB] JIAR seed error:", err.message));
+  await seedMCCData(pool).catch(err => console.error("[DB] MCC seed error:", err.message));
   await ensureJanazaAlertsTable(pool).catch(err => console.error("[DB] Janaza alerts table init error:", err.message));
   await ensureUserAccountsTable(pool).catch(err => console.error("[DB] User accounts table init error:", err.message));
   await ensureUserRatingsTable(pool).catch(err => console.error("[DB] User ratings table init error:", err.message));
