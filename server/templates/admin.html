@@ -723,6 +723,7 @@
         initAnalyticsDateRange();
         initDemoDevices();
         loadAnalytics();
+        loadDAU();
       }
       if (tab === 'restaurants') {
         loadRestSubmissions();
@@ -2079,7 +2080,6 @@
       loadAnalyticsTop(from, to);
       loadCommunityStats();
       loadUserStats();
-      loadDAU();
     }
 
     async function loadDAU() {
