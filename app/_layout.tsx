@@ -15,8 +15,8 @@ import * as SplashScreen from "expo-splash-screen";
 import * as Linking from "expo-linking";
 import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { useEffect, useState, useCallback } from "react";
-import { Platform } from "react-native";
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import { AppState, Platform } from "react-native";
 import Constants from "expo-constants";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
@@ -103,9 +103,19 @@ function PushNotificationHandler() {
 }
 
 function RootLayoutNav() {
+  const appState = useRef(AppState.currentState);
+
   useEffect(() => {
     registerPushToken();
     trackEvent("app_open");
+
+    const sub = AppState.addEventListener("change", (nextState) => {
+      if (appState.current.match(/inactive|background/) && nextState === "active") {
+        trackEvent("app_open");
+      }
+      appState.current = nextState;
+    });
+    return () => sub.remove();
   }, []);
 
   return (

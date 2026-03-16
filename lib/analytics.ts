@@ -57,6 +57,8 @@ function startFlushTimer() {
   }, FLUSH_INTERVAL);
 }
 
+const IMMEDIATE_EVENTS = new Set(["app_open"]);
+
 export async function trackEvent(eventName: string, eventData?: Record<string, any>) {
   try {
     const id = await getDeviceId();
@@ -68,7 +70,7 @@ export async function trackEvent(eventName: string, eventData?: Record<string, a
       user_id: currentUserId,
     });
     startFlushTimer();
-    if (queue.length >= BATCH_SIZE) {
+    if (queue.length >= BATCH_SIZE || IMMEDIATE_EVENTS.has(eventName)) {
       flushQueue();
     }
   } catch {
