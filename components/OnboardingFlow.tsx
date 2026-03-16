@@ -445,6 +445,58 @@ const communityStyles = StyleSheet.create({
   },
 });
 
+function SignInScreen({ isActive }: { isActive: boolean }) {
+  return (
+    <View style={screenStyles.container}>
+      <AnimatedContent isActive={isActive}>
+        <View style={screenStyles.iconWrap}>
+          <Ionicons name="person-circle" size={48} color={richGold} />
+        </View>
+        <Text style={screenStyles.title}>Sign In</Text>
+        <Text style={screenStyles.body}>
+          Create an account to unlock the full experience.
+        </Text>
+
+        <View style={{ width: "100%", maxWidth: 320, gap: 12, marginTop: 4 }}>
+          <View style={communityStyles.card}>
+            <View style={communityStyles.cardHeader}>
+              <Ionicons name="bookmark" size={20} color={richGold} />
+              <Text style={communityStyles.cardTitle}>Save Events</Text>
+            </View>
+            <Text style={communityStyles.cardBody}>
+              Bookmark events and get a reminder 1 hour before they start.
+            </Text>
+          </View>
+
+          <View style={communityStyles.card}>
+            <View style={communityStyles.cardHeader}>
+              <Ionicons name="star" size={20} color={richGold} />
+              <Text style={communityStyles.cardTitle}>Rate & Review</Text>
+            </View>
+            <Text style={communityStyles.cardBody}>
+              Rate halal restaurants and local businesses to help the community.
+            </Text>
+          </View>
+
+          <View style={communityStyles.card}>
+            <View style={communityStyles.cardHeader}>
+              <Ionicons name="trophy" size={20} color={richGold} />
+              <Text style={communityStyles.cardTitle}>Compete with Friends</Text>
+            </View>
+            <Text style={communityStyles.cardBody}>
+              Track your prayer streaks and dhikr counts on the leaderboard.
+            </Text>
+          </View>
+        </View>
+
+        <Text style={[screenStyles.body, { marginBottom: 0, marginTop: 12, fontSize: 13, opacity: 0.5 }]}>
+          You can sign in anytime from the Home screen menu.
+        </Text>
+      </AnimatedContent>
+    </View>
+  );
+}
+
 function MasjidScreen({ isActive, onSelect }: { isActive: boolean; onSelect: (name: string | null) => void }) {
   const [selected, setSelected] = useState<string | null>(null);
   const { data: fetchedMasjids } = useQuery<Masjid[]>({
@@ -522,7 +574,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const selectedAsrCalcRef = useRef<AsrCalc>(asrCalc);
   const asrCalcChangedRef = useRef(false);
 
-  const totalPages = 6;
+  const totalPages = 7;
 
   const handleMasjidSelect = useCallback((name: string | null) => {
     selectedMasjidRef.current = name;
@@ -575,7 +627,8 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       case 2: return <PrayerSettingsScreen isActive={isActive} onAsrCalcChange={handleAsrCalcChange} onNotifGranted={handleNotifGranted} initialAsrCalc={asrCalc} />;
       case 3: return <TrackerScreen isActive={isActive} />;
       case 4: return <CommunityScreen isActive={isActive} />;
-      case 5: return <MasjidScreen isActive={isActive} onSelect={handleMasjidSelect} />;
+      case 5: return <SignInScreen isActive={isActive} />;
+      case 6: return <MasjidScreen isActive={isActive} onSelect={handleMasjidSelect} />;
       default: return null;
     }
   }, [currentPage, handleMasjidSelect, handleAsrCalcChange, handleNotifGranted, asrCalc]);
@@ -605,7 +658,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
       <FlatList
         ref={flatListRef}
-        data={[0, 1, 2, 3, 4, 5]}
+        data={[0, 1, 2, 3, 4, 5, 6]}
         renderItem={renderPage}
         keyExtractor={(item) => item.toString()}
         horizontal
