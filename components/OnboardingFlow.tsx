@@ -16,7 +16,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { NEARBY_MASJIDS, CALC_METHOD_LABELS, type Masjid, type CalcMethodKey } from "@/lib/prayer-utils";
+import { NEARBY_MASJIDS, type Masjid } from "@/lib/prayer-utils";
 import { useSettings, type AsrCalc } from "@/lib/settings-context";
 import { useQuery } from "@tanstack/react-query";
 
@@ -166,21 +166,16 @@ function LocationScreen({ isActive }: { isActive: boolean }) {
 
 function PrayerSettingsScreen({
   isActive,
-  onCalcMethodChange,
   onAsrCalcChange,
   onNotifGranted,
-  initialCalcMethod,
   initialAsrCalc,
 }: {
   isActive: boolean;
-  onCalcMethodChange: (m: CalcMethodKey) => void;
   onAsrCalcChange: (a: AsrCalc) => void;
   onNotifGranted: () => void;
-  initialCalcMethod: CalcMethodKey;
   initialAsrCalc: AsrCalc;
 }) {
   const [notifStatus, setNotifStatus] = useState<"idle" | "granted" | "denied">("idle");
-  const [selectedMethod, setSelectedMethod] = useState<CalcMethodKey>(initialCalcMethod);
   const [selectedAsr, setSelectedAsr] = useState<AsrCalc>(initialAsrCalc);
 
   const requestNotifications = useCallback(async () => {
@@ -200,8 +195,6 @@ function PrayerSettingsScreen({
       setNotifStatus("denied");
     }
   }, [onNotifGranted]);
-
-  const topMethods: CalcMethodKey[] = ["NorthAmerica", "MuslimWorldLeague", "Egyptian", "Karachi", "UmmAlQura"];
 
   return (
     <View style={screenStyles.container}>
@@ -237,26 +230,7 @@ function PrayerSettingsScreen({
             </View>
           )}
 
-          <Text style={settingsStyles.sectionLabel}>Calculation Method</Text>
-          <View style={settingsStyles.optionsWrap}>
-            {topMethods.map((key) => {
-              const isSelected = selectedMethod === key;
-              return (
-                <Pressable
-                  key={key}
-                  style={[settingsStyles.optionRow, isSelected && settingsStyles.optionRowSelected]}
-                  onPress={() => { setSelectedMethod(key); onCalcMethodChange(key); }}
-                >
-                  <Text style={[settingsStyles.optionText, isSelected && settingsStyles.optionTextSelected]} numberOfLines={1}>
-                    {CALC_METHOD_LABELS[key]}
-                  </Text>
-                  {isSelected && <Ionicons name="checkmark" size={18} color={richGold} />}
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <Text style={[settingsStyles.sectionLabel, { marginTop: 16 }]}>Asr Calculation</Text>
+          <Text style={settingsStyles.sectionLabel}>Asr Calculation</Text>
           <View style={settingsStyles.toggleRow}>
             <Pressable
               style={[settingsStyles.toggleBtn, selectedAsr === "standard" && settingsStyles.toggleBtnActive]}
@@ -291,36 +265,6 @@ const settingsStyles = StyleSheet.create({
     marginBottom: 10,
     alignSelf: "flex-start" as const,
     paddingHorizontal: 4,
-  },
-  optionsWrap: {
-    width: "100%" as const,
-    gap: 6,
-    marginBottom: 8,
-  },
-  optionRow: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    justifyContent: "space-between" as const,
-    backgroundColor: "rgba(255,255,255,0.06)",
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderWidth: 1.5,
-    borderColor: "transparent",
-  },
-  optionRowSelected: {
-    borderColor: emerald,
-    backgroundColor: "rgba(27,107,74,0.15)",
-  },
-  optionText: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 14,
-    color: "rgba(255,255,255,0.8)",
-    flex: 1,
-    marginRight: 8,
-  },
-  optionTextSelected: {
-    color: richGold,
   },
   toggleRow: {
     flexDirection: "row" as const,
@@ -573,11 +517,9 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const flatListRef = useRef<FlatList>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const scrollX = useRef(new Animated.Value(0)).current;
-  const { setPreferredMasjid, setCalcMethod, setAsrCalc, setNotificationsEnabled, calcMethod, asrCalc, preferredMasjid } = useSettings();
+  const { setPreferredMasjid, setAsrCalc, setNotificationsEnabled, asrCalc, preferredMasjid } = useSettings();
   const selectedMasjidRef = useRef<string | null>(preferredMasjid);
-  const selectedCalcMethodRef = useRef<CalcMethodKey>(calcMethod);
   const selectedAsrCalcRef = useRef<AsrCalc>(asrCalc);
-  const calcMethodChangedRef = useRef(false);
   const asrCalcChangedRef = useRef(false);
 
   const totalPages = 6;
@@ -590,11 +532,6 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     setNotificationsEnabled(true);
   }, [setNotificationsEnabled]);
 
-  const handleCalcMethodChange = useCallback((m: CalcMethodKey) => {
-    selectedCalcMethodRef.current = m;
-    calcMethodChangedRef.current = true;
-  }, []);
-
   const handleAsrCalcChange = useCallback((a: AsrCalc) => {
     selectedAsrCalcRef.current = a;
     asrCalcChangedRef.current = true;
@@ -604,14 +541,11 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     if (selectedMasjidRef.current) {
       setPreferredMasjid(selectedMasjidRef.current);
     }
-    if (calcMethodChangedRef.current) {
-      setCalcMethod(selectedCalcMethodRef.current);
-    }
     if (asrCalcChangedRef.current) {
       setAsrCalc(selectedAsrCalcRef.current);
     }
     onComplete();
-  }, [onComplete, setPreferredMasjid, setCalcMethod, setAsrCalc]);
+  }, [onComplete, setPreferredMasjid, setAsrCalc]);
 
   const goNext = useCallback(() => {
     if (currentPage < totalPages - 1) {
@@ -638,13 +572,13 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     switch (index) {
       case 0: return <WelcomeScreen isActive={isActive} />;
       case 1: return <LocationScreen isActive={isActive} />;
-      case 2: return <PrayerSettingsScreen isActive={isActive} onCalcMethodChange={handleCalcMethodChange} onAsrCalcChange={handleAsrCalcChange} onNotifGranted={handleNotifGranted} initialCalcMethod={calcMethod} initialAsrCalc={asrCalc} />;
+      case 2: return <PrayerSettingsScreen isActive={isActive} onAsrCalcChange={handleAsrCalcChange} onNotifGranted={handleNotifGranted} initialAsrCalc={asrCalc} />;
       case 3: return <TrackerScreen isActive={isActive} />;
       case 4: return <CommunityScreen isActive={isActive} />;
       case 5: return <MasjidScreen isActive={isActive} onSelect={handleMasjidSelect} />;
       default: return null;
     }
-  }, [currentPage, handleMasjidSelect, handleCalcMethodChange, handleAsrCalcChange, handleNotifGranted, calcMethod, asrCalc]);
+  }, [currentPage, handleMasjidSelect, handleAsrCalcChange, handleNotifGranted, asrCalc]);
 
   const onMomentumScrollEnd = useCallback((e: any) => {
     const page = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
