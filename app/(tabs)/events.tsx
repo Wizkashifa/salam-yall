@@ -294,7 +294,7 @@ const calStyles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     position: "absolute",
-    bottom: 4,
+    bottom: 6,
   },
   clearFilter: {
     marginHorizontal: 14,
