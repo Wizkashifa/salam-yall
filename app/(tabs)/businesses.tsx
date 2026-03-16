@@ -331,7 +331,7 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
             ) : null}
 
             <View style={[styles.communitySection, { borderTopColor: colors.border }]}>
-              {communityRating.avg != null && communityRating.count > 0 ? (
+              {communityRating.avg != null && communityRating.count >= 3 ? (
                 <View style={styles.ratingRow}>
                   <Text style={[styles.ratingScore, { color: colors.gold }]}>{communityRating.avg.toFixed(1)}</Text>
                   <Text style={styles.ratingStars}>{renderStars(communityRating.avg)}</Text>
@@ -339,6 +339,10 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
                     ({communityRating.count} community {communityRating.count === 1 ? "rating" : "ratings"})
                   </Text>
                 </View>
+              ) : communityRating.count > 0 && communityRating.count < 3 ? (
+                <Text style={[styles.ratingCount, { color: colors.textTertiary, marginBottom: 6 }]}>
+                  {3 - communityRating.count} more {3 - communityRating.count === 1 ? "rating" : "ratings"} needed to show community score
+                </Text>
               ) : null}
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <Text style={[styles.rateLabel, { color: colors.textSecondary }]}>Rate this business:</Text>
@@ -1025,7 +1029,7 @@ export default function BusinessesScreen() {
               <View style={styles.cardSubRow}>
                 <Text style={[styles.categoryLabel, { color: catInfo.color }]}>{item.category}</Text>
                 {item.category !== "Services" && item.category !== "Healthcare" ? (
-                  item.community_rating != null && item.community_rating > 0 ? (
+                  item.community_rating != null && item.community_rating > 0 && (item.community_rating_count || 0) >= 3 ? (
                     <View style={styles.cardRatingRow}>
                       <Ionicons name="star" size={11} color={colors.gold} />
                       <Text style={[styles.cardRatingScore, { color: colors.gold }]}>{Number(item.community_rating).toFixed(1)}</Text>
