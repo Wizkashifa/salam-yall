@@ -1617,11 +1617,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const keywordsArray = Array.isArray(keywords) ? keywords : [];
 
+      let submitterName = "";
+      const userId = await getUserIdFromRequest(req);
+      if (userId) {
+        const userResult = await pool.query("SELECT display_name, email FROM user_accounts WHERE id = $1", [userId]);
+        if (userResult.rows.length > 0) {
+          submitterName = userResult.rows[0].display_name || userResult.rows[0].email || "";
+        }
+      }
+
       const result = await pool.query(
         `INSERT INTO businesses (name, category, description, address, phone, website, submitted_by_email, google_url, specialty, keywords, photo_url, booking_url, hospital_affiliation, instagram_url, status)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'pending')
          RETURNING id`,
-        [name, category, description || "", address || "", phone || "", website || "", "", google_url || "", specialty || "", keywordsArray, photo_url || "", booking_url || "", hospital_affiliation || "", instagram_url || ""]
+        [name, category, description || "", address || "", phone || "", website || "", submitterName, google_url || "", specialty || "", keywordsArray, photo_url || "", booking_url || "", hospital_affiliation || "", instagram_url || ""]
       );
 
       res.status(201).json({
