@@ -4223,6 +4223,38 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     }
   });
 
+  app.put("/api/admin/community-events/:id", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { id } = req.params;
+      const { title, description, location, start_time, end_time, organizer, registration_url, image_data, image_mime } = req.body;
+      const fields: string[] = [];
+      const values: any[] = [];
+      let idx = 1;
+      if (title !== undefined) { fields.push(`title = $${idx++}`); values.push(title); }
+      if (description !== undefined) { fields.push(`description = $${idx++}`); values.push(description); }
+      if (location !== undefined) { fields.push(`location = $${idx++}`); values.push(location); }
+      if (start_time !== undefined) { fields.push(`start_time = $${idx++}`); values.push(start_time); }
+      if (end_time !== undefined) { fields.push(`end_time = $${idx++}`); values.push(end_time || null); }
+      if (organizer !== undefined) { fields.push(`organizer = $${idx++}`); values.push(organizer); }
+      if (registration_url !== undefined) { fields.push(`registration_url = $${idx++}`); values.push(registration_url); }
+      if (image_data !== undefined) { fields.push(`image_data = $${idx++}`); values.push(image_data || null); }
+      if (image_mime !== undefined) { fields.push(`image_mime = $${idx++}`); values.push(image_mime || 'image/jpeg'); }
+      if (fields.length === 0) return res.status(400).json({ error: "No fields to update" });
+      values.push(id);
+      const result = await pool.query(
+        `UPDATE community_events SET ${fields.join(", ")} WHERE id = $${idx} RETURNING id`,
+        values
+      );
+      if (!result.rows.length) return res.status(404).json({ error: "Event not found" });
+      console.log(`[Community Events] Updated event ID ${id}`);
+      res.json({ updated: true });
+    } catch (error: any) {
+      console.error("[Community Events] Update error:", error.message);
+      res.status(500).json({ error: "Failed to update event" });
+    }
+  });
+
   app.delete("/api/admin/community-events/:id", async (req, res) => {
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {

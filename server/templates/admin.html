@@ -304,6 +304,48 @@
       </div>
     </div>
 
+    <div id="editCommunityEventModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:1000;overflow:auto;padding:20px;">
+      <div style="background:#161616;border:1px solid #252525;border-radius:14px;max-width:500px;margin:40px auto;padding:20px;">
+        <div style="font-size:18px;font-weight:700;color:#D4A843;margin-bottom:20px;">Edit Community Event</div>
+        <input type="hidden" id="editCommunityEventId">
+        <label>Title</label>
+        <input type="text" id="editCETitle" style="margin-bottom:14px;">
+        <label>Description</label>
+        <textarea id="editCEDescription" style="margin-bottom:14px;min-height:100px;"></textarea>
+        <label>Location</label>
+        <input type="text" id="editCELocation" style="margin-bottom:14px;">
+        <label>Organizer</label>
+        <input type="text" id="editCEOrganizer" style="margin-bottom:14px;">
+        <div class="row">
+          <div>
+            <label>Start Date & Time</label>
+            <input type="datetime-local" id="editCEStart" style="margin-bottom:14px;">
+          </div>
+          <div>
+            <label>End Date & Time</label>
+            <input type="datetime-local" id="editCEEnd" style="margin-bottom:14px;">
+          </div>
+        </div>
+        <label>Registration URL (optional)</label>
+        <input type="text" id="editCERegUrl" style="margin-bottom:14px;">
+        <label>Flyer Image (optional)</label>
+        <div style="margin-bottom:14px;">
+          <div id="editCEImagePreview" style="margin-bottom:8px;"></div>
+          <div style="display:flex;gap:8px;">
+            <label class="btn btn-sm" style="background:#333;color:#9CA3AF;cursor:pointer;margin:0;">
+              Upload New Image
+              <input type="file" accept="image/*" id="editCEImageInput" style="display:none;" onchange="handleEditCEImage(this)">
+            </label>
+            <button type="button" class="btn btn-sm" style="background:#333;color:#EF4444;" onclick="clearEditCEImage()">Remove Image</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-primary" onclick="saveCommunityEvent()" style="flex:1;">Save Changes</button>
+          <button class="btn" style="flex:1;background:#333;color:#9CA3AF;" onclick="closeCommunityEventEditor()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
     <div class="tab-content" id="tab-businesses">
       <div class="section">
         <div class="section-title"><span class="icon">➕</span> Quick Add Business</div>
@@ -1471,6 +1513,8 @@
       }
     }
 
+    var cachedCommunityEvents = [];
+
     async function loadCommunityEvents() {
       var list = document.getElementById('communityEventList');
       list.innerHTML = '<div class="loading">Loading...</div>';
@@ -1480,6 +1524,7 @@
         });
         if (res.status === 401) { handleUnauthorized(); return; }
         var events = await res.json();
+        cachedCommunityEvents = events;
         if (!events.length) {
           list.innerHTML = '<div class="empty-state">No community events published yet</div>';
           return;
@@ -1499,6 +1544,7 @@
               '</div>' +
             '</div>' +
             '<div style="display:flex;gap:6px;">' +
+              '<button class="btn btn-gold btn-sm" onclick="openCommunityEventEditor(' + e.id + ')" style="margin-right:6px;">Edit</button>' +
               '<button class="btn btn-danger btn-sm" onclick="deleteCommunityEvent(' + e.id + ')">Delete</button>' +
             '</div>' +
           '</li>';
@@ -1518,6 +1564,95 @@
           loadCommunityEvents();
         } else {
           showToast('Failed to delete event', true);
+        }
+      } catch { showToast('Connection error', true); }
+    }
+
+    var editCEImageData = null;
+    var editCEImageMime = null;
+    var editCEImageChanged = false;
+
+    function openCommunityEventEditor(id) {
+      var event = cachedCommunityEvents.find(function(e) { return e.id === id; });
+      if (!event) { showToast('Event not found', true); return; }
+      document.getElementById('editCommunityEventId').value = id;
+      document.getElementById('editCETitle').value = event.title || '';
+      document.getElementById('editCEDescription').value = event.description || '';
+      document.getElementById('editCELocation').value = event.location || '';
+      document.getElementById('editCEOrganizer').value = event.organizer || '';
+      document.getElementById('editCEStart').value = event.start_time ? toLocalDatetimeStr(event.start_time) : '';
+      document.getElementById('editCEEnd').value = event.end_time ? toLocalDatetimeStr(event.end_time) : '';
+      document.getElementById('editCERegUrl').value = event.registration_url || '';
+      editCEImageData = null;
+      editCEImageMime = null;
+      editCEImageChanged = false;
+      var preview = document.getElementById('editCEImagePreview');
+      if (event.has_image) {
+        preview.innerHTML = '<img src="/api/community-events/' + id + '/image" style="max-width:200px;max-height:120px;border-radius:8px;border:1px solid #333;">';
+      } else {
+        preview.innerHTML = '<span style="color:#6B7280;font-size:12px;">No image</span>';
+      }
+      document.getElementById('editCEImageInput').value = '';
+      document.getElementById('editCommunityEventModal').style.display = 'block';
+    }
+
+    function closeCommunityEventEditor() {
+      document.getElementById('editCommunityEventModal').style.display = 'none';
+    }
+
+    function handleEditCEImage(input) {
+      if (!input.files || !input.files[0]) return;
+      var file = input.files[0];
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var base64 = e.target.result.split(',')[1];
+        editCEImageData = base64;
+        editCEImageMime = file.type || 'image/jpeg';
+        editCEImageChanged = true;
+        document.getElementById('editCEImagePreview').innerHTML = '<img src="' + e.target.result + '" style="max-width:200px;max-height:120px;border-radius:8px;border:1px solid #333;">';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearEditCEImage() {
+      editCEImageData = '';
+      editCEImageMime = '';
+      editCEImageChanged = true;
+      document.getElementById('editCEImagePreview').innerHTML = '<span style="color:#6B7280;font-size:12px;">Image will be removed on save</span>';
+      document.getElementById('editCEImageInput').value = '';
+    }
+
+    async function saveCommunityEvent() {
+      var id = document.getElementById('editCommunityEventId').value;
+      if (!id) return;
+      var startVal = document.getElementById('editCEStart').value;
+      var endVal = document.getElementById('editCEEnd').value;
+      var body = {
+        title: document.getElementById('editCETitle').value.trim(),
+        description: document.getElementById('editCEDescription').value.trim(),
+        location: document.getElementById('editCELocation').value.trim(),
+        organizer: document.getElementById('editCEOrganizer').value.trim(),
+        start_time: startVal ? new Date(startVal).toISOString() : undefined,
+        end_time: endVal ? new Date(endVal).toISOString() : undefined,
+        registration_url: document.getElementById('editCERegUrl').value.trim(),
+      };
+      if (editCEImageChanged) {
+        body.image_data = editCEImageData || null;
+        body.image_mime = editCEImageMime || null;
+      }
+      try {
+        var res = await fetch('/api/admin/community-events/' + id, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify(body),
+        });
+        if (res.ok) {
+          showToast('Event updated');
+          closeCommunityEventEditor();
+          loadCommunityEvents();
+        } else {
+          var data = await res.json();
+          showToast(data.error || 'Failed to save', true);
         }
       } catch { showToast('Connection error', true); }
     }
