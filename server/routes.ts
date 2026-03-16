@@ -2039,7 +2039,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid business ID" });
       }
       const { name, category, description, address, phone, website, google_url, specialty, keywords, photo_url, booking_url, hospital_affiliation, member_note, search_tags, disable_enrichment, instagram_url } = req.body;
-      const validCats = ["Restaurant", "Grocery", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Events", "Creator"];
+      const validCats = ["Restaurant", "Grocery", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Events", "Creator", "Home Bakery / Catering"];
       if (category !== undefined && !validCats.includes(category)) {
         return res.status(400).json({ error: "Invalid category" });
       }

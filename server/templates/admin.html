@@ -331,6 +331,7 @@
                 <option>Services</option>
                 <option>Events</option>
                 <option>Creator</option>
+                <option>Home Bakery / Catering</option>
               </select>
             </div>
           </div>
@@ -581,6 +582,7 @@
           <option>Services</option>
           <option>Events</option>
           <option>Creator</option>
+          <option>Home Bakery / Catering</option>
         </select>
         <label>Description</label>
         <textarea id="editDescription" style="margin-bottom:14px;"></textarea>
@@ -602,10 +604,14 @@
         <input type="text" id="editInstagramUrl" placeholder="https://instagram.com/yourbiz" style="margin-bottom:14px;">
         <label>Search Tags (comma-separated, optional)</label>
         <input type="text" id="editSearchTags" style="margin-bottom:14px;">
-        <label style="display:flex;align-items:center;font-weight:normal;font-size:14px;margin-bottom:20px;cursor:pointer;">
-          <input type="checkbox" id="editDisableEnrichment" style="width:18px;height:18px;margin-right:8px;cursor:pointer;">
-          Disable future enrichment
-        </label>
+        <label>Enrichment</label>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+          <div id="enrichToggle" onclick="toggleEnrichment()" style="width:50px;height:28px;border-radius:14px;background:#333;cursor:pointer;position:relative;transition:background 0.2s;">
+            <div id="enrichToggleKnob" style="width:22px;height:22px;border-radius:11px;background:#fff;position:absolute;top:3px;left:3px;transition:left 0.2s;"></div>
+          </div>
+          <span id="enrichToggleLabel" style="font-size:14px;color:#9CA3AF;">Enrichment disabled</span>
+          <input type="hidden" id="editDisableEnrichment" value="false">
+        </div>
         <div style="display:flex;gap:8px;">
           <button class="btn btn-primary" onclick="saveBusiness()" style="flex:1;">Save</button>
           <button class="btn" style="flex:1;background:#333;color:#9CA3AF;" onclick="closeBusinessEditor()">Cancel</button>
@@ -645,6 +651,10 @@
       ].concat(UNIVERSAL_TAGS),
       Events: UNIVERSAL_TAGS.slice(),
       Creator: UNIVERSAL_TAGS.slice(),
+      "Home Bakery / Catering": [
+        "Halal-certified", "Zabiha", "Custom orders", "Delivery",
+        "Pickup only", "Desserts", "Savory", "Weekly menu"
+      ].concat(UNIVERSAL_TAGS),
       _default: UNIVERSAL_TAGS.concat([
         "Veteran-owned", "By appointment only", "Walk-ins welcome",
         "Islamic finance", "Halal investing", "Financial planning"
@@ -663,6 +673,31 @@
           (isSelected ? '#fff' : '#9CA3AF') + ';">' +
           (isSelected ? '✓ ' : '') + escHtml(kw) + '</button>';
       }).join('');
+    }
+
+    function setEnrichToggle(enabled) {
+      var toggle = document.getElementById('enrichToggle');
+      var knob = document.getElementById('enrichToggleKnob');
+      var label = document.getElementById('enrichToggleLabel');
+      var hidden = document.getElementById('editDisableEnrichment');
+      if (enabled) {
+        toggle.style.background = '#4CAF50';
+        knob.style.left = '25px';
+        label.textContent = 'Enrichment enabled';
+        label.style.color = '#4CAF50';
+        hidden.value = 'false';
+      } else {
+        toggle.style.background = '#333';
+        knob.style.left = '3px';
+        label.textContent = 'Enrichment disabled';
+        label.style.color = '#9CA3AF';
+        hidden.value = 'true';
+      }
+    }
+
+    function toggleEnrichment() {
+      var current = document.getElementById('editDisableEnrichment').value === 'true';
+      setEnrichToggle(current);
     }
 
     function toggleEditKeyword(kw) {
@@ -1509,7 +1544,7 @@
         document.getElementById('editMemberNote').value = business.member_note || '';
         document.getElementById('editSearchTags').value = (Array.isArray(business.search_tags) ? business.search_tags.join(', ') : '') || '';
         document.getElementById('editInstagramUrl').value = business.instagram_url || '';
-        document.getElementById('editDisableEnrichment').checked = business.place_id === 'none';
+        setEnrichToggle(business.place_id !== 'none');
         document.getElementById('editBusinessModal').style.display = 'block';
         document.getElementById('editCategory').onchange = function() {
           editSelectedKeywords = [];
@@ -1538,7 +1573,7 @@
       const tagsStr = document.getElementById('editSearchTags').value.trim();
       const search_tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(t => t) : [];
       const instagram_url = document.getElementById('editInstagramUrl').value.trim();
-      const disable_enrichment = document.getElementById('editDisableEnrichment').checked;
+      const disable_enrichment = document.getElementById('editDisableEnrichment').value === 'true';
       if (!name || !category) { showToast('Name and category are required', true); return; }
       const body = { name, category, description, address, phone, website, instagram_url, disable_enrichment };
       if (specialty) body.specialty = specialty;

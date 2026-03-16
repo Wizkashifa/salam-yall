@@ -79,14 +79,15 @@ const CATEGORY_ICONS: Record<string, { icon: string; color: string }> = {
   Services: { icon: "construct-outline", color: "#6366F1" },
   Events: { icon: "calendar-outline", color: "#D946EF" },
   Creator: { icon: "videocam-outline", color: "#F59E0B" },
+  "Home Bakery / Catering": { icon: "restaurant-outline", color: "#D97706" },
 };
 
 function getCategoryInfo(category: string) {
   return CATEGORY_ICONS[category] || { icon: "business-outline", color: "#6B7280" };
 }
 
-const CATEGORIES = ["All", "Grocery", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Events", "Creator"];
-const SUBMIT_CATEGORIES = ["Grocery", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Events", "Creator"];
+const CATEGORIES = ["All", "Grocery", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Events", "Creator", "Home Bakery / Catering"];
+const SUBMIT_CATEGORIES = ["Grocery", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Events", "Creator", "Home Bakery / Catering"];
 
 const SPECIALTIES: Record<string, string[]> = {
   Healthcare: [
@@ -104,6 +105,9 @@ const SPECIALTIES: Record<string, string[]> = {
   Creator: [
     "Artist", "Content Creator", "Photographer", "Videographer",
     "Graphic Designer", "Social Media", "Podcast", "YouTube", "Blogger",
+  ],
+  "Home Bakery / Catering": [
+    "Bakery", "Catering",
   ],
 };
 
@@ -134,6 +138,11 @@ const BUSINESS_KEYWORDS: Record<string, string[]> = {
     ...UNIVERSAL_TAGS,
   ],
   Creator: [
+    ...UNIVERSAL_TAGS,
+  ],
+  "Home Bakery / Catering": [
+    "Halal-certified", "Zabiha", "Custom orders", "Delivery",
+    "Pickup only", "Desserts", "Savory", "Weekly menu",
     ...UNIVERSAL_TAGS,
   ],
   _default: [
