@@ -490,7 +490,7 @@ function SignInScreen({ isActive }: { isActive: boolean }) {
         </View>
 
         <Text style={[screenStyles.body, { marginBottom: 0, marginTop: 12, fontSize: 13, opacity: 0.5 }]}>
-          You can sign in anytime from the Home screen menu.
+          You can always sign in later from the Worship tab menu.
         </Text>
       </AnimatedContent>
     </View>
