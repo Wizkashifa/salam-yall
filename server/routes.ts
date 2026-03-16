@@ -2397,7 +2397,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
          FROM generate_series(CURRENT_DATE - ($1 || ' days')::interval, CURRENT_DATE, '1 day') d
          LEFT JOIN analytics_events ae
            ON ae.created_at >= d AND ae.created_at < d + interval '1 day'
-           AND ae.event_name = 'app_open'
          GROUP BY d ORDER BY d`,
         [days]
       );
