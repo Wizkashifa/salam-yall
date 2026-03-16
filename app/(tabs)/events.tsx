@@ -13,16 +13,20 @@ import {
   Dimensions,
   Linking,
   Share,
+  Alert,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as Notifications from "expo-notifications";
 import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
 import { GlassHeader } from "@/components/GlassHeader";
 import { useDeepLink } from "@/lib/deeplink-context";
-import { getApiUrl } from "@/lib/query-client";
+import { useAuth } from "@/lib/auth-context";
+import { getApiUrl, apiRequest } from "@/lib/query-client";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 
 interface CalendarEvent {
@@ -306,7 +310,37 @@ const calStyles = StyleSheet.create({
   },
 });
 
-function EventDetailModal({ event, visible, onClose }: { event: CalendarEvent | null; visible: boolean; onClose: () => void }) {
+const BOOKMARK_DISCLAIMER_KEY = "event_bookmark_disclaimer_shown";
+
+async function scheduleEventReminder(event: CalendarEvent) {
+  const eventStart = new Date(event.start);
+  const reminderTime = new Date(eventStart.getTime() - 60 * 60 * 1000);
+  if (reminderTime <= new Date()) return;
+  try {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: event.title,
+        body: `Starting in 1 hour${event.location ? ` at ${event.location}` : ""}`,
+        data: { type: "event", eventId: event.id },
+        sound: true,
+      },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: reminderTime },
+    });
+  } catch {}
+}
+
+async function cancelEventReminder(eventId: string) {
+  try {
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    for (const notif of scheduled) {
+      if (notif.content.data?.eventId === eventId) {
+        await Notifications.cancelScheduledNotificationAsync(notif.identifier);
+      }
+    }
+  } catch {}
+}
+
+function EventDetailModal({ event, visible, onClose, isSaved, onToggleSave }: { event: CalendarEvent | null; visible: boolean; onClose: () => void; isSaved: boolean; onToggleSave: (event: CalendarEvent) => void }) {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
 
@@ -333,13 +367,18 @@ function EventDetailModal({ event, visible, onClose }: { event: CalendarEvent | 
           <Pressable onPress={onClose} hitSlop={8} style={[styles.modalCloseBtn, { backgroundColor: isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.85)" }]}>
             <Ionicons name="close" size={20} color={isDark ? "#fff" : "#374151"} />
           </Pressable>
-          <Pressable onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            const shareUrl = `https://salamyall.net/share/event/${encodeURIComponent(event.id)}`;
-            Share.share({ message: `Check out this event - "${event.title}" - ${shareUrl}` });
-          }} hitSlop={8} style={[styles.modalCloseBtn, { backgroundColor: isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.85)" }]}>
-            <Ionicons name="share-outline" size={18} color={isDark ? "#fff" : "#374151"} />
-          </Pressable>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <Pressable onPress={() => { onToggleSave(event); }} hitSlop={8} style={[styles.modalCloseBtn, { backgroundColor: isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.85)" }]}>
+              <Ionicons name={isSaved ? "bookmark" : "bookmark-outline"} size={18} color={isSaved ? colors.gold : (isDark ? "#fff" : "#374151")} />
+            </Pressable>
+            <Pressable onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              const shareUrl = `https://salamyall.net/share/event/${encodeURIComponent(event.id)}`;
+              Share.share({ message: `Check out this event - "${event.title}" - ${shareUrl}` });
+            }} hitSlop={8} style={[styles.modalCloseBtn, { backgroundColor: isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.85)" }]}>
+              <Ionicons name="share-outline" size={18} color={isDark ? "#fff" : "#374151"} />
+            </Pressable>
+          </View>
         </View>
 
         <ScrollView style={styles.modalScroll} contentContainerStyle={{ paddingBottom: insets.bottom + 40 }} bounces={false} showsVerticalScrollIndicator={false}>
@@ -436,6 +475,7 @@ function EventDetailModal({ event, visible, onClose }: { event: CalendarEvent | 
 export default function EventsScreen() {
   const { colors } = useTheme();
   const queryClient = useQueryClient();
+  const { user, getAuthHeaders } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -452,6 +492,63 @@ export default function EventsScreen() {
     refetchInterval: 2 * 60 * 1000,
   });
 
+  const { data: savedData } = useQuery<{ savedEventIds: string[] }>({
+    queryKey: ["/api/saved-events"],
+    enabled: !!user,
+    staleTime: 30 * 1000,
+    queryFn: async () => {
+      const baseUrl = getApiUrl();
+      const res = await fetch(new URL("/api/saved-events", baseUrl).toString(), { headers: getAuthHeaders() });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+  });
+  const savedEventIds = useMemo(() => new Set(savedData?.savedEventIds || []), [savedData]);
+
+  const toggleSave = useCallback(async (event: CalendarEvent) => {
+    if (!user) {
+      Alert.alert("Sign In Required", "Please sign in to save events.", [{ text: "OK" }]);
+      return;
+    }
+    const headers = getAuthHeaders();
+    const alreadySaved = savedEventIds.has(event.id);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    if (alreadySaved) {
+      await apiRequest("DELETE", `/api/saved-events/${encodeURIComponent(event.id)}`, undefined, headers);
+      cancelEventReminder(event.id);
+      queryClient.invalidateQueries({ queryKey: ["/api/saved-events"] });
+      trackEvent("event_unsaved", { title: event.title });
+    } else {
+      const disclaimerShown = await AsyncStorage.getItem(BOOKMARK_DISCLAIMER_KEY);
+      const doSave = async () => {
+        await apiRequest("POST", "/api/saved-events", { eventId: event.id }, headers);
+        scheduleEventReminder(event);
+        queryClient.invalidateQueries({ queryKey: ["/api/saved-events"] });
+        trackEvent("event_saved", { title: event.title });
+      };
+
+      if (!disclaimerShown) {
+        Alert.alert(
+          "Saving Event",
+          "Saving an event will send you a reminder 1 hour before it starts. This does not count as registration — you may need to register separately with the organizer.",
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Got It",
+              onPress: async () => {
+                await AsyncStorage.setItem(BOOKMARK_DISCLAIMER_KEY, "true");
+                await doSave();
+              },
+            },
+          ]
+        );
+      } else {
+        await doSave();
+      }
+    }
+  }, [user, savedEventIds, getAuthHeaders, queryClient]);
+
   useEffect(() => {
     if (!events || events.length === 0) return;
     if (!pendingTarget || pendingTarget.type !== "event") return;
@@ -465,7 +562,10 @@ export default function EventsScreen() {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] }),
+      queryClient.invalidateQueries({ queryKey: ["/api/saved-events"] }),
+    ]);
     setRefreshing(false);
   }, [queryClient]);
 
@@ -678,7 +778,21 @@ export default function EventsScreen() {
                           ) : null}
                         </View>
 
-                        <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} style={{ marginRight: 4 }} />
+                        <View style={{ alignItems: "center", gap: 4, marginRight: 4 }}>
+                          {user && savedEventIds.has(event.id) ? (
+                            <Pressable
+                              onPress={(e) => {
+                                e.stopPropagation?.();
+                                toggleSave(event);
+                              }}
+                              hitSlop={8}
+                            >
+                              <Ionicons name="bookmark" size={18} color={colors.gold} />
+                            </Pressable>
+                          ) : (
+                            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                          )}
+                        </View>
                       </View>
                     </Pressable>
                   );
@@ -693,6 +807,8 @@ export default function EventsScreen() {
         event={selectedEvent}
         visible={!!selectedEvent}
         onClose={() => setSelectedEvent(null)}
+        isSaved={!!selectedEvent && savedEventIds.has(selectedEvent.id)}
+        onToggleSave={toggleSave}
       />
     </View>
   );

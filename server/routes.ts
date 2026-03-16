@@ -932,6 +932,19 @@ async function ensureUserAccountsTable(pool: pg.Pool) {
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions(user_id);`);
 }
 
+async function ensureSavedEventsTable(pool: pg.Pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS saved_events (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES user_accounts(id) ON DELETE CASCADE,
+      event_id VARCHAR(255) NOT NULL,
+      saved_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(user_id, event_id)
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_saved_events_user ON saved_events(user_id);`);
+}
+
 async function ensureUserRatingsTable(pool: pg.Pool) {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS user_ratings (
@@ -1009,6 +1022,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await ensureJanazaAlertsTable(pool).catch(err => console.error("[DB] Janaza alerts table init error:", err.message));
   await ensureUserAccountsTable(pool).catch(err => console.error("[DB] User accounts table init error:", err.message));
   await ensureUserRatingsTable(pool).catch(err => console.error("[DB] User ratings table init error:", err.message));
+  await ensureSavedEventsTable(pool).catch(err => console.error("[DB] Saved events table init error:", err.message));
   await ensureHalalCheckinsTable(pool).catch(err => console.error("[DB] Halal checkins table init error:", err.message));
   await ensureRestaurantSubmissionsTable(pool).catch(err => console.error("[DB] Restaurant submissions table init error:", err.message));
   await ensureCommunityEventsTable(pool).catch(err => console.error("[DB] Community events table init error:", err.message));
@@ -2724,6 +2738,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const token = authHeader.replace("Bearer ", "");
     return await getSessionUserId(token);
   }
+
+  app.get("/api/saved-events", async (req, res) => {
+    try {
+      const userId = await getUserIdFromRequest(req);
+      if (!userId) return res.json({ savedEventIds: [] });
+      const { rows } = await pool.query("SELECT event_id FROM saved_events WHERE user_id = $1", [userId]);
+      res.json({ savedEventIds: rows.map((r: any) => r.event_id) });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to get saved events" });
+    }
+  });
+
+  app.post("/api/saved-events", async (req, res) => {
+    try {
+      const userId = await getUserIdFromRequest(req);
+      if (!userId) return res.status(401).json({ error: "Sign in required" });
+      const { eventId } = req.body;
+      if (!eventId) return res.status(400).json({ error: "eventId is required" });
+      await pool.query(
+        "INSERT INTO saved_events (user_id, event_id) VALUES ($1, $2) ON CONFLICT (user_id, event_id) DO NOTHING",
+        [userId, eventId]
+      );
+      res.json({ saved: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to save event" });
+    }
+  });
+
+  app.delete("/api/saved-events/:eventId", async (req, res) => {
+    try {
+      const userId = await getUserIdFromRequest(req);
+      if (!userId) return res.status(401).json({ error: "Sign in required" });
+      const { eventId } = req.params;
+      await pool.query("DELETE FROM saved_events WHERE user_id = $1 AND event_id = $2", [userId, eventId]);
+      res.json({ saved: false });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to unsave event" });
+    }
+  });
 
   app.post("/api/ratings", async (req, res) => {
     try {
