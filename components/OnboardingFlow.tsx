@@ -465,7 +465,7 @@ function CommunityScreen({ isActive }: { isActive: boolean }) {
               <Text style={communityStyles.cardTitle}>Add a Business</Text>
             </View>
             <Text style={communityStyles.cardBody}>
-              Know a halal restaurant or Muslim-owned business that should be listed? Submit it through the Home tab menu and we'll review it.
+              Know a Muslim-owned business? Tap the + icon on the Directory tab to submit it. For halal restaurants, use the + icon on HalalEats.
             </Text>
           </View>
         </View>
