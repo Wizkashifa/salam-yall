@@ -636,11 +636,12 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
   );
 }
 
-function SubmitRestaurantModal({ visible, onClose, colors }: { visible: boolean; onClose: () => void; colors: any }) {
+function SubmitRestaurantModal({ visible, onClose, colors, pendingCount }: { visible: boolean; onClose: () => void; colors: any; pendingCount?: number }) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { setPendingTarget } = useDeepLink();
   const { user, signInWithApple, getAuthHeaders } = useAuth();
+  const qc = useQueryClient();
   const [googleUrl, setGoogleUrl] = useState("");
   const [halalStatus, setHalalStatus] = useState<"halal" | "partial" | "not_halal" | null>(null);
   const [description, setDescription] = useState("");
@@ -648,6 +649,52 @@ function SubmitRestaurantModal({ visible, onClose, colors }: { visible: boolean;
   const [success, setSuccess] = useState(false);
   const [lookingUp, setLookingUp] = useState(false);
   const [restaurantName, setRestaurantName] = useState("");
+  const [activeTab, setActiveTab] = useState<"verify" | "submit">("verify");
+  const [votingId, setVotingId] = useState<number | null>(null);
+  const [voteStatus, setVoteStatus] = useState<string | null>(null);
+  const [voteDescription, setVoteDescription] = useState("");
+
+  const pendingSubmissionsQuery = useQuery<Array<{
+    id: number; name: string | null; google_maps_url: string; address: string | null;
+    vote_count: number; user_vote: string | null; created_at: string;
+  }>>({
+    queryKey: ["/api/restaurant-submissions/pending"],
+    enabled: visible && !!user,
+    staleTime: 30 * 1000,
+    queryFn: async () => {
+      const baseUrl = getApiUrl();
+      const res = await fetch(new URL("/api/restaurant-submissions/pending", baseUrl).toString(), { headers: getAuthHeaders() });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+  });
+
+  const pendingList = (pendingSubmissionsQuery.data || []).filter(s => !s.user_vote);
+
+  const handleVote = useCallback(async (submissionId: number, status: string, desc: string) => {
+    try {
+      const baseUrl = getApiUrl();
+      const res = await fetch(new URL(`/api/restaurant-submissions/${submissionId}/vote`, baseUrl).toString(), {
+        method: "POST",
+        headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ halalStatus: status, description: desc.trim() || null }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        qc.invalidateQueries({ queryKey: ["/api/restaurant-submissions/pending"] });
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setVotingId(null);
+        setVoteStatus(null);
+        setVoteDescription("");
+        if (data.autoApproved) {
+          Alert.alert("Restaurant Approved!", "This restaurant received enough votes and has been added to Halal Eats.");
+          qc.invalidateQueries({ queryKey: ["/api/halal-restaurants"] });
+        }
+      }
+    } catch {
+      Alert.alert("Error", "Failed to submit vote. Please try again.");
+    }
+  }, [getAuthHeaders, qc]);
 
   useEffect(() => {
     if (!visible) {
@@ -656,6 +703,10 @@ function SubmitRestaurantModal({ visible, onClose, colors }: { visible: boolean;
       setDescription("");
       setSuccess(false);
       setRestaurantName("");
+      setVotingId(null);
+      setVoteStatus(null);
+      setVoteDescription("");
+      setActiveTab(pendingList.length > 0 ? "verify" : "submit");
     }
   }, [visible]);
 
@@ -723,16 +774,126 @@ function SubmitRestaurantModal({ visible, onClose, colors }: { visible: boolean;
     { key: "not_halal", label: "Not Halal", color: "#C62828", icon: "close-circle" },
   ];
 
+  const verifyStatusChips: { key: string; label: string; color: string; icon: string }[] = [
+    { key: "halal", label: "Halal", color: "#2E7D32", icon: "checkmark-circle" },
+    { key: "partial", label: "Partial", color: "#F57C00", icon: "alert-circle" },
+    { key: "not_halal", label: "Not Halal", color: "#C62828", icon: "close-circle" },
+  ];
+
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingTop: Platform.OS === "web" ? 20 : insets.top + 10, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-          <Text style={{ fontFamily: "Inter_700Bold", fontSize: 18, color: colors.text }}>Submit a Restaurant</Text>
-          <Pressable onPress={onClose} hitSlop={10}>
-            <Ionicons name="close" size={24} color={colors.textSecondary} />
-          </Pressable>
+        <View style={{ paddingHorizontal: 20, paddingTop: Platform.OS === "web" ? 20 : insets.top + 10, paddingBottom: 0, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <Text style={{ fontFamily: "Inter_700Bold", fontSize: 18, color: colors.text }}>Community Restaurants</Text>
+            <Pressable onPress={onClose} hitSlop={10}>
+              <Ionicons name="close" size={24} color={colors.textSecondary} />
+            </Pressable>
+          </View>
+          <View style={{ flexDirection: "row", gap: 0 }}>
+            <Pressable
+              onPress={() => setActiveTab("verify")}
+              style={{ flex: 1, paddingVertical: 10, alignItems: "center", borderBottomWidth: 2, borderBottomColor: activeTab === "verify" ? colors.emerald : "transparent" }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Text style={{ fontFamily: activeTab === "verify" ? "Inter_600SemiBold" : "Inter_400Regular", fontSize: 14, color: activeTab === "verify" ? colors.emerald : colors.textSecondary }}>Verify</Text>
+                {pendingList.length > 0 && (
+                  <View style={{ backgroundColor: colors.emerald, borderRadius: 10, minWidth: 20, paddingHorizontal: 6, paddingVertical: 1, alignItems: "center" }}>
+                    <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, color: "#fff" }}>{pendingList.length}</Text>
+                  </View>
+                )}
+              </View>
+            </Pressable>
+            <Pressable
+              onPress={() => setActiveTab("submit")}
+              style={{ flex: 1, paddingVertical: 10, alignItems: "center", borderBottomWidth: 2, borderBottomColor: activeTab === "submit" ? colors.emerald : "transparent" }}
+            >
+              <Text style={{ fontFamily: activeTab === "submit" ? "Inter_600SemiBold" : "Inter_400Regular", fontSize: 14, color: activeTab === "submit" ? colors.emerald : colors.textSecondary }}>Submit New</Text>
+            </Pressable>
+          </View>
         </View>
-        {success ? (
+
+        {activeTab === "verify" ? (
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
+            {!user ? (
+              <View style={{ alignItems: "center", paddingVertical: 40 }}>
+                <Ionicons name="shield-checkmark-outline" size={48} color={colors.textTertiary} />
+                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 16, color: colors.text, marginTop: 16, textAlign: "center" }}>Sign in to verify restaurants</Text>
+                <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: colors.textSecondary, marginTop: 8, textAlign: "center", lineHeight: 18 }}>
+                  Help the community by confirming halal status of submitted restaurants.
+                </Text>
+              </View>
+            ) : pendingList.length === 0 ? (
+              <View style={{ alignItems: "center", paddingVertical: 40 }}>
+                <Ionicons name="checkmark-done-circle-outline" size={48} color={colors.emerald} />
+                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 16, color: colors.text, marginTop: 16, textAlign: "center" }}>All caught up!</Text>
+                <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: colors.textSecondary, marginTop: 8, textAlign: "center", lineHeight: 18 }}>
+                  No restaurants need verification right now. Submit a new one to get started.
+                </Text>
+                <Pressable onPress={() => setActiveTab("submit")} style={{ marginTop: 20, backgroundColor: colors.emerald, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 10 }}>
+                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff" }}>Submit a Restaurant</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <>
+                <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: colors.textSecondary, marginBottom: 16, lineHeight: 18 }}>
+                  Help verify these restaurants. Once 3 people confirm, they'll be added to Halal Eats.
+                </Text>
+                {pendingList.map((sub) => (
+                  <View key={sub.id} style={{ backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 14, marginBottom: 10 }}>
+                    <Pressable onPress={() => { setVotingId(votingId === sub.id ? null : sub.id); setVoteStatus(null); setVoteDescription(""); }}>
+                      <View style={{ flexDirection: "row", alignItems: "center" }}>
+                        <Ionicons name="restaurant-outline" size={18} color={colors.emerald} />
+                        <View style={{ flex: 1, marginLeft: 10 }}>
+                          <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: colors.text }}>{sub.name || "Unknown Restaurant"}</Text>
+                          {sub.address ? <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textSecondary, marginTop: 2 }} numberOfLines={1}>{sub.address}</Text> : null}
+                        </View>
+                        <View style={{ backgroundColor: colors.emerald + "20", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 }}>
+                          <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, color: colors.emerald }}>{sub.vote_count} vote{parseInt(String(sub.vote_count)) !== 1 ? "s" : ""}</Text>
+                        </View>
+                      </View>
+                    </Pressable>
+                    {votingId === sub.id && (
+                      <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
+                        <View style={{ flexDirection: "row", gap: 8 }}>
+                          {verifyStatusChips.map((chip) => (
+                            <Pressable
+                              key={chip.key}
+                              onPress={() => { setVoteStatus(chip.key); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                              style={{
+                                flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4,
+                                paddingVertical: 10, borderRadius: 8, borderWidth: 2,
+                                borderColor: voteStatus === chip.key ? chip.color : colors.border,
+                                backgroundColor: voteStatus === chip.key ? chip.color + "18" : "transparent",
+                              }}
+                            >
+                              <Ionicons name={chip.icon as any} size={16} color={voteStatus === chip.key ? chip.color : colors.textSecondary} />
+                              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: voteStatus === chip.key ? chip.color : colors.textSecondary }}>{chip.label}</Text>
+                            </Pressable>
+                          ))}
+                        </View>
+                        <TextInput
+                          style={{ backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, fontFamily: "Inter_400Regular", fontSize: 13, color: colors.text, marginTop: 8 }}
+                          placeholder="Optional description..."
+                          placeholderTextColor={colors.textTertiary}
+                          value={voteDescription}
+                          onChangeText={setVoteDescription}
+                        />
+                        <Pressable
+                          onPress={() => voteStatus && handleVote(sub.id, voteStatus, voteDescription)}
+                          disabled={!voteStatus}
+                          style={{ marginTop: 8, backgroundColor: voteStatus ? colors.emerald : colors.border, paddingVertical: 10, borderRadius: 8, alignItems: "center" }}
+                        >
+                          <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff" }}>Submit Vote</Text>
+                        </Pressable>
+                      </View>
+                    )}
+                  </View>
+                ))}
+              </>
+            )}
+          </ScrollView>
+        ) : success ? (
           <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 40 }}>
             <Ionicons name="checkmark-circle" size={64} color={colors.emerald} />
             <Text style={{ fontFamily: "Inter_700Bold", fontSize: 20, color: colors.text, marginTop: 16, textAlign: "center" }}>Thank You!</Text>
@@ -804,17 +965,7 @@ function SubmitRestaurantModal({ visible, onClose, colors }: { visible: boolean;
             />
 
             <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textSecondary, marginTop: 20, lineHeight: 18 }}>
-              Once three (3) people have verified a restaurant's halal status it will be added.{" "}
-              <Text
-                style={{ color: colors.emerald, fontFamily: "Inter_600SemiBold" }}
-                onPress={() => {
-                  onClose();
-                  setPendingTarget({ type: "verification", id: "" });
-                  router.navigate("/(tabs)/settings");
-                }}
-              >
-                Check here for restaurants that need to be verified.
-              </Text>
+              Once three (3) people have verified a restaurant's halal status it will be added.
             </Text>
 
             <Pressable
@@ -837,6 +988,7 @@ function SubmitRestaurantModal({ visible, onClose, colors }: { visible: boolean;
 export default function HalalScreen() {
   const { colors, isDark } = useTheme();
   const queryClient = useQueryClient();
+  const { user, getAuthHeaders } = useAuth();
   const [searchText, setSearchText] = useState("");
   const [halalFilter, setHalalFilter] = useState("ALL");
   const [cuisineFilter, setCuisineFilter] = useState("ALL");
@@ -848,6 +1000,20 @@ export default function HalalScreen() {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const { pendingTarget, consumeTarget } = useDeepLink();
   const [headerHeight, setHeaderHeight] = useState(0);
+
+  const pendingCountQuery = useQuery<number>({
+    queryKey: ["/api/restaurant-submissions/pending-count"],
+    enabled: !!user,
+    staleTime: 60 * 1000,
+    queryFn: async () => {
+      const baseUrl = getApiUrl();
+      const res = await fetch(new URL("/api/restaurant-submissions/pending", baseUrl).toString(), { headers: getAuthHeaders() });
+      if (!res.ok) return 0;
+      const data = await res.json();
+      return data.filter((s: any) => !s.user_vote).length;
+    },
+  });
+  const pendingCount = pendingCountQuery.data || 0;
 
   useEffect(() => { trackScreenView("HalalEats"); }, []);
 
@@ -1055,6 +1221,11 @@ export default function HalalScreen() {
             onPress={() => { setShowSubmitModal(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); }}
           >
             <Ionicons name="add" size={20} color="#fff" />
+            {pendingCount > 0 && (
+              <View style={{ position: "absolute", top: -4, right: -4, backgroundColor: "#EF4444", borderRadius: 9, minWidth: 18, height: 18, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 }}>
+                <Text style={{ fontFamily: "Inter_700Bold", fontSize: 10, color: "#fff" }}>{pendingCount}</Text>
+              </View>
+            )}
           </Pressable>
         </View>
         <TickerBanner />
@@ -1216,8 +1387,9 @@ export default function HalalScreen() {
       />
       <SubmitRestaurantModal
         visible={showSubmitModal}
-        onClose={() => setShowSubmitModal(false)}
+        onClose={() => { setShowSubmitModal(false); pendingCountQuery.refetch(); }}
         colors={colors}
+        pendingCount={pendingCount}
       />
     </View>
   );

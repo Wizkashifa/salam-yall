@@ -256,49 +256,6 @@ export default function SettingsScreen() {
     },
   });
 
-  const pendingSubmissionsQuery = useQuery<Array<{
-    id: number; name: string | null; google_maps_url: string; address: string | null;
-    vote_count: number; user_vote: string | null; created_at: string;
-  }>>({
-    queryKey: ["/api/restaurant-submissions/pending"],
-    enabled: !!user,
-    staleTime: 30 * 1000,
-    queryFn: async () => {
-      const baseUrl = getApiUrl();
-      const res = await fetch(new URL("/api/restaurant-submissions/pending", baseUrl).toString(), { headers: getAuthHeaders() });
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
-    },
-  });
-
-  const [votingId, setVotingId] = useState<number | null>(null);
-  const [voteStatus, setVoteStatus] = useState<string | null>(null);
-  const [voteDescription, setVoteDescription] = useState("");
-
-  const handleVote = useCallback(async (submissionId: number, halalStatus: string, desc: string) => {
-    try {
-      const baseUrl = getApiUrl();
-      const res = await fetch(new URL(`/api/restaurant-submissions/${submissionId}/vote`, baseUrl).toString(), {
-        method: "POST",
-        headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ halalStatus, description: desc.trim() || null }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        qc.invalidateQueries({ queryKey: ["/api/restaurant-submissions/pending"] });
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        setVotingId(null);
-        setVoteStatus(null);
-        setVoteDescription("");
-        if (data.autoApproved) {
-          Alert.alert("Restaurant Approved!", "This restaurant received enough votes and has been added to Halal Eats.");
-        }
-      }
-    } catch {
-      Alert.alert("Error", "Failed to submit vote. Please try again.");
-    }
-  }, [getAuthHeaders, qc]);
-
   const handleToggleNotifications = useCallback(async () => {
     if (!notificationsEnabled) {
       try {
@@ -1422,12 +1379,6 @@ export default function SettingsScreen() {
 
   const renderProfile = () => {
     const stats = userStatsQuery.data;
-    const pending = (pendingSubmissionsQuery.data || []).filter(s => !s.user_vote);
-    const statusChips: { key: string; label: string; color: string; icon: string }[] = [
-      { key: "halal", label: "Halal", color: "#2E7D32", icon: "checkmark-circle" },
-      { key: "partial", label: "Partial", color: "#F57C00", icon: "alert-circle" },
-      { key: "not_halal", label: "Not Halal", color: "#C62828", icon: "close-circle" },
-    ];
     return (
       <>
         <Pressable
@@ -1502,66 +1453,6 @@ export default function SettingsScreen() {
             </>
           );
         })()}
-
-        {pending.length > 0 && (
-          <>
-            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>HELP VERIFY</Text>
-            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: colors.textSecondary, marginBottom: 12, lineHeight: 18 }}>
-              Can you help us verify these restaurants are halal?
-            </Text>
-            {pending.map((sub) => (
-              <View key={sub.id} style={[styles.menuItem, { backgroundColor: colors.surface, borderColor: colors.border, flexDirection: "column", alignItems: "stretch", paddingVertical: 14 }]}>
-                <Pressable onPress={() => { setVotingId(votingId === sub.id ? null : sub.id); setVoteStatus(null); setVoteDescription(""); }}>
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <Ionicons name="restaurant-outline" size={18} color={colors.emerald} />
-                    <View style={{ flex: 1, marginLeft: 10 }}>
-                      <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: colors.text }}>{sub.name || "Unknown Restaurant"}</Text>
-                      {sub.address ? <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textSecondary, marginTop: 2 }} numberOfLines={1}>{sub.address}</Text> : null}
-                    </View>
-                    <View style={{ backgroundColor: colors.emerald + "20", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 }}>
-                      <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, color: colors.emerald }}>{sub.vote_count} vote{parseInt(String(sub.vote_count)) !== 1 ? "s" : ""}</Text>
-                    </View>
-                  </View>
-                </Pressable>
-                {votingId === sub.id && (
-                  <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
-                    <View style={{ flexDirection: "row", gap: 8 }}>
-                      {statusChips.map((chip) => (
-                        <Pressable
-                          key={chip.key}
-                          onPress={() => { setVoteStatus(chip.key); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-                          style={{
-                            flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4,
-                            paddingVertical: 10, borderRadius: 8, borderWidth: 2,
-                            borderColor: voteStatus === chip.key ? chip.color : colors.border,
-                            backgroundColor: voteStatus === chip.key ? chip.color + "18" : "transparent",
-                          }}
-                        >
-                          <Ionicons name={chip.icon as any} size={16} color={voteStatus === chip.key ? chip.color : colors.textSecondary} />
-                          <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: voteStatus === chip.key ? chip.color : colors.textSecondary }}>{chip.label}</Text>
-                        </Pressable>
-                      ))}
-                    </View>
-                    <TextInput
-                      style={{ backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, fontFamily: "Inter_400Regular", fontSize: 13, color: colors.text, marginTop: 8 }}
-                      placeholder="Optional description..."
-                      placeholderTextColor={colors.textTertiary}
-                      value={voteDescription}
-                      onChangeText={setVoteDescription}
-                    />
-                    <Pressable
-                      onPress={() => voteStatus && handleVote(sub.id, voteStatus, voteDescription)}
-                      disabled={!voteStatus}
-                      style={{ marginTop: 8, backgroundColor: voteStatus ? colors.emerald : colors.border, paddingVertical: 10, borderRadius: 8, alignItems: "center" }}
-                    >
-                      <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff" }}>Submit Vote</Text>
-                    </Pressable>
-                  </View>
-                )}
-              </View>
-            ))}
-          </>
-        )}
 
         {stats && stats.ratingHistory.length > 0 && (
           <>
