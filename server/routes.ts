@@ -1827,6 +1827,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  async function enrichBusinessDescription(businessId: number): Promise<string | null> {
+    try {
+      const biz = await pool.query("SELECT id, name, category, description, website, google_url, address, specialty, keywords, place_id FROM businesses WHERE id = $1", [businessId]);
+      if (biz.rows.length === 0) return null;
+      const business = biz.rows[0];
+
+      let websiteText = "";
+      if (business.website) {
+        try {
+          const resp = await fetch(business.website, {
+            headers: { "User-Agent": "Mozilla/5.0 (compatible; SalamYall/1.0)" },
+            signal: AbortSignal.timeout(8000),
+          });
+          if (resp.ok) {
+            const html = await resp.text();
+            websiteText = html
+              .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+              .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+              .replace(/<[^>]+>/g, " ")
+              .replace(/\s+/g, " ")
+              .trim()
+              .substring(0, 3000);
+          }
+        } catch {}
+      }
+
+      let googleInfo = "";
+      if (business.google_url && business.place_id && business.place_id !== "none") {
+        try {
+          const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+          if (apiKey) {
+            const detailResp = await fetch(
+              `https://places.googleapis.com/v1/places/${business.place_id}`,
+              { headers: { "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": "displayName,editorialSummary,reviews" } }
+            );
+            const detailData = await detailResp.json();
+            if (detailData.editorialSummary?.text) googleInfo += `Google summary: ${detailData.editorialSummary.text}\n`;
+            if (detailData.reviews?.length) {
+              googleInfo += "Recent Google reviews:\n" + detailData.reviews.slice(0, 3).map((r: any) => `- ${r.text?.text || ""}`).join("\n");
+            }
+          }
+        } catch {}
+      }
+
+      const contextParts = [
+        `Business name: ${business.name}`,
+        `Category: ${business.category}`,
+        business.specialty ? `Specialty: ${business.specialty}` : "",
+        business.address ? `Location: ${business.address}` : "",
+        business.keywords?.length ? `Tags: ${business.keywords.join(", ")}` : "",
+        websiteText ? `\nWebsite content:\n${websiteText}` : "",
+        googleInfo ? `\nGoogle Places info:\n${googleInfo}` : "",
+      ].filter(Boolean).join("\n");
+
+      if (!websiteText && !googleInfo) {
+        console.log(`[AI Enrich] No website or Google data for #${businessId} "${business.name}", skipping`);
+        return null;
+      }
+
+      const message = await anthropic.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 300,
+        messages: [{
+          role: "user",
+          content: `You are writing a short business description for a Muslim community directory app called "Salam Y'all" serving the Triangle area of North Carolina (Raleigh, Durham, Cary, Chapel Hill).
+
+Based on the following information, write a concise 1-2 sentence description of this business. The tone should be warm, informative, and community-oriented. Focus on what the business offers and why community members would want to visit. Do not mention "Muslim" or "halal" unless it is genuinely central to the business. Do not include the address or phone number. Do not use quotation marks around the description.
+
+${contextParts}
+
+Return ONLY the description text, nothing else.`,
+        }],
+      });
+
+      const desc = (message.content[0] as any).text?.trim();
+      if (desc && desc.length > 10) {
+        await pool.query("UPDATE businesses SET description = $1 WHERE id = $2", [desc.substring(0, 1000), businessId]);
+        console.log(`[AI Enrich] Generated description for #${businessId} "${business.name}"`);
+        return desc;
+      }
+      return null;
+    } catch (err: any) {
+      console.error(`[AI Enrich] Error for business #${businessId}:`, err.message);
+      return null;
+    }
+  }
+
   async function enrichHalalWithPlaces(restaurantId: number, forcePhoto = false) {
     try {
       const apiKey = process.env.GOOGLE_PLACES_API_KEY;
@@ -1992,6 +2079,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     dailyHalalEnrichment().catch(() => {});
     res.json({ message: "Halal enrichment started" });
+  });
+
+  app.post("/api/admin/businesses/:id/generate-description", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid business ID" });
+    try {
+      const desc = await enrichBusinessDescription(id);
+      if (desc) {
+        res.json({ description: desc });
+      } else {
+        res.status(404).json({ error: "Could not generate description — no website or Google data available for this business" });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   });
 
   setTimeout(() => dailyBusinessEnrichment(), 15000);

@@ -585,7 +585,10 @@
           <option>Home Bakery / Catering</option>
         </select>
         <label>Description</label>
-        <textarea id="editDescription" style="margin-bottom:14px;"></textarea>
+        <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:14px;">
+          <textarea id="editDescription" style="flex:1;margin-bottom:0;min-height:80px;"></textarea>
+          <button type="button" id="btnGenerateDesc" onclick="generateDescription()" style="background:#7c3aed;color:#fff;border:none;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:12px;white-space:nowrap;" title="Use AI to generate a description from the business website/Google listing">✨ AI Generate</button>
+        </div>
         <label>Address</label>
         <input type="text" id="editAddress" style="margin-bottom:14px;">
         <label>Phone</label>
@@ -1556,6 +1559,34 @@
 
     function closeBusinessEditor() {
       document.getElementById('editBusinessModal').style.display = 'none';
+    }
+
+    async function generateDescription() {
+      const id = document.getElementById('editingBusinessId').value;
+      if (!id) { showToast('No business selected', true); return; }
+      const btn = document.getElementById('btnGenerateDesc');
+      const origText = btn.textContent;
+      btn.textContent = '⏳ Generating...';
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/api/admin/businesses/${id}/generate-description`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': adminToken ? `Bearer ${adminToken}` : '' },
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        const data = await res.json();
+        if (res.ok && data.description) {
+          document.getElementById('editDescription').value = data.description;
+          showToast('Description generated! Review and save when ready.');
+        } else {
+          showToast(data.error || 'Failed to generate description', true);
+        }
+      } catch (err) {
+        showToast('Error generating description', true);
+      } finally {
+        btn.textContent = origText;
+        btn.disabled = false;
+      }
     }
 
     async function saveBusiness() {
