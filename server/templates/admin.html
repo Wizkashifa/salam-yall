@@ -438,6 +438,16 @@
       </div>
 
       <div class="section">
+        <div class="section-title"><span class="icon">👤</span> Daily Active Users</div>
+        <div id="dauStats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+          <div class="loading">Loading...</div>
+        </div>
+        <div id="dauChart" style="margin-top:14px;background:#1E1E1E;border-radius:12px;padding:16px;min-height:160px;">
+          <canvas id="dauCanvas" style="width:100%;height:140px;"></canvas>
+        </div>
+      </div>
+
+      <div class="section">
         <div class="section-title"><span class="icon">📈</span> Overview</div>
         <div id="analyticsOverview" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
           <div class="loading">Loading...</div>
@@ -2034,6 +2044,89 @@
       loadAnalyticsTop(from, to);
       loadCommunityStats();
       loadUserStats();
+      loadDAU();
+    }
+
+    async function loadDAU() {
+      try {
+        var res = await fetch('/api/admin/analytics/dau?days=30', {
+          headers: { 'Authorization': 'Bearer ' + adminToken }
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        var data = await res.json();
+        var statsEl = document.getElementById('dauStats');
+        var changeArrow = data.today >= data.yesterday ? '↑' : '↓';
+        var changeColor = data.today >= data.yesterday ? '#4CAF50' : '#FF5252';
+        var changeVal = Math.abs(data.today - data.yesterday);
+        statsEl.innerHTML =
+          '<div style="background:#1E1E1E;border-radius:12px;padding:16px;text-align:center;">' +
+            '<div style="font-size:28px;font-weight:700;color:#F5F5F5;">' + data.today + '</div>' +
+            '<div style="font-size:12px;color:#999;margin-top:4px;">Today</div>' +
+            (data.yesterday > 0 ? '<div style="font-size:12px;color:' + changeColor + ';margin-top:4px;">' + changeArrow + ' ' + changeVal + ' vs yesterday</div>' : '') +
+          '</div>' +
+          '<div style="background:#1E1E1E;border-radius:12px;padding:16px;text-align:center;">' +
+            '<div style="font-size:28px;font-weight:700;color:#F5F5F5;">' + data.yesterday + '</div>' +
+            '<div style="font-size:12px;color:#999;margin-top:4px;">Yesterday</div>' +
+          '</div>' +
+          '<div style="background:#1E1E1E;border-radius:12px;padding:16px;text-align:center;">' +
+            '<div style="font-size:28px;font-weight:700;color:#F5F5F5;">' + data.avg_7d + '</div>' +
+            '<div style="font-size:12px;color:#999;margin-top:4px;">7-day avg</div>' +
+          '</div>';
+        renderDAUChart(data.daily);
+      } catch (e) {
+        document.getElementById('dauStats').innerHTML = '<div class="empty-state">Failed to load DAU</div>';
+      }
+    }
+
+    function renderDAUChart(daily) {
+      var canvas = document.getElementById('dauCanvas');
+      if (!canvas) return;
+      var ctx = canvas.getContext('2d');
+      var dpr = window.devicePixelRatio || 1;
+      var rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = 140 * dpr;
+      canvas.style.width = rect.width + 'px';
+      canvas.style.height = '140px';
+      ctx.scale(dpr, dpr);
+      var w = rect.width, h = 140;
+      ctx.clearRect(0, 0, w, h);
+      if (!daily || daily.length === 0) return;
+      var values = daily.map(function(d) { return d.unique_devices; });
+      var maxVal = Math.max.apply(null, values) || 1;
+      var padding = { top: 20, right: 10, bottom: 30, left: 36 };
+      var chartW = w - padding.left - padding.right;
+      var chartH = h - padding.top - padding.bottom;
+      var barW = Math.max(2, (chartW / values.length) - 2);
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 0.5;
+      ctx.fillStyle = '#666';
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'right';
+      for (var g = 0; g <= 4; g++) {
+        var gy = padding.top + chartH - (chartH * g / 4);
+        ctx.beginPath();
+        ctx.moveTo(padding.left, gy);
+        ctx.lineTo(w - padding.right, gy);
+        ctx.stroke();
+        ctx.fillText(Math.round(maxVal * g / 4).toString(), padding.left - 4, gy + 3);
+      }
+      ctx.textAlign = 'center';
+      for (var i = 0; i < values.length; i++) {
+        var barH = (values[i] / maxVal) * chartH;
+        var x = padding.left + (chartW / values.length) * i + 1;
+        var y = padding.top + chartH - barH;
+        ctx.fillStyle = i === values.length - 1 ? '#4CAF50' : '#1B6B4A';
+        ctx.beginPath();
+        ctx.roundRect(x, y, barW, barH, [2, 2, 0, 0]);
+        ctx.fill();
+        if (values.length <= 14 || i % Math.ceil(values.length / 7) === 0) {
+          ctx.fillStyle = '#666';
+          ctx.font = '9px sans-serif';
+          var label = daily[i].date.slice(5);
+          ctx.fillText(label, x + barW / 2, h - padding.bottom + 14);
+        }
+      }
     }
 
     async function loadAnalyticsSummary(from, to) {

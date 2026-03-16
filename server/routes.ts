@@ -2386,6 +2386,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/admin/analytics/dau", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const days = Math.min(parseInt(req.query.days as string) || 30, 90);
+      const result = await pool.query(
+        `SELECT d::date as date,
+                COUNT(DISTINCT ae.device_id)::int as unique_devices,
+                COUNT(DISTINCT ae.user_id) FILTER (WHERE ae.user_id IS NOT NULL)::int as signed_in_users
+         FROM generate_series(CURRENT_DATE - ($1 || ' days')::interval, CURRENT_DATE, '1 day') d
+         LEFT JOIN analytics_events ae
+           ON ae.created_at >= d AND ae.created_at < d + interval '1 day'
+           AND ae.event_name = 'app_open'
+         GROUP BY d ORDER BY d`,
+        [days]
+      );
+      const today = result.rows.find((r: any) => r.date.toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10));
+      const yesterday = result.rows.find((r: any) => {
+        const yd = new Date(); yd.setDate(yd.getDate() - 1);
+        return r.date.toISOString().slice(0, 10) === yd.toISOString().slice(0, 10);
+      });
+      const last7 = result.rows.slice(-7);
+      const avg7 = last7.length > 0 ? Math.round(last7.reduce((s: number, r: any) => s + r.unique_devices, 0) / last7.length) : 0;
+      res.json({
+        daily: result.rows.map((r: any) => ({ date: r.date.toISOString().slice(0, 10), unique_devices: r.unique_devices, signed_in_users: r.signed_in_users })),
+        today: today?.unique_devices || 0,
+        yesterday: yesterday?.unique_devices || 0,
+        avg_7d: avg7,
+      });
+    } catch (error: any) {
+      console.error("[Analytics] DAU error:", error.message);
+      res.status(500).json({ error: "Failed to fetch DAU" });
+    }
+  });
+
   app.get("/api/admin/analytics/daily", async (req, res) => {
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {

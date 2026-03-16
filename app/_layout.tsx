@@ -28,6 +28,7 @@ import { queryClient } from "@/lib/query-client";
 import { ThemeProvider } from "@/lib/theme-context";
 import { SettingsProvider } from "@/lib/settings-context";
 import { registerPushToken } from "@/lib/push-utils";
+import { trackEvent } from "@/lib/analytics";
 import { DeepLinkProvider, parseDeepLinkUrl, useDeepLink } from "@/lib/deeplink-context";
 import { AuthProvider } from "@/lib/auth-context";
 
@@ -104,6 +105,7 @@ function PushNotificationHandler() {
 function RootLayoutNav() {
   useEffect(() => {
     registerPushToken();
+    trackEvent("app_open");
   }, []);
 
   return (
