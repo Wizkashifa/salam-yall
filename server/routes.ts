@@ -3074,10 +3074,57 @@ Return ONLY the description text, nothing else.`,
         return res.status(400).json({ error: "This restaurant has already been submitted and is awaiting verification" });
       }
 
+      let resolvedName = name || null;
+      let resolvedAddress = address || null;
+      let resolvedPlaceId = placeId || null;
+      let resolvedLat = lat || null;
+      let resolvedLng = lng || null;
+
+      if (!resolvedName) {
+        try {
+          const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+          if (apiKey) {
+            let resolvedUrl = googleMapsUrl;
+            if (/^https?:\/\/(maps\.app\.goo\.gl|goo\.gl)\//i.test(resolvedUrl)) {
+              try {
+                const redirectResp = await fetch(resolvedUrl, { method: "HEAD", redirect: "follow" });
+                if (redirectResp.url) resolvedUrl = redirectResp.url;
+              } catch {}
+            }
+            let searchQuery = "";
+            try {
+              const parsed = new URL(resolvedUrl);
+              const pathMatch = parsed.pathname.match(/\/maps\/place\/([^/@]+)/);
+              if (pathMatch) searchQuery = decodeURIComponent(pathMatch[1].replace(/\+/g, " "));
+              if (!searchQuery) {
+                const qParam = parsed.searchParams.get("q") || parsed.searchParams.get("query") || "";
+                if (qParam) searchQuery = qParam;
+              }
+            } catch {}
+            if (searchQuery) {
+              const searchResp = await fetch("https://places.googleapis.com/v1/places:searchText", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.id,places.location" },
+                body: JSON.stringify({ textQuery: searchQuery }),
+              });
+              const searchData = await searchResp.json();
+              const place = searchData.places?.[0];
+              if (place) {
+                resolvedName = place.displayName?.text || null;
+                if (!resolvedAddress) resolvedAddress = place.formattedAddress || null;
+                if (!resolvedPlaceId) resolvedPlaceId = place.id || null;
+                if (!resolvedLat && place.location) resolvedLat = place.location.latitude;
+                if (!resolvedLng && place.location) resolvedLng = place.location.longitude;
+              }
+            }
+          }
+        } catch {}
+      }
+
       const result = await pool.query(
         `INSERT INTO restaurant_submissions (user_id, google_maps_url, name, address, place_id, lat, lng)
          VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-        [userId, googleMapsUrl, name || null, address || null, placeId || null, lat || null, lng || null]
+        [userId, googleMapsUrl, resolvedName, resolvedAddress, resolvedPlaceId, resolvedLat, resolvedLng]
       );
 
       res.status(201).json({ success: true, id: result.rows[0].id });
