@@ -1035,7 +1035,7 @@ export default function SettingsScreen() {
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
                   <Ionicons name="grid" size={16} color={colors.emerald} />
                   <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: colors.text }}>Prayer Heatmap</Text>
-                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: colors.textSecondary, marginLeft: "auto" }}>Last 35 days</Text>
+                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: colors.textSecondary, marginLeft: "auto" }}>Last 30 days</Text>
                 </View>
                 {(() => {
                   const labelW = 48;
@@ -1204,7 +1204,7 @@ export default function SettingsScreen() {
                 { color: colors.gold, label: "Completed" },
                 { color: colors.emerald, label: "At masjid" },
                 { color: colors.gold + "60", label: "Made up" },
-                { color: "#EF4444", label: isRamadan ? "Missed fast" : "Excused" },
+                { color: "#EF4444", label: isRamadan ? "Missed fast" : "Missed fast / Excused" },
               ].map(l => (
                 <View key={l.label} style={styles.calLegendItem}>
                   <View style={[styles.calLegendDot, { backgroundColor: l.color }]} />
@@ -1213,7 +1213,7 @@ export default function SettingsScreen() {
               ))}
             </View>
             <Text style={[styles.calLegendText, { color: colors.textTertiary, textAlign: "center", marginTop: 6, fontSize: 10 }]}>
-              {isRamadan ? "Long-press a day to mark/unmark a missed fast" : "Long-press a day to mark/unmark an excused day"}
+              {isRamadan ? "Long-press a day to mark/unmark a missed fast" : "Long-press a day to mark/unmark a missed fast or excused prayer day"}
             </Text>
           </>
 
@@ -1242,7 +1242,7 @@ export default function SettingsScreen() {
                 <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
                   <Ionicons name="calendar-outline" size={18} color={colors.gold} style={{ marginTop: 2 }} />
                   <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: colors.textSecondary, flex: 1, lineHeight: 20 }}>
-                    Tap any day on the calendar to update individual prayer statuses, or long-press to mark {isRamadan ? "a missed fast" : "an excused day"}.
+                    Tap any day on the calendar to edit individual prayer statuses, or long-press to mark {isRamadan ? "a missed fast" : "a missed fast or excused prayer day"}.
                   </Text>
                 </View>
               </View>
