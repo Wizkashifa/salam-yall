@@ -9,7 +9,7 @@ export function getApiUrl(): string {
   let host = process.env.EXPO_PUBLIC_DOMAIN;
 
   if (!host) {
-    host = "muslim-life-hub.replit.app";
+    throw new Error("EXPO_PUBLIC_DOMAIN is not set");
   }
 
   let url = new URL(`https://${host}`);

@@ -86,28 +86,6 @@ export function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
           Please reload the app to continue.
         </Text>
 
-        <View
-          style={[
-            styles.errorContainer,
-            { backgroundColor: theme.backgroundSecondary, marginTop: 8, maxHeight: 200 },
-          ]}
-        >
-          <ScrollView showsVerticalScrollIndicator>
-            <Text
-              style={[
-                styles.errorText,
-                {
-                  color: theme.text,
-                  fontFamily: monoFont,
-                },
-              ]}
-              selectable
-            >
-              {error.message}
-            </Text>
-          </ScrollView>
-        </View>
-
         <Pressable
           onPress={handleRestart}
           style={({ pressed }) => [

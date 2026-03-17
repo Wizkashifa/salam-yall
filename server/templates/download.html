@@ -1,12 +1,12 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <title>Salam Y'all — Open in Expo Go</title>
+    <title>Salam Y'all — Your Triangle Muslim Community App</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Open Salam Y'all in Expo Go to test the latest published build." />
+    <meta name="description" content="Salam Y'all connects the Triangle NC Muslim community with prayer times, halal restaurants, local businesses, events, and more." />
     <meta property="og:title" content="Salam Y'all" />
-    <meta property="og:description" content="Your Triangle Muslim Community App — Open in Expo Go" />
+    <meta property="og:description" content="Your Triangle Muslim Community App — Prayer times, halal eats, events, and local directory all in one place." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://salamyall.net/app" />
     <meta property="og:site_name" content="Salam Y'all" />
@@ -53,41 +53,36 @@
       .tagline {
         font-size: 16px;
         color: #9CA3AF;
-        margin-bottom: 32px;
+        margin-bottom: 40px;
         line-height: 1.5;
       }
-      .url-box {
-        background: #161616;
-        border: 1px solid #252525;
-        border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 16px;
+      .features {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 40px;
+        text-align: left;
+      }
+      .feature {
         display: flex;
         align-items: center;
         gap: 10px;
+        padding: 14px;
+        background: #161616;
+        border: 1px solid #252525;
+        border-radius: 12px;
       }
-      .url-text {
-        flex: 1;
-        font-family: 'SF Mono', 'Menlo', monospace;
+      .feature-icon {
+        font-size: 20px;
+        flex-shrink: 0;
+      }
+      .feature-text {
         font-size: 13px;
-        color: #6EE7B7;
-        word-break: break-all;
-        text-align: left;
+        font-weight: 500;
+        color: #E5E5E5;
+        line-height: 1.3;
       }
-      .copy-btn {
-        background: #1B6B4A;
-        color: #fff;
-        border: none;
-        border-radius: 8px;
-        padding: 8px 14px;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        white-space: nowrap;
-        transition: background 0.2s;
-      }
-      .copy-btn:hover { background: #14523A; }
-      .open-btn {
+      .download-btn {
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -105,61 +100,16 @@
         transition: background 0.2s;
         margin-bottom: 12px;
       }
-      .open-btn:hover { background: #14523A; }
-      .store-btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        width: 100%;
-        padding: 14px 24px;
-        background: #161616;
-        border: 1px solid #252525;
-        color: #E5E5E5;
-        font-size: 15px;
-        font-weight: 600;
-        border-radius: 14px;
-        text-decoration: none;
-        cursor: pointer;
-        transition: background 0.2s;
-        margin-bottom: 12px;
+      .download-btn:hover { background: #14523A; }
+      .download-btn svg {
+        width: 22px;
+        height: 22px;
+        fill: currentColor;
       }
-      .store-btn:hover { background: #1E1E1E; }
-      .store-btn svg { width: 20px; height: 20px; fill: currentColor; }
-      .instructions {
-        background: #161616;
-        border: 1px solid #252525;
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 32px;
-        text-align: left;
-      }
-      .instructions h3 {
-        font-size: 14px;
-        font-weight: 600;
-        color: #D4A843;
-        margin-bottom: 12px;
-      }
-      .instructions ol {
-        padding-left: 18px;
-        font-size: 14px;
-        color: #9CA3AF;
-        line-height: 1.8;
-      }
-      .instructions li { margin-bottom: 4px; }
-      .instructions strong { color: #E5E5E5; }
-      .divider {
-        height: 1px;
-        background: #252525;
-        margin: 20px 0;
-      }
-      .section-label {
-        font-size: 11px;
-        font-weight: 600;
-        letter-spacing: 1px;
+      .store-note {
+        font-size: 13px;
         color: #6B7280;
-        text-transform: uppercase;
-        margin-bottom: 12px;
+        margin-bottom: 48px;
       }
       .footer {
         font-size: 12px;
@@ -174,15 +124,13 @@
         margin: 0 8px;
       }
       .footer a:hover { color: #9CA3AF; }
+
       @media (prefers-color-scheme: light) {
         body { background: #FAFAF8; color: #1a1a1a; }
-        .url-box, .instructions, .store-btn { background: #fff; border-color: #E5E5E5; }
-        .url-text { color: #1B6B4A; }
+        .feature { background: #fff; border-color: #E5E5E5; }
+        .feature-text { color: #374151; }
         .tagline { color: #6B7280; }
-        .instructions ol { color: #6B7280; }
-        .instructions strong { color: #1A1A1A; }
-        .store-btn { color: #374151; }
-        .divider { background: #E5E5E5; }
+        .store-note { color: #9CA3AF; }
         .footer { border-top-color: #E5E5E5; color: #9CA3AF; }
         .footer a { color: #6B7280; }
       }
@@ -197,53 +145,49 @@
       </svg>
 
       <h1>Salam Y'all</h1>
-      <p class="tagline">Published App — Test Build</p>
+      <p class="tagline">Your Triangle NC Muslim Community App</p>
 
-      <p class="section-label">Published App URL</p>
-      <div class="url-box">
-        <span class="url-text" id="appUrl">https://muslim-life-hub.replit.app/app</span>
-        <button class="copy-btn" onclick="copyUrl()">Copy</button>
+      <div class="features">
+        <div class="feature">
+          <span class="feature-icon">🕌</span>
+          <span class="feature-text">Prayer &amp; Iqama Times</span>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">🍽️</span>
+          <span class="feature-text">Halal Restaurants</span>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">📅</span>
+          <span class="feature-text">Community Events</span>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">📒</span>
+          <span class="feature-text">Local Directory</span>
+        </div>
       </div>
 
-      <div class="instructions">
-        <h3>Open in Expo Go</h3>
-        <ol>
-          <li>Install <strong>Expo Go</strong> from the App Store</li>
-          <li>Open Expo Go and tap <strong>"Enter URL manually"</strong></li>
-          <li>Paste the URL above and tap <strong>Connect</strong></li>
-        </ol>
-      </div>
-
-      <a href="exp://muslim-life-hub.replit.app/app" class="open-btn" id="openExpo">
-        Open in Expo Go
-      </a>
-
-      <div class="divider"></div>
-
-      <p class="section-label">Production App</p>
-      <a href="https://apps.apple.com/us/app/salam-yall/id6760231963" class="store-btn">
+      <a href="https://apps.apple.com/us/app/salam-yall/id6760231963" class="download-btn" id="download">
         <svg viewBox="0 0 24 24">
           <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
         </svg>
         Download on the App Store
       </a>
+      <p class="store-note">Free on iOS</p>
 
       <div class="footer">
-        <a href="/">Home</a>
-        <a href="/privacy">Privacy Policy</a>
+        <a href="/privacy-policy">Privacy Policy</a>
         <a href="/support">Support</a>
       </div>
     </div>
 
     <script>
-      function copyUrl() {
-        var url = document.getElementById('appUrl').textContent;
-        navigator.clipboard.writeText(url).then(function() {
-          var btn = document.querySelector('.copy-btn');
-          btn.textContent = 'Copied!';
-          setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
-        });
-      }
+      (function() {
+        var ua = navigator.userAgent;
+        var isIOS = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        if (isIOS) {
+          window.location.href = 'https://apps.apple.com/us/app/salam-yall/id6760231963';
+        }
+      })();
     </script>
   </body>
 </html>

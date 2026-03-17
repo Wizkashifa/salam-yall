@@ -1,5 +1,6 @@
 import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
+import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -9,14 +10,7 @@ import { useTheme } from "@/lib/theme-context";
 import { getMissedPrayerCount } from "@/lib/prayer-tracker";
 import { useSettings } from "@/lib/settings-context";
 
-let NativeTabsModule: any = null;
-try {
-  NativeTabsModule = require("expo-router/unstable-native-tabs");
-} catch {}
-
 function NativeTabLayout() {
-  if (!NativeTabsModule) return <ClassicTabLayout />;
-  const { NativeTabs, Icon, Label } = NativeTabsModule;
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="halal">
@@ -156,10 +150,8 @@ function ClassicTabLayout() {
 }
 
 export default function TabLayout() {
-  try {
-    if (isLiquidGlassAvailable()) {
-      return <NativeTabLayout />;
-    }
-  } catch {}
+  if (isLiquidGlassAvailable()) {
+    return <NativeTabLayout />;
+  }
   return <ClassicTabLayout />;
 }

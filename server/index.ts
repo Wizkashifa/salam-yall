@@ -180,7 +180,7 @@ function configureExpoAndLanding(app: express.Application) {
       return next();
     }
 
-    if (req.path !== "/" && req.path !== "/manifest" && req.path !== "/app") {
+    if (req.path !== "/" && req.path !== "/manifest") {
       return next();
     }
 
