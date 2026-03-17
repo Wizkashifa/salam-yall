@@ -1426,8 +1426,8 @@ export default function SettingsScreen() {
           style={styles.backRow}
           onPress={() => { setSection("main"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
         >
-          <Ionicons name="chevron-back" size={22} color={colors.emerald} />
-          <Text style={[styles.backLabel, { color: colors.emerald }]}>Dhikr Counter</Text>
+          <Ionicons name="chevron-back" size={22} color={colors.text} />
+          <Text style={[styles.backLabel, { color: colors.text }]}>Dhikr Counter</Text>
         </Pressable>
 
         <Pressable
@@ -1439,36 +1439,36 @@ export default function SettingsScreen() {
               justifyContent: "center",
               padding: 32,
               borderRadius: 24,
-              backgroundColor: goalReached ? colors.emerald + "15" : colors.surface,
+              backgroundColor: colors.emerald,
               borderWidth: 1,
-              borderColor: goalReached ? colors.emerald + "40" : colors.border,
+              borderColor: colors.emerald,
               marginBottom: 24,
             },
             pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
           ]}
         >
-          <Text style={{ fontSize: 24, color: colors.text, marginBottom: 8, textAlign: "center" as const }}>
+          <Text style={{ fontSize: 24, color: "#FFFFFF", marginBottom: 8, textAlign: "center" as const }}>
             {selected.arabic}
           </Text>
-          <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: colors.textSecondary, marginBottom: 20 }}>
+          <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: "rgba(255,255,255,0.8)", marginBottom: 20 }}>
             {selected.transliteration}
           </Text>
-          <Text style={{ fontSize: 64, fontFamily: "Inter_700Bold", color: goalReached ? colors.emerald : colors.gold, marginBottom: 4 }}>
+          <Text style={{ fontSize: 64, fontFamily: "Inter_700Bold", color: goalReached ? colors.gold : "#FFFFFF", marginBottom: 4 }}>
             {count}
           </Text>
           {selected.goal ? (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <View style={{ width: 120, height: 6, borderRadius: 3, backgroundColor: colors.border, overflow: "hidden" as const }}>
-                <View style={{ width: `${progress * 100}%` as any, height: 6, borderRadius: 3, backgroundColor: goalReached ? colors.emerald : colors.gold }} />
+              <View style={{ width: 120, height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.2)", overflow: "hidden" as const }}>
+                <View style={{ width: `${progress * 100}%` as any, height: 6, borderRadius: 3, backgroundColor: goalReached ? colors.gold : "#FFFFFF" }} />
               </View>
-              <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: colors.textTertiary }}>
+              <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: "rgba(255,255,255,0.7)" }}>
                 {goalReached ? "Done!" : `${count}/${selected.goal}`}
               </Text>
             </View>
           ) : (
-            <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: colors.textTertiary }}>Free count</Text>
+            <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: "rgba(255,255,255,0.7)" }}>Free count</Text>
           )}
-          <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: colors.textTertiary, marginTop: 16 }}>
+          <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.5)", marginTop: 16 }}>
             Tap to count · Long press to reset
           </Text>
         </Pressable>
