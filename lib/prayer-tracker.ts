@@ -80,8 +80,19 @@ export function isPrayerExpired(
   const dateKey = formatDateKey(date);
   const todayKey = formatDateKey(today);
 
-  if (dateKey < todayKey) return true;
   if (dateKey > todayKey) return false;
+
+  if (dateKey < todayKey) {
+    if (prayer === "isha") {
+      const yesterdayKey = formatDateKey(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1));
+      if (dateKey === yesterdayKey) {
+        const cutoff = new Date(today);
+        cutoff.setHours(2, 0, 0, 0);
+        return now >= cutoff;
+      }
+    }
+    return true;
+  }
 
   if (!prayerTimesForDate) return false;
 
@@ -127,7 +138,10 @@ export async function cyclePrayerStatus(
   return existing;
 }
 
-export async function getMissedPrayerCount(days: number = 7): Promise<number> {
+export async function getMissedPrayerCount(
+  days: number = 7,
+  todayPrayerTimes?: { fajr?: Date; dhuhr?: Date; asr?: Date; maghrib?: Date; isha?: Date }
+): Promise<number> {
   const data = await loadAll();
   let count = 0;
   const today = new Date();
@@ -138,16 +152,21 @@ export async function getMissedPrayerCount(days: number = 7): Promise<number> {
     d.setDate(d.getDate() - i);
     const key = formatDateKey(d);
     const log = data[key];
-    if (!log) continue;
+    if (!log) {
+      count += 5;
+      continue;
+    }
     for (const p of PRAYER_ORDER) {
-      if (log[p] === 0 || log[p] === 2) count++;
+      if (log[p] === 0) count++;
     }
   }
 
   const todayLog = data[todayKey];
-  if (todayLog) {
+  if (todayLog && todayPrayerTimes) {
     for (const p of PRAYER_ORDER) {
-      if (todayLog[p] === 2) count++;
+      if (todayLog[p] === 0 && isPrayerExpired(p, today, todayPrayerTimes)) {
+        count++;
+      }
     }
   }
 
