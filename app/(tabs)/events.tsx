@@ -479,7 +479,7 @@ function EventDetailModal({ event, visible, onClose, isSaved, onToggleSave }: { 
 }
 
 export default function EventsScreen() {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const queryClient = useQueryClient();
   const { user, getAuthHeaders } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
