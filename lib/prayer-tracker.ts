@@ -314,30 +314,4 @@ export async function getPrayerStreak(): Promise<number> {
   return streak;
 }
 
-export async function getOnTimeStreak(): Promise<number> {
-  const data = await loadAll();
-  let streak = 0;
-  const today = new Date();
-  const d = new Date(today);
-  d.setDate(d.getDate() - 1);
-
-  while (true) {
-    const key = formatDateKey(d);
-    const log = data[key];
-    if (!log) break;
-    const allOnTime = (log.fajr === 1 || log.fajr === 2) && (log.dhuhr === 1 || log.dhuhr === 2) && (log.asr === 1 || log.asr === 2) && (log.maghrib === 1 || log.maghrib === 2) && (log.isha === 1 || log.isha === 2);
-    if (!allOnTime) break;
-    streak++;
-    d.setDate(d.getDate() - 1);
-  }
-
-  const todayLog = data[formatDateKey(today)];
-  if (todayLog) {
-    const allToday = (todayLog.fajr === 1 || todayLog.fajr === 2) && (todayLog.dhuhr === 1 || todayLog.dhuhr === 2) && (todayLog.asr === 1 || todayLog.asr === 2) && (todayLog.maghrib === 1 || todayLog.maghrib === 2) && (todayLog.isha === 1 || todayLog.isha === 2);
-    if (allToday) streak++;
-  }
-
-  return streak;
-}
-
 export { formatDateKey };

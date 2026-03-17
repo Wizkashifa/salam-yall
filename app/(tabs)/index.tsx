@@ -47,7 +47,7 @@ import {
   type Masjid,
 } from "@/lib/prayer-utils";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { cyclePrayerStatus, getPrayerLog, getMissedFastCount, logMakeupFast, getMissedPrayerCount, getPrayerStreak, getOnTimeStreak, cacheTodayPrayerTimes, type DayLog, type PrayerName as TrackerPrayerName } from "@/lib/prayer-tracker";
+import { cyclePrayerStatus, getPrayerLog, getMissedFastCount, logMakeupFast, getMissedPrayerCount, cacheTodayPrayerTimes, type DayLog, type PrayerName as TrackerPrayerName } from "@/lib/prayer-tracker";
 import { getDailyVerse, isFriday, type DailyVerse } from "@/lib/daily-content";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 import { expandSearchTerms } from "@/lib/search-synonyms";
@@ -399,8 +399,6 @@ export default function PrayerScreen() {
   const [todayLog, setTodayLog] = useState<DayLog>({ fajr: 0, dhuhr: 0, asr: 0, maghrib: 0, isha: 0 });
   const [missedPrayerCount, setMissedPrayerCount] = useState(0);
   const [missedFastCount, setMissedFastCount] = useState(0);
-  const [prayerStreak, setPrayerStreak] = useState(0);
-  const [onTimeStreak, setOnTimeStreak] = useState(0);
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [headerHeight, setHeaderHeight] = useState(0);
@@ -709,15 +707,11 @@ export default function PrayerScreen() {
     getPrayerLog(new Date()).then(setTodayLog);
     getMissedFastCount().then(setMissedFastCount);
     getMissedPrayerCount().then(setMissedPrayerCount);
-    getPrayerStreak().then(setPrayerStreak).catch(() => {});
-    getOnTimeStreak().then(setOnTimeStreak).catch(() => {});
   }, []);
 
   useFocusEffect(useCallback(() => {
     getMissedFastCount().then(setMissedFastCount);
     getMissedPrayerCount().then(setMissedPrayerCount);
-    getPrayerStreak().then(setPrayerStreak).catch(() => {});
-    getOnTimeStreak().then(setOnTimeStreak).catch(() => {});
   }, []));
 
   const handlePrayerPillPress = useCallback(async (prayerName: string) => {
@@ -726,8 +720,6 @@ export default function PrayerScreen() {
     const updated = await cyclePrayerStatus(new Date(), trackerName);
     setTodayLog(updated);
     getMissedPrayerCount().then(setMissedPrayerCount);
-    getPrayerStreak().then(setPrayerStreak).catch(() => {});
-    getOnTimeStreak().then(setOnTimeStreak).catch(() => {});
     trackEvent("prayer_tracked", { prayer: prayerName, status: updated[trackerName] });
   }, []);
 
@@ -1076,7 +1068,7 @@ export default function PrayerScreen() {
                 </Text>
               </View>
             ) : null}
-            <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
+            <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 14 }}>
               {weatherData ? (
                 <View style={{ alignItems: "center" }}>
                   <View style={{ height: 30, alignItems: "center", justifyContent: "center" }}>
@@ -1085,41 +1077,7 @@ export default function PrayerScreen() {
                   <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: isDark ? colors.gold : colors.text, marginTop: 2 }}>{weatherData.temperature}°F</Text>
                 </View>
               ) : null}
-              {missedPrayerCount > 0 && missedFastCount > 0 ? (
-                <View style={{ alignItems: "center", gap: 2 }}>
-                  <Pressable
-                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setPendingSettingsSection("prayerTracker"); router.push("/(tabs)/settings"); }}
-                    style={{ flexDirection: "row", alignItems: "center", gap: 3 }}
-                  >
-                    <Ionicons name="alert-circle" size={16} color={isDark ? "#EF4444" : "#DC2626"} />
-                    <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: isDark ? "#EF4444" : "#DC2626" }}>{missedPrayerCount}</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => {
-                      Alert.alert(
-                        "Make Up Fast",
-                        "Did you make up a fast?",
-                        [
-                          { text: "Cancel", style: "cancel" },
-                          {
-                            text: "Yes, Alhamdulillah",
-                            onPress: async () => {
-                              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                              const remaining = await logMakeupFast();
-                              setMissedFastCount(remaining);
-                              trackEvent("makeup_fast_logged", { remaining });
-                            },
-                          },
-                        ]
-                      );
-                    }}
-                    style={{ flexDirection: "row", alignItems: "center", gap: 3 }}
-                  >
-                    <MaterialCommunityIcons name="food-off" size={16} color="#EF4444" />
-                    <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: "#EF4444" }}>{missedFastCount}</Text>
-                  </Pressable>
-                </View>
-              ) : missedPrayerCount > 0 ? (
+              {missedPrayerCount > 0 ? (
                 <Pressable
                   onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setPendingSettingsSection("prayerTracker"); router.push("/(tabs)/settings"); }}
                   style={{ alignItems: "center" }}
@@ -1129,7 +1087,8 @@ export default function PrayerScreen() {
                   </View>
                   <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: isDark ? "#EF4444" : "#DC2626", marginTop: 2 }}>{missedPrayerCount}</Text>
                 </Pressable>
-              ) : missedFastCount > 0 ? (
+              ) : null}
+              {missedFastCount > 0 ? (
                 <Pressable
                   onPress={() => {
                     Alert.alert(
