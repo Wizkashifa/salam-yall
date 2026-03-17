@@ -1287,23 +1287,23 @@ export default function PrayerScreen() {
             style={({ pressed }) => [styles.quickActionChip, { backgroundColor: colors.surface, borderColor: colors.border }, pressed && { opacity: 0.7 }]}
           >
             <Ionicons name="calendar" size={15} color={colors.emerald} />
-            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[styles.quickActionLabel, { color: colors.text }]}>Prayer Tracker</Text>
+            <Text numberOfLines={1} style={[styles.quickActionLabel, { color: colors.text }]}>Prayer Tracker</Text>
           </Pressable>
           <Pressable
             onPress={() => { setPendingSettingsSection("quranReader"); router.push("/(tabs)/settings"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-            style={({ pressed }) => [styles.quickActionChip, { backgroundColor: colors.surface, borderColor: colors.border }, pressed && { opacity: 0.7 }]}
+            style={({ pressed }) => [styles.quickActionChip, { flex: 1, backgroundColor: colors.surface, borderColor: colors.border }, pressed && { opacity: 0.7 }]}
           >
             <Ionicons name="book" size={15} color={colors.emerald} />
             <Text numberOfLines={1} style={[styles.quickActionLabel, { color: colors.text }]}>Quran</Text>
           </Pressable>
           <Pressable
             onPress={() => { setPendingSettingsSection("dhikrCounter"); router.push("/(tabs)/settings"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-            style={({ pressed }) => [styles.quickActionChip, { backgroundColor: colors.surface, borderColor: colors.border }, pressed && { opacity: 0.7 }]}
+            style={({ pressed }) => [styles.quickActionChip, { flex: 1, backgroundColor: colors.surface, borderColor: colors.border }, pressed && { opacity: 0.7 }]}
           >
             <MaterialCommunityIcons name="counter" size={15} color={colors.emerald} />
             <Text numberOfLines={1} style={[styles.quickActionLabel, { color: colors.text }]}>Dhikr</Text>
           </Pressable>
-          <View style={[styles.quickActionChip, { backgroundColor: colors.surface, borderColor: colors.border, opacity: 0.45 }]}>
+          <View style={[styles.quickActionChip, { flex: 1, backgroundColor: colors.surface, borderColor: colors.border, opacity: 0.45 }]}>
             <Ionicons name="sunny-outline" size={15} color={colors.emerald} />
             <Text numberOfLines={1} style={[styles.quickActionLabel, { color: colors.text }]}>Adhkar</Text>
           </View>
@@ -2103,21 +2103,18 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   quickActionChip: {
-    flexGrow: 1,
     flexShrink: 1,
-    flexBasis: 0,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
     paddingVertical: 8,
-    paddingHorizontal: 6,
+    paddingHorizontal: 10,
     borderRadius: 8,
     borderWidth: 1,
   },
   quickActionLabel: {
     fontSize: 11,
     fontFamily: "Inter_600SemiBold",
-    flexShrink: 1,
   },
 });
