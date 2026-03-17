@@ -813,8 +813,19 @@ export default function SettingsScreen() {
               onPress={(e) => {
                 e.stopPropagation();
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                setPreferredMasjid(isPreferred ? null : masjid.name);
-                if (!isPreferred) trackEvent("masjid_selected", { masjid: masjid.name });
+                if (!isPreferred && !masjid.hasIqama) {
+                  Alert.alert(
+                    "No Iqama Times Available",
+                    `${masjid.name} does not publish iqama times. Your Home Screen will show iqama times from the Islamic Association of Raleigh (IAR) instead.`,
+                    [
+                      { text: "Cancel", style: "cancel" },
+                      { text: "OK", onPress: () => { setPreferredMasjid(masjid.name); trackEvent("masjid_selected", { masjid: masjid.name }); } },
+                    ]
+                  );
+                } else {
+                  setPreferredMasjid(isPreferred ? null : masjid.name);
+                  if (!isPreferred) trackEvent("masjid_selected", { masjid: masjid.name });
+                }
               }}
               hitSlop={8}
               style={{ padding: 4, marginRight: 4 }}
