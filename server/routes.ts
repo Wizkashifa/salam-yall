@@ -1449,7 +1449,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const COMMUNITY_MONTHLY_TARGET = parseInt(process.env.COMMUNITY_MONTHLY_TARGET || "10000", 10);
+  await pool.query(`CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TIMESTAMP DEFAULT NOW())`);
+
+  async function getCommunityTarget(): Promise<number> {
+    const result = await pool.query(`SELECT value FROM app_settings WHERE key = 'community_monthly_target'`);
+    if (result.rows.length > 0) return parseInt(result.rows[0].value, 10);
+    return parseInt(process.env.COMMUNITY_MONTHLY_TARGET || "10000", 10);
+  }
 
   app.get("/api/community-goal", async (req, res) => {
     try {
@@ -1469,6 +1475,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const prayerCount = parseInt(prayerResult.rows[0]?.count || "0");
       const quranCount = parseInt(quranResult.rows[0]?.count || "0");
       const totalCount = prayerCount + quranCount;
+      const target = await getCommunityTarget();
 
       const monthName = now.toLocaleString("en-US", { month: "long" });
 
@@ -1476,8 +1483,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         prayerCount,
         quranCount,
         totalCount,
-        target: COMMUNITY_MONTHLY_TARGET,
-        progress: Math.min(1, totalCount / COMMUNITY_MONTHLY_TARGET),
+        target,
+        progress: Math.min(1, totalCount / target),
         month: monthName,
       });
     } catch (error: any) {
@@ -1495,7 +1502,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!target || typeof target !== "number" || target < 100 || target > 100000) {
         return res.status(400).json({ error: "Target must be a number between 100 and 100,000" });
       }
-      process.env.COMMUNITY_MONTHLY_TARGET = String(target);
+      await pool.query(
+        `INSERT INTO app_settings (key, value, updated_at) VALUES ('community_monthly_target', $1, NOW()) ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()`,
+        [String(target)]
+      );
       res.json({ success: true, target, message: `Community goal updated to ${target.toLocaleString()}` });
     } catch (error: any) {
       console.error("[Community Goal Update] Error:", error.message);

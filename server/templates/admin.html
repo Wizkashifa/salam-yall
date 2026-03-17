@@ -807,6 +807,7 @@
           loadJumuah();
           loadEvents();
           loadCommunityEvents();
+          loadCommunityGoal();
         } else {
           document.getElementById('loginError').style.display = 'block';
         }
@@ -822,6 +823,19 @@
       document.getElementById('loginWrap').style.display = 'flex';
       document.getElementById('appWrap').style.display = 'none';
       document.getElementById('passwordInput').value = '';
+    }
+
+    async function loadCommunityGoal() {
+      try {
+        const res = await fetch('/api/community-goal');
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        const statusEl = document.getElementById('communityGoalStatus');
+        const input = document.getElementById('communityGoalInput');
+        input.placeholder = data.target.toLocaleString();
+        statusEl.innerHTML = 'Current target: <strong>' + data.target.toLocaleString() + '</strong> · Progress: ' + data.totalCount.toLocaleString() + '/' + data.target.toLocaleString() + ' (' + Math.round(data.progress * 100) + '%) · ' + data.prayerCount.toLocaleString() + ' prayers, ' + data.quranCount.toLocaleString() + ' readings';
+        statusEl.style.color = '#9CA3AF';
+      } catch(e) {}
     }
 
     async function updateCommunityGoal() {
@@ -845,7 +859,7 @@
         statusEl.textContent = '✓ Goal updated to ' + target.toLocaleString();
         statusEl.style.color = '#6EE7B7';
         input.value = '';
-        setTimeout(() => { statusEl.textContent = ''; }, 3000);
+        setTimeout(() => { loadCommunityGoal(); }, 2000);
       } catch(e) {
         statusEl.textContent = '❌ Error updating goal';
         statusEl.style.color = '#F87171';
@@ -2637,6 +2651,7 @@
             loadJumuah();
             loadEvents();
             loadCommunityEvents();
+            loadCommunityGoal();
           } else {
             handleUnauthorized();
           }
