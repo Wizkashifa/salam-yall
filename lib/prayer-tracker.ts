@@ -268,6 +268,18 @@ export async function toggleMissedFast(dateKey: string): Promise<{ dates: string
   }
 }
 
+export async function toggleExcusedDay(dateKey: string): Promise<boolean> {
+  const data = await loadAll();
+  const log = data[dateKey] ?? { ...DEFAULT_DAY_LOG };
+  const allExcused = PRAYER_ORDER.every(p => log[p] === 4);
+  for (const p of PRAYER_ORDER) {
+    log[p] = allExcused ? 0 : (log[p] === 0 ? 4 : log[p]);
+  }
+  data[dateKey] = log;
+  await saveAll(data);
+  return !allExcused;
+}
+
 export async function getMissedFastCount(): Promise<number> {
   const dates = await loadMissedFasts();
   return dates.length;

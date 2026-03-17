@@ -38,7 +38,7 @@ import {
 import { getApiUrl } from "@/lib/query-client";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useDeepLink } from "@/lib/deeplink-context";
-import { getMonthLogs, cyclePrayerStatus, getMonthMissedFasts, toggleMissedFast, getAllLogs, getPrayerStreak, getMissedPrayerCount, type DayLog, type PrayerName, type PrayerStatus } from "@/lib/prayer-tracker";
+import { getMonthLogs, cyclePrayerStatus, getMonthMissedFasts, toggleMissedFast, toggleExcusedDay, getAllLogs, getPrayerStreak, getMissedPrayerCount, type DayLog, type PrayerName, type PrayerStatus } from "@/lib/prayer-tracker";
 import { DHIKR_PRESETS, getDhikrCounts, incrementDhikr, resetDhikr, type DhikrDayData } from "@/lib/dhikr-tracker";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 import { MasjidMap } from "@/components/MasjidMap";
@@ -1107,9 +1107,16 @@ export default function SettingsScreen() {
                     onPress={() => { setSelectedDay(isSelected ? null : dateKey); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
                     onLongPress={async () => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-                      await toggleMissedFast(dateKey);
-                      const updated = await getMonthMissedFasts(trackerYear, trackerMonth);
-                      setMissedFasts(updated);
+                      const parts = dateKey.split("-");
+                      const dayDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                      const isDayInRamadan = dayDate < new Date(2026, 2, 20);
+                      if (isDayInRamadan) {
+                        await toggleMissedFast(dateKey);
+                        const updated = await getMonthMissedFasts(trackerYear, trackerMonth);
+                        setMissedFasts(updated);
+                      } else {
+                        await toggleExcusedDay(dateKey);
+                      }
                       const updatedLogs = await getMonthLogs(trackerYear, trackerMonth);
                       setMonthLogs(updatedLogs);
                       getMissedPrayerCount().then(setMissedPrayerCount);
