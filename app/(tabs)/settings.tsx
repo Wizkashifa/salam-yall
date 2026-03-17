@@ -1026,7 +1026,7 @@ export default function SettingsScreen() {
                   const clampedDot = Math.min(Math.max(dotSize, 5), 10);
                   return (["fajr", "dhuhr", "asr", "maghrib", "isha"] as const).map((prayer) => (
                     <View key={prayer} style={{ flexDirection: "row", alignItems: "center", marginBottom: 3 }}>
-                      <Text style={{ fontFamily: "Inter_500Medium", fontSize: 9, color: colors.textSecondary, width: labelW, textTransform: "capitalize" }}>
+                      <Text style={{ fontFamily: "Inter_500Medium", fontSize: 10, color: colors.textSecondary, width: labelW, textTransform: "capitalize" }}>
                         {prayer}
                       </Text>
                       <View style={{ flexDirection: "row", gap, flexWrap: "nowrap", flex: 1 }}>
@@ -1065,7 +1065,7 @@ export default function SettingsScreen() {
                   ].map(l => (
                     <View key={l.label} style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
                       <View style={{ width: 6, height: 6, borderRadius: 1.5, backgroundColor: l.color }} />
-                      <Text style={{ fontFamily: "Inter_400Regular", fontSize: 9, color: colors.textSecondary }}>{l.label}</Text>
+                      <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: colors.textSecondary }}>{l.label}</Text>
                     </View>
                   ))}
                 </View>
