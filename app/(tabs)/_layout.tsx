@@ -1,6 +1,4 @@
-import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
-import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -9,33 +7,6 @@ import React, { useState, useEffect } from "react";
 import { useTheme } from "@/lib/theme-context";
 import { getMissedPrayerCount } from "@/lib/prayer-tracker";
 import { useSettings } from "@/lib/settings-context";
-
-function NativeTabLayout() {
-  return (
-    <NativeTabs>
-      <NativeTabs.Trigger name="halal">
-        <Icon sf={{ default: "fork.knife", selected: "fork.knife" }} />
-        <Label>HalalEats</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="events">
-        <Icon sf={{ default: "calendar", selected: "calendar" }} />
-        <Label>Events</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="index">
-        <Icon sf={{ default: "house", selected: "house.fill" }} />
-        <Label>Home</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="businesses">
-        <Icon sf={{ default: "storefront", selected: "storefront.fill" }} />
-        <Label>Directory</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="settings">
-        <Icon sf={{ default: "moon.stars", selected: "moon.stars.fill" }} />
-        <Label>Worship</Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
-  );
-}
 
 function ClassicTabLayout() {
   const { colors, isDark, ramadanMode } = useTheme();
@@ -150,8 +121,5 @@ function ClassicTabLayout() {
 }
 
 export default function TabLayout() {
-  if (isLiquidGlassAvailable()) {
-    return <NativeTabLayout />;
-  }
   return <ClassicTabLayout />;
 }
