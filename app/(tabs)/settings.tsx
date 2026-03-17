@@ -32,6 +32,7 @@ import {
   CALC_METHOD_LABELS,
   matchEventsToMasjid,
   getAllMasjidsByDistance,
+  getPrayerTimes,
   type CalcMethodKey,
   type Masjid,
 } from "@/lib/prayer-utils";
@@ -1075,7 +1076,18 @@ export default function SettingsScreen() {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         const parts = selectedDay.split("-");
                         const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-                        await cyclePrayerStatus(date, p);
+                        let prayerTimesMap: { fajr?: Date; dhuhr?: Date; asr?: Date; maghrib?: Date; isha?: Date } | undefined;
+                        if (userLocation) {
+                          const times = getPrayerTimes(userLocation.latitude, userLocation.longitude, date, calcMethod, asrCalc === "hanafi");
+                          prayerTimesMap = {
+                            fajr: times.find(t => t.name === "fajr")?.time,
+                            dhuhr: times.find(t => t.name === "dhuhr")?.time,
+                            asr: times.find(t => t.name === "asr")?.time,
+                            maghrib: times.find(t => t.name === "maghrib")?.time,
+                            isha: times.find(t => t.name === "isha")?.time,
+                          };
+                        }
+                        await cyclePrayerStatus(date, p, prayerTimesMap);
                         const updated = await getMonthLogs(trackerYear, trackerMonth);
                         setMonthLogs(updated);
                       }}
