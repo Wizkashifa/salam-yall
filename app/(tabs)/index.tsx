@@ -1156,19 +1156,7 @@ export default function PrayerScreen() {
                   </View>
                   <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#EF4444", marginTop: 2 }}>{missedFastCount}</Text>
                 </Pressable>
-              ) : (
-                <Pressable
-                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setPendingSettingsSection("prayerTracker"); router.push("/(tabs)/settings"); }}
-                  style={{ alignItems: "center" }}
-                >
-                  <View style={{ height: 30, alignItems: "center", justifyContent: "center" }}>
-                    <Ionicons name="flame" size={26} color={isDark ? ((onTimeStreak > 0 || prayerStreak > 0) ? colors.gold : "#FFFFFF") : ((onTimeStreak > 0 || prayerStreak > 0) ? colors.emerald : colors.text)} />
-                  </View>
-                  <Text style={{ fontSize: 11, fontFamily: "Inter_700Bold", color: isDark ? ((onTimeStreak > 0 || prayerStreak > 0) ? colors.gold : "#FFFFFF") : ((onTimeStreak > 0 || prayerStreak > 0) ? colors.emerald : colors.text) }}>
-                    {onTimeStreak > 0 ? `${onTimeStreak}d` : prayerStreak > 0 ? `${prayerStreak}d` : "0d"}
-                  </Text>
-                </Pressable>
-              )}
+              ) : null}
             </View>
           </View>
 
