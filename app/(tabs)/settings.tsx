@@ -38,7 +38,7 @@ import {
 import { getApiUrl } from "@/lib/query-client";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useDeepLink } from "@/lib/deeplink-context";
-import { getMonthLogs, cyclePrayerStatus, getMonthMissedFasts, toggleMissedFast, type DayLog, type PrayerName } from "@/lib/prayer-tracker";
+import { getMonthLogs, cyclePrayerStatus, getMonthMissedFasts, toggleMissedFast, getAllLogs, type DayLog, type PrayerName, type PrayerStatus } from "@/lib/prayer-tracker";
 import { DHIKR_PRESETS, getDhikrCounts, incrementDhikr, resetDhikr, type DhikrDayData } from "@/lib/dhikr-tracker";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 import { MasjidMap } from "@/components/MasjidMap";
@@ -955,7 +955,7 @@ export default function SettingsScreen() {
       const log = monthLogs[dateKey];
       if (log) {
         for (const p of PRAYER_NAMES) {
-          if (log[p] === 1) prayedCount++;
+          if (log[p] === 1 || log[p] === 3) prayedCount++;
           if (log[p] === 2) { prayedCount++; masjidCount++; }
         }
       }
@@ -1049,7 +1049,7 @@ export default function SettingsScreen() {
                       ) : log ? PRAYER_NAMES.map(p => {
                         const s = log[p];
                         if (s === 0) return <View key={p} style={[styles.calDot, { backgroundColor: "transparent" }]} />;
-                        return <View key={p} style={[styles.calDot, { backgroundColor: s === 1 ? colors.gold : colors.emerald }]} />;
+                        return <View key={p} style={[styles.calDot, { backgroundColor: s === 1 ? colors.gold : s === 3 ? colors.gold + "60" : colors.emerald }]} />;
                       }) : <View style={{ height: 6 }} />}
                     </View>
                   </Pressable>
@@ -1065,8 +1065,8 @@ export default function SettingsScreen() {
                 <Text style={[styles.dayDetailHint, { color: colors.textTertiary }]}>Tap a prayer to update its status</Text>
                 {PRAYER_NAMES.map(p => {
                   const status = selectedLog ? selectedLog[p] : 0;
-                  const statusLabel = status === 0 ? "Not tracked" : status === 1 ? "Completed" : "At masjid";
-                  const statusColor = status === 0 ? colors.textTertiary : status === 1 ? colors.gold : colors.emerald;
+                  const statusLabel = status === 0 ? "Not tracked" : status === 1 ? "Completed" : status === 2 ? "At masjid" : "Made up";
+                  const statusColor = status === 0 ? colors.textTertiary : status === 1 ? colors.gold : status === 2 ? colors.emerald : colors.gold + "80";
                   return (
                     <Pressable
                       key={p}
@@ -1544,7 +1544,9 @@ export default function SettingsScreen() {
     khatamProgress: number;
     nextBadge: { title: string; progress: number; total: number; remaining: number } | null;
     improvementPct: number;
+    heatmapData: { date: string; fajr: PrayerStatus; dhuhr: PrayerStatus; asr: PrayerStatus; maghrib: PrayerStatus; isha: PrayerStatus }[];
   } | null>(null);
+  const [trendPage, setTrendPage] = useState(0);
 
   useEffect(() => {
     if (section === "personalGrowth") {
@@ -1613,6 +1615,24 @@ export default function SettingsScreen() {
             }
           }
 
+          const allLogs = await getAllLogs();
+          const heatmapDays = 35;
+          const heatmapData: { date: string; fajr: PrayerStatus; dhuhr: PrayerStatus; asr: PrayerStatus; maghrib: PrayerStatus; isha: PrayerStatus }[] = [];
+          for (let i = heatmapDays - 1; i >= 0; i--) {
+            const d = new Date(today);
+            d.setDate(d.getDate() - i);
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+            const log = allLogs[key];
+            heatmapData.push({
+              date: key,
+              fajr: log?.fajr ?? 0,
+              dhuhr: log?.dhuhr ?? 0,
+              asr: log?.asr ?? 0,
+              maghrib: log?.maghrib ?? 0,
+              isha: log?.isha ?? 0,
+            });
+          }
+
           setGrowthData({
             thisWeekPrayers,
             lastWeekPrayers,
@@ -1622,6 +1642,7 @@ export default function SettingsScreen() {
             khatamProgress,
             nextBadge,
             improvementPct,
+            heatmapData,
           });
         } catch {}
       })();
@@ -1672,48 +1693,114 @@ export default function SettingsScreen() {
             <>
               <View style={{ backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16, marginBottom: 16 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 16 }}>
-                  <Ionicons name="bar-chart" size={18} color={colors.emerald} />
-                  <Text style={{ fontFamily: "Inter_700Bold", fontSize: 16, color: colors.text }}>Weekly Prayer Trend</Text>
+                  <Ionicons name={trendPage === 0 ? "bar-chart" : "grid"} size={18} color={colors.emerald} />
+                  <Text style={{ fontFamily: "Inter_700Bold", fontSize: 16, color: colors.text }}>
+                    {trendPage === 0 ? "Weekly Prayer Trend" : "Prayer Heatmap"}
+                  </Text>
                 </View>
 
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", height: 120, marginBottom: 8 }}>
-                  {growthData.thisWeekPrayers.map((count, i) => {
-                    const lastWeekCount = growthData.lastWeekPrayers[i];
-                    const maxHeight = 100;
-                    const thisHeight = Math.max(4, (count / 5) * maxHeight);
-                    const lastHeight = Math.max(4, (lastWeekCount / 5) * maxHeight);
-                    return (
-                      <View key={i} style={{ alignItems: "center", flex: 1 }}>
-                        <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 2, height: maxHeight }}>
-                          <View style={{ width: 12, height: lastHeight, borderRadius: 4, backgroundColor: colors.textTertiary + "40" }} />
-                          <View style={{ width: 12, height: thisHeight, borderRadius: 4, backgroundColor: count >= 5 ? colors.emerald : colors.gold }} />
-                        </View>
-                        <Text style={{ fontFamily: "Inter_500Medium", fontSize: 10, color: colors.textSecondary, marginTop: 4 }}>{dayLabels[i]}</Text>
+                <ScrollView
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  onMomentumScrollEnd={(e) => {
+                    const page = Math.round(e.nativeEvent.contentOffset.x / e.nativeEvent.layoutMeasurement.width);
+                    setTrendPage(page);
+                  }}
+                  style={{ marginHorizontal: -16 }}
+                  contentContainerStyle={{ paddingHorizontal: 0 }}
+                >
+                  <View style={{ width: screenWidth - 66, paddingHorizontal: 16 }}>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", height: 120, marginBottom: 8 }}>
+                      {growthData.thisWeekPrayers.map((count, i) => {
+                        const lastWeekCount = growthData.lastWeekPrayers[i];
+                        const maxHeight = 100;
+                        const thisHeight = Math.max(4, (count / 5) * maxHeight);
+                        const lastHeight = Math.max(4, (lastWeekCount / 5) * maxHeight);
+                        return (
+                          <View key={i} style={{ alignItems: "center", flex: 1 }}>
+                            <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 2, height: maxHeight }}>
+                              <View style={{ width: 12, height: lastHeight, borderRadius: 4, backgroundColor: colors.textTertiary + "40" }} />
+                              <View style={{ width: 12, height: thisHeight, borderRadius: 4, backgroundColor: count >= 5 ? colors.emerald : colors.gold }} />
+                            </View>
+                            <Text style={{ fontFamily: "Inter_500Medium", fontSize: 10, color: colors.textSecondary, marginTop: 4 }}>{dayLabels[i]}</Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+
+                    <View style={{ flexDirection: "row", justifyContent: "center", gap: 16, marginTop: 8 }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                        <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: colors.textTertiary + "40" }} />
+                        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: colors.textSecondary }}>Last week</Text>
                       </View>
-                    );
-                  })}
-                </View>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                        <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: colors.emerald }} />
+                        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: colors.textSecondary }}>This week</Text>
+                      </View>
+                    </View>
 
-                <View style={{ flexDirection: "row", justifyContent: "center", gap: 16, marginTop: 8 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                    <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: colors.textTertiary + "40" }} />
-                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: colors.textSecondary }}>Last week</Text>
+                    {growthData.improvementPct !== 0 && (
+                      <View style={{ marginTop: 12, padding: 10, borderRadius: 10, backgroundColor: growthData.improvementPct > 0 ? colors.emerald + "15" : colors.gold + "15" }}>
+                        <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: growthData.improvementPct > 0 ? colors.emerald : colors.gold, textAlign: "center" }}>
+                          {growthData.improvementPct > 0
+                            ? `You've improved ${growthData.improvementPct}% this week!`
+                            : `Down ${Math.abs(growthData.improvementPct)}% from last week — keep pushing!`}
+                        </Text>
+                      </View>
+                    )}
                   </View>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                    <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: colors.emerald }} />
-                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: colors.textSecondary }}>This week</Text>
-                  </View>
-                </View>
 
-                {growthData.improvementPct !== 0 && (
-                  <View style={{ marginTop: 12, padding: 10, borderRadius: 10, backgroundColor: growthData.improvementPct > 0 ? colors.emerald + "15" : colors.gold + "15" }}>
-                    <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: growthData.improvementPct > 0 ? colors.emerald : colors.gold, textAlign: "center" }}>
-                      {growthData.improvementPct > 0
-                        ? `You've improved ${growthData.improvementPct}% this week!`
-                        : `Down ${Math.abs(growthData.improvementPct)}% from last week — keep pushing!`}
-                    </Text>
+                  <View style={{ width: screenWidth - 66, paddingHorizontal: 16 }}>
+                    {(["fajr", "dhuhr", "asr", "maghrib", "isha"] as const).map((prayer) => (
+                      <View key={prayer} style={{ flexDirection: "row", alignItems: "center", marginBottom: 6 }}>
+                        <Text style={{ fontFamily: "Inter_500Medium", fontSize: 10, color: colors.textSecondary, width: 52, textTransform: "capitalize" }}>
+                          {prayer}
+                        </Text>
+                        <View style={{ flexDirection: "row", gap: 2, flexWrap: "nowrap", flex: 1 }}>
+                          {growthData.heatmapData.map((day, di) => {
+                            const status = day[prayer];
+                            let dotColor = colors.surfaceSecondary;
+                            if (status === 1) dotColor = colors.emerald;
+                            else if (status === 3) dotColor = colors.emerald + "50";
+                            else if (status === 2) dotColor = colors.surfaceSecondary;
+                            return (
+                              <View
+                                key={di}
+                                style={{
+                                  width: 7,
+                                  height: 7,
+                                  borderRadius: 1.5,
+                                  backgroundColor: dotColor,
+                                }}
+                              />
+                            );
+                          })}
+                        </View>
+                      </View>
+                    ))}
+                    <View style={{ flexDirection: "row", justifyContent: "center", gap: 12, marginTop: 8 }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                        <View style={{ width: 8, height: 8, borderRadius: 1.5, backgroundColor: colors.emerald }} />
+                        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: colors.textSecondary }}>On time</Text>
+                      </View>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                        <View style={{ width: 8, height: 8, borderRadius: 1.5, backgroundColor: colors.emerald + "50" }} />
+                        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: colors.textSecondary }}>Made up</Text>
+                      </View>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                        <View style={{ width: 8, height: 8, borderRadius: 1.5, backgroundColor: colors.surfaceSecondary }} />
+                        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: colors.textSecondary }}>Missed</Text>
+                      </View>
+                    </View>
                   </View>
-                )}
+                </ScrollView>
+
+                <View style={{ flexDirection: "row", justifyContent: "center", gap: 6, marginTop: 12 }}>
+                  {[0, 1].map((i) => (
+                    <View key={i} style={{ width: trendPage === i ? 16 : 6, height: 6, borderRadius: 3, backgroundColor: trendPage === i ? colors.emerald : colors.textTertiary + "40" }} />
+                  ))}
+                </View>
               </View>
 
               <View style={{ backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16, marginBottom: 16 }}>

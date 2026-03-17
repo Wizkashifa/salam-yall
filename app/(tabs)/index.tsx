@@ -47,7 +47,7 @@ import {
   type Masjid,
 } from "@/lib/prayer-utils";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { cyclePrayerStatus, getPrayerLog, getMissedFastCount, logMakeupFast, getPrayerStreak, type DayLog, type PrayerName as TrackerPrayerName } from "@/lib/prayer-tracker";
+import { cyclePrayerStatus, getPrayerLog, getMissedFastCount, logMakeupFast, getPrayerStreak, getMissedPrayerCount, type DayLog, type PrayerName as TrackerPrayerName } from "@/lib/prayer-tracker";
 import { getDailyVerse, isFriday, type DailyVerse } from "@/lib/daily-content";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 import { expandSearchTerms } from "@/lib/search-synonyms";
@@ -398,6 +398,7 @@ export default function PrayerScreen() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [todayLog, setTodayLog] = useState<DayLog>({ fajr: 0, dhuhr: 0, asr: 0, maghrib: 0, isha: 0 });
   const [prayerStreak, setPrayerStreak] = useState(0);
+  const [missedPrayerCount, setMissedPrayerCount] = useState(0);
   const [missedFastCount, setMissedFastCount] = useState(0);
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -700,21 +701,31 @@ export default function PrayerScreen() {
     getPrayerLog(new Date()).then(setTodayLog);
     getMissedFastCount().then(setMissedFastCount);
     getPrayerStreak().then(setPrayerStreak);
+    getMissedPrayerCount().then(setMissedPrayerCount);
   }, []);
 
   useFocusEffect(useCallback(() => {
     getMissedFastCount().then(setMissedFastCount);
     getPrayerStreak().then(setPrayerStreak);
+    getMissedPrayerCount().then(setMissedPrayerCount);
   }, []));
 
   const handlePrayerPillPress = useCallback(async (prayerName: string) => {
     const trackerName = prayerName as TrackerPrayerName;
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const updated = await cyclePrayerStatus(new Date(), trackerName);
+    const prayerTimesMap = prayers.length > 0 ? {
+      fajr: prayers.find(p => p.name === "fajr")?.time,
+      dhuhr: prayers.find(p => p.name === "dhuhr")?.time,
+      asr: prayers.find(p => p.name === "asr")?.time,
+      maghrib: prayers.find(p => p.name === "maghrib")?.time,
+      isha: prayers.find(p => p.name === "isha")?.time,
+    } : undefined;
+    const updated = await cyclePrayerStatus(new Date(), trackerName, prayerTimesMap);
     setTodayLog(updated);
     getPrayerStreak().then(setPrayerStreak);
+    getMissedPrayerCount().then(setMissedPrayerCount);
     trackEvent("prayer_tracked", { prayer: prayerName, status: updated[trackerName] });
-  }, []);
+  }, [prayers]);
 
   const dailyVerse = useMemo(() => getDailyVerse(), []);
   const [showVerseModal, setShowVerseModal] = useState(false);
@@ -1070,7 +1081,17 @@ export default function PrayerScreen() {
                   <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: isDark ? colors.gold : colors.text, marginTop: 2 }}>{weatherData.temperature}°F</Text>
                 </View>
               ) : null}
-              {prayerStreak > 0 ? (
+              {missedPrayerCount > 0 ? (
+                <Pressable
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setPendingSettingsSection("prayerTracker"); router.push("/(tabs)/settings"); }}
+                  style={{ alignItems: "center" }}
+                >
+                  <View style={{ height: 30, alignItems: "center", justifyContent: "center" }}>
+                    <Ionicons name="alert-circle" size={26} color={isDark ? "#EF4444" : "#DC2626"} />
+                  </View>
+                  <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: isDark ? "#EF4444" : "#DC2626", marginTop: 2 }}>{missedPrayerCount}</Text>
+                </Pressable>
+              ) : prayerStreak > 0 ? (
                 <Pressable
                   onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setPendingSettingsSection("prayerTracker"); router.push("/(tabs)/settings"); }}
                   style={{ alignItems: "center" }}
@@ -1120,11 +1141,14 @@ export default function PrayerScreen() {
               const status = todayLog[trackerKey] ?? 0;
               const isGold = status === 1;
               const isGreen = status === 2;
+              const isMadeUp = status === 3;
               const pillBg = isGold
                 ? (isDark ? colors.gold + "20" : colors.gold + "15")
                 : isGreen
                   ? (isDark ? colors.emerald + "25" : colors.emerald + "12")
-                  : undefined;
+                  : isMadeUp
+                    ? (isDark ? colors.gold + "12" : colors.gold + "08")
+                    : undefined;
               return (
                 <Pressable
                   key={prayer.name}
@@ -1172,11 +1196,14 @@ export default function PrayerScreen() {
                 const status = todayLog[trackerKey] ?? 0;
                 const isGold = status === 1;
                 const isGreen = status === 2;
+                const isMadeUp = status === 3;
                 const pillBg = isGold
                   ? (isDark ? colors.gold + "20" : colors.gold + "15")
                   : isGreen
                     ? (isDark ? colors.emerald + "25" : colors.emerald + "12")
-                    : undefined;
+                    : isMadeUp
+                      ? (isDark ? colors.gold + "12" : colors.gold + "08")
+                      : undefined;
                 const iqamaTime = activeIqama?.iqama?.[prayer.name as keyof typeof activeIqama.iqama];
                 return (
                   <Pressable

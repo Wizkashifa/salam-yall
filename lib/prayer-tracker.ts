@@ -3,9 +3,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const STORAGE_KEY = "prayer_tracker";
 const MISSED_FASTS_KEY = "missed_fasts";
 
-export type PrayerStatus = 0 | 1 | 2;
+export type PrayerStatus = 0 | 1 | 2 | 3;
 
 export type PrayerName = "fajr" | "dhuhr" | "asr" | "maghrib" | "isha";
+
+const PRAYER_ORDER: PrayerName[] = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
 
 export interface DayLog {
   fajr: PrayerStatus;
@@ -68,19 +70,92 @@ export async function setPrayerStatus(
   return existing;
 }
 
+export function isPrayerExpired(
+  prayer: PrayerName,
+  date: Date,
+  prayerTimesForDate?: { fajr?: Date; dhuhr?: Date; asr?: Date; maghrib?: Date; isha?: Date }
+): boolean {
+  const now = new Date();
+  const today = new Date();
+  const dateKey = formatDateKey(date);
+  const todayKey = formatDateKey(today);
+
+  if (dateKey < todayKey) return true;
+  if (dateKey > todayKey) return false;
+
+  if (!prayerTimesForDate) return false;
+
+  const prayerIdx = PRAYER_ORDER.indexOf(prayer);
+  if (prayerIdx < 0) return false;
+
+  if (prayer === "isha") {
+    const tomorrow2am = new Date(today);
+    tomorrow2am.setDate(tomorrow2am.getDate() + 1);
+    tomorrow2am.setHours(2, 0, 0, 0);
+    return now >= tomorrow2am;
+  }
+
+  const nextPrayerName = PRAYER_ORDER[prayerIdx + 1];
+  const nextTime = prayerTimesForDate[nextPrayerName];
+  if (nextTime && now >= nextTime) return true;
+
+  return false;
+}
+
 export async function cyclePrayerStatus(
   date: Date,
-  prayer: PrayerName
+  prayer: PrayerName,
+  prayerTimesForDate?: { fajr?: Date; dhuhr?: Date; asr?: Date; maghrib?: Date; isha?: Date }
 ): Promise<DayLog> {
   const data = await loadAll();
   const key = formatDateKey(date);
   const existing = data[key] ?? { ...DEFAULT_DAY_LOG };
   const current = existing[prayer];
-  const next: PrayerStatus = current === 0 ? 1 : current === 1 ? 2 : 0;
+
+  const expired = isPrayerExpired(prayer, date, prayerTimesForDate);
+
+  let next: PrayerStatus;
+  if (expired) {
+    next = current === 0 ? 3 : current === 3 ? 2 : 0;
+  } else {
+    next = current === 0 ? 1 : current === 1 ? 2 : 0;
+  }
+
   existing[prayer] = next;
   data[key] = existing;
   await saveAll(data);
   return existing;
+}
+
+export async function getMissedPrayerCount(days: number = 7): Promise<number> {
+  const data = await loadAll();
+  let count = 0;
+  const today = new Date();
+  const todayKey = formatDateKey(today);
+
+  for (let i = 1; i <= days; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const key = formatDateKey(d);
+    const log = data[key];
+    if (!log) continue;
+    for (const p of PRAYER_ORDER) {
+      if (log[p] === 0 || log[p] === 2) count++;
+    }
+  }
+
+  const todayLog = data[todayKey];
+  if (todayLog) {
+    for (const p of PRAYER_ORDER) {
+      if (todayLog[p] === 2) count++;
+    }
+  }
+
+  return count;
+}
+
+export async function getAllLogs(): Promise<PrayerTrackerData> {
+  return loadAll();
 }
 
 export async function getMonthLogs(
