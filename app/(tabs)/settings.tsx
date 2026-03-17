@@ -1131,7 +1131,7 @@ export default function SettingsScreen() {
                         const s = log[p];
                         if (s === 0) return <View key={p} style={[styles.calDot, { backgroundColor: "transparent" }]} />;
                         if (s === 4) return <View key={p} style={[styles.calDot, { backgroundColor: "#EF4444" }]} />;
-                        return <View key={p} style={[styles.calDot, { backgroundColor: s === 1 ? colors.gold : s === 3 ? colors.gold + "60" : colors.emerald }]} />;
+                        return <View key={p} style={[styles.calDot, { backgroundColor: s === 1 ? colors.emerald : s === 3 ? colors.emerald + "50" : colors.gold }]} />;
                       }) : isMissedFast ? (
                         <View style={[styles.calDot, { backgroundColor: "#EF4444", width: 5, height: 5, borderRadius: 2.5 }]} />
                       ) : <View style={{ height: 5 }} />}
@@ -1150,7 +1150,7 @@ export default function SettingsScreen() {
                 {PRAYER_NAMES.map(p => {
                   const status = selectedLog ? selectedLog[p] : 0;
                   const statusLabel = status === 0 ? "Not tracked" : status === 1 ? "Completed" : status === 2 ? "At masjid" : status === 3 ? "Made up" : "Excused";
-                  const statusColor = status === 0 ? colors.textTertiary : status === 1 ? colors.gold : status === 2 ? colors.emerald : status === 3 ? colors.gold + "80" : "#EF4444";
+                  const statusColor = status === 0 ? colors.textTertiary : status === 1 ? colors.emerald : status === 2 ? colors.gold : status === 3 ? colors.emerald + "50" : "#EF4444";
                   return (
                     <Pressable
                       key={p}
