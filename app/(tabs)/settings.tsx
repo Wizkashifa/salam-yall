@@ -38,7 +38,7 @@ import {
 import { getApiUrl } from "@/lib/query-client";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useDeepLink } from "@/lib/deeplink-context";
-import { getMonthLogs, cyclePrayerStatus, getMonthMissedFasts, toggleMissedFast, toggleExcusedDay, getAllLogs, getPrayerStreak, getMissedPrayerCount, type DayLog, type PrayerName, type PrayerStatus } from "@/lib/prayer-tracker";
+import { getMonthLogs, cyclePrayerStatus, getMonthMissedFasts, toggleMissedFast, toggleExcusedDay, getAllLogs, getPrayerStreak, getMissedPrayerCount, getFirstUseDate, type DayLog, type PrayerName, type PrayerStatus } from "@/lib/prayer-tracker";
 import { DHIKR_PRESETS, getDhikrCounts, incrementDhikr, resetDhikr, type DhikrDayData } from "@/lib/dhikr-tracker";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 import { MasjidMap } from "@/components/MasjidMap";
@@ -227,6 +227,7 @@ export default function SettingsScreen() {
       getMissedPrayerCount().then(setMissedPrayerCount);
       (async () => {
         const allLogs = await getAllLogs();
+        const firstUse = await getFirstUseDate();
         const today = new Date();
         const heatmapDays = 30;
         const hData: typeof heatmapData = [];
@@ -234,6 +235,7 @@ export default function SettingsScreen() {
           const d = new Date(today);
           d.setDate(d.getDate() - i);
           const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+          if (firstUse && key < firstUse) continue;
           const log = allLogs[key];
           hData.push({ date: key, fajr: log?.fajr ?? 0, dhuhr: log?.dhuhr ?? 0, asr: log?.asr ?? 0, maghrib: log?.maghrib ?? 0, isha: log?.isha ?? 0 });
         }
@@ -1014,7 +1016,7 @@ export default function SettingsScreen() {
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
                   <Ionicons name="grid" size={16} color={colors.emerald} />
                   <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: colors.text }}>Prayer Heatmap</Text>
-                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: colors.textSecondary, marginLeft: "auto" }}>Last 30 days</Text>
+                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: colors.textSecondary, marginLeft: "auto" }}>{heatmapData.length < 30 ? `Last ${heatmapData.length} day${heatmapData.length === 1 ? "" : "s"}` : "Last 30 days"}</Text>
                 </View>
                 {(() => {
                   const labelW = 48;
@@ -1161,18 +1163,21 @@ export default function SettingsScreen() {
                         const updated = await getMonthLogs(trackerYear, trackerMonth);
                         setMonthLogs(updated);
                         getMissedPrayerCount().then(setMissedPrayerCount);
-                        getAllLogs().then(allLogs => {
+                        (async () => {
+                          const allLogs = await getAllLogs();
+                          const firstUse = await getFirstUseDate();
                           const today = new Date();
                           const hData: typeof heatmapData = [];
                           for (let i = 29; i >= 0; i--) {
                             const dd = new Date(today);
                             dd.setDate(dd.getDate() - i);
                             const key = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, "0")}-${String(dd.getDate()).padStart(2, "0")}`;
+                            if (firstUse && key < firstUse) continue;
                             const log = allLogs[key];
                             hData.push({ date: key, fajr: log?.fajr ?? 0, dhuhr: log?.dhuhr ?? 0, asr: log?.asr ?? 0, maghrib: log?.maghrib ?? 0, isha: log?.isha ?? 0 });
                           }
                           setHeatmapData(hData);
-                        });
+                        })();
                       }}
                     >
                       <View style={[styles.dayDetailDot, { backgroundColor: status === 0 ? colors.border : statusColor }]} />

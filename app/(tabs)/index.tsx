@@ -47,7 +47,7 @@ import {
   type Masjid,
 } from "@/lib/prayer-utils";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { cyclePrayerStatus, getPrayerLog, getMissedFastCount, logMakeupFast, getMissedPrayerCount, getPrayerStreak, getOnTimeStreak, cacheTodayPrayerTimes, type DayLog, type PrayerName as TrackerPrayerName } from "@/lib/prayer-tracker";
+import { cyclePrayerStatus, getPrayerLog, getMissedFastCount, logMakeupFast, getMissedPrayerCount, getPrayerStreak, getOnTimeStreak, cacheTodayPrayerTimes, ensureFirstUseDate, type DayLog, type PrayerName as TrackerPrayerName } from "@/lib/prayer-tracker";
 import { getDailyVerse, isFriday, type DailyVerse } from "@/lib/daily-content";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 import { expandSearchTerms } from "@/lib/search-synonyms";
@@ -706,6 +706,7 @@ export default function PrayerScreen() {
   }, [loadPrayerData]);
 
   useEffect(() => {
+    ensureFirstUseDate();
     getPrayerLog(new Date()).then(setTodayLog);
     getMissedFastCount().then(setMissedFastCount);
     getMissedPrayerCount().then(setMissedPrayerCount);

@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const STORAGE_KEY = "prayer_tracker";
 const MISSED_FASTS_KEY = "missed_fasts";
 const CACHED_PRAYER_TIMES_KEY = "cached_prayer_times";
+const FIRST_USE_KEY = "prayer_tracker_first_use";
 
 export type PrayerStatus = 0 | 1 | 2 | 3 | 4;
 
@@ -90,6 +91,18 @@ async function loadAll(): Promise<PrayerTrackerData> {
 
 async function saveAll(data: PrayerTrackerData): Promise<void> {
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+export async function getFirstUseDate(): Promise<string | null> {
+  return AsyncStorage.getItem(FIRST_USE_KEY);
+}
+
+export async function ensureFirstUseDate(): Promise<string> {
+  const existing = await AsyncStorage.getItem(FIRST_USE_KEY);
+  if (existing) return existing;
+  const today = formatDateKey(new Date());
+  await AsyncStorage.setItem(FIRST_USE_KEY, today);
+  return today;
 }
 
 export async function getPrayerLog(date: Date): Promise<DayLog> {
@@ -184,6 +197,7 @@ export async function cyclePrayerStatus(
 export async function getMissedPrayerCount(days: number = 7): Promise<number> {
   const data = await loadAll();
   const todayPrayerTimes = await getCachedPrayerTimes();
+  const firstUse = await getFirstUseDate();
   let count = 0;
   const today = new Date();
 
@@ -191,6 +205,7 @@ export async function getMissedPrayerCount(days: number = 7): Promise<number> {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
     const key = formatDateKey(d);
+    if (firstUse && key < firstUse) break;
     const log = data[key] ?? { ...DEFAULT_DAY_LOG };
     for (const p of PRAYER_ORDER) {
       if (log[p] !== 0) continue;
