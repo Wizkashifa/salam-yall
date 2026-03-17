@@ -1707,7 +1707,7 @@ export default function SettingsScreen() {
                     const page = Math.round(e.nativeEvent.contentOffset.x / e.nativeEvent.layoutMeasurement.width);
                     setTrendPage(page);
                   }}
-                  style={{ marginHorizontal: -16 }}
+                  style={{ marginHorizontal: -16, overflow: "hidden" }}
                   contentContainerStyle={{ paddingHorizontal: 0 }}
                 >
                   <View style={{ width: screenWidth - 66, paddingHorizontal: 16 }}>
@@ -1752,33 +1752,42 @@ export default function SettingsScreen() {
                   </View>
 
                   <View style={{ width: screenWidth - 66, paddingHorizontal: 16 }}>
-                    {(["fajr", "dhuhr", "asr", "maghrib", "isha"] as const).map((prayer) => (
-                      <View key={prayer} style={{ flexDirection: "row", alignItems: "center", marginBottom: 6 }}>
-                        <Text style={{ fontFamily: "Inter_500Medium", fontSize: 10, color: colors.textSecondary, width: 52, textTransform: "capitalize" }}>
-                          {prayer}
-                        </Text>
-                        <View style={{ flexDirection: "row", gap: 2, flexWrap: "nowrap", flex: 1 }}>
-                          {growthData.heatmapData.map((day, di) => {
-                            const status = day[prayer];
-                            let dotColor = colors.surfaceSecondary;
-                            if (status === 1) dotColor = colors.emerald;
-                            else if (status === 3) dotColor = colors.emerald + "50";
-                            else if (status === 2) dotColor = colors.surfaceSecondary;
-                            return (
-                              <View
-                                key={di}
-                                style={{
-                                  width: 7,
-                                  height: 7,
-                                  borderRadius: 1.5,
-                                  backgroundColor: dotColor,
-                                }}
-                              />
-                            );
-                          })}
+                    {(() => {
+                      const labelW = 52;
+                      const availableW = screenWidth - 66 - 32 - labelW;
+                      const gap = 2;
+                      const dotSize = Math.floor((availableW - (34 * gap)) / 35);
+                      const clampedDot = Math.min(Math.max(dotSize, 5), 10);
+                      return (["fajr", "dhuhr", "asr", "maghrib", "isha"] as const).map((prayer) => (
+                        <View key={prayer} style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
+                          <Text style={{ fontFamily: "Inter_500Medium", fontSize: 10, color: colors.textSecondary, width: labelW, textTransform: "capitalize" }}>
+                            {prayer}
+                          </Text>
+                          <View style={{ flexDirection: "row", gap, flexWrap: "nowrap", flex: 1 }}>
+                            {growthData.heatmapData.map((day, di) => {
+                              const status = day[prayer];
+                              let dotColor = colors.surfaceSecondary;
+                              if (status === 1) dotColor = colors.emerald;
+                              else if (status === 3) dotColor = colors.emerald + "50";
+                              else if (status === 2) dotColor = colors.surfaceSecondary;
+                              return (
+                                <View
+                                  key={di}
+                                  style={{
+                                    flex: 1,
+                                    aspectRatio: 1,
+                                    maxWidth: clampedDot,
+                                    maxHeight: clampedDot,
+                                    borderRadius: 1.5,
+                                    backgroundColor: dotColor,
+                                  }}
+                                />
+                              );
+                            })}
+                          </View>
                         </View>
-                      </View>
-                    ))}
+                      ));
+                    })()}
                     <View style={{ flexDirection: "row", justifyContent: "center", gap: 12, marginTop: 8 }}>
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                         <View style={{ width: 8, height: 8, borderRadius: 1.5, backgroundColor: colors.emerald }} />
