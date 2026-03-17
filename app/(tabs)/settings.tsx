@@ -1149,7 +1149,7 @@ export default function SettingsScreen() {
                 <Text style={[styles.dayDetailHint, { color: colors.textTertiary }]}>Tap a prayer to update its status</Text>
                 {PRAYER_NAMES.map(p => {
                   const status = selectedLog ? selectedLog[p] : 0;
-                  const statusLabel = status === 0 ? "Not tracked" : status === 1 ? "Completed" : status === 2 ? "At masjid" : status === 3 ? "Made up" : "Excused";
+                  const statusLabel = status === 0 ? "Not tracked" : status === 1 ? "On time" : status === 2 ? "At masjid" : status === 3 ? "Made up" : "Excused";
                   const statusColor = status === 0 ? colors.textTertiary : status === 1 ? colors.emerald : status === 2 ? colors.gold : status === 3 ? colors.emerald + "50" : "#EF4444";
                   return (
                     <Pressable
@@ -1192,9 +1192,9 @@ export default function SettingsScreen() {
 
             <View style={[styles.calLegend, { backgroundColor: gcBg, borderColor: gcBorder }]}>
               {[
-                { color: colors.gold, label: "Completed" },
-                { color: colors.emerald, label: "At masjid" },
-                { color: colors.gold + "60", label: "Made up" },
+                { color: colors.emerald, label: "On time" },
+                { color: colors.gold, label: "At masjid" },
+                { color: colors.emerald + "50", label: "Made up" },
                 { color: "#EF4444", label: isRamadan ? "Missed fast" : "Missed fast / Excused" },
               ].map(l => (
                 <View key={l.label} style={styles.calLegendItem}>

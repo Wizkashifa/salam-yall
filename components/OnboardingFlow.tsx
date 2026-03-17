@@ -312,12 +312,12 @@ function TrackerScreen({ isActive }: { isActive: boolean }) {
               <Text style={trackerStyles.stateLabel}>Not tracked</Text>
             </View>
             <View style={trackerStyles.stateRow}>
-              <View style={[trackerStyles.dot, { backgroundColor: richGold }]} />
-              <Text style={trackerStyles.stateLabel}>Prayed</Text>
+              <View style={[trackerStyles.dot, { backgroundColor: emerald }]} />
+              <Text style={trackerStyles.stateLabel}>On time</Text>
             </View>
             <View style={trackerStyles.stateRow}>
-              <View style={[trackerStyles.dot, { backgroundColor: emerald }]} />
-              <Text style={trackerStyles.stateLabel}>Prayed at the Masjid</Text>
+              <View style={[trackerStyles.dot, { backgroundColor: richGold }]} />
+              <Text style={trackerStyles.stateLabel}>At masjid</Text>
             </View>
           </View>
 
