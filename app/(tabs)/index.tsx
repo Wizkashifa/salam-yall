@@ -292,15 +292,15 @@ function SkeletonHomeScreen({ colors, isDark, insets }: { colors: any; isDark: b
   );
 }
 
-function getWeatherIcon(code: number, isDay: boolean): { name: string; lib: "ionicons" | "mci" } {
-  if (code <= 1) return { name: isDay ? "sunny" : "moon", lib: "ionicons" };
-  if (code <= 3) return { name: isDay ? "partly-sunny" : "cloudy-night", lib: "ionicons" };
-  if (code <= 48) return { name: "cloud", lib: "ionicons" };
-  if (code <= 67) return { name: "rainy", lib: "ionicons" };
-  if (code <= 77) return { name: "snow", lib: "ionicons" };
-  if (code <= 82) return { name: "rainy", lib: "ionicons" };
-  if (code <= 86) return { name: "snow", lib: "ionicons" };
-  return { name: "thunderstorm", lib: "ionicons" };
+function getWeatherIcon(code: number, isDay: boolean): { name: string; lib: "ionicons" | "mci"; color: string } {
+  if (code <= 1) return { name: isDay ? "sunny" : "moon", lib: "ionicons", color: isDay ? "#F5A623" : "#A0AEC0" };
+  if (code <= 3) return { name: isDay ? "partly-sunny" : "cloudy-night", lib: "ionicons", color: isDay ? "#F5A623" : "#A0AEC0" };
+  if (code <= 48) return { name: "cloud", lib: "ionicons", color: "#9CA3AF" };
+  if (code <= 67) return { name: "rainy", lib: "ionicons", color: "#60A5FA" };
+  if (code <= 77) return { name: "snow", lib: "ionicons", color: "#93C5FD" };
+  if (code <= 82) return { name: "rainy", lib: "ionicons", color: "#60A5FA" };
+  if (code <= 86) return { name: "snow", lib: "ionicons", color: "#93C5FD" };
+  return { name: "thunderstorm", lib: "ionicons", color: "#FBBF24" };
 }
 
 function CountdownRing({ colors, isDark, progress, qiblaBearing, hasRealLocation, onRequestLocation }: {
@@ -1081,7 +1081,7 @@ export default function PrayerScreen() {
               {weatherData ? (
                 <View style={{ alignItems: "center" }}>
                   <View style={{ height: 30, alignItems: "center", justifyContent: "center" }}>
-                    <Ionicons name={getWeatherIcon(weatherData.weatherCode, weatherData.isDay).name as any} size={26} color={isDark ? colors.gold : colors.textSecondary} />
+                    <Ionicons name={getWeatherIcon(weatherData.weatherCode, weatherData.isDay).name as any} size={26} color={getWeatherIcon(weatherData.weatherCode, weatherData.isDay).color} />
                   </View>
                   <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: isDark ? colors.gold : colors.text, marginTop: 2 }}>{weatherData.temperature}°F</Text>
                 </View>
