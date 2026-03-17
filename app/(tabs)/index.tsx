@@ -1085,44 +1085,77 @@ export default function PrayerScreen() {
                   <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: isDark ? colors.gold : colors.text, marginTop: 2 }}>{weatherData.temperature}°F</Text>
                 </View>
               ) : null}
-              {missedPrayerCount > 0 || missedFastCount > 0 ? (
+              {missedPrayerCount > 0 && missedFastCount > 0 ? (
                 <View style={{ alignItems: "center", gap: 2 }}>
-                  {missedPrayerCount > 0 ? (
-                    <Pressable
-                      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setPendingSettingsSection("prayerTracker"); router.push("/(tabs)/settings"); }}
-                      style={{ flexDirection: "row", alignItems: "center", gap: 3 }}
-                    >
-                      <Ionicons name="alert-circle" size={16} color={isDark ? "#EF4444" : "#DC2626"} />
-                      <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: isDark ? "#EF4444" : "#DC2626" }}>{missedPrayerCount}</Text>
-                    </Pressable>
-                  ) : null}
-                  {missedFastCount > 0 ? (
-                    <Pressable
-                      onPress={() => {
-                        Alert.alert(
-                          "Make Up Fast",
-                          "Did you make up a fast?",
-                          [
-                            { text: "Cancel", style: "cancel" },
-                            {
-                              text: "Yes, Alhamdulillah",
-                              onPress: async () => {
-                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                                const remaining = await logMakeupFast();
-                                setMissedFastCount(remaining);
-                                trackEvent("makeup_fast_logged", { remaining });
-                              },
+                  <Pressable
+                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setPendingSettingsSection("prayerTracker"); router.push("/(tabs)/settings"); }}
+                    style={{ flexDirection: "row", alignItems: "center", gap: 3 }}
+                  >
+                    <Ionicons name="alert-circle" size={16} color={isDark ? "#EF4444" : "#DC2626"} />
+                    <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: isDark ? "#EF4444" : "#DC2626" }}>{missedPrayerCount}</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => {
+                      Alert.alert(
+                        "Make Up Fast",
+                        "Did you make up a fast?",
+                        [
+                          { text: "Cancel", style: "cancel" },
+                          {
+                            text: "Yes, Alhamdulillah",
+                            onPress: async () => {
+                              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                              const remaining = await logMakeupFast();
+                              setMissedFastCount(remaining);
+                              trackEvent("makeup_fast_logged", { remaining });
                             },
-                          ]
-                        );
-                      }}
-                      style={{ flexDirection: "row", alignItems: "center", gap: 3 }}
-                    >
-                      <MaterialCommunityIcons name="food-off" size={16} color="#EF4444" />
-                      <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: "#EF4444" }}>{missedFastCount}</Text>
-                    </Pressable>
-                  ) : null}
+                          },
+                        ]
+                      );
+                    }}
+                    style={{ flexDirection: "row", alignItems: "center", gap: 3 }}
+                  >
+                    <MaterialCommunityIcons name="food-off" size={16} color="#EF4444" />
+                    <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: "#EF4444" }}>{missedFastCount}</Text>
+                  </Pressable>
                 </View>
+              ) : missedPrayerCount > 0 ? (
+                <Pressable
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setPendingSettingsSection("prayerTracker"); router.push("/(tabs)/settings"); }}
+                  style={{ alignItems: "center" }}
+                >
+                  <View style={{ height: 30, alignItems: "center", justifyContent: "center" }}>
+                    <Ionicons name="alert-circle" size={26} color={isDark ? "#EF4444" : "#DC2626"} />
+                  </View>
+                  <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: isDark ? "#EF4444" : "#DC2626", marginTop: 2 }}>{missedPrayerCount}</Text>
+                </Pressable>
+              ) : missedFastCount > 0 ? (
+                <Pressable
+                  onPress={() => {
+                    Alert.alert(
+                      "Make Up Fast",
+                      "Did you make up a fast?",
+                      [
+                        { text: "Cancel", style: "cancel" },
+                        {
+                          text: "Yes, Alhamdulillah",
+                          onPress: async () => {
+                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                            const remaining = await logMakeupFast();
+                            setMissedFastCount(remaining);
+                            trackEvent("makeup_fast_logged", { remaining });
+                          },
+                        },
+                      ]
+                    );
+                  }}
+                  style={{ alignItems: "center" }}
+                >
+                  <View style={{ height: 30, alignItems: "center", justifyContent: "center" }}>
+                    <MaterialCommunityIcons name="food-off" size={26} color="#EF4444" />
+                  </View>
+                  <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#EF4444", marginTop: 2 }}>{missedFastCount}</Text>
+                </Pressable>
               ) : (
                 <Pressable
                   onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setPendingSettingsSection("prayerTracker"); router.push("/(tabs)/settings"); }}
