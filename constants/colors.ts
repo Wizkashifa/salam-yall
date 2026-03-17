@@ -84,6 +84,8 @@ export default {
     prayerIconBg: "#EDF5F0",
     actionButtonBg: "#EDF5F0",
     heroOverlay: "rgba(15, 61, 43, 0.03)",
+    pageBgStart: warmCream,
+    pageBgEnd: "#EBF0EC",
   },
   dark: {
     ...baseDark,
@@ -99,6 +101,8 @@ export default {
     prayerIconBg: "#1A2E22",
     actionButtonBg: "#1A2E22",
     heroOverlay: "rgba(212, 168, 67, 0.03)",
+    pageBgStart: "#0A1A12",
+    pageBgEnd: "#0D2218",
   },
   lightRamadan: {
     ...baseLight,
@@ -114,6 +118,8 @@ export default {
     prayerIconBg: "#F0EBF5",
     actionButtonBg: "#F0EBF5",
     heroOverlay: "rgba(107, 63, 160, 0.03)",
+    pageBgStart: warmCream,
+    pageBgEnd: "#EDE8F0",
   },
   darkRamadan: {
     ...baseDark,
@@ -142,5 +148,7 @@ export default {
     prayerIconBg: "#261C3E",
     actionButtonBg: "#261C3E",
     heroOverlay: "rgba(212, 168, 67, 0.03)",
+    pageBgStart: "#140B24",
+    pageBgEnd: "#1A1030",
   },
 };

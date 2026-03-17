@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
 import { GlassHeader } from "@/components/GlassHeader";
@@ -1079,7 +1080,7 @@ export default function BusinessesScreen() {
   const [headerHeight, setHeaderHeight] = useState(0);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <LinearGradient colors={[colors.pageBgStart, colors.pageBgEnd]} style={styles.container}>
       <GlassHeader onHeaderHeight={setHeaderHeight}>
         <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14, flexDirection: "row", alignItems: "center" }}>
           <View style={{ flex: 1 }}>
@@ -1222,7 +1223,7 @@ export default function BusinessesScreen() {
         colors={colors}
         isDark={isDark}
       />
-    </View>
+    </LinearGradient>
   );
 }
 
