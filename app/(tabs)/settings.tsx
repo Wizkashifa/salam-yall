@@ -1426,8 +1426,8 @@ export default function SettingsScreen() {
           style={styles.backRow}
           onPress={() => { setSection("main"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
         >
-          <Ionicons name="chevron-back" size={22} color={colors.text} />
-          <Text style={[styles.backLabel, { color: colors.text }]}>Dhikr Counter</Text>
+          <Ionicons name="chevron-back" size={22} color={colors.emerald} />
+          <Text style={[styles.backLabel, { color: colors.emerald }]}>Dhikr Counter</Text>
         </Pressable>
 
         <Pressable
