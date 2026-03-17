@@ -1849,6 +1849,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 10,
     flex: 1,
+    marginHorizontal: 2,
   },
   prayerPillName: {
     fontSize: 11,
