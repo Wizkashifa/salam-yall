@@ -709,15 +709,15 @@ export default function PrayerScreen() {
     getPrayerLog(new Date()).then(setTodayLog);
     getMissedFastCount().then(setMissedFastCount);
     getMissedPrayerCount().then(setMissedPrayerCount);
-    getPrayerStreak().then(setPrayerStreak);
-    getOnTimeStreak().then(setOnTimeStreak);
+    getPrayerStreak().then(setPrayerStreak).catch(() => {});
+    getOnTimeStreak().then(setOnTimeStreak).catch(() => {});
   }, []);
 
   useFocusEffect(useCallback(() => {
     getMissedFastCount().then(setMissedFastCount);
     getMissedPrayerCount().then(setMissedPrayerCount);
-    getPrayerStreak().then(setPrayerStreak);
-    getOnTimeStreak().then(setOnTimeStreak);
+    getPrayerStreak().then(setPrayerStreak).catch(() => {});
+    getOnTimeStreak().then(setOnTimeStreak).catch(() => {});
   }, []));
 
   const handlePrayerPillPress = useCallback(async (prayerName: string) => {
@@ -726,8 +726,8 @@ export default function PrayerScreen() {
     const updated = await cyclePrayerStatus(new Date(), trackerName);
     setTodayLog(updated);
     getMissedPrayerCount().then(setMissedPrayerCount);
-    getPrayerStreak().then(setPrayerStreak);
-    getOnTimeStreak().then(setOnTimeStreak);
+    getPrayerStreak().then(setPrayerStreak).catch(() => {});
+    getOnTimeStreak().then(setOnTimeStreak).catch(() => {});
     trackEvent("prayer_tracked", { prayer: prayerName, status: updated[trackerName] });
   }, []);
 
@@ -1161,21 +1161,12 @@ export default function PrayerScreen() {
                   onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setPendingSettingsSection("prayerTracker"); router.push("/(tabs)/settings"); }}
                   style={{ alignItems: "center" }}
                 >
-                  {(() => {
-                    const hasStreak = onTimeStreak > 0 || prayerStreak > 0;
-                    const streakColor = isDark ? (hasStreak ? colors.gold : "#FFFFFF") : (hasStreak ? colors.emerald : colors.text);
-                    const streakVal = onTimeStreak > 0 ? onTimeStreak : prayerStreak;
-                    return (
-                      <>
-                        <View style={{ height: 30, alignItems: "center", justifyContent: "center" }}>
-                          <Ionicons name="flame" size={26} color={streakColor} />
-                        </View>
-                        <Text style={{ fontSize: 11, fontFamily: "Inter_700Bold", color: streakColor }}>
-                          {streakVal > 0 ? `${streakVal}d` : "0d"}
-                        </Text>
-                      </>
-                    );
-                  })()}
+                  <View style={{ height: 30, alignItems: "center", justifyContent: "center" }}>
+                    <Ionicons name="flame" size={26} color={isDark ? ((onTimeStreak > 0 || prayerStreak > 0) ? colors.gold : "#FFFFFF") : ((onTimeStreak > 0 || prayerStreak > 0) ? colors.emerald : colors.text)} />
+                  </View>
+                  <Text style={{ fontSize: 11, fontFamily: "Inter_700Bold", color: isDark ? ((onTimeStreak > 0 || prayerStreak > 0) ? colors.gold : "#FFFFFF") : ((onTimeStreak > 0 || prayerStreak > 0) ? colors.emerald : colors.text) }}>
+                    {onTimeStreak > 0 ? `${onTimeStreak}d` : prayerStreak > 0 ? `${prayerStreak}d` : "0d"}
+                  </Text>
                 </Pressable>
               )}
             </View>
