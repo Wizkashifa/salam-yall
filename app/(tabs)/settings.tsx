@@ -1195,7 +1195,7 @@ export default function SettingsScreen() {
                 { color: colors.emerald, label: "On time" },
                 { color: colors.gold, label: "At masjid" },
                 { color: colors.emerald + "50", label: "Made up" },
-                { color: "#EF4444", label: isRamadan ? "Missed fast" : "Missed fast / Excused" },
+                { color: "#EF4444", label: isRamadan ? "Excused / Missed fast" : "Excused" },
               ].map(l => (
                 <View key={l.label} style={styles.calLegendItem}>
                   <View style={[styles.calLegendDot, { backgroundColor: l.color }]} />
