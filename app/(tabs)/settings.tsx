@@ -501,7 +501,7 @@ export default function SettingsScreen() {
         <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
           <Ionicons name="notifications-outline" size={20} color={colors.emerald} />
           {!notificationsEnabled && (
-            <View style={{ position: "absolute", top: -4, right: -4, backgroundColor: colors.gold, borderRadius: 8, minWidth: 16, height: 16, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 }}>
+            <View style={{ position: "absolute", top: -4, right: -4, backgroundColor: "#EF4444", borderRadius: 8, minWidth: 16, height: 16, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 }}>
               <Text style={{ fontFamily: "Inter_700Bold", fontSize: 9, color: "#fff" }}>!</Text>
             </View>
           )}

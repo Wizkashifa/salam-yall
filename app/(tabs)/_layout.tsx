@@ -142,7 +142,7 @@ function ClassicTabLayout() {
             <MaterialCommunityIcons name="mosque" size={size - 2} color={color} />
           ),
           tabBarBadge: worshipBadge,
-          tabBarBadgeStyle: { backgroundColor: typeof worshipBadge === "number" ? "#EF4444" : colors.gold, fontSize: 10, fontFamily: "Inter_700Bold" },
+          tabBarBadgeStyle: { backgroundColor: "#EF4444", fontSize: 10, fontFamily: "Inter_700Bold" },
         }}
       />
     </Tabs>
