@@ -145,26 +145,16 @@ export async function getMissedPrayerCount(
   const data = await loadAll();
   let count = 0;
   const today = new Date();
-  const todayKey = formatDateKey(today);
 
-  for (let i = 1; i <= days; i++) {
+  for (let i = 0; i < days; i++) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
     const key = formatDateKey(d);
-    const log = data[key];
-    if (!log) {
-      count += 5;
-      continue;
-    }
+    const log = data[key] ?? { ...DEFAULT_DAY_LOG };
     for (const p of PRAYER_ORDER) {
-      if (log[p] === 0) count++;
-    }
-  }
-
-  const todayLog = data[todayKey];
-  if (todayLog && todayPrayerTimes) {
-    for (const p of PRAYER_ORDER) {
-      if (todayLog[p] === 0 && isPrayerExpired(p, today, todayPrayerTimes)) {
+      if (log[p] !== 0) continue;
+      const timesForDay = i === 0 ? todayPrayerTimes : undefined;
+      if (isPrayerExpired(p, d, timesForDay)) {
         count++;
       }
     }
