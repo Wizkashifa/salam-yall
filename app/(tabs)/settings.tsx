@@ -38,7 +38,7 @@ import {
 import { getApiUrl } from "@/lib/query-client";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useDeepLink } from "@/lib/deeplink-context";
-import { getMonthLogs, cyclePrayerStatus, getMonthMissedFasts, toggleMissedFast, getAllLogs, type DayLog, type PrayerName, type PrayerStatus } from "@/lib/prayer-tracker";
+import { getMonthLogs, cyclePrayerStatus, getMonthMissedFasts, toggleMissedFast, getAllLogs, getPrayerStreak, getMissedPrayerCount, type DayLog, type PrayerName, type PrayerStatus } from "@/lib/prayer-tracker";
 import { DHIKR_PRESETS, getDhikrCounts, incrementDhikr, resetDhikr, type DhikrDayData } from "@/lib/dhikr-tracker";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 import { MasjidMap } from "@/components/MasjidMap";
@@ -153,6 +153,7 @@ export default function SettingsScreen() {
     if (pending) {
       setSection(pending as SettingsSection);
     }
+    getMissedPrayerCount().then(setMissedPrayerCount);
   }, [consumePendingSettingsSection]));
 
   useEffect(() => {
@@ -185,6 +186,9 @@ export default function SettingsScreen() {
   const [locationRequested, setLocationRequested] = useState(false);
   const [badgeStates, setBadgeStates] = useState<BadgeState[]>([]);
   const [newBadgeKey, setNewBadgeKey] = useState<string | null>(null);
+  const [heatmapData, setHeatmapData] = useState<{ date: string; fajr: PrayerStatus; dhuhr: PrayerStatus; asr: PrayerStatus; maghrib: PrayerStatus; isha: PrayerStatus }[]>([]);
+  const [missedPrayerCount, setMissedPrayerCount] = useState(0);
+  const [showTrackerOnboarding, setShowTrackerOnboarding] = useState(false);
   const badgeShareRef = useRef<ViewShot | null>(null);
   const [sharingBadgeKey, setSharingBadgeKey] = useState<string | null>(null);
 
@@ -220,6 +224,29 @@ export default function SettingsScreen() {
     if (section === "prayerTracker") {
       getMonthLogs(trackerYear, trackerMonth).then(setMonthLogs);
       getMonthMissedFasts(trackerYear, trackerMonth).then(setMissedFasts);
+      getMissedPrayerCount().then(setMissedPrayerCount);
+      (async () => {
+        const allLogs = await getAllLogs();
+        const today = new Date();
+        const heatmapDays = 35;
+        const hData: typeof heatmapData = [];
+        for (let i = heatmapDays - 1; i >= 0; i--) {
+          const d = new Date(today);
+          d.setDate(d.getDate() - i);
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+          const log = allLogs[key];
+          hData.push({ date: key, fajr: log?.fajr ?? 0, dhuhr: log?.dhuhr ?? 0, asr: log?.asr ?? 0, maghrib: log?.maghrib ?? 0, isha: log?.isha ?? 0 });
+        }
+        setHeatmapData(hData);
+      })();
+      (async () => {
+        const APP_VERSION = "1.1.1";
+        const ONBOARDING_KEY = "prayer_tracker_onboarding_shown";
+        const shown = await AsyncStorage.getItem(ONBOARDING_KEY);
+        if (shown !== APP_VERSION) {
+          setShowTrackerOnboarding(true);
+        }
+      })();
     }
   }, [section, trackerYear, trackerMonth]);
 
@@ -412,9 +439,14 @@ export default function SettingsScreen() {
       >
         <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
           <Ionicons name="calendar" size={20} color={colors.emerald} />
+          {missedPrayerCount > 0 && (
+            <View style={{ position: "absolute", top: -4, right: -4, backgroundColor: "#EF4444", borderRadius: 8, minWidth: 16, height: 16, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 }}>
+              <Text style={{ fontFamily: "Inter_700Bold", fontSize: 9, color: "#fff" }}>{missedPrayerCount}</Text>
+            </View>
+          )}
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.menuLabel, { color: colors.text }]}>Prayer Tracker</Text>
+          <Text style={[styles.menuLabel, { color: colors.text }]}>{trackerTitle}</Text>
           <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>View your prayer history</Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
@@ -468,6 +500,11 @@ export default function SettingsScreen() {
       >
         <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
           <Ionicons name="notifications-outline" size={20} color={colors.emerald} />
+          {!notificationsEnabled && (
+            <View style={{ position: "absolute", top: -4, right: -4, backgroundColor: colors.gold, borderRadius: 8, minWidth: 16, height: 16, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 }}>
+              <Text style={{ fontFamily: "Inter_700Bold", fontSize: 9, color: "#fff" }}>!</Text>
+            </View>
+          )}
         </View>
         <View style={{ flex: 1 }}>
           <Text style={[styles.menuLabel, { color: colors.text }]}>Athan & Alerts</Text>
@@ -600,6 +637,33 @@ export default function SettingsScreen() {
       <Text style={[styles.settingHint, { color: colors.textTertiary, marginTop: 4 }]}>
         Requires a preferred masjid with iqama timings. Select one from the Masjid Directory.
       </Text>
+
+      {!notificationsEnabled && (
+        <Pressable
+          style={{ flexDirection: "row", alignItems: "center", gap: 10, padding: 14, borderRadius: 12, backgroundColor: colors.gold + "15", marginTop: 12, borderWidth: 1, borderColor: colors.gold + "30" }}
+          onPress={async () => {
+            if (Platform.OS !== "web") {
+              const { status } = await Notifications.getPermissionsAsync();
+              if (status === "denied") {
+                Linking.openSettings();
+              } else {
+                handleToggleNotifications();
+              }
+            } else {
+              handleToggleNotifications();
+            }
+          }}
+        >
+          <Ionicons name="notifications-off-outline" size={20} color={colors.gold} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: colors.gold }}>Adhan notifications are off</Text>
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>
+              {Platform.OS !== "web" ? "Tap to enable, or open Settings if previously denied." : "Tap to enable prayer time reminders."}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.gold} />
+        </Pressable>
+      )}
 
       <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>PRAYER CALCULATION</Text>
 
@@ -908,67 +972,33 @@ export default function SettingsScreen() {
     else setTrackerMonth(m => m + 1);
   }, [trackerMonth]);
 
-  const trackerStats = useMemo(() => {
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1;
-    const currentDay = now.getDate();
-    const currentHour = now.getHours();
-    const daysInMonth = new Date(trackerYear, trackerMonth, 0).getDate();
-
-    const isFutureMonth = trackerYear > currentYear || (trackerYear === currentYear && trackerMonth > currentMonth);
-    if (isFutureMonth) {
-      return { prayedCount: 0, masjidCount: 0, elapsedPrayers: 0, prayedPct: 0, masjidPct: 0 };
+  const isRamadan = useMemo(() => {
+    const d = new Date();
+    const gY = d.getFullYear();
+    const gM = d.getMonth() + 1;
+    const gD = d.getDate();
+    let jd: number;
+    if (gM <= 2) {
+      const adjY = gY - 1;
+      const adjM = gM + 12;
+      const A = Math.floor(adjY / 100);
+      const B = 2 - A + Math.floor(A / 4);
+      jd = Math.floor(365.25 * (adjY + 4716)) + Math.floor(30.6001 * (adjM + 1)) + gD + B - 1524.5;
+    } else {
+      const A = Math.floor(gY / 100);
+      const B = 2 - A + Math.floor(A / 4);
+      jd = Math.floor(365.25 * (gY + 4716)) + Math.floor(30.6001 * (gM + 1)) + gD + B - 1524.5;
     }
+    const L = Math.floor(jd - 1948439.5) + 10632;
+    const N = Math.floor((L - 1) / 10631);
+    const Lr = L - 10631 * N + 354;
+    const J = Math.floor((10985 - Lr) / 5316) * Math.floor((50 * Lr) / 17719) + Math.floor(Lr / 5670) * Math.floor((43 * Lr) / 15238);
+    const Ld = Lr - Math.floor((30 - J) / 15) * Math.floor((17719 * J) / 50) - Math.floor(J / 16) * Math.floor((15238 * J) / 43) + 29;
+    const hM = Math.floor((24 * Ld) / 709);
+    return hM === 9;
+  }, []);
 
-    const isCurrentMonth = trackerYear === currentYear && trackerMonth === currentMonth;
-    const fullDays = isCurrentMonth ? Math.max(0, currentDay - 1) : daysInMonth;
-
-    let missedFastFullDays = 0;
-    for (let d = 1; d <= (isCurrentMonth ? Math.max(0, currentDay - 1) : daysInMonth); d++) {
-      const dateKey = `${trackerYear}-${String(trackerMonth).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-      if (missedFasts.has(dateKey)) missedFastFullDays++;
-    }
-
-    let todayElapsedPrayers = 0;
-    let todayIsMissedFast = false;
-    if (isCurrentMonth) {
-      const todayDateKey = `${trackerYear}-${String(trackerMonth).padStart(2, "0")}-${String(currentDay).padStart(2, "0")}`;
-      todayIsMissedFast = missedFasts.has(todayDateKey);
-      if (!todayIsMissedFast) {
-        if (currentHour >= 5) todayElapsedPrayers++;
-        if (currentHour >= 13) todayElapsedPrayers++;
-        if (currentHour >= 16) todayElapsedPrayers++;
-        if (currentHour >= 18) todayElapsedPrayers++;
-        if (currentHour >= 20) todayElapsedPrayers++;
-      }
-    }
-
-    const elapsedPrayers = ((fullDays - missedFastFullDays) * 5) + todayElapsedPrayers;
-
-    let prayedCount = 0;
-    let masjidCount = 0;
-    const countDays = isCurrentMonth ? currentDay : daysInMonth;
-
-    let excusedCount = 0;
-    for (let d = 1; d <= countDays; d++) {
-      const dateKey = `${trackerYear}-${String(trackerMonth).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-      if (missedFasts.has(dateKey)) continue;
-      const log = monthLogs[dateKey];
-      if (log) {
-        for (const p of PRAYER_NAMES) {
-          if (log[p] === 1 || log[p] === 3) prayedCount++;
-          if (log[p] === 2) { prayedCount++; masjidCount++; }
-          if (log[p] === 4) excusedCount++;
-        }
-      }
-    }
-    const adjustedElapsed = Math.max(0, elapsedPrayers - excusedCount);
-
-    const prayedPct = adjustedElapsed > 0 ? Math.round((prayedCount / adjustedElapsed) * 100) : 0;
-    const masjidPct = adjustedElapsed > 0 ? Math.round((masjidCount / adjustedElapsed) * 100) : 0;
-
-    return { prayedCount, masjidCount, elapsedPrayers: adjustedElapsed, prayedPct, masjidPct };
-  }, [monthLogs, missedFasts, trackerYear, trackerMonth, now]);
+  const trackerTitle = isRamadan ? "Fast & Prayer Tracker" : "Prayer Tracker";
 
   const renderPrayerTracker = () => {
     const selectedLog = selectedDay ? monthLogs[selectedDay] : null;
@@ -979,27 +1009,8 @@ export default function SettingsScreen() {
           onPress={() => { setSection("main"); setSelectedDay(null); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
         >
           <Ionicons name="arrow-back" size={20} color={colors.text} />
-          <Text style={[styles.backLabel, { color: colors.text }]}>Prayer Tracker</Text>
+          <Text style={[styles.backLabel, { color: colors.text }]}>{trackerTitle}</Text>
         </Pressable>
-
-        {trackerStats.elapsedPrayers > 0 && (
-          <View style={[styles.statsRow, { marginBottom: 12 }]}>
-            <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <View style={[styles.statCircle, { borderColor: colors.gold }]}>
-                <Text style={[styles.statPct, { color: colors.gold }]}>{trackerStats.prayedPct}%</Text>
-              </View>
-              <Text style={[styles.statLabel, { color: colors.text }]}>Prayers Completed</Text>
-              <Text style={[styles.statSub, { color: colors.textSecondary }]}>{trackerStats.prayedCount} of {trackerStats.elapsedPrayers}</Text>
-            </View>
-            <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <View style={[styles.statCircle, { borderColor: colors.emerald }]}>
-                <Text style={[styles.statPct, { color: colors.emerald }]}>{trackerStats.masjidPct}%</Text>
-              </View>
-              <Text style={[styles.statLabel, { color: colors.text }]}>At the Masjid</Text>
-              <Text style={[styles.statSub, { color: colors.textSecondary }]}>{trackerStats.masjidCount} of {trackerStats.elapsedPrayers}</Text>
-            </View>
-          </View>
-        )}
 
         <>
             <View style={[styles.calMonthRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -1044,6 +1055,7 @@ export default function SettingsScreen() {
                       setMissedFasts(updated);
                       const updatedLogs = await getMonthLogs(trackerYear, trackerMonth);
                       setMonthLogs(updatedLogs);
+                      getMissedPrayerCount().then(setMissedPrayerCount);
                     }}
                     delayLongPress={400}
                   >
@@ -1084,6 +1096,19 @@ export default function SettingsScreen() {
                         await cyclePrayerStatus(date, p);
                         const updated = await getMonthLogs(trackerYear, trackerMonth);
                         setMonthLogs(updated);
+                        getMissedPrayerCount().then(setMissedPrayerCount);
+                        getAllLogs().then(allLogs => {
+                          const today = new Date();
+                          const hData: typeof heatmapData = [];
+                          for (let i = 34; i >= 0; i--) {
+                            const dd = new Date(today);
+                            dd.setDate(dd.getDate() - i);
+                            const key = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, "0")}-${String(dd.getDate()).padStart(2, "0")}`;
+                            const log = allLogs[key];
+                            hData.push({ date: key, fajr: log?.fajr ?? 0, dhuhr: log?.dhuhr ?? 0, asr: log?.asr ?? 0, maghrib: log?.maghrib ?? 0, isha: log?.isha ?? 0 });
+                          }
+                          setHeatmapData(hData);
+                        });
                       }}
                     >
                       <View style={[styles.dayDetailDot, { backgroundColor: status === 0 ? colors.border : statusColor }]} />
@@ -1111,13 +1136,124 @@ export default function SettingsScreen() {
               </View>
               <View style={styles.calLegendItem}>
                 <View style={[styles.calLegendDot, { backgroundColor: "#EF4444" }]} />
-                <Text style={[styles.calLegendText, { color: colors.textSecondary }]}>Excused</Text>
+                <Text style={[styles.calLegendText, { color: colors.textSecondary }]}>{isRamadan ? "Missed fast" : "Excused"}</Text>
               </View>
             </View>
             <Text style={[styles.calLegendText, { color: colors.textTertiary, textAlign: "center", marginTop: 8, fontSize: 11 }]}>
-              Long-press a day to mark/unmark a missed fast
+              {isRamadan ? "Long-press a day to mark/unmark a missed fast" : "Long-press a day to mark/unmark an excused day"}
             </Text>
+
+            {heatmapData.length > 0 && (
+              <View style={{ backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16, marginTop: 16 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                  <Ionicons name="grid" size={18} color={colors.emerald} />
+                  <Text style={{ fontFamily: "Inter_700Bold", fontSize: 16, color: colors.text }}>Prayer Heatmap</Text>
+                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: colors.textSecondary, marginLeft: "auto" }}>Last 35 days</Text>
+                </View>
+                {(() => {
+                  const labelW = 52;
+                  const availableW = screenWidth - 66 - 32 - labelW;
+                  const gap = 2;
+                  const dotSize = Math.floor((availableW - (34 * gap)) / 35);
+                  const clampedDot = Math.min(Math.max(dotSize, 5), 10);
+                  return (["fajr", "dhuhr", "asr", "maghrib", "isha"] as const).map((prayer) => (
+                    <View key={prayer} style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
+                      <Text style={{ fontFamily: "Inter_500Medium", fontSize: 10, color: colors.textSecondary, width: labelW, textTransform: "capitalize" }}>
+                        {prayer}
+                      </Text>
+                      <View style={{ flexDirection: "row", gap, flexWrap: "nowrap", flex: 1 }}>
+                        {heatmapData.map((day, di) => {
+                          const status = day[prayer];
+                          let dotColor = colors.surfaceSecondary;
+                          if (status === 1) dotColor = colors.emerald;
+                          else if (status === 2) dotColor = colors.gold;
+                          else if (status === 3) dotColor = colors.emerald + "50";
+                          else if (status === 4) dotColor = "#EF4444";
+                          return (
+                            <View
+                              key={di}
+                              style={{
+                                flex: 1,
+                                aspectRatio: 1,
+                                maxWidth: clampedDot,
+                                maxHeight: clampedDot,
+                                borderRadius: 1.5,
+                                backgroundColor: dotColor,
+                              }}
+                            />
+                          );
+                        })}
+                      </View>
+                    </View>
+                  ));
+                })()}
+                <View style={{ flexDirection: "row", justifyContent: "center", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                    <View style={{ width: 7, height: 7, borderRadius: 1.5, backgroundColor: colors.emerald }} />
+                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 9, color: colors.textSecondary }}>On time</Text>
+                  </View>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                    <View style={{ width: 7, height: 7, borderRadius: 1.5, backgroundColor: colors.gold }} />
+                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 9, color: colors.textSecondary }}>Masjid</Text>
+                  </View>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                    <View style={{ width: 7, height: 7, borderRadius: 1.5, backgroundColor: colors.emerald + "50" }} />
+                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 9, color: colors.textSecondary }}>Made up</Text>
+                  </View>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                    <View style={{ width: 7, height: 7, borderRadius: 1.5, backgroundColor: "#EF4444" }} />
+                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 9, color: colors.textSecondary }}>Excused</Text>
+                  </View>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                    <View style={{ width: 7, height: 7, borderRadius: 1.5, backgroundColor: colors.surfaceSecondary }} />
+                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 9, color: colors.textSecondary }}>Missed</Text>
+                  </View>
+                </View>
+              </View>
+            )}
           </>
+
+        {showTrackerOnboarding && (
+          <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", alignItems: "center", padding: 24, zIndex: 999 }}>
+            <View style={{ backgroundColor: colors.surface, borderRadius: 20, padding: 24, maxWidth: 340, width: "100%", borderWidth: 1, borderColor: colors.border }}>
+              <View style={{ alignItems: "center", marginBottom: 16 }}>
+                <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: colors.emerald + "20", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+                  <Ionicons name="grid" size={24} color={colors.emerald} />
+                </View>
+                <Text style={{ fontFamily: "Inter_700Bold", fontSize: 18, color: colors.text, textAlign: "center" }}>How the Prayer Tracker Works</Text>
+              </View>
+              <View style={{ gap: 12, marginBottom: 20 }}>
+                <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
+                  <Ionicons name="home-outline" size={18} color={colors.gold} style={{ marginTop: 2 }} />
+                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: colors.textSecondary, flex: 1, lineHeight: 20 }}>
+                    Tap prayer pills on the Home screen to log prayers — including made up prayers for past times.
+                  </Text>
+                </View>
+                <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
+                  <Ionicons name="grid-outline" size={18} color={colors.emerald} style={{ marginTop: 2 }} />
+                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: colors.textSecondary, flex: 1, lineHeight: 20 }}>
+                    The heatmap shows your prayer consistency over the last 35 days at a glance.
+                  </Text>
+                </View>
+                <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
+                  <Ionicons name="calendar-outline" size={18} color={colors.gold} style={{ marginTop: 2 }} />
+                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: colors.textSecondary, flex: 1, lineHeight: 20 }}>
+                    Tap any day on the calendar to update individual prayer statuses, or long-press to mark {isRamadan ? "a missed fast" : "an excused day"}.
+                  </Text>
+                </View>
+              </View>
+              <Pressable
+                style={{ backgroundColor: colors.emerald, borderRadius: 12, paddingVertical: 14, alignItems: "center" }}
+                onPress={async () => {
+                  setShowTrackerOnboarding(false);
+                  await AsyncStorage.setItem("prayer_tracker_onboarding_shown", "1.1.1");
+                }}
+              >
+                <Text style={{ fontFamily: "Inter_700Bold", fontSize: 15, color: "#FFFFFF" }}>Got it!</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
       </>
     );
   };
@@ -1546,17 +1682,18 @@ export default function SettingsScreen() {
   );
 
   const [growthData, setGrowthData] = useState<{
-    thisWeekPrayers: number[];
-    lastWeekPrayers: number[];
     quranStreak: number;
     quranConsistency: number;
     quranTotalDays: number;
     khatamProgress: number;
     nextBadge: { title: string; progress: number; total: number; remaining: number } | null;
-    improvementPct: number;
-    heatmapData: { date: string; fajr: PrayerStatus; dhuhr: PrayerStatus; asr: PrayerStatus; maghrib: PrayerStatus; isha: PrayerStatus }[];
+    prayerStreak: number;
+    totalPrayed: number;
+    totalMasjid: number;
+    totalElapsed: number;
+    prayedPct: number;
+    masjidPct: number;
   } | null>(null);
-  const [trendPage, setTrendPage] = useState(0);
 
   useEffect(() => {
     if (section === "personalGrowth") {
@@ -1566,30 +1703,26 @@ export default function SettingsScreen() {
           const prayerData: { [dateKey: string]: DayLog } = prayerRaw ? JSON.parse(prayerRaw) : {};
 
           const today = new Date();
-          const thisWeekPrayers: number[] = [];
-          const lastWeekPrayers: number[] = [];
 
-          for (let i = 6; i >= 0; i--) {
-            const d = new Date(today);
-            d.setDate(d.getDate() - i);
-            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-            const log = prayerData[key];
-            const count = log ? [log.fajr, log.dhuhr, log.asr, log.maghrib, log.isha].filter(s => s > 0).length : 0;
-            thisWeekPrayers.push(count);
+          let totalPrayed = 0;
+          let totalMasjid = 0;
+          let totalExcused = 0;
+          let totalDaysWithData = 0;
+          const pNames: PrayerName[] = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
+          for (const [, log] of Object.entries(prayerData)) {
+            let dayHasData = false;
+            for (const p of pNames) {
+              if (log[p] === 1 || log[p] === 3) { totalPrayed++; dayHasData = true; }
+              else if (log[p] === 2) { totalPrayed++; totalMasjid++; dayHasData = true; }
+              else if (log[p] === 4) { totalExcused++; dayHasData = true; }
+            }
+            if (dayHasData) totalDaysWithData++;
           }
+          const totalElapsed = Math.max(0, totalDaysWithData * 5 - totalExcused);
+          const prayedPct = totalElapsed > 0 ? Math.round((totalPrayed / totalElapsed) * 100) : 0;
+          const masjidPct = totalElapsed > 0 ? Math.round((totalMasjid / totalElapsed) * 100) : 0;
 
-          for (let i = 13; i >= 7; i--) {
-            const d = new Date(today);
-            d.setDate(d.getDate() - i);
-            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-            const log = prayerData[key];
-            const count = log ? [log.fajr, log.dhuhr, log.asr, log.maghrib, log.isha].filter(s => s > 0).length : 0;
-            lastWeekPrayers.push(count);
-          }
-
-          const thisWeekTotal = thisWeekPrayers.reduce((a, b) => a + b, 0);
-          const lastWeekTotal = lastWeekPrayers.reduce((a, b) => a + b, 0);
-          const improvementPct = lastWeekTotal > 0 ? Math.round(((thisWeekTotal - lastWeekTotal) / lastWeekTotal) * 100) : 0;
+          const prayerStreak = await getPrayerStreak();
 
           const quranStreak = await getReadingStreak();
           const quranDates = await getReadingDates();
@@ -1625,34 +1758,18 @@ export default function SettingsScreen() {
             }
           }
 
-          const allLogs = await getAllLogs();
-          const heatmapDays = 35;
-          const heatmapData: { date: string; fajr: PrayerStatus; dhuhr: PrayerStatus; asr: PrayerStatus; maghrib: PrayerStatus; isha: PrayerStatus }[] = [];
-          for (let i = heatmapDays - 1; i >= 0; i--) {
-            const d = new Date(today);
-            d.setDate(d.getDate() - i);
-            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-            const log = allLogs[key];
-            heatmapData.push({
-              date: key,
-              fajr: log?.fajr ?? 0,
-              dhuhr: log?.dhuhr ?? 0,
-              asr: log?.asr ?? 0,
-              maghrib: log?.maghrib ?? 0,
-              isha: log?.isha ?? 0,
-            });
-          }
-
           setGrowthData({
-            thisWeekPrayers,
-            lastWeekPrayers,
             quranStreak,
             quranConsistency,
             quranTotalDays: quranDates.length,
             khatamProgress,
             nextBadge,
-            improvementPct,
-            heatmapData,
+            prayerStreak,
+            totalPrayed,
+            totalMasjid,
+            totalElapsed,
+            prayedPct,
+            masjidPct,
           });
         } catch {}
       })();
@@ -1660,8 +1777,6 @@ export default function SettingsScreen() {
   }, [section]);
 
   const renderPersonalGrowth = () => {
-    const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
     return (
       <>
         <Pressable
@@ -1703,131 +1818,25 @@ export default function SettingsScreen() {
             <>
               <View style={{ backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16, marginBottom: 16 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 16 }}>
-                  <Ionicons name={trendPage === 0 ? "bar-chart" : "grid"} size={18} color={colors.emerald} />
-                  <Text style={{ fontFamily: "Inter_700Bold", fontSize: 16, color: colors.text }}>
-                    {trendPage === 0 ? "Weekly Prayer Trend" : "Prayer Heatmap"}
-                  </Text>
+                  <Ionicons name="moon" size={18} color={colors.emerald} />
+                  <Text style={{ fontFamily: "Inter_700Bold", fontSize: 16, color: colors.text }}>Prayer Statistics</Text>
                 </View>
 
-                <ScrollView
-                  horizontal
-                  pagingEnabled
-                  showsHorizontalScrollIndicator={false}
-                  onMomentumScrollEnd={(e) => {
-                    const page = Math.round(e.nativeEvent.contentOffset.x / e.nativeEvent.layoutMeasurement.width);
-                    setTrendPage(page);
-                  }}
-                  style={{ marginHorizontal: -16 }}
-                  contentContainerStyle={{ paddingHorizontal: 0 }}
-                >
-                  <View style={{ width: screenWidth - 66, paddingHorizontal: 16 }}>
-                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", height: 120, marginBottom: 8 }}>
-                      {growthData.thisWeekPrayers.map((count, i) => {
-                        const lastWeekCount = growthData.lastWeekPrayers[i];
-                        const maxHeight = 100;
-                        const thisHeight = Math.max(4, (count / 5) * maxHeight);
-                        const lastHeight = Math.max(4, (lastWeekCount / 5) * maxHeight);
-                        return (
-                          <View key={i} style={{ alignItems: "center", flex: 1 }}>
-                            <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 2, height: maxHeight }}>
-                              <View style={{ width: 12, height: lastHeight, borderRadius: 4, backgroundColor: colors.textTertiary + "40" }} />
-                              <View style={{ width: 12, height: thisHeight, borderRadius: 4, backgroundColor: count >= 5 ? colors.emerald : colors.gold }} />
-                            </View>
-                            <Text style={{ fontFamily: "Inter_500Medium", fontSize: 10, color: colors.textSecondary, marginTop: 4 }}>{dayLabels[i]}</Text>
-                          </View>
-                        );
-                      })}
-                    </View>
-
-                    <View style={{ flexDirection: "row", justifyContent: "center", gap: 16, marginTop: 8 }}>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                        <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: colors.textTertiary + "40" }} />
-                        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: colors.textSecondary }}>Last week</Text>
-                      </View>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                        <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: colors.emerald }} />
-                        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: colors.textSecondary }}>This week</Text>
-                      </View>
-                    </View>
-
-                    {growthData.improvementPct !== 0 && (
-                      <View style={{ marginTop: 12, padding: 10, borderRadius: 10, backgroundColor: growthData.improvementPct > 0 ? colors.emerald + "15" : colors.gold + "15" }}>
-                        <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: growthData.improvementPct > 0 ? colors.emerald : colors.gold, textAlign: "center" }}>
-                          {growthData.improvementPct > 0
-                            ? `You've improved ${growthData.improvementPct}% this week!`
-                            : `Down ${Math.abs(growthData.improvementPct)}% from last week — keep pushing!`}
-                        </Text>
-                      </View>
-                    )}
+                <View style={{ flexDirection: "row", gap: 12, marginBottom: 12 }}>
+                  <View style={{ flex: 1, padding: 12, borderRadius: 12, backgroundColor: colors.surfaceSecondary, alignItems: "center" }}>
+                    <Text style={{ fontFamily: "Inter_700Bold", fontSize: 24, color: colors.gold }}>{growthData.prayedPct}%</Text>
+                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 11, color: colors.textSecondary, marginTop: 2 }}>Completion</Text>
+                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: colors.textTertiary, marginTop: 1 }}>{growthData.totalPrayed}/{growthData.totalElapsed}</Text>
                   </View>
-
-                  <View style={{ width: screenWidth - 66, paddingHorizontal: 16 }}>
-                    {(() => {
-                      const labelW = 52;
-                      const availableW = screenWidth - 66 - 32 - labelW;
-                      const gap = 2;
-                      const dotSize = Math.floor((availableW - (34 * gap)) / 35);
-                      const clampedDot = Math.min(Math.max(dotSize, 5), 10);
-                      return (["fajr", "dhuhr", "asr", "maghrib", "isha"] as const).map((prayer) => (
-                        <View key={prayer} style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
-                          <Text style={{ fontFamily: "Inter_500Medium", fontSize: 10, color: colors.textSecondary, width: labelW, textTransform: "capitalize" }}>
-                            {prayer}
-                          </Text>
-                          <View style={{ flexDirection: "row", gap, flexWrap: "nowrap", flex: 1 }}>
-                            {growthData.heatmapData.map((day, di) => {
-                              const status = day[prayer];
-                              let dotColor = colors.surfaceSecondary;
-                              if (status === 1) dotColor = colors.emerald;
-                              else if (status === 2) dotColor = colors.gold;
-                              else if (status === 3) dotColor = colors.emerald + "50";
-                              else if (status === 4) dotColor = "#EF4444";
-                              return (
-                                <View
-                                  key={di}
-                                  style={{
-                                    flex: 1,
-                                    aspectRatio: 1,
-                                    maxWidth: clampedDot,
-                                    maxHeight: clampedDot,
-                                    borderRadius: 1.5,
-                                    backgroundColor: dotColor,
-                                  }}
-                                />
-                              );
-                            })}
-                          </View>
-                        </View>
-                      ));
-                    })()}
-                    <View style={{ flexDirection: "row", justifyContent: "center", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                        <View style={{ width: 7, height: 7, borderRadius: 1.5, backgroundColor: colors.emerald }} />
-                        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 9, color: colors.textSecondary }}>On time</Text>
-                      </View>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                        <View style={{ width: 7, height: 7, borderRadius: 1.5, backgroundColor: colors.gold }} />
-                        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 9, color: colors.textSecondary }}>Masjid</Text>
-                      </View>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                        <View style={{ width: 7, height: 7, borderRadius: 1.5, backgroundColor: colors.emerald + "50" }} />
-                        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 9, color: colors.textSecondary }}>Made up</Text>
-                      </View>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                        <View style={{ width: 7, height: 7, borderRadius: 1.5, backgroundColor: "#EF4444" }} />
-                        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 9, color: colors.textSecondary }}>Excused</Text>
-                      </View>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                        <View style={{ width: 7, height: 7, borderRadius: 1.5, backgroundColor: colors.surfaceSecondary }} />
-                        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 9, color: colors.textSecondary }}>Missed</Text>
-                      </View>
-                    </View>
+                  <View style={{ flex: 1, padding: 12, borderRadius: 12, backgroundColor: colors.surfaceSecondary, alignItems: "center" }}>
+                    <Text style={{ fontFamily: "Inter_700Bold", fontSize: 24, color: colors.emerald }}>{growthData.masjidPct}%</Text>
+                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 11, color: colors.textSecondary, marginTop: 2 }}>At Masjid</Text>
+                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: colors.textTertiary, marginTop: 1 }}>{growthData.totalMasjid}/{growthData.totalElapsed}</Text>
                   </View>
-                </ScrollView>
-
-                <View style={{ flexDirection: "row", justifyContent: "center", gap: 6, marginTop: 12 }}>
-                  {[0, 1].map((i) => (
-                    <View key={i} style={{ width: trendPage === i ? 16 : 6, height: 6, borderRadius: 3, backgroundColor: trendPage === i ? colors.emerald : colors.textTertiary + "40" }} />
-                  ))}
+                  <View style={{ flex: 1, padding: 12, borderRadius: 12, backgroundColor: colors.surfaceSecondary, alignItems: "center" }}>
+                    <Text style={{ fontFamily: "Inter_700Bold", fontSize: 24, color: colors.text }}>{growthData.prayerStreak}</Text>
+                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 11, color: colors.textSecondary, marginTop: 2 }}>Day Streak</Text>
+                  </View>
                 </View>
               </View>
 
@@ -1887,7 +1896,7 @@ export default function SettingsScreen() {
                     ? "MashaAllah! Your consistency with the Quran is inspiring."
                     : growthData.quranStreak >= 3
                       ? `Keep going — ${7 - growthData.quranStreak} more days to your Daily Reader badge!`
-                      : growthData.thisWeekPrayers.reduce((a, b) => a + b, 0) > 0
+                      : growthData.totalPrayed > 0
                         ? "Every prayer counts. You're building a beautiful habit."
                         : "Start tracking today — small steps lead to great rewards."}
                 </Text>

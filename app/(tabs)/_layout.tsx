@@ -4,9 +4,11 @@ import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { Platform, StyleSheet, View } from "react-native";
-import React from "react";
+import { Platform, StyleSheet, View, Text } from "react-native";
+import React, { useState, useEffect } from "react";
 import { useTheme } from "@/lib/theme-context";
+import { getMissedPrayerCount } from "@/lib/prayer-tracker";
+import { useSettings } from "@/lib/settings-context";
 
 function NativeTabLayout() {
   return (
@@ -37,9 +39,21 @@ function NativeTabLayout() {
 
 function ClassicTabLayout() {
   const { colors, isDark, ramadanMode } = useTheme();
+  const { notificationsEnabled } = useSettings();
   const isWeb = Platform.OS === "web";
   const isIOS = Platform.OS === "ios";
   const isDarkRamadan = isDark && ramadanMode;
+  const [missedCount, setMissedCount] = useState(0);
+
+  useEffect(() => {
+    getMissedPrayerCount().then(setMissedCount);
+    const interval = setInterval(() => {
+      getMissedPrayerCount().then(setMissedCount);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const worshipBadge = missedCount > 0 ? missedCount : (!notificationsEnabled ? "!" : undefined);
 
   return (
     <Tabs
@@ -127,6 +141,8 @@ function ClassicTabLayout() {
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="mosque" size={size - 2} color={color} />
           ),
+          tabBarBadge: worshipBadge,
+          tabBarBadgeStyle: { backgroundColor: typeof worshipBadge === "number" ? "#EF4444" : colors.gold, fontSize: 10, fontFamily: "Inter_700Bold" },
         }}
       />
     </Tabs>
