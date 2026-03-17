@@ -1137,7 +1137,7 @@ export default function SettingsScreen() {
                     }}
                     delayLongPress={400}
                   >
-                    <Text style={[styles.calDayText, { color: isSelected ? "#fff" : isMissedFast ? "#EF4444" : isToday ? colors.gold : colors.text }]}>{day}</Text>
+                    <Text style={[styles.calDayText, { color: isSelected ? "#fff" : isMissedFast ? "#EF4444" : isToday ? colors.emerald : colors.text }]}>{day}</Text>
                     <View style={styles.calDots}>
                       {log ? PRAYER_NAMES.map(p => {
                         const s = log[p];

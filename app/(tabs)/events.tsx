@@ -221,7 +221,7 @@ function EventCalendar({
             >
               <Text style={[
                 calStyles.dayText,
-                { color: isSelected ? "#fff" : isToday ? colors.gold : colors.text },
+                { color: isSelected ? "#fff" : isToday ? colors.emerald : colors.text },
                 !hasEvents && !isToday && !isSelected && { color: colors.textTertiary },
               ]}>
                 {day}
