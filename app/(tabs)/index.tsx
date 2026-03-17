@@ -1012,7 +1012,7 @@ export default function PrayerScreen() {
   const glassCardBorder = isDark ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.8)";
 
   return (
-    <LinearGradient colors={[colors.pageBgStart, colors.pageBgEnd]} style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <GlassHeader onHeaderHeight={setHeaderHeight}>
         <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14, flexDirection: "row", alignItems: "center" }}>
           <View style={{ flex: 1 }}>
@@ -1744,7 +1744,7 @@ export default function PrayerScreen() {
           </View>
         </View>
       </Modal>
-    </LinearGradient>
+    </View>
   );
 }
 

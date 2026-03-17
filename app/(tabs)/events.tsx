@@ -21,7 +21,6 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as Notifications from "expo-notifications";
-import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
 import { GlassHeader } from "@/components/GlassHeader";
@@ -613,7 +612,7 @@ export default function EventsScreen() {
     : null;
 
   return (
-    <LinearGradient colors={[colors.pageBgStart, colors.pageBgEnd]} style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <GlassHeader onHeaderHeight={setHeaderHeight}>
         <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <View>
@@ -819,7 +818,7 @@ export default function EventsScreen() {
         isSaved={!!selectedEvent && savedEventIds.has(selectedEvent.id)}
         onToggleSave={toggleSave}
       />
-    </LinearGradient>
+    </View>
   );
 }
 

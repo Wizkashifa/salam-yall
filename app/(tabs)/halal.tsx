@@ -22,7 +22,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
-import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
 import { GlassHeader } from "@/components/GlassHeader";
@@ -1208,7 +1207,7 @@ export default function HalalScreen() {
   const isWeb = Platform.OS === "web";
 
   return (
-    <LinearGradient colors={[colors.pageBgStart, colors.pageBgEnd]} style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <GlassHeader onHeaderHeight={setHeaderHeight}>
         <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14, flexDirection: "row", alignItems: "center" }}>
           <View style={{ flex: 1 }}>
@@ -1392,7 +1391,7 @@ export default function HalalScreen() {
         colors={colors}
         pendingCount={pendingCount}
       />
-    </LinearGradient>
+    </View>
   );
 }
 

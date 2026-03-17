@@ -22,7 +22,6 @@ import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
 import { GlassHeader } from "@/components/GlassHeader";
