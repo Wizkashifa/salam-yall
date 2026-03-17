@@ -319,6 +319,14 @@ function TrackerScreen({ isActive }: { isActive: boolean }) {
               <View style={[trackerStyles.dot, { backgroundColor: richGold }]} />
               <Text style={trackerStyles.stateLabel}>At masjid</Text>
             </View>
+            <View style={trackerStyles.stateRow}>
+              <View style={[trackerStyles.dot, { backgroundColor: emerald + "50" }]} />
+              <Text style={trackerStyles.stateLabel}>Made up</Text>
+            </View>
+            <View style={trackerStyles.stateRow}>
+              <View style={[trackerStyles.dot, { backgroundColor: "#EF4444" }]} />
+              <Text style={trackerStyles.stateLabel}>Excused</Text>
+            </View>
           </View>
 
           <View style={trackerStyles.divider} />
