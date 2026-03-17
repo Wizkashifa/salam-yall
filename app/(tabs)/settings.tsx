@@ -228,7 +228,7 @@ export default function SettingsScreen() {
       (async () => {
         const allLogs = await getAllLogs();
         const today = new Date();
-        const heatmapDays = 35;
+        const heatmapDays = 30;
         const hData: typeof heatmapData = [];
         for (let i = heatmapDays - 1; i >= 0; i--) {
           const d = new Date(today);
@@ -1178,7 +1178,7 @@ export default function SettingsScreen() {
                         getAllLogs().then(allLogs => {
                           const today = new Date();
                           const hData: typeof heatmapData = [];
-                          for (let i = 34; i >= 0; i--) {
+                          for (let i = 29; i >= 0; i--) {
                             const dd = new Date(today);
                             dd.setDate(dd.getDate() - i);
                             const key = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, "0")}-${String(dd.getDate()).padStart(2, "0")}`;
@@ -1236,7 +1236,7 @@ export default function SettingsScreen() {
                 <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
                   <Ionicons name="grid-outline" size={18} color={colors.emerald} style={{ marginTop: 2 }} />
                   <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: colors.textSecondary, flex: 1, lineHeight: 20 }}>
-                    The heatmap shows your prayer consistency over the last 35 days at a glance.
+                    The heatmap shows your prayer consistency over the last 30 days at a glance.
                   </Text>
                 </View>
                 <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
