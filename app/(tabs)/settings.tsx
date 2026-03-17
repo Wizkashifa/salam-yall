@@ -949,6 +949,7 @@ export default function SettingsScreen() {
     let masjidCount = 0;
     const countDays = isCurrentMonth ? currentDay : daysInMonth;
 
+    let excusedCount = 0;
     for (let d = 1; d <= countDays; d++) {
       const dateKey = `${trackerYear}-${String(trackerMonth).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
       if (missedFasts.has(dateKey)) continue;
@@ -957,14 +958,16 @@ export default function SettingsScreen() {
         for (const p of PRAYER_NAMES) {
           if (log[p] === 1 || log[p] === 3) prayedCount++;
           if (log[p] === 2) { prayedCount++; masjidCount++; }
+          if (log[p] === 4) excusedCount++;
         }
       }
     }
+    const adjustedElapsed = Math.max(0, elapsedPrayers - excusedCount);
 
-    const prayedPct = elapsedPrayers > 0 ? Math.round((prayedCount / elapsedPrayers) * 100) : 0;
-    const masjidPct = elapsedPrayers > 0 ? Math.round((masjidCount / elapsedPrayers) * 100) : 0;
+    const prayedPct = adjustedElapsed > 0 ? Math.round((prayedCount / adjustedElapsed) * 100) : 0;
+    const masjidPct = adjustedElapsed > 0 ? Math.round((masjidCount / adjustedElapsed) * 100) : 0;
 
-    return { prayedCount, masjidCount, elapsedPrayers, prayedPct, masjidPct };
+    return { prayedCount, masjidCount, elapsedPrayers: adjustedElapsed, prayedPct, masjidPct };
   }, [monthLogs, missedFasts, trackerYear, trackerMonth, now]);
 
   const renderPrayerTracker = () => {
@@ -1039,18 +1042,21 @@ export default function SettingsScreen() {
                       await toggleMissedFast(dateKey);
                       const updated = await getMonthMissedFasts(trackerYear, trackerMonth);
                       setMissedFasts(updated);
+                      const updatedLogs = await getMonthLogs(trackerYear, trackerMonth);
+                      setMonthLogs(updatedLogs);
                     }}
                     delayLongPress={400}
                   >
                     <Text style={[styles.calDayText, { color: isSelected ? "#fff" : isMissedFast ? "#EF4444" : isToday ? colors.emerald : colors.text }]}>{day}</Text>
                     <View style={styles.calDots}>
-                      {isMissedFast ? (
-                        <View style={[styles.calDot, { backgroundColor: "#EF4444", width: 6, height: 6, borderRadius: 3 }]} />
-                      ) : log ? PRAYER_NAMES.map(p => {
+                      {log ? PRAYER_NAMES.map(p => {
                         const s = log[p];
                         if (s === 0) return <View key={p} style={[styles.calDot, { backgroundColor: "transparent" }]} />;
+                        if (s === 4) return <View key={p} style={[styles.calDot, { backgroundColor: "#EF4444" }]} />;
                         return <View key={p} style={[styles.calDot, { backgroundColor: s === 1 ? colors.gold : s === 3 ? colors.gold + "60" : colors.emerald }]} />;
-                      }) : <View style={{ height: 6 }} />}
+                      }) : isMissedFast ? (
+                        <View style={[styles.calDot, { backgroundColor: "#EF4444", width: 6, height: 6, borderRadius: 3 }]} />
+                      ) : <View style={{ height: 6 }} />}
                     </View>
                   </Pressable>
                 );
@@ -1065,8 +1071,8 @@ export default function SettingsScreen() {
                 <Text style={[styles.dayDetailHint, { color: colors.textTertiary }]}>Tap a prayer to update its status</Text>
                 {PRAYER_NAMES.map(p => {
                   const status = selectedLog ? selectedLog[p] : 0;
-                  const statusLabel = status === 0 ? "Not tracked" : status === 1 ? "Completed" : status === 2 ? "At masjid" : "Made up";
-                  const statusColor = status === 0 ? colors.textTertiary : status === 1 ? colors.gold : status === 2 ? colors.emerald : colors.gold + "80";
+                  const statusLabel = status === 0 ? "Not tracked" : status === 1 ? "Completed" : status === 2 ? "At masjid" : status === 3 ? "Made up" : "Excused";
+                  const statusColor = status === 0 ? colors.textTertiary : status === 1 ? colors.gold : status === 2 ? colors.emerald : status === 3 ? colors.gold + "80" : "#EF4444";
                   return (
                     <Pressable
                       key={p}
@@ -1100,8 +1106,12 @@ export default function SettingsScreen() {
                 <Text style={[styles.calLegendText, { color: colors.textSecondary }]}>At masjid</Text>
               </View>
               <View style={styles.calLegendItem}>
+                <View style={[styles.calLegendDot, { backgroundColor: colors.gold + "60" }]} />
+                <Text style={[styles.calLegendText, { color: colors.textSecondary }]}>Made up</Text>
+              </View>
+              <View style={styles.calLegendItem}>
                 <View style={[styles.calLegendDot, { backgroundColor: "#EF4444" }]} />
-                <Text style={[styles.calLegendText, { color: colors.textSecondary }]}>Missed fast</Text>
+                <Text style={[styles.calLegendText, { color: colors.textSecondary }]}>Excused</Text>
               </View>
             </View>
             <Text style={[styles.calLegendText, { color: colors.textTertiary, textAlign: "center", marginTop: 8, fontSize: 11 }]}>
@@ -1707,7 +1717,7 @@ export default function SettingsScreen() {
                     const page = Math.round(e.nativeEvent.contentOffset.x / e.nativeEvent.layoutMeasurement.width);
                     setTrendPage(page);
                   }}
-                  style={{ marginHorizontal: -16, overflow: "hidden" }}
+                  style={{ marginHorizontal: -16 }}
                   contentContainerStyle={{ paddingHorizontal: 0 }}
                 >
                   <View style={{ width: screenWidth - 66, paddingHorizontal: 16 }}>
@@ -1768,8 +1778,9 @@ export default function SettingsScreen() {
                               const status = day[prayer];
                               let dotColor = colors.surfaceSecondary;
                               if (status === 1) dotColor = colors.emerald;
+                              else if (status === 2) dotColor = colors.gold;
                               else if (status === 3) dotColor = colors.emerald + "50";
-                              else if (status === 2) dotColor = colors.surfaceSecondary;
+                              else if (status === 4) dotColor = "#EF4444";
                               return (
                                 <View
                                   key={di}
@@ -1788,18 +1799,26 @@ export default function SettingsScreen() {
                         </View>
                       ));
                     })()}
-                    <View style={{ flexDirection: "row", justifyContent: "center", gap: 12, marginTop: 8 }}>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                        <View style={{ width: 8, height: 8, borderRadius: 1.5, backgroundColor: colors.emerald }} />
-                        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: colors.textSecondary }}>On time</Text>
+                    <View style={{ flexDirection: "row", justifyContent: "center", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                        <View style={{ width: 7, height: 7, borderRadius: 1.5, backgroundColor: colors.emerald }} />
+                        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 9, color: colors.textSecondary }}>On time</Text>
                       </View>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                        <View style={{ width: 8, height: 8, borderRadius: 1.5, backgroundColor: colors.emerald + "50" }} />
-                        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: colors.textSecondary }}>Made up</Text>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                        <View style={{ width: 7, height: 7, borderRadius: 1.5, backgroundColor: colors.gold }} />
+                        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 9, color: colors.textSecondary }}>Masjid</Text>
                       </View>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                        <View style={{ width: 8, height: 8, borderRadius: 1.5, backgroundColor: colors.surfaceSecondary }} />
-                        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: colors.textSecondary }}>Missed</Text>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                        <View style={{ width: 7, height: 7, borderRadius: 1.5, backgroundColor: colors.emerald + "50" }} />
+                        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 9, color: colors.textSecondary }}>Made up</Text>
+                      </View>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                        <View style={{ width: 7, height: 7, borderRadius: 1.5, backgroundColor: "#EF4444" }} />
+                        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 9, color: colors.textSecondary }}>Excused</Text>
+                      </View>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                        <View style={{ width: 7, height: 7, borderRadius: 1.5, backgroundColor: colors.surfaceSecondary }} />
+                        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 9, color: colors.textSecondary }}>Missed</Text>
                       </View>
                     </View>
                   </View>

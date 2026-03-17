@@ -1125,16 +1125,16 @@ export default function PrayerScreen() {
               const isPast = prayer.time < now && !isNext;
               const trackerKey = prayer.name as TrackerPrayerName;
               const status = todayLog[trackerKey] ?? 0;
-              const isGold = status === 1;
-              const isGreen = status === 2;
-              const isMadeUp = status === 3;
-              const pillBg = isGold
+              const isExcused = status === 4;
+              const pillBg = status === 1
                 ? (isDark ? colors.gold + "20" : colors.gold + "15")
-                : isGreen
+                : status === 2
                   ? (isDark ? colors.emerald + "25" : colors.emerald + "12")
-                  : isMadeUp
+                  : status === 3
                     ? (isDark ? colors.gold + "12" : colors.gold + "08")
-                    : undefined;
+                    : isExcused
+                      ? (isDark ? "rgba(239,68,68,0.15)" : "rgba(239,68,68,0.08)")
+                      : undefined;
               return (
                 <Pressable
                   key={prayer.name}
@@ -1147,13 +1147,13 @@ export default function PrayerScreen() {
                 >
                   <Text style={[
                     styles.prayerPillName,
-                    { color: isPast ? colors.textTertiary : colors.textSecondary },
+                    { color: isExcused ? "#EF4444" : isPast ? colors.textTertiary : colors.textSecondary },
                   ]} allowFontScaling={false}>
                     {prayer.label}
                   </Text>
                   <Text style={[
                     styles.prayerPillTime,
-                    { color: isPast ? colors.textTertiary : colors.text },
+                    { color: isExcused ? "#EF4444" : isPast ? colors.textTertiary : colors.text },
                   ]} allowFontScaling={false}>
                     {formatTime(prayer.time)}
                   </Text>
@@ -1180,16 +1180,16 @@ export default function PrayerScreen() {
                 const isPast = prayer.time < now && !isNext;
                 const trackerKey = prayer.name as TrackerPrayerName;
                 const status = todayLog[trackerKey] ?? 0;
-                const isGold = status === 1;
-                const isGreen = status === 2;
-                const isMadeUp = status === 3;
-                const pillBg = isGold
+                const isExcused = status === 4;
+                const pillBg = status === 1
                   ? (isDark ? colors.gold + "20" : colors.gold + "15")
-                  : isGreen
+                  : status === 2
                     ? (isDark ? colors.emerald + "25" : colors.emerald + "12")
-                    : isMadeUp
+                    : status === 3
                       ? (isDark ? colors.gold + "12" : colors.gold + "08")
-                      : undefined;
+                      : isExcused
+                        ? (isDark ? "rgba(239,68,68,0.15)" : "rgba(239,68,68,0.08)")
+                        : undefined;
                 const iqamaTime = activeIqama?.iqama?.[prayer.name as keyof typeof activeIqama.iqama];
                 return (
                   <Pressable
@@ -1203,13 +1203,13 @@ export default function PrayerScreen() {
                   >
                     <Text style={[
                       styles.prayerPillName,
-                      { color: isPast ? colors.textTertiary : colors.textSecondary },
+                      { color: isExcused ? "#EF4444" : isPast ? colors.textTertiary : colors.textSecondary },
                     ]} allowFontScaling={false}>
                       {prayer.label}
                     </Text>
                     <Text style={[
                       styles.prayerPillTime,
-                      { color: isPast ? colors.textTertiary : colors.text },
+                      { color: isExcused ? "#EF4444" : isPast ? colors.textTertiary : colors.text },
                     ]} allowFontScaling={false}>
                       {iqamaTime ? iqamaTime.replace(/^0/, "") : formatTime(prayer.time)}
                     </Text>

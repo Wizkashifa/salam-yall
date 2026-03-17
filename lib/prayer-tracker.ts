@@ -4,7 +4,7 @@ const STORAGE_KEY = "prayer_tracker";
 const MISSED_FASTS_KEY = "missed_fasts";
 const CACHED_PRAYER_TIMES_KEY = "cached_prayer_times";
 
-export type PrayerStatus = 0 | 1 | 2 | 3;
+export type PrayerStatus = 0 | 1 | 2 | 3 | 4;
 
 export type PrayerName = "fajr" | "dhuhr" | "asr" | "maghrib" | "isha";
 
@@ -170,9 +170,9 @@ export async function cyclePrayerStatus(
 
   let next: PrayerStatus;
   if (expired) {
-    next = current === 0 ? 3 : current === 3 ? 2 : 0;
+    next = current === 0 ? 3 : current === 3 ? 4 : current === 4 ? 2 : 0;
   } else {
-    next = current === 0 ? 1 : current === 1 ? 2 : 0;
+    next = current === 0 ? 1 : current === 1 ? 2 : current === 2 ? 4 : 0;
   }
 
   existing[prayer] = next;
@@ -243,13 +243,26 @@ export async function getMissedFastDates(): Promise<string[]> {
 
 export async function toggleMissedFast(dateKey: string): Promise<{ dates: string[]; isMissed: boolean }> {
   const dates = await loadMissedFasts();
+  const data = await loadAll();
   const idx = dates.indexOf(dateKey);
   if (idx >= 0) {
     dates.splice(idx, 1);
+    if (data[dateKey]) {
+      for (const p of PRAYER_ORDER) {
+        if (data[dateKey][p] === 4) data[dateKey][p] = 0;
+      }
+      await saveAll(data);
+    }
     await saveMissedFasts(dates);
     return { dates, isMissed: false };
   } else {
     dates.push(dateKey);
+    const log = data[dateKey] ?? { ...DEFAULT_DAY_LOG };
+    for (const p of PRAYER_ORDER) {
+      if (log[p] === 0) log[p] = 4;
+    }
+    data[dateKey] = log;
+    await saveAll(data);
     await saveMissedFasts(dates);
     return { dates, isMissed: true };
   }
