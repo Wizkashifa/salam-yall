@@ -326,7 +326,7 @@ function TrackerScreen({ isActive }: { isActive: boolean }) {
           <View style={trackerStyles.featureRow}>
             <Ionicons name="calendar-outline" size={20} color={richGold} />
             <Text style={trackerStyles.featureText}>
-              Track missed Ramadan fasts — tap any date on your prayer calendar to log it
+              Tap any day on your prayer calendar to edit statuses, or long-press to mark a missed fast or excused day
             </Text>
           </View>
 
