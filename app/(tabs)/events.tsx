@@ -131,11 +131,13 @@ function EventCalendar({
   selectedDate,
   onSelectDate,
   colors,
+  isDark,
 }: {
   events: CalendarEvent[];
   selectedDate: string | null;
   onSelectDate: (dateKey: string | null) => void;
   colors: ReturnType<typeof useTheme>["colors"];
+  isDark: boolean;
 }) {
   const [viewMonth, setViewMonth] = useState(() => {
     const now = new Date();
@@ -166,13 +168,11 @@ function EventCalendar({
   for (let i = 0; i < firstDay; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
-  const cellSize = Math.floor((SCREEN_WIDTH - 56) / 7);
-
   return (
-    <View style={[calStyles.container, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
+    <View style={[calStyles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={calStyles.header}>
         <Pressable onPress={prevMonth} hitSlop={12}>
-          <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
+          <Ionicons name="chevron-back" size={20} color={colors.text} />
         </Pressable>
         <Pressable onPress={() => {
           const now = new Date();
@@ -181,14 +181,14 @@ function EventCalendar({
           <Text style={[calStyles.monthLabel, { color: colors.text }]}>{monthLabel}</Text>
         </Pressable>
         <Pressable onPress={nextMonth} hitSlop={12}>
-          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+          <Ionicons name="chevron-forward" size={20} color={colors.text} />
         </Pressable>
       </View>
 
       <View style={calStyles.weekdayRow}>
         {WEEKDAYS.map((wd) => (
-          <View key={wd} style={[calStyles.weekdayCell, { width: cellSize }]}>
-            <Text style={[calStyles.weekdayText, { color: colors.textTertiary }]}>{wd}</Text>
+          <View key={wd} style={calStyles.weekdayCell}>
+            <Text style={[calStyles.weekdayText, { color: colors.textSecondary }]}>{wd}</Text>
           </View>
         ))}
       </View>
@@ -196,7 +196,7 @@ function EventCalendar({
       <View style={calStyles.grid}>
         {cells.map((day, i) => {
           if (day === null) {
-            return <View key={`empty-${i}`} style={{ width: cellSize, height: cellSize }} />;
+            return <View key={`empty-${i}`} style={calStyles.dayCell} />;
           }
           const dateKey = `${viewMonth.year}-${String(viewMonth.month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
           const hasEvents = !!eventDateMap[dateKey];
@@ -212,15 +212,14 @@ function EventCalendar({
               }}
               style={[
                 calStyles.dayCell,
-                { width: cellSize, height: cellSize },
-                isSelected && { backgroundColor: colors.emerald, borderRadius: cellSize / 2 },
-                isToday && !isSelected && { borderWidth: 1.5, borderColor: colors.emerald, borderRadius: cellSize / 2 },
+                isToday && !isSelected && { backgroundColor: isDark ? colors.actionButtonBg : colors.prayerIconBg, borderRadius: 6 },
+                isSelected && { backgroundColor: colors.emerald, borderRadius: 6 },
               ]}
             >
               <Text style={[
                 calStyles.dayText,
-                { color: isSelected ? "#fff" : colors.text },
-                !hasEvents && !isToday && { color: colors.textTertiary },
+                { color: isSelected ? "#fff" : isToday ? colors.gold : colors.text },
+                !hasEvents && !isToday && !isSelected && { color: colors.textTertiary },
               ]}>
                 {day}
               </Text>
@@ -247,43 +246,47 @@ function EventCalendar({
 const calStyles = StyleSheet.create({
   container: {
     marginHorizontal: 16,
-    borderRadius: 14,
-    borderWidth: StyleSheet.hairlineWidth,
-    paddingBottom: 8,
-    overflow: "hidden",
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 4,
+    paddingBottom: 6,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
     paddingVertical: 8,
   },
   monthLabel: {
     fontFamily: "Inter_600SemiBold",
-    fontSize: 15,
+    fontSize: 14,
   },
   weekdayRow: {
     flexDirection: "row",
-    paddingHorizontal: 6,
+    paddingHorizontal: 0,
   },
   weekdayCell: {
+    width: "14.28%",
     alignItems: "center",
-    paddingBottom: 4,
+    paddingBottom: 3,
   },
   weekdayText: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 10,
     textTransform: "uppercase",
   },
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    paddingHorizontal: 6,
+    paddingHorizontal: 0,
   },
   dayCell: {
+    width: "14.28%",
     alignItems: "center",
     justifyContent: "center",
+    minHeight: 38,
+    paddingVertical: 4,
   },
   dayText: {
     fontFamily: "Inter_500Medium",
@@ -294,19 +297,19 @@ const calStyles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     position: "absolute",
-    bottom: 6,
+    bottom: 5,
   },
   clearFilter: {
-    marginHorizontal: 14,
-    marginTop: 4,
-    marginBottom: 4,
-    paddingVertical: 6,
-    borderRadius: 8,
+    marginHorizontal: 10,
+    marginTop: 2,
+    marginBottom: 2,
+    paddingVertical: 5,
+    borderRadius: 6,
     alignItems: "center",
   },
   clearFilterText: {
     fontFamily: "Inter_500Medium",
-    fontSize: 13,
+    fontSize: 12,
   },
 });
 
@@ -653,6 +656,7 @@ export default function EventsScreen() {
               selectedDate={selectedDate}
               onSelectDate={onSelectDate}
               colors={colors}
+              isDark={isDark}
             />
           </View>
         )}

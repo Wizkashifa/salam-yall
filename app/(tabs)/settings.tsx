@@ -1013,15 +1013,76 @@ export default function SettingsScreen() {
         </Pressable>
 
         <>
+            {heatmapData.length > 0 && (
+              <View style={{ backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 12, marginBottom: 10 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                  <Ionicons name="grid" size={16} color={colors.emerald} />
+                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: colors.text }}>Prayer Heatmap</Text>
+                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: colors.textSecondary, marginLeft: "auto" }}>Last 35 days</Text>
+                </View>
+                {(() => {
+                  const labelW = 48;
+                  const availableW = screenWidth - 66 - 24 - labelW;
+                  const gap = 2;
+                  const dotSize = Math.floor((availableW - (34 * gap)) / 35);
+                  const clampedDot = Math.min(Math.max(dotSize, 5), 10);
+                  return (["fajr", "dhuhr", "asr", "maghrib", "isha"] as const).map((prayer) => (
+                    <View key={prayer} style={{ flexDirection: "row", alignItems: "center", marginBottom: 3 }}>
+                      <Text style={{ fontFamily: "Inter_500Medium", fontSize: 9, color: colors.textSecondary, width: labelW, textTransform: "capitalize" }}>
+                        {prayer}
+                      </Text>
+                      <View style={{ flexDirection: "row", gap, flexWrap: "nowrap", flex: 1 }}>
+                        {heatmapData.map((day, di) => {
+                          const status = day[prayer];
+                          let dotColor = colors.surfaceSecondary;
+                          if (status === 1) dotColor = colors.emerald;
+                          else if (status === 2) dotColor = colors.gold;
+                          else if (status === 3) dotColor = colors.emerald + "50";
+                          else if (status === 4) dotColor = "#EF4444";
+                          return (
+                            <View
+                              key={di}
+                              style={{
+                                flex: 1,
+                                aspectRatio: 1,
+                                maxWidth: clampedDot,
+                                maxHeight: clampedDot,
+                                borderRadius: 1.5,
+                                backgroundColor: dotColor,
+                              }}
+                            />
+                          );
+                        })}
+                      </View>
+                    </View>
+                  ));
+                })()}
+                <View style={{ flexDirection: "row", justifyContent: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+                  {[
+                    { color: colors.emerald, label: "On time" },
+                    { color: colors.gold, label: "Masjid" },
+                    { color: colors.emerald + "50", label: "Made up" },
+                    { color: "#EF4444", label: "Excused" },
+                    { color: colors.surfaceSecondary, label: "Missed" },
+                  ].map(l => (
+                    <View key={l.label} style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                      <View style={{ width: 6, height: 6, borderRadius: 1.5, backgroundColor: l.color }} />
+                      <Text style={{ fontFamily: "Inter_400Regular", fontSize: 9, color: colors.textSecondary }}>{l.label}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
             <View style={[styles.calMonthRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Pressable onPress={handlePrevMonth} hitSlop={12}>
-                <Ionicons name="chevron-back" size={22} color={colors.text} />
+                <Ionicons name="chevron-back" size={20} color={colors.text} />
               </Pressable>
               <Text style={[styles.calMonthText, { color: colors.text }]}>
                 {MONTH_NAMES[trackerMonth - 1]} {trackerYear}
               </Text>
               <Pressable onPress={handleNextMonth} hitSlop={12}>
-                <Ionicons name="chevron-forward" size={22} color={colors.text} />
+                <Ionicons name="chevron-forward" size={20} color={colors.text} />
               </Pressable>
             </View>
 
@@ -1043,9 +1104,9 @@ export default function SettingsScreen() {
                     key={dateKey}
                     style={[
                       styles.calCell,
-                      isMissedFast && { backgroundColor: isDark ? "rgba(239,68,68,0.2)" : "rgba(239,68,68,0.12)", borderRadius: 8 },
-                      isToday && !isMissedFast && { backgroundColor: isDark ? colors.actionButtonBg : colors.prayerIconBg, borderRadius: 8 },
-                      isSelected && { backgroundColor: colors.emerald, borderRadius: 8 },
+                      isMissedFast && { backgroundColor: isDark ? "rgba(239,68,68,0.2)" : "rgba(239,68,68,0.12)", borderRadius: 6 },
+                      isToday && !isMissedFast && { backgroundColor: isDark ? colors.actionButtonBg : colors.prayerIconBg, borderRadius: 6 },
+                      isSelected && { backgroundColor: colors.emerald, borderRadius: 6 },
                     ]}
                     onPress={() => { setSelectedDay(isSelected ? null : dateKey); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
                     onLongPress={async () => {
@@ -1059,7 +1120,7 @@ export default function SettingsScreen() {
                     }}
                     delayLongPress={400}
                   >
-                    <Text style={[styles.calDayText, { color: isSelected ? "#fff" : isMissedFast ? "#EF4444" : isToday ? colors.emerald : colors.text }]}>{day}</Text>
+                    <Text style={[styles.calDayText, { color: isSelected ? "#fff" : isMissedFast ? "#EF4444" : isToday ? colors.gold : colors.text }]}>{day}</Text>
                     <View style={styles.calDots}>
                       {log ? PRAYER_NAMES.map(p => {
                         const s = log[p];
@@ -1067,8 +1128,8 @@ export default function SettingsScreen() {
                         if (s === 4) return <View key={p} style={[styles.calDot, { backgroundColor: "#EF4444" }]} />;
                         return <View key={p} style={[styles.calDot, { backgroundColor: s === 1 ? colors.gold : s === 3 ? colors.gold + "60" : colors.emerald }]} />;
                       }) : isMissedFast ? (
-                        <View style={[styles.calDot, { backgroundColor: "#EF4444", width: 6, height: 6, borderRadius: 3 }]} />
-                      ) : <View style={{ height: 6 }} />}
+                        <View style={[styles.calDot, { backgroundColor: "#EF4444", width: 5, height: 5, borderRadius: 2.5 }]} />
+                      ) : <View style={{ height: 5 }} />}
                     </View>
                   </Pressable>
                 );
@@ -1122,95 +1183,21 @@ export default function SettingsScreen() {
             )}
 
             <View style={[styles.calLegend, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <View style={styles.calLegendItem}>
-                <View style={[styles.calLegendDot, { backgroundColor: colors.gold }]} />
-                <Text style={[styles.calLegendText, { color: colors.textSecondary }]}>Completed</Text>
-              </View>
-              <View style={styles.calLegendItem}>
-                <View style={[styles.calLegendDot, { backgroundColor: colors.emerald }]} />
-                <Text style={[styles.calLegendText, { color: colors.textSecondary }]}>At masjid</Text>
-              </View>
-              <View style={styles.calLegendItem}>
-                <View style={[styles.calLegendDot, { backgroundColor: colors.gold + "60" }]} />
-                <Text style={[styles.calLegendText, { color: colors.textSecondary }]}>Made up</Text>
-              </View>
-              <View style={styles.calLegendItem}>
-                <View style={[styles.calLegendDot, { backgroundColor: "#EF4444" }]} />
-                <Text style={[styles.calLegendText, { color: colors.textSecondary }]}>{isRamadan ? "Missed fast" : "Excused"}</Text>
-              </View>
+              {[
+                { color: colors.gold, label: "Completed" },
+                { color: colors.emerald, label: "At masjid" },
+                { color: colors.gold + "60", label: "Made up" },
+                { color: "#EF4444", label: isRamadan ? "Missed fast" : "Excused" },
+              ].map(l => (
+                <View key={l.label} style={styles.calLegendItem}>
+                  <View style={[styles.calLegendDot, { backgroundColor: l.color }]} />
+                  <Text style={[styles.calLegendText, { color: colors.textSecondary }]}>{l.label}</Text>
+                </View>
+              ))}
             </View>
-            <Text style={[styles.calLegendText, { color: colors.textTertiary, textAlign: "center", marginTop: 8, fontSize: 11 }]}>
+            <Text style={[styles.calLegendText, { color: colors.textTertiary, textAlign: "center", marginTop: 6, fontSize: 10 }]}>
               {isRamadan ? "Long-press a day to mark/unmark a missed fast" : "Long-press a day to mark/unmark an excused day"}
             </Text>
-
-            {heatmapData.length > 0 && (
-              <View style={{ backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16, marginTop: 16 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                  <Ionicons name="grid" size={18} color={colors.emerald} />
-                  <Text style={{ fontFamily: "Inter_700Bold", fontSize: 16, color: colors.text }}>Prayer Heatmap</Text>
-                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: colors.textSecondary, marginLeft: "auto" }}>Last 35 days</Text>
-                </View>
-                {(() => {
-                  const labelW = 52;
-                  const availableW = screenWidth - 66 - 32 - labelW;
-                  const gap = 2;
-                  const dotSize = Math.floor((availableW - (34 * gap)) / 35);
-                  const clampedDot = Math.min(Math.max(dotSize, 5), 10);
-                  return (["fajr", "dhuhr", "asr", "maghrib", "isha"] as const).map((prayer) => (
-                    <View key={prayer} style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
-                      <Text style={{ fontFamily: "Inter_500Medium", fontSize: 10, color: colors.textSecondary, width: labelW, textTransform: "capitalize" }}>
-                        {prayer}
-                      </Text>
-                      <View style={{ flexDirection: "row", gap, flexWrap: "nowrap", flex: 1 }}>
-                        {heatmapData.map((day, di) => {
-                          const status = day[prayer];
-                          let dotColor = colors.surfaceSecondary;
-                          if (status === 1) dotColor = colors.emerald;
-                          else if (status === 2) dotColor = colors.gold;
-                          else if (status === 3) dotColor = colors.emerald + "50";
-                          else if (status === 4) dotColor = "#EF4444";
-                          return (
-                            <View
-                              key={di}
-                              style={{
-                                flex: 1,
-                                aspectRatio: 1,
-                                maxWidth: clampedDot,
-                                maxHeight: clampedDot,
-                                borderRadius: 1.5,
-                                backgroundColor: dotColor,
-                              }}
-                            />
-                          );
-                        })}
-                      </View>
-                    </View>
-                  ));
-                })()}
-                <View style={{ flexDirection: "row", justifyContent: "center", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                    <View style={{ width: 7, height: 7, borderRadius: 1.5, backgroundColor: colors.emerald }} />
-                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 9, color: colors.textSecondary }}>On time</Text>
-                  </View>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                    <View style={{ width: 7, height: 7, borderRadius: 1.5, backgroundColor: colors.gold }} />
-                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 9, color: colors.textSecondary }}>Masjid</Text>
-                  </View>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                    <View style={{ width: 7, height: 7, borderRadius: 1.5, backgroundColor: colors.emerald + "50" }} />
-                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 9, color: colors.textSecondary }}>Made up</Text>
-                  </View>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                    <View style={{ width: 7, height: 7, borderRadius: 1.5, backgroundColor: "#EF4444" }} />
-                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 9, color: colors.textSecondary }}>Excused</Text>
-                  </View>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                    <View style={{ width: 7, height: 7, borderRadius: 1.5, backgroundColor: colors.surfaceSecondary }} />
-                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 9, color: colors.textSecondary }}>Missed</Text>
-                  </View>
-                </View>
-              </View>
-            )}
           </>
 
         {showTrackerOnboarding && (
@@ -2274,55 +2261,55 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
     borderWidth: 1,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   calMonthText: {
-    fontSize: 16,
-    fontFamily: "Inter_700Bold",
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
   },
   calGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
-    padding: 6,
-    marginBottom: 12,
+    padding: 4,
+    marginBottom: 8,
   },
   calHeaderCell: {
     width: "14.28%",
     alignItems: "center",
-    paddingVertical: 6,
+    paddingVertical: 3,
   },
   calHeaderText: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: "Inter_600SemiBold",
   },
   calCell: {
     width: "14.28%",
     alignItems: "center",
-    paddingVertical: 6,
-    minHeight: 48,
+    paddingVertical: 4,
+    minHeight: 38,
     justifyContent: "center",
   },
   calDayText: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
   },
   calDots: {
     flexDirection: "row",
-    gap: 2,
-    marginTop: 3,
-    height: 6,
+    gap: 1.5,
+    marginTop: 2,
+    height: 5,
     alignItems: "center",
   },
   calDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
+    width: 3.5,
+    height: 3.5,
+    borderRadius: 1.75,
   },
   dayDetail: {
     borderRadius: 12,
@@ -2363,23 +2350,24 @@ const styles = StyleSheet.create({
   calLegend: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
+    gap: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
     borderWidth: 1,
+    flexWrap: "wrap",
   },
   calLegendItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 4,
   },
   calLegendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   calLegendText: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: "Inter_500Medium",
   },
   toggleTrack: {
