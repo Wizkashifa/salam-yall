@@ -782,7 +782,7 @@ export default function SettingsScreen() {
         </View>
         <View style={[styles.legendItem, { alignItems: "flex-start" }]}>
           <Ionicons name="star" size={11} color={colors.gold} style={{ marginTop: 2 }} />
-          <Text style={[styles.legendText, { color: colors.textTertiary, flex: 1 }]}>Starring a masjid with iqama times will show those times on your Home screen</Text>
+          <Text style={[styles.legendText, { color: colors.textSecondary, flex: 1 }]}>Starring a masjid with iqama times will show those times on your Home screen</Text>
         </View>
       </View>
 
