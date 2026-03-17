@@ -706,11 +706,11 @@ export default function EventsScreen() {
               <View key={group.dateKey} style={[styles.dateGroup, groupIdx === 0 && { marginTop: 0 }]}>
                 <View style={styles.dateHeaderRow}>
                   {isTodayGroup ? (
-                    <View style={[styles.todayDot, { backgroundColor: colors.emerald }]} />
+                    <View style={[styles.todayDot, { backgroundColor: isDark ? colors.gold : colors.emerald }]} />
                   ) : null}
                   <Text style={[
                     styles.dateGroupLabel,
-                    { color: isTodayGroup ? colors.emerald : colors.textSecondary },
+                    { color: isTodayGroup ? (isDark ? colors.gold : colors.emerald) : colors.textSecondary },
                   ]}>
                     {relativeLabel}
                   </Text>
