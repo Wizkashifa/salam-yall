@@ -3882,13 +3882,13 @@ Return ONLY the description text, nothing else.`,
   function formatShareDate(dateStr: string): string {
     try {
       const d = new Date(dateStr);
-      return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+      return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York" });
     } catch { return ""; }
   }
   function formatShareTime(dateStr: string): string {
     try {
       const d = new Date(dateStr);
-      return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+      return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/New_York" });
     } catch { return ""; }
   }
 
