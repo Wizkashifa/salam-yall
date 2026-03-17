@@ -989,28 +989,7 @@ export default function SettingsScreen() {
 
   const isRamadan = useMemo(() => {
     const d = new Date();
-    const gY = d.getFullYear();
-    const gM = d.getMonth() + 1;
-    const gD = d.getDate();
-    let jd: number;
-    if (gM <= 2) {
-      const adjY = gY - 1;
-      const adjM = gM + 12;
-      const A = Math.floor(adjY / 100);
-      const B = 2 - A + Math.floor(A / 4);
-      jd = Math.floor(365.25 * (adjY + 4716)) + Math.floor(30.6001 * (adjM + 1)) + gD + B - 1524.5;
-    } else {
-      const A = Math.floor(gY / 100);
-      const B = 2 - A + Math.floor(A / 4);
-      jd = Math.floor(365.25 * (gY + 4716)) + Math.floor(30.6001 * (gM + 1)) + gD + B - 1524.5;
-    }
-    const L = Math.floor(jd - 1948439.5) + 10632;
-    const N = Math.floor((L - 1) / 10631);
-    const Lr = L - 10631 * N + 354;
-    const J = Math.floor((10985 - Lr) / 5316) * Math.floor((50 * Lr) / 17719) + Math.floor(Lr / 5670) * Math.floor((43 * Lr) / 15238);
-    const Ld = Lr - Math.floor((30 - J) / 15) * Math.floor((17719 * J) / 50) - Math.floor(J / 16) * Math.floor((15238 * J) / 43) + 29;
-    const hM = Math.floor((24 * Ld) / 709);
-    return hM === 9;
+    return d < new Date(2026, 2, 20);
   }, []);
 
   const trackerTitle = isRamadan ? "Fast & Prayer Tracker" : "Prayer Tracker";
