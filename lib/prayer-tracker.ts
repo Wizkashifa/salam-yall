@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const STORAGE_KEY = "prayer_tracker";
 const MISSED_FASTS_KEY = "missed_fasts";
+const CACHED_PRAYER_TIMES_KEY = "cached_prayer_times";
 
 export type PrayerStatus = 0 | 1 | 2 | 3;
 
@@ -29,11 +30,52 @@ const DEFAULT_DAY_LOG: DayLog = {
   isha: 0,
 };
 
+export type PrayerTimesMap = { fajr?: Date; dhuhr?: Date; asr?: Date; maghrib?: Date; isha?: Date };
+
+interface CachedPrayerTimesRaw {
+  dateKey: string;
+  fajr?: string;
+  dhuhr?: string;
+  asr?: string;
+  maghrib?: string;
+  isha?: string;
+}
+
 function formatDateKey(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+export async function cacheTodayPrayerTimes(times: PrayerTimesMap): Promise<void> {
+  const raw: CachedPrayerTimesRaw = {
+    dateKey: formatDateKey(new Date()),
+    fajr: times.fajr?.toISOString(),
+    dhuhr: times.dhuhr?.toISOString(),
+    asr: times.asr?.toISOString(),
+    maghrib: times.maghrib?.toISOString(),
+    isha: times.isha?.toISOString(),
+  };
+  await AsyncStorage.setItem(CACHED_PRAYER_TIMES_KEY, JSON.stringify(raw));
+}
+
+async function getCachedPrayerTimes(): Promise<PrayerTimesMap | undefined> {
+  try {
+    const raw = await AsyncStorage.getItem(CACHED_PRAYER_TIMES_KEY);
+    if (!raw) return undefined;
+    const parsed: CachedPrayerTimesRaw = JSON.parse(raw);
+    if (parsed.dateKey !== formatDateKey(new Date())) return undefined;
+    return {
+      fajr: parsed.fajr ? new Date(parsed.fajr) : undefined,
+      dhuhr: parsed.dhuhr ? new Date(parsed.dhuhr) : undefined,
+      asr: parsed.asr ? new Date(parsed.asr) : undefined,
+      maghrib: parsed.maghrib ? new Date(parsed.maghrib) : undefined,
+      isha: parsed.isha ? new Date(parsed.isha) : undefined,
+    };
+  } catch {
+    return undefined;
+  }
 }
 
 async function loadAll(): Promise<PrayerTrackerData> {
@@ -116,14 +158,15 @@ export function isPrayerExpired(
 export async function cyclePrayerStatus(
   date: Date,
   prayer: PrayerName,
-  prayerTimesForDate?: { fajr?: Date; dhuhr?: Date; asr?: Date; maghrib?: Date; isha?: Date }
+  prayerTimesForDate?: PrayerTimesMap
 ): Promise<DayLog> {
   const data = await loadAll();
   const key = formatDateKey(date);
   const existing = data[key] ?? { ...DEFAULT_DAY_LOG };
   const current = existing[prayer];
 
-  const expired = isPrayerExpired(prayer, date, prayerTimesForDate);
+  const times = prayerTimesForDate ?? (formatDateKey(date) === formatDateKey(new Date()) ? await getCachedPrayerTimes() : undefined);
+  const expired = isPrayerExpired(prayer, date, times);
 
   let next: PrayerStatus;
   if (expired) {
@@ -138,11 +181,9 @@ export async function cyclePrayerStatus(
   return existing;
 }
 
-export async function getMissedPrayerCount(
-  days: number = 7,
-  todayPrayerTimes?: { fajr?: Date; dhuhr?: Date; asr?: Date; maghrib?: Date; isha?: Date }
-): Promise<number> {
+export async function getMissedPrayerCount(days: number = 7): Promise<number> {
   const data = await loadAll();
+  const todayPrayerTimes = await getCachedPrayerTimes();
   let count = 0;
   const today = new Date();
 

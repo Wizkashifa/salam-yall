@@ -47,7 +47,7 @@ import {
   type Masjid,
 } from "@/lib/prayer-utils";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { cyclePrayerStatus, getPrayerLog, getMissedFastCount, logMakeupFast, getMissedPrayerCount, type DayLog, type PrayerName as TrackerPrayerName } from "@/lib/prayer-tracker";
+import { cyclePrayerStatus, getPrayerLog, getMissedFastCount, logMakeupFast, getMissedPrayerCount, cacheTodayPrayerTimes, type DayLog, type PrayerName as TrackerPrayerName } from "@/lib/prayer-tracker";
 import { getDailyVerse, isFriday, type DailyVerse } from "@/lib/daily-content";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 import { expandSearchTerms } from "@/lib/search-synonyms";
@@ -594,6 +594,13 @@ export default function PrayerScreen() {
     const isHanafi = asrCalc === "hanafi";
     const todayPrayers = getPrayerTimes(lat, lon, now, calcMethod, isHanafi);
     setPrayers(todayPrayers);
+    cacheTodayPrayerTimes({
+      fajr: todayPrayers.find(p => p.name === "fajr")?.time,
+      dhuhr: todayPrayers.find(p => p.name === "dhuhr")?.time,
+      asr: todayPrayers.find(p => p.name === "asr")?.time,
+      maghrib: todayPrayers.find(p => p.name === "maghrib")?.time,
+      isha: todayPrayers.find(p => p.name === "isha")?.time,
+    });
     setHijriDate(toHijriDate(now, hijriOffset));
     setUserCoords({ lat, lon });
 
@@ -704,31 +711,17 @@ export default function PrayerScreen() {
 
   useFocusEffect(useCallback(() => {
     getMissedFastCount().then(setMissedFastCount);
-    const prayerTimesMap = prayers.length > 0 ? {
-      fajr: prayers.find(p => p.name === "fajr")?.time,
-      dhuhr: prayers.find(p => p.name === "dhuhr")?.time,
-      asr: prayers.find(p => p.name === "asr")?.time,
-      maghrib: prayers.find(p => p.name === "maghrib")?.time,
-      isha: prayers.find(p => p.name === "isha")?.time,
-    } : undefined;
-    getMissedPrayerCount(7, prayerTimesMap).then(setMissedPrayerCount);
-  }, [prayers]));
+    getMissedPrayerCount().then(setMissedPrayerCount);
+  }, []));
 
   const handlePrayerPillPress = useCallback(async (prayerName: string) => {
     const trackerName = prayerName as TrackerPrayerName;
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const prayerTimesMap = prayers.length > 0 ? {
-      fajr: prayers.find(p => p.name === "fajr")?.time,
-      dhuhr: prayers.find(p => p.name === "dhuhr")?.time,
-      asr: prayers.find(p => p.name === "asr")?.time,
-      maghrib: prayers.find(p => p.name === "maghrib")?.time,
-      isha: prayers.find(p => p.name === "isha")?.time,
-    } : undefined;
-    const updated = await cyclePrayerStatus(new Date(), trackerName, prayerTimesMap);
+    const updated = await cyclePrayerStatus(new Date(), trackerName);
     setTodayLog(updated);
-    getMissedPrayerCount(7, prayerTimesMap).then(setMissedPrayerCount);
+    getMissedPrayerCount().then(setMissedPrayerCount);
     trackEvent("prayer_tracked", { prayer: prayerName, status: updated[trackerName] });
-  }, [prayers]);
+  }, []);
 
   const dailyVerse = useMemo(() => getDailyVerse(), []);
   const [showVerseModal, setShowVerseModal] = useState(false);
