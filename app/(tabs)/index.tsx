@@ -1165,7 +1165,7 @@ export default function PrayerScreen() {
                   <View style={{ height: 30, alignItems: "center", justifyContent: "center" }}>
                     <Ionicons name="flame" size={26} color={isDark ? ((onTimeStreak > 0 || prayerStreak > 0) ? colors.gold : "#FFFFFF") : ((onTimeStreak > 0 || prayerStreak > 0) ? colors.emerald : colors.text)} />
                   </View>
-                  <Text style={{ fontSize: 11, fontFamily: "Inter_700Bold", color: isDark ? ((onTimeStreak > 0 || prayerStreak > 0) ? colors.gold : "#FFFFFF") : ((onTimeStreak > 0 || prayerStreak > 0) ? colors.emerald : colors.text) }}>
+                  <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: isDark ? ((onTimeStreak > 0 || prayerStreak > 0) ? colors.gold : "#FFFFFF") : ((onTimeStreak > 0 || prayerStreak > 0) ? colors.emerald : colors.text), marginTop: 2 }}>
                     {onTimeStreak > 0 ? `${onTimeStreak}d` : prayerStreak > 0 ? `${prayerStreak}d` : "0d"}
                   </Text>
                 </Pressable>
