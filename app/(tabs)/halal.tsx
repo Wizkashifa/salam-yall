@@ -1119,7 +1119,7 @@ export default function HalalScreen() {
         <Pressable
           style={({ pressed }) => [
             styles.card,
-            { backgroundColor: colors.surface, opacity: pressed ? 0.95 : 1 },
+            { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.95 : 1 },
           ]}
           onPress={() => { setSelectedRestaurant(item); trackEvent("restaurant_viewed", { name: item.name, id: item.id }); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
           testID={`restaurant-${item.id}`}
@@ -1483,8 +1483,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   card: {
-    borderRadius: 12,
+    borderRadius: 14,
     marginBottom: 10,
+    borderWidth: 1,
     overflow: "hidden",
     ...Platform.select({
       ios: {

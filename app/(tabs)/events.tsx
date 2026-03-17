@@ -735,6 +735,7 @@ export default function EventsScreen() {
                         styles.eventCard,
                         {
                           backgroundColor: colors.surface,
+                          borderColor: colors.border,
                           opacity: pressed ? 0.92 : 1,
                           shadowColor: colors.cardShadow,
                         },
@@ -879,9 +880,10 @@ const styles = StyleSheet.create({
   },
   eventCard: {
     marginHorizontal: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     overflow: "hidden",
     marginBottom: 10,
+    borderWidth: 1,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 4,
