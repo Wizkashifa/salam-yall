@@ -1110,7 +1110,7 @@ export default function SettingsScreen() {
                       const parts = dateKey.split("-");
                       const dayDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
                       const isDayInRamadan = dayDate < new Date(2026, 2, 20);
-                      if (isDayInRamadan) {
+                      if (isDayInRamadan || isMissedFast) {
                         await toggleMissedFast(dateKey);
                         const updated = await getMonthMissedFasts(trackerYear, trackerMonth);
                         setMissedFasts(updated);
