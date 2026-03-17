@@ -778,6 +778,10 @@ export default function SettingsScreen() {
           <MaterialCommunityIcons name="mosque" size={14} color={colors.gold} />
           <Text style={[styles.legendText, { color: colors.textSecondary }]}>Iqama times available</Text>
         </View>
+        <View style={[styles.legendItem, { marginTop: 4 }]}>
+          <Ionicons name="star" size={11} color={colors.gold} />
+          <Text style={[styles.legendText, { color: colors.textTertiary, flex: 1 }]}>Starring a masjid with iqama times will show those times on your Home Screen</Text>
+        </View>
       </View>
 
       {sortedMasjids.map((entry, i) => {
