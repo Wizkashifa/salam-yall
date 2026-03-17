@@ -1002,6 +1002,8 @@ export default function SettingsScreen() {
 
   const renderPrayerTracker = () => {
     const selectedLog = selectedDay ? monthLogs[selectedDay] : null;
+    const gcBg = isDark ? "rgba(22,22,22,0.9)" : "rgba(255,255,255,0.85)";
+    const gcBorder = isDark ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.8)";
     return (
       <>
         <Pressable
@@ -1014,7 +1016,7 @@ export default function SettingsScreen() {
 
         <>
             {heatmapData.length > 0 && (
-              <View style={{ backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 12, marginBottom: 10 }}>
+              <View style={{ backgroundColor: gcBg, borderRadius: 16, borderWidth: 1, borderColor: gcBorder, padding: 12, marginBottom: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
                   <Ionicons name="grid" size={16} color={colors.emerald} />
                   <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: colors.text }}>Prayer Heatmap</Text>
@@ -1074,7 +1076,7 @@ export default function SettingsScreen() {
               </View>
             )}
 
-            <View style={[styles.calMonthRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.calMonthRow, { backgroundColor: gcBg, borderColor: gcBorder, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }]}>
               <Pressable onPress={handlePrevMonth} hitSlop={12}>
                 <Ionicons name="chevron-back" size={20} color={colors.text} />
               </Pressable>
@@ -1086,7 +1088,7 @@ export default function SettingsScreen() {
               </Pressable>
             </View>
 
-            <View style={[styles.calGrid, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.calGrid, { backgroundColor: gcBg, borderColor: gcBorder, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }]}>
               {DAY_HEADERS.map(d => (
                 <View key={d} style={styles.calHeaderCell}>
                   <Text style={[styles.calHeaderText, { color: colors.textSecondary }]}>{d}</Text>
@@ -1137,7 +1139,7 @@ export default function SettingsScreen() {
             </View>
 
             {selectedDay && (
-              <View style={[styles.dayDetail, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={[styles.dayDetail, { backgroundColor: gcBg, borderColor: gcBorder, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }]}>
                 <Text style={[styles.dayDetailTitle, { color: colors.text }]}>
                   {new Date(trackerYear, trackerMonth - 1, parseInt(selectedDay.split("-")[2])).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
                 </Text>
@@ -1182,7 +1184,7 @@ export default function SettingsScreen() {
               </View>
             )}
 
-            <View style={[styles.calLegend, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.calLegend, { backgroundColor: gcBg, borderColor: gcBorder }]}>
               {[
                 { color: colors.gold, label: "Completed" },
                 { color: colors.emerald, label: "At masjid" },
@@ -1480,7 +1482,7 @@ export default function SettingsScreen() {
               style={({ pressed }) => [
                 styles.menuItem,
                 {
-                  backgroundColor: isActive ? (isDark ? colors.emerald + "15" : colors.emerald + "08") : (pressed ? colors.surfaceSecondary : colors.surface),
+                  backgroundColor: isActive ? colors.prayerIconBg : (pressed ? colors.surfaceSecondary : colors.surface),
                   borderColor: isActive ? colors.emerald + "40" : colors.border,
                 },
               ]}
@@ -2263,7 +2265,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 10,
+    borderRadius: 16,
     borderWidth: 1,
     marginBottom: 8,
   },
@@ -2274,7 +2276,7 @@ const styles = StyleSheet.create({
   calGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    borderRadius: 10,
+    borderRadius: 16,
     borderWidth: 1,
     padding: 4,
     marginBottom: 8,
@@ -2352,7 +2354,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 16,
     paddingVertical: 8,
-    borderRadius: 10,
+    borderRadius: 16,
     borderWidth: 1,
     flexWrap: "wrap",
   },

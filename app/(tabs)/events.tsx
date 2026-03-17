@@ -168,8 +168,11 @@ function EventCalendar({
   for (let i = 0; i < firstDay; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
+  const gcBg = isDark ? "rgba(22,22,22,0.9)" : "rgba(255,255,255,0.85)";
+  const gcBorder = isDark ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.8)";
+
   return (
-    <View style={[calStyles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <View style={[calStyles.container, { backgroundColor: gcBg, borderColor: gcBorder, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }]}>
       <View style={calStyles.header}>
         <Pressable onPress={prevMonth} hitSlop={12}>
           <Ionicons name="chevron-back" size={20} color={colors.text} />
@@ -246,7 +249,7 @@ function EventCalendar({
 const calStyles = StyleSheet.create({
   container: {
     marginHorizontal: 16,
-    borderRadius: 10,
+    borderRadius: 16,
     borderWidth: 1,
     padding: 4,
     paddingBottom: 6,
