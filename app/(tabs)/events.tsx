@@ -703,7 +703,7 @@ export default function EventsScreen() {
                   }}
                   style={({ pressed }) => ({
                     flex: 1,
-                    height: 42,
+                    height: 36,
                     borderRadius: 12,
                     backgroundColor: isActive ? colors.emerald : "rgba(255,255,255,0.12)",
                     borderWidth: 1,
