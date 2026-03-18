@@ -15,6 +15,8 @@ import {
   PanResponder,
   Animated,
   Dimensions,
+  Image,
+  Modal,
 } from "react-native";
 
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -146,6 +148,7 @@ export default function SettingsScreen() {
   const [growthTab, setGrowthTab] = useState<"statistics" | "badges">("statistics");
   const [selectedMasjid, setSelectedMasjid] = useState<Masjid | null>(null);
   const [selectedCommunityOrg, setSelectedCommunityOrg] = useState<CommunityOrg | null>(null);
+  const [selectedOrgEvent, setSelectedOrgEvent] = useState<any>(null);
   const [feedbackType, setFeedbackType] = useState<"bug" | "feature">("feature");
   const [feedbackText, setFeedbackText] = useState("");
   const [feedbackEmail, setFeedbackEmail] = useState("");
@@ -964,9 +967,13 @@ export default function SettingsScreen() {
             style={({ pressed }) => [styles.masjidRow, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
             onPress={() => { setSelectedCommunityOrg(org); setSection("communityOrgDetail"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
           >
-            <View style={[styles.masjidIcon, { backgroundColor: colors.prayerIconBg }]}>
-              <Ionicons name="people" size={16} color={colors.emerald} />
-            </View>
+            {org.logo ? (
+              <Image source={org.logo} style={{ width: 36, height: 36, borderRadius: 18 }} resizeMode="cover" />
+            ) : (
+              <View style={[styles.masjidIcon, { backgroundColor: colors.prayerIconBg }]}>
+                <Ionicons name="people" size={16} color={colors.emerald} />
+              </View>
+            )}
             <View style={{ flex: 1 }}>
               <Text style={[styles.masjidName, { color: colors.text }]} numberOfLines={1}>{org.name}</Text>
               <Text style={[styles.masjidAddr, { color: colors.textSecondary }]} numberOfLines={1}>{org.address}</Text>
@@ -986,6 +993,7 @@ export default function SettingsScreen() {
 
   const renderCommunityOrgDetail = () => {
     if (!selectedCommunityOrg) return null;
+    const campuses = selectedCommunityOrg.campuses;
     return (
       <>
         <Pressable
@@ -997,9 +1005,13 @@ export default function SettingsScreen() {
         </Pressable>
 
         <View style={styles.masjidDetailHeader}>
-          <View style={[styles.masjidDetailIcon, { backgroundColor: colors.prayerIconBg }]}>
-            <Ionicons name="people" size={28} color={colors.emerald} />
-          </View>
+          {selectedCommunityOrg.logo ? (
+            <Image source={selectedCommunityOrg.logo} style={{ width: 56, height: 56, borderRadius: 28 }} resizeMode="cover" />
+          ) : (
+            <View style={[styles.masjidDetailIcon, { backgroundColor: colors.prayerIconBg }]}>
+              <Ionicons name="people" size={28} color={colors.emerald} />
+            </View>
+          )}
           <Text style={[styles.masjidDetailName, { color: colors.text }]}>{selectedCommunityOrg.name}</Text>
         </View>
 
@@ -1008,12 +1020,23 @@ export default function SettingsScreen() {
         ) : null}
 
         <View style={[styles.detailCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Pressable style={styles.detailRow} onPress={() => openMasjidDirections(selectedCommunityOrg.address)}>
-            <Ionicons name="location-outline" size={18} color={colors.emerald} />
-            <Text style={[styles.detailText, { color: colors.text, flex: 1 }]}>{selectedCommunityOrg.address}</Text>
-            <Ionicons name="navigate-outline" size={14} color={colors.gold} />
-          </Pressable>
-          <Pressable style={styles.detailRow} onPress={() => Linking.openURL(selectedCommunityOrg.website).catch(() => {})}>
+          {campuses && campuses.length > 0 ? campuses.map((campus, ci) => (
+            <Pressable key={ci} style={[styles.detailRow, ci > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]} onPress={() => openMasjidDirections(campus.address)}>
+              <Ionicons name="location-outline" size={18} color={colors.emerald} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.detailText, { color: colors.text, fontFamily: "Inter_600SemiBold" }]}>{campus.name}</Text>
+                <Text style={[styles.detailText, { color: colors.textSecondary, fontSize: 13, marginTop: 2 }]}>{campus.address}</Text>
+              </View>
+              <Ionicons name="navigate-outline" size={14} color={colors.gold} />
+            </Pressable>
+          )) : (
+            <Pressable style={styles.detailRow} onPress={() => openMasjidDirections(selectedCommunityOrg.address)}>
+              <Ionicons name="location-outline" size={18} color={colors.emerald} />
+              <Text style={[styles.detailText, { color: colors.text, flex: 1 }]}>{selectedCommunityOrg.address}</Text>
+              <Ionicons name="navigate-outline" size={14} color={colors.gold} />
+            </Pressable>
+          )}
+          <Pressable style={[styles.detailRow, { borderTopWidth: 1, borderTopColor: colors.border }]} onPress={() => Linking.openURL(selectedCommunityOrg.website).catch(() => {})}>
             <Ionicons name="globe-outline" size={18} color={colors.emerald} />
             <Text style={[styles.detailText, { color: colors.gold, flex: 1 }]} numberOfLines={1}>
               {selectedCommunityOrg.website.replace(/^https?:\/\/(www\.)?/, "")}
@@ -1026,17 +1049,27 @@ export default function SettingsScreen() {
         {communityOrgEvents.length > 0 ? communityOrgEvents.map((ev) => {
           const date = new Date(ev.start);
           const time = ev.isAllDay ? "All Day" : date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+          const hasImage = !!ev.imageUrl;
           return (
-            <View key={ev.id} style={[styles.eventCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <View style={[styles.eventBadge, { backgroundColor: isDark ? colors.actionButtonBg : colors.prayerIconBg }]}>
-                <Text style={[styles.eventDay, { color: colors.emerald }]}>{date.getDate()}</Text>
-                <Text style={[styles.eventMonth, { color: colors.emerald }]}>{date.toLocaleDateString("en-US", { month: "short" })}</Text>
-              </View>
+            <Pressable key={ev.id} style={[styles.eventCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={() => { setSelectedOrgEvent(ev); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+            >
+              {hasImage ? (
+                <Image source={{ uri: ev.imageUrl }} style={{ width: 52, height: 52, borderRadius: 10 }} resizeMode="cover" />
+              ) : selectedCommunityOrg.logo ? (
+                <Image source={selectedCommunityOrg.logo} style={{ width: 52, height: 52, borderRadius: 10 }} resizeMode="cover" />
+              ) : (
+                <View style={[styles.eventBadge, { backgroundColor: isDark ? colors.actionButtonBg : colors.prayerIconBg }]}>
+                  <Text style={[styles.eventDay, { color: colors.emerald }]}>{date.getDate()}</Text>
+                  <Text style={[styles.eventMonth, { color: colors.emerald }]}>{date.toLocaleDateString("en-US", { month: "short" })}</Text>
+                </View>
+              )}
               <View style={{ flex: 1 }}>
                 <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={2}>{ev.title}</Text>
-                <Text style={[styles.eventTime, { color: colors.textSecondary }]}>{time}</Text>
+                <Text style={[styles.eventTime, { color: colors.textSecondary }]}>{time}{ev.location ? ` · ${ev.location}` : ""}</Text>
               </View>
-            </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+            </Pressable>
           );
         }) : (
           <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -1044,6 +1077,87 @@ export default function SettingsScreen() {
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No upcoming events</Text>
           </View>
         )}
+
+        <Modal visible={!!selectedOrgEvent} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setSelectedOrgEvent(null)}>
+          {selectedOrgEvent && (() => {
+            const ev = selectedOrgEvent;
+            const dateInfo = new Date(ev.start);
+            const endDate = ev.end ? new Date(ev.end) : null;
+            const fullDate = dateInfo.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+            const timeStr = ev.isAllDay ? "All Day" : dateInfo.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+            const endTimeStr = endDate && !ev.isAllDay ? endDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }) : null;
+            const timeRange = endTimeStr ? `${timeStr} – ${endTimeStr}` : timeStr;
+            const openMaps = () => {
+              if (ev.location) Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ev.location)}`);
+            };
+            const modalImageSource = ev.imageUrl ? { uri: ev.imageUrl } : selectedCommunityOrg?.logo || null;
+            return (
+              <View style={{ flex: 1, backgroundColor: colors.background }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingTop: Platform.OS === "web" ? 67 : 12, paddingHorizontal: 16, position: "absolute", top: 0, left: 0, right: 0, zIndex: 10 }}>
+                  <Pressable onPress={() => setSelectedOrgEvent(null)} hitSlop={8} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.85)", justifyContent: "center", alignItems: "center" }}>
+                    <Ionicons name="close" size={20} color={isDark ? "#fff" : "#374151"} />
+                  </Pressable>
+                  <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); Share.share({ message: `Check out "${ev.title}" by ${ev.organizer}` }); }} hitSlop={8} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.85)", justifyContent: "center", alignItems: "center" }}>
+                    <Ionicons name="share-outline" size={18} color={isDark ? "#fff" : "#374151"} />
+                  </Pressable>
+                </View>
+                <ScrollView bounces={false} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+                  {modalImageSource ? (
+                    <Image source={modalImageSource} style={{ width: "100%", aspectRatio: 1 }} resizeMode="cover" />
+                  ) : (
+                    <View style={{ width: "100%", height: 160, backgroundColor: colors.prayerIconBg, justifyContent: "center", alignItems: "center" }}>
+                      <Ionicons name="calendar" size={48} color={colors.emerald} />
+                    </View>
+                  )}
+                  <View style={{ padding: 20 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 12, backgroundColor: colors.gold + "20", alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+                      <MaterialCommunityIcons name="office-building-outline" size={12} color={colors.gold} />
+                      <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.gold }}>{ev.organizer}</Text>
+                    </View>
+                    <Text style={{ fontSize: 24, fontFamily: "Inter_700Bold", color: colors.text, marginBottom: 16 }}>{ev.title}</Text>
+                    <View style={{ gap: 12, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.divider }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                        <Ionicons name="calendar-outline" size={18} color={colors.emerald} />
+                        <Text style={{ fontSize: 15, fontFamily: "Inter_500Medium", color: colors.text }}>{fullDate}</Text>
+                      </View>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                        <Ionicons name="time-outline" size={18} color={colors.emerald} />
+                        <Text style={{ fontSize: 15, fontFamily: "Inter_500Medium", color: colors.text }}>{timeRange}</Text>
+                      </View>
+                      {ev.location ? (
+                        <Pressable style={{ flexDirection: "row", alignItems: "center", gap: 12 }} onPress={openMaps}>
+                          <Ionicons name="location-outline" size={18} color={colors.emerald} />
+                          <Text style={{ fontSize: 15, fontFamily: "Inter_500Medium", color: colors.text, flex: 1 }}>{ev.location}</Text>
+                          <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                        </Pressable>
+                      ) : null}
+                    </View>
+                    {ev.description?.trim() ? (
+                      <View style={{ paddingTop: 16, marginTop: 16, borderTopWidth: 1, borderTopColor: colors.divider }}>
+                        <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.textSecondary, marginBottom: 8, textTransform: "uppercase" }}>Details</Text>
+                        <Text style={{ fontSize: 15, fontFamily: "Inter_400Regular", color: colors.text, lineHeight: 22 }}>{ev.description}</Text>
+                      </View>
+                    ) : null}
+                    <View style={{ flexDirection: "row", gap: 12, marginTop: 24 }}>
+                      {ev.registrationUrl ? (
+                        <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); Linking.openURL(ev.registrationUrl); }} style={({ pressed }) => ({ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14, borderRadius: 14, backgroundColor: colors.emerald, opacity: pressed ? 0.85 : 1 })}>
+                          <Ionicons name="open-outline" size={18} color="#fff" />
+                          <Text style={{ fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" }}>Register / RSVP</Text>
+                        </Pressable>
+                      ) : null}
+                      {ev.location ? (
+                        <Pressable style={({ pressed }) => ({ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14, borderRadius: 14, backgroundColor: colors.gold, opacity: pressed ? 0.85 : 1 })} onPress={openMaps}>
+                          <Ionicons name="navigate" size={18} color="#fff" />
+                          <Text style={{ fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" }}>Directions</Text>
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  </View>
+                </ScrollView>
+              </View>
+            );
+          })()}
+        </Modal>
       </>
     );
   };

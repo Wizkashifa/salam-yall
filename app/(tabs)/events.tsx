@@ -29,7 +29,7 @@ import * as Location from "expo-location";
 import { useAuth } from "@/lib/auth-context";
 import { getApiUrl, apiRequest } from "@/lib/query-client";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
-import { getDistanceKm, kmToMiles } from "@/lib/prayer-utils";
+import { getDistanceKm, kmToMiles, COMMUNITY_ORGS } from "@/lib/prayer-utils";
 
 type DistanceFilter = 10 | 25 | 50 | 100 | "all";
 const DISTANCE_OPTIONS: { label: string; value: DistanceFilter }[] = [
@@ -77,6 +77,17 @@ const MASJID_KEYWORDS = [
 function isMasjid(organizer: string): boolean {
   const lower = organizer.toLowerCase();
   return MASJID_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
+function getOrgLogo(organizer: string): any {
+  if (!organizer) return null;
+  const lower = organizer.toLowerCase();
+  for (const org of COMMUNITY_ORGS) {
+    for (const term of org.matchTerms) {
+      if (lower.includes(term)) return org.logo || null;
+    }
+  }
+  return null;
 }
 
 function groupEventsByDate(events: CalendarEvent[]): { dateLabel: string; dateKey: string; events: CalendarEvent[] }[] {
@@ -403,6 +414,8 @@ function EventDetailModal({ event, visible, onClose, isSaved, onToggleSave }: { 
         <ScrollView style={styles.modalScroll} contentContainerStyle={{ paddingBottom: insets.bottom + 40 }} bounces={false} showsVerticalScrollIndicator={false}>
           {event.imageUrl ? (
             <Image source={{ uri: event.imageUrl }} style={styles.modalImage} resizeMode="cover" />
+          ) : getOrgLogo(event.organizer) ? (
+            <Image source={getOrgLogo(event.organizer)} style={styles.modalImage} resizeMode="cover" />
           ) : (
             <View style={[styles.modalImagePlaceholder, { backgroundColor: colors.prayerIconBg }]}>
               <Ionicons name="calendar" size={48} color={colors.emerald} />
@@ -813,6 +826,12 @@ export default function EventsScreen() {
                         {event.imageUrl ? (
                           <Image
                             source={{ uri: event.imageUrl }}
+                            style={styles.eventThumb}
+                            resizeMode="cover"
+                          />
+                        ) : getOrgLogo(event.organizer) ? (
+                          <Image
+                            source={getOrgLogo(event.organizer)}
                             style={styles.eventThumb}
                             resizeMode="cover"
                           />

@@ -134,6 +134,13 @@ export const NEARBY_MASJIDS: Masjid[] = [
   { name: "MCA Al-Noor", latitude: 37.3530, longitude: -121.9535, address: "1755 Catherine St, Santa Clara, CA 95050", website: "https://www.mcabayarea.org", matchTerms: ["mca al-noor", "mca alnoor", "mca noor", "catherine st"], hasIqama: true },
 ];
 
+export interface OrgCampus {
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+}
+
 export interface CommunityOrg {
   name: string;
   latitude: number;
@@ -142,6 +149,8 @@ export interface CommunityOrg {
   website: string;
   description: string;
   matchTerms: string[];
+  logo?: any;
+  campuses?: OrgCampus[];
 }
 
 export const COMMUNITY_ORGS: CommunityOrg[] = [
@@ -153,24 +162,41 @@ export const COMMUNITY_ORGS: CommunityOrg[] = [
     website: "https://www.lhproj.com/",
     description: "Community space fostering connection, dialogue, and personal growth through events, mentorship, and creative programming.",
     matchTerms: ["light house project", "lighthouse project", "lhproj"],
+    logo: require("@/assets/logos/lighthouse.png"),
   },
   {
     name: "Taleef Collective",
-    latitude: 37.7749,
-    longitude: -122.4194,
-    address: "San Francisco Bay Area, CA",
+    latitude: 37.5484,
+    longitude: -121.9886,
+    address: "43170 Osgood Rd, Fremont, CA 94539",
     website: "https://www.taleefcollective.org/",
     description: "A welcoming space for Muslims to learn, grow, and connect — especially those new or returning to the faith.",
     matchTerms: ["taleef collective", "taleef"],
+    logo: require("@/assets/logos/taleef.png"),
+    campuses: [
+      {
+        name: "Fremont Campus",
+        address: "43170 Osgood Rd, Fremont, CA 94539",
+        latitude: 37.5484,
+        longitude: -121.9886,
+      },
+      {
+        name: "Chicago Campus",
+        address: "1945 S Halsted St, Chicago, IL 60608",
+        latitude: 41.8557,
+        longitude: -87.6466,
+      },
+    ],
   },
   {
     name: "Roots DFW",
     latitude: 32.9857,
     longitude: -96.7502,
-    address: "Dallas-Fort Worth, TX",
+    address: "4200 International Pkwy, Carrollton, TX 75007",
     website: "https://www.rootsdfw.org/",
     description: "Building community among young Muslim professionals through social, spiritual, and service-oriented programming in the DFW metroplex.",
     matchTerms: ["roots dfw", "rootsdfw"],
+    logo: require("@/assets/logos/roots-dfw.png"),
   },
 ];
 

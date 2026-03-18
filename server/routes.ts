@@ -323,8 +323,9 @@ const KNOWN_COORDINATES: Record<string, { lat: number; lng: number }> = {
   "San Ramon Valley Islamic Center": { lat: 37.7770, lng: -121.9691 },
   "Muslim Community Association": { lat: 37.3769, lng: -121.9595 },
   "MCA Al-Noor": { lat: 37.3530, lng: -121.9535 },
-  "Taleef Collective": { lat: 37.7749, lng: -122.4194 },
+  "Taleef Collective": { lat: 37.5484, lng: -121.9886 },
   "Roots DFW": { lat: 32.9857, lng: -96.7502 },
+  "Roots Community": { lat: 32.9857, lng: -96.7502 },
 };
 
 function resolveCoordinates(organizer: string, location: string): { latitude: number | null; longitude: number | null } {
@@ -1213,7 +1214,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: `roots_dfw_${event.id}`,
           title: event.summary || "Untitled Event",
           description: cleanDescription(desc),
-          location: event.location || "Dallas-Fort Worth, TX",
+          location: event.location || "4200 International Pkwy, Carrollton, TX 75007",
           start: event.start?.dateTime || event.start?.date || "",
           end: event.end?.dateTime || event.end?.date || "",
           isAllDay: !event.start?.dateTime,
