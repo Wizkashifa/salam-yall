@@ -690,41 +690,39 @@ export default function EventsScreen() {
             <Ionicons name={showCalendar ? "calendar" : "map"} size={20} color="#fff" />
           </Pressable>
         </View>
-        {!isLoading && !error && activeEvents.length > 0 && (
-          <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10 }}>
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              {DISTANCE_OPTIONS.map((opt) => {
-                const isActive = distanceFilter === opt.value;
-                return (
-                  <Pressable
-                    key={opt.label}
-                    onPress={() => {
-                      setDistanceFilter(opt.value);
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }}
-                    style={({ pressed }) => ({
-                      flex: 1,
-                      height: 36,
-                      borderRadius: 12,
-                      backgroundColor: isActive ? colors.emerald : "rgba(255,255,255,0.12)",
-                      borderWidth: 1,
-                      borderColor: isActive ? colors.emerald : "rgba(255,255,255,0.2)",
-                      alignItems: "center" as const,
-                      justifyContent: "center" as const,
-                      opacity: pressed ? 0.8 : 1,
-                    })}
-                  >
-                    <Text style={{
-                      fontSize: 13,
-                      fontFamily: "Inter_600SemiBold",
-                      color: isActive ? "#fff" : "rgba(255,255,255,0.6)",
-                    }}>{opt.label}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+        <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10 }}>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            {DISTANCE_OPTIONS.map((opt) => {
+              const isActive = distanceFilter === opt.value;
+              return (
+                <Pressable
+                  key={opt.label}
+                  onPress={() => {
+                    setDistanceFilter(opt.value);
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }}
+                  style={({ pressed }) => ({
+                    flex: 1,
+                    height: 42,
+                    borderRadius: 12,
+                    backgroundColor: isActive ? colors.emerald : "rgba(255,255,255,0.12)",
+                    borderWidth: 1,
+                    borderColor: isActive ? colors.emerald : "rgba(255,255,255,0.2)",
+                    alignItems: "center" as const,
+                    justifyContent: "center" as const,
+                    opacity: pressed ? 0.8 : 1,
+                  })}
+                >
+                  <Text style={{
+                    fontSize: 13,
+                    fontFamily: "Inter_600SemiBold",
+                    color: isActive ? "#fff" : "rgba(255,255,255,0.6)",
+                  }}>{opt.label}</Text>
+                </Pressable>
+              );
+            })}
           </View>
-        )}
+        </View>
         <TickerBanner />
       </GlassHeader>
       <ScrollView
