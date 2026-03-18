@@ -1,5 +1,5 @@
-import { useRef, useEffect } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { useRef, useEffect, useState } from "react";
+import { View, Text, StyleSheet, Platform } from "react-native";
 import MapView, { Marker, Callout } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -37,6 +37,8 @@ function zoomToDelta(zoom: number): number {
 
 export function EventsMap({ events, userLocation, borderColor, backgroundColor, emeraldColor, goldColor, distanceFilter = "all", onSelectEvent }: EventsMapProps) {
   const mapRef = useRef<MapView>(null);
+  const [mapKey, setMapKey] = useState(0);
+  const prevFilterRef = useRef(distanceFilter);
 
   const mappableEvents = events.filter((e) => e.latitude != null && e.longitude != null && !e.isVirtual);
 
@@ -55,16 +57,26 @@ export function EventsMap({ events, userLocation, borderColor, backgroundColor, 
       : { latitude: 35.78, longitude: -78.64, latitudeDelta: delta, longitudeDelta: delta };
 
   useEffect(() => {
-    try {
-      if (mapRef.current) {
-        mapRef.current.animateToRegion(region, 500);
+    if (prevFilterRef.current !== distanceFilter) {
+      prevFilterRef.current = distanceFilter;
+      if (Platform.OS !== "web") {
+        setMapKey(k => k + 1);
       }
-    } catch {}
-  }, [userLocation, distanceFilter]);
+    }
+  }, [distanceFilter]);
+
+  useEffect(() => {
+    if (userLocation && mapRef.current) {
+      try {
+        mapRef.current.animateToRegion(region, 500);
+      } catch {}
+    }
+  }, [userLocation]);
 
   return (
     <View style={[styles.container, { borderColor, backgroundColor, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }]}>
       <MapView
+        key={mapKey}
         ref={mapRef}
         style={styles.map}
         initialRegion={region}
