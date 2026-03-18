@@ -17,6 +17,7 @@ import {
   Modal,
   ScrollView,
   Dimensions,
+  Keyboard,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { GlassModalContainer } from "@/components/GlassModal";
@@ -1174,76 +1175,17 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
     );
   }
 
-  const surahPickerModal = (
-    <Modal visible={showSurahPicker !== null} transparent animationType="slide" onRequestClose={() => { setShowSurahPicker(null); setSurahPickerSearch(""); }}>
-      <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }} onPress={() => { setShowSurahPicker(null); setSurahPickerSearch(""); }}>
-        <Pressable onPress={() => {}}>
-          <GlassModalContainer style={{ borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: Dimensions.get("window").height * 0.65, flex: 0 }}>
-          <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-            <Text style={{ fontFamily: "Inter_700Bold", fontSize: 16, color: colors.text, textAlign: "center", marginBottom: 12 }}>
-              Select {showSurahPicker === "start" ? "Start" : "End"} Surah
-            </Text>
-            <View style={{ backgroundColor: colors.surfaceSecondary, borderRadius: 10, flexDirection: "row", alignItems: "center", paddingHorizontal: 12, gap: 8 }}>
-              <Ionicons name="search" size={16} color={colors.textTertiary} />
-              <TextInput
-                style={{ flex: 1, paddingVertical: 10, fontFamily: "Inter_400Regular", fontSize: 14, color: colors.text }}
-                placeholder="Search surah..."
-                placeholderTextColor={colors.textTertiary}
-                value={surahPickerSearch}
-                onChangeText={setSurahPickerSearch}
-                autoFocus
-              />
-            </View>
-          </View>
-          <FlatList
-            data={filteredPickerSurahs}
-            keyExtractor={s => String(s.id)}
-            style={{ maxHeight: Dimensions.get("window").height * 0.45 }}
-            renderItem={({ item: s }) => (
-              <Pressable
-                style={{ flexDirection: "row", alignItems: "center", paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: colors.border + "30", gap: 12 }}
-                onPress={() => {
-                  if (showSurahPicker === "start") {
-                    setPhysStartSurah(s.id);
-                    setPhysStartAyah(1);
-                  } else {
-                    setPhysEndSurah(s.id);
-                    setPhysEndAyah(s.verses_count);
-                  }
-                  setShowSurahPicker(null);
-                  setSurahPickerSearch("");
-                }}
-              >
-                <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.emerald + "18", alignItems: "center", justifyContent: "center" }}>
-                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, color: colors.emerald }}>{s.id}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: colors.text }}>{s.name_simple}</Text>
-                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: colors.textTertiary }}>{s.verses_count} ayahs</Text>
-                </View>
-                <Text style={{ fontFamily: "Inter_400Regular", fontSize: 16, color: colors.textTertiary }}>{s.name_arabic}</Text>
-              </Pressable>
-            )}
-          />
-        </GlassModalContainer>
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-
   const physicalReadingModal = (
-    <>
-      {surahPickerModal}
-      <Modal visible={showPhysicalModal} transparent animationType="slide" onRequestClose={() => setShowPhysicalModal(false)}>
-        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }} onPress={() => setShowPhysicalModal(false)}>
-          <Pressable onPress={() => {}}>
-            <GlassModalContainer style={{ borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: Dimensions.get("window").height * 0.7, flex: 0 }}>
+    <Modal visible={showPhysicalModal} transparent animationType="slide" onRequestClose={() => { setShowPhysicalModal(false); setShowSurahPicker(null); setSurahPickerSearch(""); }}>
+      <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }} onPress={() => { Keyboard.dismiss(); setShowPhysicalModal(false); setShowSurahPicker(null); setSurahPickerSearch(""); }}>
+        <Pressable onPress={() => Keyboard.dismiss()}>
+          <GlassModalContainer style={{ borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: Dimensions.get("window").height * 0.7, flex: 0 }}>
             <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: "center", marginBottom: 16 }} />
             <Text style={{ fontFamily: "Inter_700Bold", fontSize: 18, color: colors.text, textAlign: "center", marginBottom: 16 }}>Add Physical Reading</Text>
 
             <View style={{ flexDirection: "row", backgroundColor: colors.surfaceSecondary, borderRadius: 10, padding: 3, marginBottom: 20 }}>
               {(["surahs", "pages"] as const).map(t => (
-                <Pressable key={t} onPress={() => setPhysicalTab(t)} style={{ flex: 1, paddingVertical: 8, borderRadius: 8, backgroundColor: physicalTab === t ? colors.emerald : "transparent", alignItems: "center" }}>
+                <Pressable key={t} onPress={() => { Keyboard.dismiss(); setPhysicalTab(t); }} style={{ flex: 1, paddingVertical: 8, borderRadius: 8, backgroundColor: physicalTab === t ? colors.emerald : "transparent", alignItems: "center" }}>
                   <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: physicalTab === t ? "#fff" : colors.textSecondary }}>
                     {t === "surahs" ? "Surahs Read" : "Pages Completed"}
                   </Text>
@@ -1251,15 +1193,69 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
               ))}
             </View>
 
-            {physicalTab === "surahs" ? (
-              <ScrollView style={{ maxHeight: 300 }}>
+            {showSurahPicker !== null ? (
+              <View>
+                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
+                  <Pressable onPress={() => { setShowSurahPicker(null); setSurahPickerSearch(""); }} style={{ padding: 4 }}>
+                    <Ionicons name="chevron-back" size={20} color={colors.text} />
+                  </Pressable>
+                  <Text style={{ fontFamily: "Inter_700Bold", fontSize: 16, color: colors.text, flex: 1, textAlign: "center", marginRight: 24 }}>
+                    Select {showSurahPicker === "start" ? "Start" : "End"} Surah
+                  </Text>
+                </View>
+                <View style={{ backgroundColor: colors.surfaceSecondary, borderRadius: 10, flexDirection: "row", alignItems: "center", paddingHorizontal: 12, gap: 8, marginBottom: 8 }}>
+                  <Ionicons name="search" size={16} color={colors.textTertiary} />
+                  <TextInput
+                    style={{ flex: 1, paddingVertical: 10, fontFamily: "Inter_400Regular", fontSize: 14, color: colors.text }}
+                    placeholder="Search surah..."
+                    placeholderTextColor={colors.textTertiary}
+                    value={surahPickerSearch}
+                    onChangeText={setSurahPickerSearch}
+                    autoFocus
+                    returnKeyType="search"
+                  />
+                </View>
+                <FlatList
+                  data={filteredPickerSurahs}
+                  keyExtractor={s => String(s.id)}
+                  keyboardShouldPersistTaps="handled"
+                  style={{ maxHeight: Dimensions.get("window").height * 0.35 }}
+                  renderItem={({ item: s }) => (
+                    <Pressable
+                      style={{ flexDirection: "row", alignItems: "center", paddingVertical: 12, paddingHorizontal: 8, borderBottomWidth: 1, borderBottomColor: colors.border + "30", gap: 12 }}
+                      onPress={() => {
+                        if (showSurahPicker === "start") {
+                          setPhysStartSurah(s.id);
+                          setPhysStartAyah(1);
+                        } else {
+                          setPhysEndSurah(s.id);
+                          setPhysEndAyah(s.verses_count);
+                        }
+                        setShowSurahPicker(null);
+                        setSurahPickerSearch("");
+                      }}
+                    >
+                      <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.emerald + "18", alignItems: "center", justifyContent: "center" }}>
+                        <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, color: colors.emerald }}>{s.id}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: colors.text }}>{s.name_simple}</Text>
+                        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: colors.textTertiary }}>{s.verses_count} ayahs</Text>
+                      </View>
+                      <Text style={{ fontFamily: "Inter_400Regular", fontSize: 16, color: colors.textTertiary }}>{s.name_arabic}</Text>
+                    </Pressable>
+                  )}
+                />
+              </View>
+            ) : physicalTab === "surahs" ? (
+              <ScrollView style={{ maxHeight: 300 }} keyboardShouldPersistTaps="handled">
                 <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: colors.textSecondary, marginBottom: 8 }}>Start</Text>
                 <View style={{ flexDirection: "row", gap: 10, marginBottom: 16 }}>
                   <View style={{ flex: 2 }}>
                     <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: colors.textTertiary, marginBottom: 4 }}>Surah</Text>
                     <Pressable
                       style={{ backgroundColor: colors.surfaceSecondary, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: colors.border, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
-                      onPress={() => setShowSurahPicker("start")}
+                      onPress={() => { Keyboard.dismiss(); setShowSurahPicker("start"); }}
                     >
                       <Text style={{ fontFamily: "Inter_500Medium", fontSize: 14, color: colors.text }} numberOfLines={1}>
                         {surahs.find(s => s.id === physStartSurah)?.name_simple || `Surah ${physStartSurah}`}
@@ -1273,6 +1269,8 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
                       <TextInput
                         style={{ padding: 12, fontFamily: "Inter_500Medium", fontSize: 14, color: colors.text }}
                         keyboardType="number-pad"
+                        returnKeyType="done"
+                        blurOnSubmit
                         value={String(physStartAyah)}
                         onChangeText={t => {
                           const n = parseInt(t) || 1;
@@ -1290,7 +1288,7 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
                     <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: colors.textTertiary, marginBottom: 4 }}>Surah</Text>
                     <Pressable
                       style={{ backgroundColor: colors.surfaceSecondary, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: colors.border, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
-                      onPress={() => setShowSurahPicker("end")}
+                      onPress={() => { Keyboard.dismiss(); setShowSurahPicker("end"); }}
                     >
                       <Text style={{ fontFamily: "Inter_500Medium", fontSize: 14, color: colors.text }} numberOfLines={1}>
                         {surahs.find(s => s.id === physEndSurah)?.name_simple || `Surah ${physEndSurah}`}
@@ -1304,6 +1302,8 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
                       <TextInput
                         style={{ padding: 12, fontFamily: "Inter_500Medium", fontSize: 14, color: colors.text }}
                         keyboardType="number-pad"
+                        returnKeyType="done"
+                        blurOnSubmit
                         value={String(physEndAyah)}
                         onChangeText={t => {
                           const n = parseInt(t) || 1;
@@ -1324,6 +1324,8 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
                       <TextInput
                         style={{ padding: 12, fontFamily: "Inter_500Medium", fontSize: 14, color: colors.text, textAlign: "center" }}
                         keyboardType="number-pad"
+                        returnKeyType="done"
+                        blurOnSubmit
                         value={String(physStartPage)}
                         onChangeText={t => { const n = parseInt(t) || 1; setPhysStartPage(Math.max(1, Math.min(TOTAL_MUSHAF_PAGES, n))); }}
                       />
@@ -1335,6 +1337,8 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
                       <TextInput
                         style={{ padding: 12, fontFamily: "Inter_500Medium", fontSize: 14, color: colors.text, textAlign: "center" }}
                         keyboardType="number-pad"
+                        returnKeyType="done"
+                        blurOnSubmit
                         value={String(physEndPage)}
                         onChangeText={t => { const n = parseInt(t) || 1; setPhysEndPage(Math.max(1, Math.min(TOTAL_MUSHAF_PAGES, n))); }}
                       />
@@ -1347,17 +1351,18 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
               </View>
             )}
 
-            <Pressable
-              style={{ backgroundColor: colors.emerald, borderRadius: 12, paddingVertical: 14, alignItems: "center", marginTop: 20 }}
-              onPress={handlePhysicalSubmit}
-            >
-              <Text style={{ fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" }}>Save Reading</Text>
-            </Pressable>
+            {showSurahPicker === null && (
+              <Pressable
+                style={{ backgroundColor: colors.emerald, borderRadius: 12, paddingVertical: 14, alignItems: "center", marginTop: 20 }}
+                onPress={handlePhysicalSubmit}
+              >
+                <Text style={{ fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" }}>Save Reading</Text>
+              </Pressable>
+            )}
           </GlassModalContainer>
-          </Pressable>
         </Pressable>
-      </Modal>
-    </>
+      </Pressable>
+    </Modal>
   );
 
   return (
