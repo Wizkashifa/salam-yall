@@ -161,6 +161,7 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
   const [mushafVerses, setMushafVerses] = useState<MushafVerse[]>([]);
   const [mushafLoading, setMushafLoading] = useState(false);
   const [mushafSurahName, setMushafSurahName] = useState("");
+  const [mushafSurahInfo, setMushafSurahInfo] = useState<{ name: string; arabic: string; translation: string } | null>(null);
   const [showPhysicalModal, setShowPhysicalModal] = useState(false);
   const [physicalTab, setPhysicalTab] = useState<"surahs" | "pages">("surahs");
   const [physStartSurah, setPhysStartSurah] = useState(1);
@@ -448,6 +449,7 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
         const surahNum = parseInt(parsed[0].verse_key.split(":")[0]);
         const s = surahs.find(s => s.id === surahNum);
         setMushafSurahName(s?.name_simple || `Surah ${surahNum}`);
+        setMushafSurahInfo(s ? { name: s.name_simple, arabic: s.name_arabic, translation: s.translated_name.name } : null);
       }
       addQuranReading(1, parsed.length);
     } catch {
@@ -1060,9 +1062,21 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
             <Ionicons name="chevron-back" size={22} color={colors.text} />
           </Pressable>
           <View style={qStyles.headerTitleArea}>
-            <Text style={[qStyles.backLabel, { color: colors.text }]} numberOfLines={1}>
-              Page {mushafPage} · {mushafSurahName}
-            </Text>
+            {mushafSurahInfo ? (
+              <View style={qStyles.collapsedBanner}>
+                <Text numberOfLines={1}>
+                  <Text style={[qStyles.collapsedAccent, { color: isDark ? colors.gold : colors.emerald }]}>{mushafSurahInfo.name}</Text>
+                  <Text style={[qStyles.collapsedSep, { color: colors.textTertiary }]}>  ·  </Text>
+                  <Text style={[qStyles.collapsedArabic, { color: colors.text }]}>{mushafSurahInfo.arabic}</Text>
+                  <Text style={[qStyles.collapsedSep, { color: colors.textTertiary }]}>  ·  </Text>
+                  <Text style={[qStyles.collapsedName, { color: colors.textSecondary }]}>{mushafSurahInfo.translation}</Text>
+                </Text>
+              </View>
+            ) : (
+              <Text style={[qStyles.backLabel, { color: colors.text }]} numberOfLines={1}>
+                Page {mushafPage}
+              </Text>
+            )}
           </View>
         </View>
 
