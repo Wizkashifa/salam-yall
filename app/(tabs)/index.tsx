@@ -68,6 +68,8 @@ interface CalendarEvent {
   speaker: string;
   latitude: number | null;
   longitude: number | null;
+  isVirtual?: boolean;
+  isFeatured?: boolean;
 }
 
 const MASJID_KEYWORDS = [

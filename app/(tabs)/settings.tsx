@@ -70,6 +70,8 @@ interface CalendarEvent {
   registrationUrl: string;
   latitude: number | null;
   longitude: number | null;
+  isVirtual?: boolean;
+  isFeatured?: boolean;
 }
 
 type SettingsSection = "main" | "calcMethod" | "masjids" | "masjidDetail" | "feedback" | "prayerTracker" | "janazaHistory" | "profile" | "dhikrCounter" | "athanAlerts" | "quranReader" | "personalGrowth" | "communityOrgs" | "communityOrgDetail";

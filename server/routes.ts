@@ -223,6 +223,8 @@ interface CachedEvent {
   speaker: string;
   latitude: number | null;
   longitude: number | null;
+  isVirtual: boolean;
+  isFeatured: boolean;
 }
 
 let cachedEvents: CachedEvent[] = [];
@@ -440,6 +442,8 @@ function processEvent(event: any): CachedEvent {
     speaker: extractSpeaker(desc),
     latitude: coords.latitude,
     longitude: coords.longitude,
+    isVirtual: false,
+    isFeatured: false,
   };
 }
 
@@ -542,6 +546,8 @@ async function ensureEventOverridesTable(pool: pg.Pool) {
       organizer VARCHAR(255),
       image_url TEXT,
       registration_url TEXT,
+      is_virtual BOOLEAN,
+      is_featured BOOLEAN,
       updated_at TIMESTAMP DEFAULT NOW()
     );
   `);
@@ -560,6 +566,8 @@ async function ensureCommunityEventsTable(pool: pg.Pool) {
       registration_url TEXT,
       image_data TEXT,
       image_mime VARCHAR(50) DEFAULT 'image/jpeg',
+      is_virtual BOOLEAN DEFAULT false,
+      is_featured BOOLEAN DEFAULT false,
       status VARCHAR(20) DEFAULT 'approved',
       created_at TIMESTAMP DEFAULT NOW()
     );
@@ -1091,6 +1099,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await ensureRestaurantSubmissionsTable(pool).catch(err => console.error("[DB] Restaurant submissions table init error:", err.message));
   await ensureCommunityEventsTable(pool).catch(err => console.error("[DB] Community events table init error:", err.message));
 
+  await pool.query("ALTER TABLE community_events ADD COLUMN IF NOT EXISTS is_virtual BOOLEAN DEFAULT false").catch(() => {});
+  await pool.query("ALTER TABLE community_events ADD COLUMN IF NOT EXISTS is_featured BOOLEAN DEFAULT false").catch(() => {});
+  await pool.query("ALTER TABLE event_overrides ADD COLUMN IF NOT EXISTS is_virtual BOOLEAN").catch(() => {});
+  await pool.query("ALTER TABLE event_overrides ADD COLUMN IF NOT EXISTS is_featured BOOLEAN").catch(() => {});
+
   startHalalAutoSync(pool);
   startIqamaSync(pool);
 
@@ -1112,6 +1125,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           organizer: o.organizer !== null && o.organizer !== undefined ? o.organizer : e.organizer,
           imageUrl: o.image_url !== null && o.image_url !== undefined ? o.image_url : e.imageUrl,
           registrationUrl: o.registration_url !== null && o.registration_url !== undefined ? o.registration_url : e.registrationUrl,
+          isVirtual: o.is_virtual !== null && o.is_virtual !== undefined ? o.is_virtual : e.isVirtual,
+          isFeatured: o.is_featured !== null && o.is_featured !== undefined ? o.is_featured : e.isFeatured,
         };
       });
     } catch (err: any) {
@@ -1146,6 +1161,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           speaker: "",
           latitude: coords.latitude,
           longitude: coords.longitude,
+          isVirtual: !!r.is_virtual,
+          isFeatured: !!r.is_featured,
         };
       });
     } catch (err: any) {
@@ -1224,6 +1241,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           speaker: extractSpeaker(desc),
           latitude: 32.9857,
           longitude: -96.7502,
+          isVirtual: false,
+          isFeatured: false,
         };
       });
 
@@ -2421,7 +2440,24 @@ Return ONLY the description text, nothing else.`,
     try {
       if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
       const eventId = req.params.eventId;
-      const { title, description, location, start_time, end_time, organizer, image_url, registration_url } = req.body;
+      const { title, description, location, start_time, end_time, organizer, image_url, registration_url, is_virtual, is_featured } = req.body;
+
+      if (is_featured) {
+        const { rows: existing } = await pool.query("SELECT is_featured FROM event_overrides WHERE event_id = $1", [eventId]);
+        if (!existing.length || !existing[0].is_featured) {
+          const { rows: featuredCount } = await pool.query(
+            "SELECT COUNT(*) as cnt FROM community_events WHERE is_featured = true AND status = 'approved'"
+          );
+          const { rows: overrideFeatured } = await pool.query(
+            "SELECT COUNT(*) as cnt FROM event_overrides WHERE is_featured = true AND event_id != $1", [eventId]
+          );
+          const totalFeatured = parseInt(featuredCount[0]?.cnt || "0") + parseInt(overrideFeatured[0]?.cnt || "0");
+          if (totalFeatured >= 3) {
+            return res.status(400).json({ error: "Maximum of 3 featured events allowed. Please unfeature an existing event first." });
+          }
+        }
+      }
+
       const fields: string[] = ["event_id"];
       const values: any[] = [eventId];
       let idx = 2;
@@ -2434,6 +2470,8 @@ Return ONLY the description text, nothing else.`,
       if (organizer !== undefined) { fields.push("organizer"); values.push(organizer); updates.push(`organizer = $${idx++}`); }
       if (image_url !== undefined) { fields.push("image_url"); values.push(image_url); updates.push(`image_url = $${idx++}`); }
       if (registration_url !== undefined) { fields.push("registration_url"); values.push(registration_url); updates.push(`registration_url = $${idx++}`); }
+      if (is_virtual !== undefined) { fields.push("is_virtual"); values.push(!!is_virtual); updates.push(`is_virtual = $${idx++}`); }
+      if (is_featured !== undefined) { fields.push("is_featured"); values.push(!!is_featured); updates.push(`is_featured = $${idx++}`); }
       updates.push(`updated_at = NOW()`);
       if (fields.length <= 1) return res.status(400).json({ error: "No fields to update" });
       const placeholders = fields.map((_, i) => `$${i + 1}`).join(", ");
@@ -3660,6 +3698,10 @@ Return ONLY the description text, nothing else.`,
             imageUrl: "",
             registrationUrl: r.registration_url || "",
             speaker: "",
+            latitude: null,
+            longitude: null,
+            isVirtual: !!r.is_virtual,
+            isFeatured: !!r.is_featured,
           };
         }
       }
@@ -4080,6 +4122,10 @@ Return ONLY the description text, nothing else.`,
             imageUrl: r.image_data ? `${baseUrl}/api/events/image/${r.id}` : "",
             registrationUrl: r.registration_url || "",
             speaker: "",
+            latitude: null,
+            longitude: null,
+            isVirtual: !!r.is_virtual,
+            isFeatured: !!r.is_featured,
           };
         }
       }
@@ -4357,14 +4403,27 @@ Return ONLY the JSON object, no markdown, no explanation.`,
   app.post("/api/admin/events/publish", async (req, res) => {
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {
-      const { title, description, location, startTime, endTime, organizer, registrationUrl, image, imageMime } = req.body;
+      const { title, description, location, startTime, endTime, organizer, registrationUrl, image, imageMime, isVirtual, isFeatured } = req.body;
       if (!title || !startTime) return res.status(400).json({ error: "Title and start time are required" });
 
+      if (isFeatured) {
+        const { rows: featuredCount } = await pool.query(
+          "SELECT COUNT(*) as cnt FROM community_events WHERE is_featured = true AND status = 'approved'"
+        );
+        const { rows: overrideFeatured } = await pool.query(
+          "SELECT COUNT(*) as cnt FROM event_overrides WHERE is_featured = true"
+        );
+        const totalFeatured = parseInt(featuredCount[0]?.cnt || "0") + parseInt(overrideFeatured[0]?.cnt || "0");
+        if (totalFeatured >= 3) {
+          return res.status(400).json({ error: "Maximum of 3 featured events allowed. Please unfeature an existing event first." });
+        }
+      }
+
       const result = await pool.query(
-        `INSERT INTO community_events (title, description, location, start_time, end_time, organizer, registration_url, image_data, image_mime, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'approved')
+        `INSERT INTO community_events (title, description, location, start_time, end_time, organizer, registration_url, image_data, image_mime, is_virtual, is_featured, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'approved')
          RETURNING id, title, start_time, status, created_at`,
-        [title, description || null, location || null, new Date(startTime), endTime ? new Date(endTime) : null, organizer || null, registrationUrl || null, image || null, imageMime || "image/jpeg"]
+        [title, description || null, location || null, new Date(startTime), endTime ? new Date(endTime) : null, organizer || null, registrationUrl || null, image || null, imageMime || "image/jpeg", !!isVirtual, !!isFeatured]
       );
       console.log(`[Community Events] Published: "${title}" (ID ${result.rows[0].id})`);
       res.json(result.rows[0]);
@@ -4378,7 +4437,7 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {
       const { rows } = await pool.query(
-        "SELECT id, title, description, location, start_time, end_time, organizer, registration_url, status, created_at, CASE WHEN image_data IS NOT NULL THEN true ELSE false END as has_image FROM community_events ORDER BY created_at DESC"
+        "SELECT id, title, description, location, start_time, end_time, organizer, registration_url, is_virtual, is_featured, status, created_at, CASE WHEN image_data IS NOT NULL THEN true ELSE false END as has_image FROM community_events ORDER BY created_at DESC"
       );
       res.json(rows);
     } catch (error: any) {
@@ -4391,7 +4450,22 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {
       const { id } = req.params;
-      const { title, description, location, start_time, end_time, organizer, registration_url, image_data, image_mime } = req.body;
+      const { title, description, location, start_time, end_time, organizer, registration_url, image_data, image_mime, is_virtual, is_featured } = req.body;
+
+      if (is_featured) {
+        const { rows: current } = await pool.query("SELECT is_featured FROM community_events WHERE id = $1", [id]);
+        if (!current.length || !current[0].is_featured) {
+          const { rows: featuredCount } = await pool.query(
+            "SELECT COUNT(*) as cnt FROM community_events WHERE is_featured = true AND status = 'approved' AND id != $1", [id]
+          );
+          const { rows: overrideFeatured } = await pool.query("SELECT COUNT(*) as cnt FROM event_overrides WHERE is_featured = true");
+          const totalFeatured = parseInt(featuredCount[0]?.cnt || "0") + parseInt(overrideFeatured[0]?.cnt || "0");
+          if (totalFeatured >= 3) {
+            return res.status(400).json({ error: "Maximum of 3 featured events allowed. Please unfeature an existing event first." });
+          }
+        }
+      }
+
       const fields: string[] = [];
       const values: any[] = [];
       let idx = 1;
@@ -4404,6 +4478,8 @@ Return ONLY the JSON object, no markdown, no explanation.`,
       if (registration_url !== undefined) { fields.push(`registration_url = $${idx++}`); values.push(registration_url); }
       if (image_data !== undefined) { fields.push(`image_data = $${idx++}`); values.push(image_data || null); }
       if (image_mime !== undefined) { fields.push(`image_mime = $${idx++}`); values.push(image_mime || 'image/jpeg'); }
+      if (is_virtual !== undefined) { fields.push(`is_virtual = $${idx++}`); values.push(!!is_virtual); }
+      if (is_featured !== undefined) { fields.push(`is_featured = $${idx++}`); values.push(!!is_featured); }
       if (fields.length === 0) return res.status(400).json({ error: "No fields to update" });
       values.push(id);
       const result = await pool.query(

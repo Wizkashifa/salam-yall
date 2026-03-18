@@ -54,6 +54,8 @@ interface CalendarEvent {
   speaker: string;
   latitude: number | null;
   longitude: number | null;
+  isVirtual?: boolean;
+  isFeatured?: boolean;
 }
 
 function formatEventDate(dateStr: string, isAllDay: boolean): { day: string; month: string; weekday: string; time: string; fullDate: string } {
@@ -445,6 +447,12 @@ function EventDetailModal({ event, visible, onClose, isSaved, onToggleSave }: { 
                 <Ionicons name="time-outline" size={18} color={colors.emerald} />
                 <Text style={[styles.modalInfoText, { color: colors.text }]}>{timeRange}</Text>
               </View>
+              {event.isVirtual ? (
+                <View style={styles.modalInfoRow}>
+                  <Ionicons name="videocam" size={18} color={colors.emerald} />
+                  <Text style={[styles.modalInfoText, { color: colors.emerald, fontFamily: "Inter_600SemiBold" }]}>Virtual Event</Text>
+                </View>
+              ) : null}
               {event.location ? (
                 <Pressable style={styles.modalInfoRow} onPress={openMaps}>
                   <Ionicons name="location-outline" size={18} color={colors.emerald} />
@@ -513,7 +521,6 @@ export default function EventsScreen() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
-  const calendarScrolledPastRef = useRef(false);
   const { pendingTarget, consumeTarget } = useDeepLink();
   const [distanceFilter, setDistanceFilter] = useState<DistanceFilter>(50);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -615,18 +622,6 @@ export default function EventsScreen() {
     setRefreshing(false);
   }, [queryClient]);
 
-  const handleScroll = useCallback((e: { nativeEvent: { contentOffset: { y: number } } }) => {
-    const scrolledPast = e.nativeEvent.contentOffset.y > 120;
-    if (scrolledPast !== calendarScrolledPastRef.current) {
-      calendarScrolledPastRef.current = scrolledPast;
-      setCalendarScrolledPast(scrolledPast);
-    }
-  }, []);
-
-  const scrollToTop = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    scrollRef.current?.scrollTo({ y: 0, animated: true });
-  }, []);
 
   const onSelectDate = useCallback((dateKey: string | null) => {
     setSelectedDate(dateKey);
@@ -640,15 +635,23 @@ export default function EventsScreen() {
       })
     : [];
 
+  const featuredEvents = useMemo(() => {
+    return activeEvents.filter((ev) => ev.isFeatured).slice(0, 3);
+  }, [activeEvents]);
+
+  const featuredIds = useMemo(() => new Set(featuredEvents.map((e) => e.id)), [featuredEvents]);
+
   const distanceFilteredEvents = useMemo(() => {
-    if (distanceFilter === "all" || !userLocation) return activeEvents;
-    return activeEvents.filter((ev) => {
+    const nonFeatured = activeEvents.filter((ev) => !featuredIds.has(ev.id));
+    if (distanceFilter === "all" || !userLocation) return nonFeatured;
+    return nonFeatured.filter((ev) => {
+      if (ev.isVirtual) return true;
       if (ev.latitude == null || ev.longitude == null) return true;
       const km = getDistanceKm(userLocation.latitude, userLocation.longitude, ev.latitude, ev.longitude);
       const miles = kmToMiles(km);
       return miles <= distanceFilter;
     });
-  }, [activeEvents, distanceFilter, userLocation]);
+  }, [activeEvents, distanceFilter, userLocation, featuredIds]);
 
   const filteredEvents = selectedDate
     ? distanceFilteredEvents.filter((ev) => toDateKey(new Date(ev.start)) === selectedDate)
@@ -726,7 +729,6 @@ export default function EventsScreen() {
           paddingBottom: Platform.OS === "web" ? 34 : 100,
           paddingTop: headerHeight + 12,
         }}
-        onScroll={handleScroll}
         scrollEventThrottle={16}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />
@@ -748,7 +750,93 @@ export default function EventsScreen() {
           <View style={{ height: 240, marginHorizontal: 16, marginBottom: 12, borderRadius: 14, overflow: "hidden", backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, justifyContent: "center", alignItems: "center" }}>
             <Ionicons name="map" size={48} color={colors.emerald} />
             <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.text, marginTop: 12 }}>Events Map</Text>
-            <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.textSecondary, marginTop: 4 }}>View events within {distanceFilter}mi radius</Text>
+            <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.textSecondary, marginTop: 4 }}>{distanceFilter === "all" ? "Showing all event locations" : `View events within ${distanceFilter}mi radius`}</Text>
+          </View>
+        )}
+
+        {!isLoading && !error && featuredEvents.length > 0 && (
+          <View style={{ marginBottom: 16 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, marginBottom: 10, gap: 6 }}>
+              <Ionicons name="star" size={14} color={colors.gold} />
+              <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.gold, letterSpacing: 0.3 }}>FEATURED</Text>
+            </View>
+            {featuredEvents.map((event) => {
+              const dateInfo = formatEventDate(event.start, event.isAllDay);
+              const endInfo = event.end ? formatEventDate(event.end, event.isAllDay) : null;
+              const cardTimeRange = endInfo && !event.isAllDay
+                ? `${dateInfo.time} – ${endInfo.time}`
+                : dateInfo.time;
+
+              return (
+                <Pressable
+                  key={event.id}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setSelectedEvent(event);
+                    trackEvent("event_viewed", { title: event.title });
+                  }}
+                  style={({ pressed }) => ({
+                    marginHorizontal: 16,
+                    borderRadius: 14,
+                    overflow: "hidden",
+                    marginBottom: 10,
+                    borderWidth: 1,
+                    borderColor: colors.gold + "40",
+                    backgroundColor: colors.surface,
+                    opacity: pressed ? 0.92 : 1,
+                    shadowColor: colors.gold,
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.12,
+                    shadowRadius: 8,
+                    elevation: 3,
+                  })}
+                >
+                  <View style={styles.eventCardRow}>
+                    {event.imageUrl ? (
+                      <Image source={{ uri: event.imageUrl }} style={styles.eventThumb} resizeMode="cover" />
+                    ) : getOrgLogo(event.organizer) ? (
+                      <Image source={getOrgLogo(event.organizer)} style={styles.eventThumb} resizeMode="cover" />
+                    ) : (
+                      <View style={[styles.eventThumbPlaceholder, { backgroundColor: colors.gold + "18" }]}>
+                        <Ionicons name="star" size={24} color={colors.gold} />
+                      </View>
+                    )}
+                    <View style={styles.eventCardBody}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                        <Text style={[styles.eventTitle, { color: colors.text, flex: 1 }]} numberOfLines={2}>
+                          {event.title}
+                        </Text>
+                      </View>
+                      <Text style={[styles.eventTimeText, { color: colors.gold }]} numberOfLines={1}>
+                        {cardTimeRange}
+                      </Text>
+                      {event.isVirtual ? (
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                          <Ionicons name="videocam" size={12} color={colors.emerald} />
+                          <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: colors.emerald }}>Virtual Event</Text>
+                        </View>
+                      ) : event.location ? (
+                        <View style={styles.locationRow}>
+                          <Ionicons name="location-outline" size={12} color={colors.textTertiary} />
+                          <Text style={[styles.locationText, { color: colors.textTertiary }]} numberOfLines={1}>
+                            {event.location}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    <View style={{ alignItems: "center", gap: 4, marginRight: 4 }}>
+                      {user && savedEventIds.has(event.id) ? (
+                        <Pressable onPress={(e) => { e.stopPropagation?.(); toggleSave(event); }} hitSlop={8}>
+                          <Ionicons name="bookmark" size={18} color={colors.gold} />
+                        </Pressable>
+                      ) : (
+                        <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                      )}
+                    </View>
+                  </View>
+                </Pressable>
+              );
+            })}
           </View>
         )}
 
@@ -767,7 +855,7 @@ export default function EventsScreen() {
               <Text style={styles.retryButtonText}>Retry</Text>
             </Pressable>
           </View>
-        ) : grouped.length === 0 ? (
+        ) : grouped.length === 0 && featuredEvents.length === 0 ? (
           <View style={styles.centerContainer}>
             <Ionicons name="calendar-outline" size={36} color={colors.textSecondary} />
             <Text style={[styles.emptyText, { color: colors.text }]}>
@@ -870,7 +958,12 @@ export default function EventsScreen() {
                             </View>
                           ) : null}
 
-                          {event.location ? (
+                          {event.isVirtual ? (
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                              <Ionicons name="videocam" size={12} color={colors.emerald} />
+                              <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: colors.emerald }}>Virtual Event</Text>
+                            </View>
+                          ) : event.location ? (
                             <View style={styles.locationRow}>
                               <Ionicons name="location-outline" size={12} color={colors.textTertiary} />
                               <Text style={[styles.locationText, { color: colors.textTertiary }]} numberOfLines={1}>
