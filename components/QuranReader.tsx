@@ -1270,42 +1270,39 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
   return (
     <View style={{ flex: 1 }}>
       {physicalReadingModal}
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }}>
-        <Pressable
-          style={[qStyles.searchBar, { flex: 1, marginBottom: 0, backgroundColor: colors.surface, borderColor: colors.border }]}
-          onPress={() => { setQSection("search"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-          testID="quran-search-bar"
-        >
-          <Ionicons name="search" size={18} color={colors.textSecondary} />
-          <Text style={[qStyles.searchPlaceholder, { color: colors.textTertiary }]}>Search verses...</Text>
-        </Pressable>
-        <Pressable
-          style={{ padding: 10, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border }}
-          onPress={toggleViewMode}
-        >
-          <Ionicons name={viewMode === "verses" ? "book-outline" : "list-outline"} size={20} color={colors.emerald} />
-        </Pressable>
-      </View>
+      <Pressable
+        style={[qStyles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        onPress={() => { setQSection("search"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+        testID="quran-search-bar"
+      >
+        <Ionicons name="search" size={18} color={colors.textSecondary} />
+        <Text style={[qStyles.searchPlaceholder, { color: colors.textTertiary }]}>Search verses...</Text>
+      </Pressable>
 
-      {viewMode === "mushaf" && (
+      <View style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}>
         <Pressable
-          style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: colors.emerald + "12", borderRadius: 10, paddingVertical: 10, marginBottom: 10, borderWidth: 1, borderColor: colors.emerald + "30" }}
-          onPress={() => { setQSection("mushafView"); fetchMushafPage(mushafPage || 1); }}
+          style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: viewMode === "mushaf" ? colors.emerald + "18" : colors.surface, borderRadius: 10, paddingVertical: 9, borderWidth: 1, borderColor: viewMode === "mushaf" ? colors.emerald + "40" : colors.border }}
+          onPress={() => {
+            toggleViewMode();
+            if (viewMode === "verses") {
+              setQSection("mushafView");
+              fetchMushafPage(mushafPage || 1);
+            }
+          }}
         >
-          <Ionicons name="book" size={16} color={colors.emerald} />
-          <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: colors.emerald }}>
-            Open Mushaf — Page {mushafPage}
+          <Ionicons name={viewMode === "mushaf" ? "book" : "book-outline"} size={15} color={viewMode === "mushaf" ? colors.emerald : colors.textSecondary} />
+          <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: viewMode === "mushaf" ? colors.emerald : colors.textSecondary }}>
+            {viewMode === "mushaf" ? "Mushaf View" : "Mushaf View"}
           </Text>
         </Pressable>
-      )}
-
-      <Pressable
-        style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: colors.gold + "12", borderRadius: 10, paddingVertical: 8, marginBottom: 10, borderWidth: 1, borderColor: colors.gold + "30" }}
-        onPress={() => setShowPhysicalModal(true)}
-      >
-        <Ionicons name="add-circle-outline" size={16} color={colors.gold} />
-        <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: colors.gold }}>Add Physical Reading</Text>
-      </Pressable>
+        <Pressable
+          style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: colors.gold + "12", borderRadius: 10, paddingVertical: 9, borderWidth: 1, borderColor: colors.gold + "30" }}
+          onPress={() => setShowPhysicalModal(true)}
+        >
+          <Ionicons name="add-circle-outline" size={15} color={colors.gold} />
+          <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: colors.gold }}>Physical Reading</Text>
+        </Pressable>
+      </View>
 
       {surahsLoading ? (
         <ActivityIndicator size="small" color={colors.emerald} style={{ marginTop: 24 }} />
