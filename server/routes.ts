@@ -1001,6 +1001,14 @@ async function ensureHalalCheckinsTable(pool: pg.Pool) {
     );
   `);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_halal_checkins_restaurant ON halal_checkins(restaurant_id, created_at DESC);`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS android_waitlist (
+      id SERIAL PRIMARY KEY,
+      email TEXT NOT NULL UNIQUE,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -1401,6 +1409,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error proxying halal photo:", error.message);
       res.status(500).json({ error: "Failed to load photo" });
+    }
+  });
+
+  app.post("/api/android-waitlist", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email || typeof email !== "string" || !email.includes("@")) {
+        return res.status(400).json({ error: "Valid email required" });
+      }
+      await pool.query(
+        "INSERT INTO android_waitlist (email) VALUES ($1) ON CONFLICT (email) DO NOTHING",
+        [email.trim().toLowerCase().slice(0, 255)]
+      );
+      res.status(201).json({ ok: true });
+    } catch (error: any) {
+      console.error("[Waitlist] Error:", error.message);
+      res.status(500).json({ error: "Failed to join waitlist" });
     }
   });
 

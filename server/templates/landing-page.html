@@ -116,6 +116,24 @@
       }
       .hero-cta:hover { background: #14523A; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(27,107,74,0.3); }
       .hero-cta svg { width: 24px; height: 24px; fill: currentColor; }
+      .hero-buttons { display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap; }
+      .hero-android {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 18px 32px;
+        background: transparent;
+        border: 1.5px solid rgba(255,255,255,0.25);
+        border-radius: 16px;
+        color: #fff;
+        font-size: 16px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s;
+        cursor: pointer;
+      }
+      .hero-android:hover { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.05); transform: translateY(-2px); }
+      .hero-android svg { width: 22px; height: 22px; fill: currentColor; }
       .hero-badge {
         display: inline-block;
         margin-top: 16px;
@@ -382,6 +400,85 @@
       }
       .cta-btn-primary:hover { background: #14523A; transform: translateY(-2px); }
       .cta-btn-primary svg { width: 22px; height: 22px; fill: currentColor; }
+      .cta-btn-android {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 18px 32px;
+        background: transparent;
+        border: 1.5px solid rgba(255,255,255,0.25);
+        border-radius: 16px;
+        color: #fff;
+        font-size: 16px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s;
+      }
+      .cta-btn-android:hover { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.05); transform: translateY(-2px); }
+      .cta-btn-android svg { width: 22px; height: 22px; fill: currentColor; }
+
+      /* ANDROID WAITLIST */
+      .waitlist-section {
+        padding: 60px 24px;
+        text-align: center;
+        background: rgba(27,107,74,0.08);
+        border-top: 1px solid rgba(255,255,255,0.06);
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+      }
+      .waitlist-section h2 {
+        font-size: 28px;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 8px;
+      }
+      .waitlist-section p {
+        font-size: 16px;
+        color: var(--text-secondary);
+        margin-bottom: 24px;
+      }
+      .waitlist-form {
+        display: flex;
+        gap: 10px;
+        max-width: 440px;
+        margin: 0 auto;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .waitlist-form input {
+        flex: 1;
+        min-width: 220px;
+        padding: 14px 18px;
+        border-radius: 12px;
+        border: 1.5px solid rgba(255,255,255,0.15);
+        background: rgba(255,255,255,0.06);
+        color: #fff;
+        font-size: 15px;
+        font-family: 'Inter', sans-serif;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .waitlist-form input::placeholder { color: rgba(255,255,255,0.35); }
+      .waitlist-form input:focus { border-color: var(--emerald); }
+      .waitlist-form button {
+        padding: 14px 28px;
+        border-radius: 12px;
+        border: none;
+        background: var(--emerald);
+        color: #fff;
+        font-size: 15px;
+        font-weight: 600;
+        font-family: 'Inter', sans-serif;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .waitlist-form button:hover { background: #14523A; }
+      .waitlist-success {
+        display: none;
+        color: var(--emerald);
+        font-size: 15px;
+        font-weight: 500;
+        margin-top: 16px;
+      }
 
       /* FOOTER */
       .footer {
@@ -473,10 +570,16 @@
       <img src="/assets/images/splash-logo.png" alt="Salam Y'all" class="hero-logo" />
       <h1>Salam Y'all</h1>
       <p class="hero-tagline">The all-in-one app for the Triangle NC Muslim community. Prayer times, Quran, halal eats, events, and more.</p>
-      <a href="https://apps.apple.com/us/app/salam-yall/id6760231963" class="hero-cta">
-        <svg viewBox="0 0 24 24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-        Download Free on iOS
-      </a>
+      <div class="hero-buttons">
+        <a href="https://apps.apple.com/us/app/salam-yall/id6760231963" class="hero-cta">
+          <svg viewBox="0 0 24 24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          Download Free on iOS
+        </a>
+        <a href="#android-waitlist" class="hero-android" onclick="event.preventDefault(); document.getElementById('android-waitlist').scrollIntoView({ behavior: 'smooth' });">
+          <svg viewBox="0 0 24 24"><path d="M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85-.29-.15-.65-.06-.83.22l-1.88 3.24a11.463 11.463 0 00-8.94 0L5.65 5.67c-.19-.29-.58-.38-.87-.2-.28.18-.37.54-.22.83L6.4 9.48A10.78 10.78 0 002 18h20a10.78 10.78 0 00-4.4-8.52zM7 15.25a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5zm10 0a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5z"/></svg>
+          Android Waitlist
+        </a>
+      </div>
       <span class="hero-badge">Available on the App Store</span>
       <a href="https://testflight.apple.com/join/4ApBN4mJ" class="beta-link">Try the beta on TestFlight</a>
       <div class="scroll-hint">
@@ -593,12 +696,30 @@
       <h2 class="cta-title">Join the Community</h2>
       <p class="cta-subtitle">Download Salam Y'all and stay connected.</p>
       <div class="cta-buttons">
-        <a href="https://apps.apple.com/us/app/salam-yall/id6760231963" class="cta-btn-primary">
-          <svg viewBox="0 0 24 24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-          Download on the App Store
-        </a>
+        <div style="display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;">
+          <a href="https://apps.apple.com/us/app/salam-yall/id6760231963" class="cta-btn-primary">
+            <svg viewBox="0 0 24 24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+            Download on the App Store
+          </a>
+          <a href="#android-waitlist" class="cta-btn-android" onclick="event.preventDefault(); document.getElementById('android-waitlist').scrollIntoView({ behavior: 'smooth' });">
+            <svg viewBox="0 0 24 24"><path d="M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85-.29-.15-.65-.06-.83.22l-1.88 3.24a11.463 11.463 0 00-8.94 0L5.65 5.67c-.19-.29-.58-.38-.87-.2-.28.18-.37.54-.22.83L6.4 9.48A10.78 10.78 0 002 18h20a10.78 10.78 0 00-4.4-8.52zM7 15.25a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5zm10 0a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5z"/></svg>
+            Android Waitlist
+          </a>
+        </div>
         <a href="https://testflight.apple.com/join/4ApBN4mJ" class="beta-link">Or try the latest beta on TestFlight</a>
       </div>
+    </section>
+
+    <!-- ANDROID WAITLIST -->
+    <section class="waitlist-section" id="android-waitlist">
+      <svg viewBox="0 0 24 24" style="width:40px;height:40px;fill:rgba(255,255,255,0.7);margin-bottom:16px;"><path d="M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85-.29-.15-.65-.06-.83.22l-1.88 3.24a11.463 11.463 0 00-8.94 0L5.65 5.67c-.19-.29-.58-.38-.87-.2-.28.18-.37.54-.22.83L6.4 9.48A10.78 10.78 0 002 18h20a10.78 10.78 0 00-4.4-8.52zM7 15.25a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5zm10 0a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5z"/></svg>
+      <h2>Android Coming Soon</h2>
+      <p>Join the waitlist and be the first to know when Salam Y'all launches on Android.</p>
+      <form class="waitlist-form" id="waitlist-form" onsubmit="submitWaitlist(event)">
+        <input type="email" placeholder="Enter your email" required id="waitlist-email" />
+        <button type="submit">Join Waitlist</button>
+      </form>
+      <p class="waitlist-success" id="waitlist-success">You're on the list! We'll notify you when Android is ready.</p>
     </section>
 
     <!-- FOOTER -->
@@ -611,5 +732,34 @@
       <p class="footer-copy">Salam Y'all. Made for the Triangle NC Muslim community.</p>
     </footer>
 
+    <script>
+      async function submitWaitlist(e) {
+        e.preventDefault();
+        const email = document.getElementById('waitlist-email').value;
+        const btn = e.target.querySelector('button');
+        btn.textContent = 'Joining...';
+        btn.disabled = true;
+        try {
+          const res = await fetch('/api/android-waitlist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+          });
+          if (res.ok) {
+            document.getElementById('waitlist-form').style.display = 'none';
+            document.getElementById('waitlist-success').style.display = 'block';
+          } else {
+            const data = await res.json();
+            alert(data.error || 'Something went wrong. Please try again.');
+            btn.textContent = 'Join Waitlist';
+            btn.disabled = false;
+          }
+        } catch {
+          alert('Something went wrong. Please try again.');
+          btn.textContent = 'Join Waitlist';
+          btn.disabled = false;
+        }
+      }
+    </script>
   </body>
 </html>
