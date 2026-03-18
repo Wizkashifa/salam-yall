@@ -668,7 +668,7 @@ export default function EventsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <GlassHeader onHeaderHeight={setHeaderHeight}>
-        <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14, flexDirection: "row", alignItems: "center" }}>
+        <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 6, flexDirection: "row", alignItems: "center" }}>
           <View style={{ flex: 1 }}>
             <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>Community Events</Text>
             <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
