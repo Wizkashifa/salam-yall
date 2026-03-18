@@ -690,7 +690,7 @@ export default function EventsScreen() {
             </Pressable>
           </View>
           {!isLoading && !error && activeEvents.length > 0 && (
-            <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+            <View style={{ flexDirection: "row", gap: 6 }}>
               {DISTANCE_OPTIONS.map((opt) => {
                 const isActive = distanceFilter === opt.value;
                 return (
@@ -700,19 +700,20 @@ export default function EventsScreen() {
                       setDistanceFilter(opt.value);
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     }}
-                    style={{
+                    style={({ pressed }) => ({
                       paddingHorizontal: 10,
-                      paddingVertical: 6,
-                      borderRadius: 16,
+                      paddingVertical: 8,
+                      borderRadius: 8,
                       backgroundColor: isActive ? colors.emerald : colors.surface,
                       borderWidth: 1,
                       borderColor: isActive ? colors.emerald : colors.border,
-                    }}
+                      opacity: pressed ? 0.7 : 1,
+                    })}
                   >
                     <Text style={{
-                      fontSize: 13,
-                      fontFamily: isActive ? "Inter_600SemiBold" : "Inter_400Regular",
-                      color: isActive ? "#fff" : colors.textSecondary,
+                      fontSize: 11,
+                      fontFamily: "Inter_600SemiBold",
+                      color: isActive ? "#fff" : colors.text,
                     }}>{opt.label}</Text>
                   </Pressable>
                 );
