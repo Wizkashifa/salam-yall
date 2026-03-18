@@ -21,6 +21,7 @@ import { NEARBY_MASJIDS, type Masjid } from "@/lib/prayer-utils";
 import { useSettings, type AsrCalc } from "@/lib/settings-context";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
+import PrayerPillMockup from "@/components/PrayerPillMockup";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -330,6 +331,8 @@ function TrackerScreen({ isActive }: { isActive: boolean }) {
               <Text style={trackerStyles.stateLabel}>Excused</Text>
             </View>
           </View>
+
+          <PrayerPillMockup variant="onboarding" />
 
           <View style={trackerStyles.divider} />
 

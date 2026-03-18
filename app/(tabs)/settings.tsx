@@ -29,6 +29,7 @@ import { TickerBanner } from "@/components/TickerBanner";
 import { GlassHeader } from "@/components/GlassHeader";
 import { useSettings } from "@/lib/settings-context";
 import { useAuth } from "@/lib/auth-context";
+import PrayerPillMockup from "@/components/PrayerPillMockup";
 import {
   NEARBY_MASJIDS,
   COMMUNITY_ORGS,
@@ -1483,6 +1484,7 @@ export default function SettingsScreen() {
                     Tap prayer pills on the Home screen to log prayers — including made up prayers for past times.
                   </Text>
                 </View>
+                <PrayerPillMockup variant="modal" colors={colors} />
                 <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
                   <Ionicons name="grid-outline" size={18} color={colors.emerald} style={{ marginTop: 2 }} />
                   <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: colors.textSecondary, flex: 1, lineHeight: 20 }}>
