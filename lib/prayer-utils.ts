@@ -165,7 +165,7 @@ export const COMMUNITY_ORGS: CommunityOrg[] = [
     logo: require("@/assets/logos/lighthouse.jpeg"),
   },
   {
-    name: "Taleef Collective",
+    name: "Taleef Collective — Fremont",
     latitude: 37.5484,
     longitude: -121.9886,
     address: "43170 Osgood Rd, Fremont, CA 94539",
@@ -173,20 +173,16 @@ export const COMMUNITY_ORGS: CommunityOrg[] = [
     description: "A welcoming space for Muslims to learn, grow, and connect — especially those new or returning to the faith.",
     matchTerms: ["taleef collective", "taleef"],
     logo: require("@/assets/logos/taleef.jpeg"),
-    campuses: [
-      {
-        name: "Fremont Campus",
-        address: "43170 Osgood Rd, Fremont, CA 94539",
-        latitude: 37.5484,
-        longitude: -121.9886,
-      },
-      {
-        name: "Chicago Campus",
-        address: "1945 S Halsted St, Chicago, IL 60608",
-        latitude: 41.8557,
-        longitude: -87.6466,
-      },
-    ],
+  },
+  {
+    name: "Taleef Collective — Chicago",
+    latitude: 41.8557,
+    longitude: -87.6466,
+    address: "1945 S Halsted St, Chicago, IL 60608",
+    website: "https://www.taleefcollective.org/",
+    description: "A welcoming space for Muslims to learn, grow, and connect — especially those new or returning to the faith.",
+    matchTerms: ["taleef collective", "taleef"],
+    logo: require("@/assets/logos/taleef.jpeg"),
   },
   {
     name: "Roots DFW",

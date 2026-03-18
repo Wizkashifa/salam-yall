@@ -972,7 +972,9 @@ export default function SettingsScreen() {
             onPress={() => { setSelectedCommunityOrg(org); setSection("communityOrgDetail"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
           >
             {org.logo ? (
-              <Image source={org.logo} style={{ width: 36, height: 36, borderRadius: 18 }} resizeMode="cover" />
+              <View style={[styles.masjidIcon, { backgroundColor: "transparent", overflow: "hidden" as const }]}>
+                <Image source={org.logo} style={{ width: 32, height: 32, borderRadius: 8 }} resizeMode="cover" />
+              </View>
             ) : (
               <View style={[styles.masjidIcon, { backgroundColor: colors.prayerIconBg }]}>
                 <Ionicons name="people" size={16} color={colors.emerald} />

@@ -761,6 +761,7 @@ export default function EventsScreen() {
                 backgroundColor={isDark ? "rgba(22,22,22,0.9)" : "rgba(255,255,255,0.85)"}
                 emeraldColor={colors.emerald}
                 goldColor={colors.gold}
+                distanceFilter={distanceFilter}
                 onSelectEvent={(eventId) => {
                   const ev = distanceFilteredEvents.find((e) => e.id === eventId);
                   if (ev) {

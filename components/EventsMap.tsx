@@ -19,30 +19,46 @@ interface EventsMapProps {
   backgroundColor: string;
   emeraldColor: string;
   goldColor: string;
+  distanceFilter?: number | "all";
   onSelectEvent?: (eventId: string) => void;
 }
 
-export function EventsMap({ events, userLocation, borderColor, backgroundColor, emeraldColor, goldColor, onSelectEvent }: EventsMapProps) {
+function getZoomForRadius(miles: number | "all"): number {
+  if (miles === "all") return 8;
+  if (miles <= 10) return 11.5;
+  if (miles <= 25) return 10;
+  if (miles <= 50) return 9;
+  return 8.5;
+}
+
+function zoomToDelta(zoom: number): number {
+  return 360 / Math.pow(2, zoom);
+}
+
+export function EventsMap({ events, userLocation, borderColor, backgroundColor, emeraldColor, goldColor, distanceFilter = "all", onSelectEvent }: EventsMapProps) {
   const mapRef = useRef<MapView>(null);
 
   const mappableEvents = events.filter((e) => e.latitude != null && e.longitude != null && !e.isVirtual);
 
+  const zoom = getZoomForRadius(distanceFilter);
+  const delta = zoomToDelta(zoom);
+
   const region = userLocation
-    ? { latitude: userLocation.latitude, longitude: userLocation.longitude, latitudeDelta: 0.45, longitudeDelta: 0.45 }
+    ? { latitude: userLocation.latitude, longitude: userLocation.longitude, latitudeDelta: delta, longitudeDelta: delta }
     : mappableEvents.length > 0
       ? {
           latitude: mappableEvents.reduce((sum, e) => sum + e.latitude, 0) / mappableEvents.length,
           longitude: mappableEvents.reduce((sum, e) => sum + e.longitude, 0) / mappableEvents.length,
-          latitudeDelta: 0.5,
-          longitudeDelta: 0.5,
+          latitudeDelta: delta,
+          longitudeDelta: delta,
         }
-      : { latitude: 35.78, longitude: -78.64, latitudeDelta: 0.5, longitudeDelta: 0.5 };
+      : { latitude: 35.78, longitude: -78.64, latitudeDelta: delta, longitudeDelta: delta };
 
   useEffect(() => {
     if (mapRef.current && mappableEvents.length > 0) {
       mapRef.current.animateToRegion(region, 500);
     }
-  }, [userLocation]);
+  }, [userLocation, distanceFilter]);
 
   return (
     <View style={[styles.container, { borderColor, backgroundColor, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }]}>

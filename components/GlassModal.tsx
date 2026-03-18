@@ -16,16 +16,16 @@ export function GlassModalContainer({ children, style }: GlassModalContainerProp
 
   if (isIOS) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }, style]}>
+      <View style={[styles.container, { backgroundColor: isDark ? "rgba(10,26,18,0.82)" : "rgba(245,248,246,0.82)" }, style]}>
         <BlurView
-          intensity={isDark ? 30 : 20}
+          intensity={isDark ? 60 : 45}
           tint={isDark ? "dark" : "light"}
           style={StyleSheet.absoluteFill}
         />
         <LinearGradient
           colors={[
-            colors.gradientStart + "12",
-            colors.gradientEnd + "08",
+            colors.gradientStart + "1A",
+            colors.gradientEnd + "10",
           ]}
           style={StyleSheet.absoluteFill}
         />
@@ -36,8 +36,8 @@ export function GlassModalContainer({ children, style }: GlassModalContainerProp
 
   const frostStyle = isWeb
     ? ({
-        backdropFilter: "blur(16px)",
-        WebkitBackdropFilter: "blur(16px)",
+        backdropFilter: "blur(24px)",
+        WebkitBackdropFilter: "blur(24px)",
       } as any)
     : {};
 
@@ -45,15 +45,19 @@ export function GlassModalContainer({ children, style }: GlassModalContainerProp
     <View
       style={[
         styles.container,
-        { backgroundColor: colors.background },
+        {
+          backgroundColor: isDark
+            ? "rgba(10,26,18,0.85)"
+            : "rgba(245,248,246,0.85)",
+        },
         frostStyle,
         style,
       ]}
     >
       <LinearGradient
         colors={[
-          colors.gradientStart + "0A",
-          colors.gradientEnd + "06",
+          colors.gradientStart + "14",
+          colors.gradientEnd + "0D",
         ]}
         style={StyleSheet.absoluteFill}
       />
