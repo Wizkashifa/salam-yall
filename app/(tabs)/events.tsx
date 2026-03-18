@@ -690,7 +690,6 @@ export default function EventsScreen() {
             <Ionicons name={showCalendar ? "calendar" : "map"} size={20} color="#fff" />
           </Pressable>
         </View>
-        <TickerBanner />
         {!isLoading && !error && activeEvents.length > 0 && (
           <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10 }}>
             <View style={{ flexDirection: "row", gap: 8 }}>
@@ -726,6 +725,7 @@ export default function EventsScreen() {
             </View>
           </View>
         )}
+        <TickerBanner />
       </GlassHeader>
       <ScrollView
         ref={scrollRef}

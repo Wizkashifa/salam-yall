@@ -1107,7 +1107,6 @@ export default function BusinessesScreen() {
             <Ionicons name="add" size={20} color="#fff" />
           </Pressable>
         </View>
-        <TickerBanner />
         <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10 }}>
           <View style={styles.searchFilterRow}>
             <View style={[styles.searchBar, { backgroundColor: "rgba(255,255,255,0.12)", borderColor: "rgba(255,255,255,0.2)" }]}>
@@ -1148,6 +1147,7 @@ export default function BusinessesScreen() {
             </Pressable>
           </View>
         </View>
+        <TickerBanner />
       </GlassHeader>
 
       {showDropdown ? (
