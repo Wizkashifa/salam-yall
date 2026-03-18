@@ -1220,7 +1220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isAllDay: !event.start?.dateTime,
           organizer: "Roots DFW",
           imageUrl,
-          registrationUrl,
+          registrationUrl: registrationUrl || "https://www.rootsdfw.org/",
           speaker: extractSpeaker(desc),
           latitude: 32.9857,
           longitude: -96.7502,
