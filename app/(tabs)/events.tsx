@@ -756,7 +756,8 @@ export default function EventsScreen() {
                   organizer: e.organizer,
                 }))}
                 userLocation={userLocation}
-                borderColor={colors.border}
+                borderColor={isDark ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.8)"}
+                backgroundColor={isDark ? "rgba(22,22,22,0.9)" : "rgba(255,255,255,0.85)"}
                 emeraldColor={colors.emerald}
                 goldColor={colors.gold}
                 onSelectEvent={(eventId) => {

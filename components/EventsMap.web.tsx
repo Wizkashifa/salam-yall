@@ -14,12 +14,13 @@ interface EventsMapProps {
   events: EventLocation[];
   userLocation: { latitude: number; longitude: number } | null;
   borderColor: string;
+  backgroundColor: string;
   emeraldColor: string;
   goldColor: string;
   onSelectEvent?: (eventId: string) => void;
 }
 
-export function EventsMap({ events, userLocation, borderColor, emeraldColor }: EventsMapProps) {
+export function EventsMap({ events, userLocation, borderColor, backgroundColor, emeraldColor }: EventsMapProps) {
   const leafletHtml = useMemo(() => {
     const mappableEvents = events.filter((e) => e.latitude != null && e.longitude != null && !e.isVirtual);
 
@@ -45,7 +46,7 @@ export function EventsMap({ events, userLocation, borderColor, emeraldColor }: E
   }, [events, userLocation, emeraldColor]);
 
   return (
-    <View style={[styles.container, { borderColor }]}>
+    <View style={[styles.container, { borderColor, backgroundColor, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 } as any]}>
       <iframe
         srcDoc={leafletHtml}
         style={{ width: "100%", height: "100%", border: "none", borderRadius: 16 } as any}
