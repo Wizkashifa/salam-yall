@@ -25,9 +25,20 @@ import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
 import { GlassHeader } from "@/components/GlassHeader";
 import { useDeepLink } from "@/lib/deeplink-context";
+import * as Location from "expo-location";
 import { useAuth } from "@/lib/auth-context";
 import { getApiUrl, apiRequest } from "@/lib/query-client";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
+import { getDistanceKm, kmToMiles } from "@/lib/prayer-utils";
+
+type DistanceFilter = 10 | 25 | 50 | 100 | "all";
+const DISTANCE_OPTIONS: { label: string; value: DistanceFilter }[] = [
+  { label: "10 mi", value: 10 },
+  { label: "25 mi", value: 25 },
+  { label: "50 mi", value: 50 },
+  { label: "100 mi", value: 100 },
+  { label: "All", value: "all" },
+];
 
 interface CalendarEvent {
   id: string;
@@ -41,6 +52,8 @@ interface CalendarEvent {
   imageUrl: string;
   registrationUrl: string;
   speaker: string;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 function formatEventDate(dateStr: string, isAllDay: boolean): { day: string; month: string; weekday: string; time: string; fullDate: string } {
@@ -489,8 +502,22 @@ export default function EventsScreen() {
   const [calendarScrolledPast, setCalendarScrolledPast] = useState(false);
   const calendarScrolledPastRef = useRef(false);
   const { pendingTarget, consumeTarget } = useDeepLink();
+  const [distanceFilter, setDistanceFilter] = useState<DistanceFilter>(50);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
   useEffect(() => { trackScreenView("Events"); }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === "granted") {
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          setUserLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+        }
+      } catch {}
+    })();
+  }, []);
 
   const { data: events, isLoading, error } = useQuery<CalendarEvent[]>({
     queryKey: ["/api/events"],
@@ -600,9 +627,19 @@ export default function EventsScreen() {
       })
     : [];
 
+  const distanceFilteredEvents = useMemo(() => {
+    if (distanceFilter === "all" || !userLocation) return activeEvents;
+    return activeEvents.filter((ev) => {
+      if (ev.latitude == null || ev.longitude == null) return true;
+      const km = getDistanceKm(userLocation.latitude, userLocation.longitude, ev.latitude, ev.longitude);
+      const miles = kmToMiles(km);
+      return miles <= distanceFilter;
+    });
+  }, [activeEvents, distanceFilter, userLocation]);
+
   const filteredEvents = selectedDate
-    ? activeEvents.filter((ev) => toDateKey(new Date(ev.start)) === selectedDate)
-    : activeEvents;
+    ? distanceFilteredEvents.filter((ev) => toDateKey(new Date(ev.start)) === selectedDate)
+    : distanceFilteredEvents;
   const grouped = groupEventsByDate(filteredEvents);
 
   const [headerHeight, setHeaderHeight] = useState(0);
@@ -661,6 +698,37 @@ export default function EventsScreen() {
               colors={colors}
               isDark={isDark}
             />
+          </View>
+        )}
+
+        {!isLoading && !error && activeEvents.length > 0 && (
+          <View style={{ flexDirection: "row", paddingHorizontal: 20, marginBottom: 12, gap: 8 }}>
+            {DISTANCE_OPTIONS.map((opt) => {
+              const isActive = distanceFilter === opt.value;
+              return (
+                <Pressable
+                  key={opt.label}
+                  onPress={() => {
+                    setDistanceFilter(opt.value);
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }}
+                  style={{
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 16,
+                    backgroundColor: isActive ? colors.emerald : colors.surface,
+                    borderWidth: 1,
+                    borderColor: isActive ? colors.emerald : colors.border,
+                  }}
+                >
+                  <Text style={{
+                    fontSize: 13,
+                    fontFamily: isActive ? "Inter_600SemiBold" : "Inter_400Regular",
+                    color: isActive ? "#fff" : colors.textSecondary,
+                  }}>{opt.label}</Text>
+                </Pressable>
+              );
+            })}
           </View>
         )}
 

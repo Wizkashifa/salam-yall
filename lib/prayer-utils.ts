@@ -134,6 +134,61 @@ export const NEARBY_MASJIDS: Masjid[] = [
   { name: "MCA Al-Noor", latitude: 37.3530, longitude: -121.9535, address: "1755 Catherine St, Santa Clara, CA 95050", website: "https://www.mcabayarea.org", matchTerms: ["mca al-noor", "mca alnoor", "mca noor", "catherine st"], hasIqama: true },
 ];
 
+export interface CommunityOrg {
+  name: string;
+  latitude: number;
+  longitude: number;
+  address: string;
+  website: string;
+  description: string;
+  matchTerms: string[];
+}
+
+export const COMMUNITY_ORGS: CommunityOrg[] = [
+  {
+    name: "Light House Project",
+    latitude: 35.7672,
+    longitude: -78.7811,
+    address: "1127 Kildaire Farm Rd, Cary, NC 27511",
+    website: "https://www.lhproj.com/",
+    description: "Community space fostering connection, dialogue, and personal growth through events, mentorship, and creative programming.",
+    matchTerms: ["light house project", "lighthouse project", "lhproj"],
+  },
+  {
+    name: "Taleef Collective",
+    latitude: 37.7749,
+    longitude: -122.4194,
+    address: "San Francisco Bay Area, CA",
+    website: "https://www.taleefcollective.org/",
+    description: "A welcoming space for Muslims to learn, grow, and connect — especially those new or returning to the faith.",
+    matchTerms: ["taleef collective", "taleef"],
+  },
+  {
+    name: "Roots DFW",
+    latitude: 32.9857,
+    longitude: -96.7502,
+    address: "Dallas-Fort Worth, TX",
+    website: "https://www.rootsdfw.org/",
+    description: "Building community among young Muslim professionals through social, spiritual, and service-oriented programming in the DFW metroplex.",
+    matchTerms: ["roots dfw", "rootsdfw"],
+  },
+];
+
+export function matchEventsToCommunityOrg(org: CommunityOrg, events: { title: string; location: string; organizer: string }[]): number[] {
+  const indices: number[] = [];
+  for (let i = 0; i < events.length; i++) {
+    const ev = events[i];
+    const searchable = `${(ev.location || "").toLowerCase()} ${(ev.organizer || "").toLowerCase()} ${(ev.title || "").toLowerCase()}`;
+    for (const term of org.matchTerms) {
+      if (searchable.includes(term)) {
+        indices.push(i);
+        break;
+      }
+    }
+  }
+  return indices;
+}
+
 export function matchEventsToMasjid(masjid: Masjid, events: { title: string; location: string; organizer: string }[]): number[] {
   const terms = masjid.matchTerms || [];
   const addrParts = masjid.address.toLowerCase().split(",")[0];

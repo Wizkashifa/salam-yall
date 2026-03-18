@@ -1271,7 +1271,7 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
     <View style={{ flex: 1 }}>
       {physicalReadingModal}
       <Pressable
-        style={[qStyles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        style={[qStyles.searchBar, { marginBottom: 15, backgroundColor: colors.surface, borderColor: colors.border }]}
         onPress={() => { setQSection("search"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
         testID="quran-search-bar"
       >

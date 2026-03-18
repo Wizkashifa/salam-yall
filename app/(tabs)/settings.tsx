@@ -29,11 +29,16 @@ import { useSettings } from "@/lib/settings-context";
 import { useAuth } from "@/lib/auth-context";
 import {
   NEARBY_MASJIDS,
+  COMMUNITY_ORGS,
   CALC_METHOD_LABELS,
   matchEventsToMasjid,
+  matchEventsToCommunityOrg,
   getAllMasjidsByDistance,
+  getDistanceKm,
+  kmToMiles,
   type CalcMethodKey,
   type Masjid,
+  type CommunityOrg,
 } from "@/lib/prayer-utils";
 import { getApiUrl } from "@/lib/query-client";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -60,9 +65,11 @@ interface CalendarEvent {
   organizer: string;
   imageUrl: string;
   registrationUrl: string;
+  latitude: number | null;
+  longitude: number | null;
 }
 
-type SettingsSection = "main" | "calcMethod" | "masjids" | "masjidDetail" | "feedback" | "prayerTracker" | "janazaHistory" | "profile" | "dhikrCounter" | "athanAlerts" | "quranReader" | "personalGrowth";
+type SettingsSection = "main" | "calcMethod" | "masjids" | "masjidDetail" | "feedback" | "prayerTracker" | "janazaHistory" | "profile" | "dhikrCounter" | "athanAlerts" | "quranReader" | "personalGrowth" | "communityOrgs" | "communityOrgDetail";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -138,6 +145,7 @@ export default function SettingsScreen() {
 
   const [growthTab, setGrowthTab] = useState<"statistics" | "badges">("statistics");
   const [selectedMasjid, setSelectedMasjid] = useState<Masjid | null>(null);
+  const [selectedCommunityOrg, setSelectedCommunityOrg] = useState<CommunityOrg | null>(null);
   const [feedbackType, setFeedbackType] = useState<"bug" | "feature">("feature");
   const [feedbackText, setFeedbackText] = useState("");
   const [feedbackEmail, setFeedbackEmail] = useState("");
@@ -193,7 +201,7 @@ export default function SettingsScreen() {
   const [sharingBadgeKey, setSharingBadgeKey] = useState<string | null>(null);
 
   useEffect(() => {
-    if (section === "masjids" && !locationRequested) {
+    if ((section === "masjids" || section === "communityOrgs") && !locationRequested) {
       setLocationRequested(true);
       (async () => {
         try {
@@ -362,6 +370,24 @@ export default function SettingsScreen() {
     const indices = matchEventsToMasjid(selectedMasjid, events);
     return indices.map(i => events[i]);
   }, [selectedMasjid, events]);
+
+  const communityOrgEvents = useMemo(() => {
+    if (!selectedCommunityOrg || !events) return [];
+    const now = new Date();
+    const indices = matchEventsToCommunityOrg(selectedCommunityOrg, events);
+    return indices.map(i => events[i]).filter(ev => {
+      const end = ev.end ? new Date(ev.end) : new Date(ev.start);
+      return end >= now;
+    });
+  }, [selectedCommunityOrg, events]);
+
+  const sortedCommunityOrgs = useMemo(() => {
+    if (!userLocation) return COMMUNITY_ORGS.map(org => ({ org, distanceMiles: 0 }));
+    return COMMUNITY_ORGS.map(org => {
+      const km = getDistanceKm(userLocation.latitude, userLocation.longitude, org.latitude, org.longitude);
+      return { org, distanceMiles: kmToMiles(km) };
+    }).sort((a, b) => a.distanceMiles - b.distanceMiles);
+  }, [userLocation]);
 
   const handleSignIn = useCallback(async () => {
     try {
@@ -537,6 +563,20 @@ export default function SettingsScreen() {
         <View style={{ flex: 1 }}>
           <Text style={[styles.menuLabel, { color: colors.text }]}>Masjid Directory</Text>
           <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>Select a masjid for iqamah timings</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+      </Pressable>
+
+      <Pressable
+        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
+        onPress={() => { setSection("communityOrgs"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+      >
+        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
+          <Ionicons name="people-outline" size={20} color={colors.emerald} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.menuLabel, { color: colors.text }]}>Community Organizations</Text>
+          <Text style={[styles.menuSublabel, { color: colors.textSecondary }]}>Local Muslim organizations & events</Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
       </Pressable>
@@ -879,6 +919,111 @@ export default function SettingsScreen() {
 
         <Text style={[styles.sectionLabel, { color: colors.textSecondary, marginTop: 20 }]}>UPCOMING EVENTS</Text>
         {masjidEvents.length > 0 ? masjidEvents.map((ev) => {
+          const date = new Date(ev.start);
+          const time = ev.isAllDay ? "All Day" : date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+          return (
+            <View key={ev.id} style={[styles.eventCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={[styles.eventBadge, { backgroundColor: isDark ? colors.actionButtonBg : colors.prayerIconBg }]}>
+                <Text style={[styles.eventDay, { color: colors.emerald }]}>{date.getDate()}</Text>
+                <Text style={[styles.eventMonth, { color: colors.emerald }]}>{date.toLocaleDateString("en-US", { month: "short" })}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={2}>{ev.title}</Text>
+                <Text style={[styles.eventTime, { color: colors.textSecondary }]}>{time}</Text>
+              </View>
+            </View>
+          );
+        }) : (
+          <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Ionicons name="calendar-outline" size={24} color={colors.textSecondary} />
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No upcoming events</Text>
+          </View>
+        )}
+      </>
+    );
+  };
+
+  const renderCommunityOrgs = () => (
+    <>
+      <Pressable
+        style={styles.backRow}
+        onPress={() => { setSection("main"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+      >
+        <Ionicons name="arrow-back" size={20} color={colors.text} />
+        <Text style={[styles.backLabel, { color: colors.text }]}>Community Organizations</Text>
+      </Pressable>
+
+      {sortedCommunityOrgs.map((entry, i) => {
+        const org = entry.org;
+        const distanceLabel = userLocation && entry.distanceMiles > 0
+          ? `${entry.distanceMiles < 10 ? entry.distanceMiles.toFixed(1) : Math.round(entry.distanceMiles)} mi`
+          : null;
+        return (
+          <Pressable
+            key={i}
+            style={({ pressed }) => [styles.masjidRow, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
+            onPress={() => { setSelectedCommunityOrg(org); setSection("communityOrgDetail"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+          >
+            <View style={[styles.masjidIcon, { backgroundColor: colors.prayerIconBg }]}>
+              <Ionicons name="people" size={16} color={colors.emerald} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.masjidName, { color: colors.text }]} numberOfLines={1}>{org.name}</Text>
+              <Text style={[styles.masjidAddr, { color: colors.textSecondary }]} numberOfLines={1}>{org.address}</Text>
+            </View>
+            {distanceLabel ? (
+              <View style={styles.distanceBadge}>
+                <Ionicons name="location-outline" size={12} color={colors.emerald} />
+                <Text style={[styles.distanceText, { color: colors.emerald }]}>{distanceLabel}</Text>
+              </View>
+            ) : null}
+            <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+          </Pressable>
+        );
+      })}
+    </>
+  );
+
+  const renderCommunityOrgDetail = () => {
+    if (!selectedCommunityOrg) return null;
+    return (
+      <>
+        <Pressable
+          style={styles.backRow}
+          onPress={() => { setSection("communityOrgs"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+        >
+          <Ionicons name="arrow-back" size={20} color={colors.text} />
+          <Text style={[styles.backLabel, { color: colors.text }]}>Community Organizations</Text>
+        </Pressable>
+
+        <View style={styles.masjidDetailHeader}>
+          <View style={[styles.masjidDetailIcon, { backgroundColor: colors.prayerIconBg }]}>
+            <Ionicons name="people" size={28} color={colors.emerald} />
+          </View>
+          <Text style={[styles.masjidDetailName, { color: colors.text }]}>{selectedCommunityOrg.name}</Text>
+        </View>
+
+        {selectedCommunityOrg.description ? (
+          <Text style={{ color: colors.textSecondary, fontSize: 14, fontFamily: "Inter_400Regular", marginBottom: 16, lineHeight: 20 }}>{selectedCommunityOrg.description}</Text>
+        ) : null}
+
+        <View style={[styles.detailCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Pressable style={styles.detailRow} onPress={() => openMasjidDirections(selectedCommunityOrg.address)}>
+            <Ionicons name="location-outline" size={18} color={colors.emerald} />
+            <Text style={[styles.detailText, { color: colors.text, flex: 1 }]}>{selectedCommunityOrg.address}</Text>
+            <Ionicons name="navigate-outline" size={14} color={colors.gold} />
+          </Pressable>
+          <Pressable style={styles.detailRow} onPress={() => Linking.openURL(selectedCommunityOrg.website).catch(() => {})}>
+            <Ionicons name="globe-outline" size={18} color={colors.emerald} />
+            <Text style={[styles.detailText, { color: colors.gold, flex: 1 }]} numberOfLines={1}>
+              {selectedCommunityOrg.website.replace(/^https?:\/\/(www\.)?/, "")}
+            </Text>
+            <Ionicons name="open-outline" size={14} color={colors.gold} />
+          </Pressable>
+        </View>
+
+        <Text style={[styles.sectionLabel, { color: colors.textSecondary, marginTop: 20 }]}>UPCOMING EVENTS</Text>
+        {communityOrgEvents.length > 0 ? communityOrgEvents.map((ev) => {
           const date = new Date(ev.start);
           const time = ev.isAllDay ? "All Day" : date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
           return (
@@ -2030,6 +2175,8 @@ export default function SettingsScreen() {
             {section === "calcMethod" && renderCalcMethod()}
             {section === "masjids" && renderMasjids()}
             {section === "masjidDetail" && renderMasjidDetail()}
+            {section === "communityOrgs" && renderCommunityOrgs()}
+            {section === "communityOrgDetail" && renderCommunityOrgDetail()}
             {section === "feedback" && renderFeedback()}
             {section === "prayerTracker" && renderPrayerTracker()}
             {section === "dhikrCounter" && renderDhikrCounter()}

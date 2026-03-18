@@ -42,6 +42,8 @@ import {
   checkNearMosque,
   matchEventsToMasjid,
   calculateQiblaBearing,
+  getDistanceKm,
+  kmToMiles,
   NEARBY_MASJIDS,
   type PrayerTimeEntry,
   type Masjid,
@@ -64,6 +66,8 @@ interface CalendarEvent {
   imageUrl: string;
   registrationUrl: string;
   speaker: string;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 const MASJID_KEYWORDS = [
@@ -546,6 +550,10 @@ export default function PrayerScreen() {
         const start = new Date(ev.start);
         const end = ev.end ? new Date(ev.end) : start;
         if (ev.isAllDay) return false;
+        if (ev.latitude != null && ev.longitude != null) {
+          const km = getDistanceKm(userCoords.lat, userCoords.lon, ev.latitude, ev.longitude);
+          if (kmToMiles(km) > 50) return false;
+        }
         const isCurrentlyHappening = start <= now && end >= now;
         if (isDaytimeMode) {
           const endOfDay = new Date(now);

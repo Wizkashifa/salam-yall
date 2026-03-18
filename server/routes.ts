@@ -221,6 +221,8 @@ interface CachedEvent {
   imageUrl: string;
   registrationUrl: string;
   speaker: string;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 let cachedEvents: CachedEvent[] = [];
@@ -295,6 +297,53 @@ const LOCATION_ADDRESS_MAP: Record<string, string> = {
   "The Light House Project": "1127 Kildaire Farm Rd, Cary, NC 27511",
   "The McKimmon Center": "1101 Gorman St, Raleigh, NC 27606",
 };
+
+const KNOWN_COORDINATES: Record<string, { lat: number; lng: number }> = {
+  "Islamic Association of Raleigh": { lat: 35.7898, lng: -78.6912 },
+  "Islamic Association of Raleigh (Atwater)": { lat: 35.7898, lng: -78.6912 },
+  "Islamic Association of Raleigh (Page Rd)": { lat: 35.9067, lng: -78.8169 },
+  "Islamic Center of Morrisville": { lat: 35.8099, lng: -78.8228 },
+  "Islamic Center of Cary": { lat: 35.7731, lng: -78.8028 },
+  "Al-Noor Islamic Center": { lat: 35.7636, lng: -78.7443 },
+  "Jamaat Ibad Ar-Rahman (Fayetteville)": { lat: 35.9856, lng: -78.8977 },
+  "Jamaat Ibad Ar-Rahman (Parkwood)": { lat: 35.8938, lng: -78.9109 },
+  "Apex Masjid": { lat: 35.7294, lng: -78.8415 },
+  "Ar-Razzaq Islamic Center": { lat: 35.9966, lng: -78.9155 },
+  "As-Salaam Islamic Center": { lat: 35.7781, lng: -78.6075 },
+  "Chapel Hill Islamic Society": { lat: 35.9406, lng: -79.0164 },
+  "Masjid King Khalid": { lat: 35.7693, lng: -78.6383 },
+  "North Raleigh Masjid": { lat: 35.8520, lng: -78.5571 },
+  "Light House Project": { lat: 35.7672, lng: -78.7811 },
+  "The Light House Project": { lat: 35.7672, lng: -78.7811 },
+  "Muslim American Society (MAS Raleigh)": { lat: 35.7800, lng: -78.7000 },
+  "Raleigh Islamic Institute": { lat: 35.7500, lng: -78.6200 },
+  "Madinah Quran & Youth Center": { lat: 35.8200, lng: -78.5800 },
+  "Rumman Room": { lat: 35.7898, lng: -78.6912 },
+  "Cary Mosque": { lat: 35.7731, lng: -78.8028 },
+  "San Ramon Valley Islamic Center": { lat: 37.7770, lng: -121.9691 },
+  "Muslim Community Association": { lat: 37.3769, lng: -121.9595 },
+  "MCA Al-Noor": { lat: 37.3530, lng: -121.9535 },
+  "Taleef Collective": { lat: 37.7749, lng: -122.4194 },
+  "Roots DFW": { lat: 32.9857, lng: -96.7502 },
+};
+
+function resolveCoordinates(organizer: string, location: string): { latitude: number | null; longitude: number | null } {
+  if (organizer && KNOWN_COORDINATES[organizer]) {
+    const c = KNOWN_COORDINATES[organizer];
+    return { latitude: c.lat, longitude: c.lng };
+  }
+  for (const [name, coords] of Object.entries(KNOWN_COORDINATES)) {
+    if (location && location.toLowerCase().includes(name.toLowerCase())) {
+      return { latitude: coords.lat, longitude: coords.lng };
+    }
+  }
+  for (const [name, coords] of Object.entries(KNOWN_COORDINATES)) {
+    if (organizer && organizer.toLowerCase().includes(name.toLowerCase())) {
+      return { latitude: coords.lat, longitude: coords.lng };
+    }
+  }
+  return { latitude: null, longitude: null };
+}
 
 const LOCATION_STRIP_PREFIXES = [
   /^islamic association of raleigh\s*[|,]\s*/i,
@@ -372,18 +421,24 @@ function processEvent(event: any): CachedEvent {
     !url.includes("drive.google.com/thumbnail")
   ) || "";
 
+  const organizer = resolveOrganizer(event);
+  const resolvedLocation = resolveLocation(event.location || "");
+  const coords = resolveCoordinates(organizer, event.location || "");
+
   return {
     id: event.id,
     title: event.summary || "Untitled Event",
     description: cleanDescription(desc),
-    location: resolveLocation(event.location || ""),
+    location: resolvedLocation,
     start: event.start?.dateTime || event.start?.date || "",
     end: event.end?.dateTime || event.end?.date || "",
     isAllDay: !event.start?.dateTime,
-    organizer: resolveOrganizer(event),
+    organizer,
     imageUrl,
     registrationUrl,
     speaker: extractSpeaker(desc),
+    latitude: coords.latitude,
+    longitude: coords.longitude,
   };
 }
 
@@ -1072,19 +1127,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
       const host = req.headers["host"] || "localhost:5000";
       const baseUrl = `${protocol}://${host}`;
-      return rows.map((r: any) => ({
-        id: `community_${r.id}`,
-        title: r.title,
-        description: r.description || "",
-        location: r.location || "",
-        start: r.start_time ? new Date(r.start_time).toISOString() : "",
-        end: r.end_time ? new Date(r.end_time).toISOString() : "",
-        isAllDay: false,
-        organizer: r.organizer || "",
-        imageUrl: r.image_data ? `${baseUrl}/api/events/image/${r.id}` : "",
-        registrationUrl: r.registration_url || "",
-        speaker: "",
-      }));
+      return rows.map((r: any) => {
+        const organizer = r.organizer || "";
+        const location = r.location || "";
+        const coords = resolveCoordinates(organizer, location);
+        return {
+          id: `community_${r.id}`,
+          title: r.title,
+          description: r.description || "",
+          location,
+          start: r.start_time ? new Date(r.start_time).toISOString() : "",
+          end: r.end_time ? new Date(r.end_time).toISOString() : "",
+          isAllDay: false,
+          organizer,
+          imageUrl: r.image_data ? `${baseUrl}/api/events/image/${r.id}` : "",
+          registrationUrl: r.registration_url || "",
+          speaker: "",
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+        };
+      });
     } catch (err: any) {
       console.error("[Events] Error fetching community events:", err.message);
       return [];
@@ -1109,6 +1171,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const ROOTS_DFW_CALENDAR_ID = "3vdosst5ebluhk5eucg6kgrrl8@group.calendar.google.com";
+  let cachedRootsDfwEvents: CachedEvent[] = [];
+  let rootsDfwLastFetch = 0;
+  const ROOTS_DFW_CACHE_TTL = 5 * 60 * 1000;
+
+  async function fetchRootsDfwEvents(): Promise<CachedEvent[]> {
+    const now = Date.now();
+    if (cachedRootsDfwEvents.length > 0 && (now - rootsDfwLastFetch) < ROOTS_DFW_CACHE_TTL) {
+      return cachedRootsDfwEvents.filter(e => new Date(e.end || e.start) >= new Date());
+    }
+    try {
+      const calendar = await getUncachableGoogleCalendarClient();
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      const threeMonthsLater = new Date();
+      threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
+
+      const response = await calendar.events.list({
+        calendarId: ROOTS_DFW_CALENDAR_ID,
+        timeMin: startOfToday.toISOString(),
+        timeMax: threeMonthsLater.toISOString(),
+        singleEvents: true,
+        orderBy: "startTime",
+        maxResults: 50,
+      });
+
+      const events: CachedEvent[] = (response.data.items || []).map((event: any) => {
+        const desc = event.description || "";
+        const imgMatch = desc.match(/src="([^"]+)"/);
+        const imageUrl = imgMatch ? imgMatch[1] : "";
+        const allLinks = desc.match(/https?:\/\/[^\s)"<>]+/g) || [];
+        const registrationUrl = allLinks.find((url: string) =>
+          !url.includes("drive.google.com/thumbnail") &&
+          (url.includes("forms.gle") || url.includes("docs.google.com/forms") ||
+           url.includes("eventbrite") || url.includes("register") || url.includes("rsvp") ||
+           url.includes("bit.ly") || url.includes("tinyurl.com"))
+        ) || allLinks.find((url: string) => !url.includes("drive.google.com/thumbnail")) || "";
+
+        return {
+          id: `roots_dfw_${event.id}`,
+          title: event.summary || "Untitled Event",
+          description: cleanDescription(desc),
+          location: event.location || "Dallas-Fort Worth, TX",
+          start: event.start?.dateTime || event.start?.date || "",
+          end: event.end?.dateTime || event.end?.date || "",
+          isAllDay: !event.start?.dateTime,
+          organizer: "Roots DFW",
+          imageUrl,
+          registrationUrl,
+          speaker: extractSpeaker(desc),
+          latitude: 32.9857,
+          longitude: -96.7502,
+        };
+      });
+
+      cachedRootsDfwEvents = events;
+      rootsDfwLastFetch = Date.now();
+      console.log(`[Roots DFW] Fetched ${events.length} events from Google Calendar`);
+      return events.filter(e => new Date(e.end || e.start) >= new Date());
+    } catch (err: any) {
+      console.error("[Roots DFW] Calendar fetch error:", err.message);
+      return cachedRootsDfwEvents.filter(e => new Date(e.end || e.start) >= new Date());
+    }
+  }
+
   app.get("/api/events", async (req, res) => {
     try {
       const now = Date.now();
@@ -1120,7 +1247,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const withOverrides = await applyEventOverrides(events);
       const communityEvents = await getCommunityEvents(req);
-      const allEvents = [...withOverrides, ...communityEvents].sort((a, b) => {
+      const rootsDfwEvents = await fetchRootsDfwEvents();
+      const allEvents = [...withOverrides, ...communityEvents, ...rootsDfwEvents].sort((a, b) => {
         const aTime = new Date(a.start).getTime();
         const bTime = new Date(b.start).getTime();
         return aTime - bTime;
