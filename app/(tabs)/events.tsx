@@ -668,30 +668,32 @@ export default function EventsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <GlassHeader onHeaderHeight={setHeaderHeight}>
-        <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>Community Events</Text>
-              <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
-                {selectedDateLabel ? `Showing ${selectedDateLabel}` : "Programs and events in the local area"}
-              </Text>
-            </View>
-            <Pressable
-              onPress={() => { setShowCalendar(!showCalendar); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-              style={({ pressed }) => ({
-                width: 36,
-                height: 36,
-                borderRadius: 10,
-                backgroundColor: pressed ? "rgba(255,255,255,0.2)" : (showCalendar ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.12)"),
-                alignItems: "center",
-                justifyContent: "center",
-              })}
-            >
-              <Ionicons name={showCalendar ? "calendar" : "map"} size={20} color="#fff" />
-            </Pressable>
+        <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14, flexDirection: "row", alignItems: "center" }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>Community Events</Text>
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
+              {selectedDateLabel ? `Showing ${selectedDateLabel}` : "Programs and events in the local area"}
+            </Text>
           </View>
-          {!isLoading && !error && activeEvents.length > 0 && (
-            <View style={{ flexDirection: "row", gap: 6 }}>
+          <Pressable
+            onPress={() => { setShowCalendar(!showCalendar); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+            style={({ pressed }) => ({
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: pressed ? "rgba(255,255,255,0.2)" : (showCalendar ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.15)"),
+              alignItems: "center" as const,
+              justifyContent: "center" as const,
+              opacity: pressed ? 0.8 : 1,
+            })}
+          >
+            <Ionicons name={showCalendar ? "calendar" : "map"} size={20} color="#fff" />
+          </Pressable>
+        </View>
+        <TickerBanner />
+        {!isLoading && !error && activeEvents.length > 0 && (
+          <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10 }}>
+            <View style={{ flexDirection: "row", gap: 8 }}>
               {DISTANCE_OPTIONS.map((opt) => {
                 const isActive = distanceFilter === opt.value;
                 return (
@@ -702,27 +704,28 @@ export default function EventsScreen() {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     }}
                     style={({ pressed }) => ({
-                      paddingHorizontal: 10,
-                      paddingVertical: 8,
-                      borderRadius: 8,
-                      backgroundColor: isActive ? colors.emerald : colors.surface,
+                      flex: 1,
+                      height: 36,
+                      borderRadius: 12,
+                      backgroundColor: isActive ? colors.emerald : "rgba(255,255,255,0.12)",
                       borderWidth: 1,
-                      borderColor: isActive ? colors.emerald : colors.border,
-                      opacity: pressed ? 0.7 : 1,
+                      borderColor: isActive ? colors.emerald : "rgba(255,255,255,0.2)",
+                      alignItems: "center" as const,
+                      justifyContent: "center" as const,
+                      opacity: pressed ? 0.8 : 1,
                     })}
                   >
                     <Text style={{
-                      fontSize: 11,
+                      fontSize: 13,
                       fontFamily: "Inter_600SemiBold",
-                      color: isActive ? "#fff" : colors.text,
+                      color: isActive ? "#fff" : "rgba(255,255,255,0.6)",
                     }}>{opt.label}</Text>
                   </Pressable>
                 );
               })}
             </View>
-          )}
-        </View>
-        <TickerBanner />
+          </View>
+        )}
       </GlassHeader>
       <ScrollView
         ref={scrollRef}
