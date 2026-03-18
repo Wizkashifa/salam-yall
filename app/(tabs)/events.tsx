@@ -28,6 +28,7 @@ import { useDeepLink } from "@/lib/deeplink-context";
 import * as Location from "expo-location";
 import { useAuth } from "@/lib/auth-context";
 import { getApiUrl, apiRequest } from "@/lib/query-client";
+import { EventsMap } from "@/components/EventsMap";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 import { getDistanceKm, kmToMiles, COMMUNITY_ORGS } from "@/lib/prayer-utils";
 
@@ -274,7 +275,6 @@ function EventCalendar({
 
 const calStyles = StyleSheet.create({
   container: {
-    marginHorizontal: 16,
     borderRadius: 16,
     borderWidth: 1,
     padding: 4,
@@ -735,23 +735,39 @@ export default function EventsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />
         }
       >
-        {showCalendar && !isLoading && !error && activeEvents.length > 0 && (
-          <View style={{ marginBottom: 8, marginHorizontal: 16 }}>
-            <EventCalendar
-              events={activeEvents}
-              selectedDate={selectedDate}
-              onSelectDate={onSelectDate}
-              colors={colors}
-              isDark={isDark}
-            />
-          </View>
-        )}
-
-        {!showCalendar && !isLoading && !error && activeEvents.length > 0 && (
-          <View style={{ height: 240, marginHorizontal: 16, marginBottom: 12, borderRadius: 14, overflow: "hidden", backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, justifyContent: "center", alignItems: "center" }}>
-            <Ionicons name="map" size={48} color={colors.emerald} />
-            <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.text, marginTop: 12 }}>Events Map</Text>
-            <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.textSecondary, marginTop: 4 }}>{distanceFilter === "all" ? "Showing all event locations" : `View events within ${distanceFilter}mi radius`}</Text>
+        {!isLoading && !error && activeEvents.length > 0 && (
+          <View style={{ marginHorizontal: 16, marginBottom: 12 }}>
+            {showCalendar ? (
+              <EventCalendar
+                events={activeEvents}
+                selectedDate={selectedDate}
+                onSelectDate={onSelectDate}
+                colors={colors}
+                isDark={isDark}
+              />
+            ) : (
+              <EventsMap
+                events={distanceFilteredEvents.map((e) => ({
+                  id: e.id,
+                  title: e.title,
+                  latitude: e.latitude!,
+                  longitude: e.longitude!,
+                  isVirtual: e.isVirtual,
+                  organizer: e.organizer,
+                }))}
+                userLocation={userLocation}
+                borderColor={colors.border}
+                emeraldColor={colors.emerald}
+                goldColor={colors.gold}
+                onSelectEvent={(eventId) => {
+                  const ev = distanceFilteredEvents.find((e) => e.id === eventId);
+                  if (ev) {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setSelectedEvent(ev);
+                  }
+                }}
+              />
+            )}
           </View>
         )}
 
