@@ -1474,7 +1474,7 @@ export default function SettingsScreen() {
           </>
 
         {showTrackerOnboarding && (
-          <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", alignItems: "center", padding: 24, zIndex: 999 }}>
+          <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end", alignItems: "center", paddingHorizontal: 24, paddingBottom: 100, zIndex: 999 }}>
             <View style={{ backgroundColor: colors.surface, borderRadius: 20, padding: 24, maxWidth: 340, width: "100%", borderWidth: 1, borderColor: colors.border }}>
               <View style={{ alignItems: "center", marginBottom: 16 }}>
                 <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: colors.emerald + "20", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>

@@ -602,13 +602,41 @@ const signInBtnStyles = StyleSheet.create({
   },
 });
 
+function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 function MasjidScreen({ isActive, onSelect }: { isActive: boolean; onSelect: (name: string | null) => void }) {
   const [selected, setSelected] = useState<string | null>(null);
+  const [userLoc, setUserLoc] = useState<{ latitude: number; longitude: number } | null>(null);
   const { data: fetchedMasjids } = useQuery<Masjid[]>({
     queryKey: ["/api/masjids"],
     staleTime: 60 * 60 * 1000,
   });
-  const masjidList = fetchedMasjids && fetchedMasjids.length > 0 ? fetchedMasjids : NEARBY_MASJIDS;
+  const baseMasjidList = fetchedMasjids && fetchedMasjids.length > 0 ? fetchedMasjids : NEARBY_MASJIDS;
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === "granted") {
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          setUserLoc({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+        }
+      } catch {}
+    })();
+  }, []);
+
+  const masjidList = userLoc
+    ? [...baseMasjidList].sort((a, b) =>
+        getDistanceKm(userLoc.latitude, userLoc.longitude, a.latitude, a.longitude) -
+        getDistanceKm(userLoc.latitude, userLoc.longitude, b.latitude, b.longitude)
+      )
+    : baseMasjidList;
 
   const handleSelect = useCallback((name: string) => {
     const newVal = selected === name ? null : name;

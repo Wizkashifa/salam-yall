@@ -22,7 +22,7 @@ const EXAMPLE_PILLS = [
   { name: "Fajr", time: "5:42", status: 0 },
   { name: "Dhuhr", time: "12:15", status: 1 },
   { name: "Asr", time: "3:38", status: 2 },
-  { name: "Maghrib", time: "6:12", status: 3 },
+  { name: "Mgrb", time: "6:12", status: 3 },
   { name: "Isha", time: "7:45", status: 4 },
 ] as const;
 

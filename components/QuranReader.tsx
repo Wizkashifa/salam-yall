@@ -44,7 +44,7 @@ const BANNER_COLLAPSE_THRESHOLD = 30;
 
 const TRANSLATIONS: { id: number; label: string }[] = [
   { id: 20, label: "Sahih International" },
-  { id: 131, label: "Dr. Mustafa Khattab" },
+  { id: 22, label: "Abdullah Yusuf Ali" },
   { id: 19, label: "Pickthall" },
   { id: 84, label: "Mufti Taqi Usmani" },
   { id: 85, label: "Abdul Haleem" },
@@ -170,6 +170,7 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
   const [physStartPage, setPhysStartPage] = useState(1);
   const [physEndPage, setPhysEndPage] = useState(1);
   const [mushafError, setMushafError] = useState(false);
+  const [mushafPageInput, setMushafPageInput] = useState("");
   const [showSurahPicker, setShowSurahPicker] = useState<"start" | "end" | null>(null);
   const [surahPickerSearch, setSurahPickerSearch] = useState("");
   const mushafFetchId = useRef(0);
@@ -1354,7 +1355,74 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
         </Pressable>
       </View>
 
-      {surahsLoading ? (
+      {viewMode === "mushaf" ? (
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 }}>
+            <View style={{ flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 12, height: 42 }}>
+              <Ionicons name="document-text-outline" size={16} color={colors.textSecondary} style={{ marginRight: 8 }} />
+              <TextInput
+                style={{ flex: 1, fontFamily: "Inter_500Medium", fontSize: 15, color: colors.text, paddingVertical: 0 }}
+                placeholder={`Go to page (1–${TOTAL_MUSHAF_PAGES})`}
+                placeholderTextColor={colors.textTertiary}
+                keyboardType="number-pad"
+                returnKeyType="go"
+                value={mushafPageInput}
+                onChangeText={setMushafPageInput}
+                onSubmitEditing={() => {
+                  const p = parseInt(mushafPageInput);
+                  if (p >= 1 && p <= TOTAL_MUSHAF_PAGES) {
+                    setQSection("mushafView");
+                    fetchMushafPage(p);
+                    setMushafPageInput("");
+                  }
+                }}
+              />
+            </View>
+            <Pressable
+              style={{ backgroundColor: colors.emerald, borderRadius: 10, paddingHorizontal: 16, height: 42, alignItems: "center", justifyContent: "center" }}
+              onPress={() => {
+                const p = parseInt(mushafPageInput);
+                if (p >= 1 && p <= TOTAL_MUSHAF_PAGES) {
+                  setQSection("mushafView");
+                  fetchMushafPage(p);
+                  setMushafPageInput("");
+                }
+              }}
+            >
+              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff" }}>Go</Text>
+            </Pressable>
+          </View>
+          <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+            <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: colors.textTertiary, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Juz Pages</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {Array.from({ length: 30 }, (_, i) => {
+                const juzPage = [1,22,42,62,82,102,121,142,162,182,201,222,242,262,282,302,322,342,362,382,402,422,442,462,483,502,522,542,562,582][i];
+                return (
+                  <Pressable
+                    key={i}
+                    style={({ pressed }) => ({
+                      width: "18.5%" as any,
+                      backgroundColor: pressed ? colors.emerald + "30" : colors.surface,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      paddingVertical: 10,
+                      alignItems: "center" as const,
+                    })}
+                    onPress={() => {
+                      setQSection("mushafView");
+                      fetchMushafPage(juzPage);
+                    }}
+                  >
+                    <Text style={{ fontFamily: "Inter_700Bold", fontSize: 14, color: colors.text }}>Juz {i + 1}</Text>
+                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: colors.textTertiary, marginTop: 2 }}>p. {juzPage}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </ScrollView>
+        </View>
+      ) : surahsLoading ? (
         <ActivityIndicator size="small" color={colors.emerald} style={{ marginTop: 24 }} />
       ) : errorMsg && surahs.length === 0 ? (
         <View style={qStyles.emptyState}>
