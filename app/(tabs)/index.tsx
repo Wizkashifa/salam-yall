@@ -1069,14 +1069,21 @@ export default function PrayerScreen() {
           </View>
           <View style={styles.prayerHero}>
             <CountdownRing colors={colors} isDark={isDark} progress={countdownProgress} qiblaBearing={qiblaRotation} hasRealLocation={hasRealLocation} onRequestLocation={loadPrayerData} />
-            {nextPrayer ? (
-              <View style={styles.prayerHeroText}>
-                <Text style={[styles.prayerHeroName, { color: isDark ? "#FFFFFF" : colors.emerald }]} allowFontScaling={false}>{nextPrayer.label}</Text>
-                <Text style={[styles.prayerHeroCountdown, { color: isDark ? colors.gold : colors.text }]} allowFontScaling={false}>
-                  {padNum(countdown.hours)}:{padNum(countdown.minutes)}:{padNum(countdown.seconds)}
-                </Text>
-              </View>
-            ) : null}
+            {nextPrayer ? (() => {
+              const nextIdx = prayers.findIndex(p => p.name === nextPrayer.name);
+              const currentPrayer = nextIdx > 0 ? prayers[nextIdx - 1] : prayers[prayers.length - 1];
+              const timeParts: string[] = [];
+              if (countdown.hours > 0) timeParts.push(`${countdown.hours} hr`);
+              if (countdown.minutes > 0 || countdown.hours === 0) timeParts.push(`${countdown.minutes} min`);
+              return (
+                <View style={styles.prayerHeroText}>
+                  <Text style={[styles.prayerHeroName, { color: isDark ? "#FFFFFF" : colors.emerald }]} allowFontScaling={false}>Time for {currentPrayer.label}</Text>
+                  <Text style={[styles.prayerHeroCountdown, { color: isDark ? colors.gold : colors.text }]} allowFontScaling={false}>
+                    {nextPrayer.label} is in {timeParts.join(", ")}
+                  </Text>
+                </View>
+              );
+            })() : null}
             <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
               {weatherData ? (
                 <View style={{ alignItems: "center" }}>
@@ -1824,18 +1831,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   prayerHeroName: {
-    fontSize: 20,
+    fontSize: 22,
     fontFamily: "Inter_700Bold",
     marginTop: 2,
-    textTransform: "uppercase" as const,
-    letterSpacing: 1.5,
+    letterSpacing: 0.5,
   },
   prayerHeroCountdown: {
-    fontSize: 28,
-    fontFamily: "Inter_700Bold",
-    marginTop: 2,
-    letterSpacing: 1,
-    fontVariant: ["tabular-nums" as const],
+    fontSize: 15,
+    fontFamily: "Inter_500Medium",
+    marginTop: 4,
+    letterSpacing: 0.3,
   },
   prayerPillRowView: {
     flexDirection: "row" as const,

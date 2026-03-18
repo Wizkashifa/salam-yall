@@ -47,7 +47,7 @@ import ViewShot, { captureRef } from "react-native-view-shot";
 import { useRef } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { QuranReader, type QuranReaderHandle } from "@/components/QuranReader";
-import { getReadingStreak, getReadingDates, getKhatamProgress } from "@/lib/quran-tracker";
+import { getReadingStreak, getReadingDates, getKhatamProgress, getQuranStats } from "@/lib/quran-tracker";
 
 interface CalendarEvent {
   id: string;
@@ -1680,6 +1680,9 @@ export default function SettingsScreen() {
     quranStreak: number;
     quranConsistency: number;
     quranTotalDays: number;
+    quranPagesRead: number;
+    quranAyahsRead: number;
+    quranReadingDates: string[];
     khatamProgress: number;
     nextBadge: { title: string; progress: number; total: number; remaining: number } | null;
     prayerStreak: number;
@@ -1733,6 +1736,8 @@ export default function SettingsScreen() {
           const khatam = await getKhatamProgress();
           const khatamProgress = khatam.completedCount;
 
+          const quranStats = await getQuranStats();
+
           const { badges } = await computeBadges();
           const unearnedBadges = badges.filter(b => !b.earned && b.total > 0);
           let nextBadge: { title: string; progress: number; total: number; remaining: number } | null = null;
@@ -1757,6 +1762,9 @@ export default function SettingsScreen() {
             quranStreak,
             quranConsistency,
             quranTotalDays: quranDates.length,
+            quranPagesRead: quranStats.totalPagesRead,
+            quranAyahsRead: quranStats.totalAyahsRead,
+            quranReadingDates: quranDates,
             khatamProgress,
             nextBadge,
             prayerStreak,
@@ -1811,6 +1819,79 @@ export default function SettingsScreen() {
             </View>
           ) : (
             <>
+              {(() => {
+                const heatDays: { date: string; fajr: PrayerStatus; dhuhr: PrayerStatus; asr: PrayerStatus; maghrib: PrayerStatus; isha: PrayerStatus; quran: boolean }[] = [];
+                const today2 = new Date();
+                const quranSet = new Set(growthData.quranReadingDates);
+                for (let i = 29; i >= 0; i--) {
+                  const d2 = new Date(today2);
+                  d2.setDate(d2.getDate() - i);
+                  const key2 = `${d2.getFullYear()}-${String(d2.getMonth() + 1).padStart(2, "0")}-${String(d2.getDate()).padStart(2, "0")}`;
+                  const existing = heatmapData.find(h => h.date === key2);
+                  heatDays.push({
+                    date: key2,
+                    fajr: existing?.fajr ?? 0,
+                    dhuhr: existing?.dhuhr ?? 0,
+                    asr: existing?.asr ?? 0,
+                    maghrib: existing?.maghrib ?? 0,
+                    isha: existing?.isha ?? 0,
+                    quran: quranSet.has(key2),
+                  });
+                }
+                const labelW2 = 48;
+                const availableW2 = screenWidth - 66 - 24 - labelW2;
+                const gap2 = 2;
+                const dotSize2 = Math.floor((availableW2 - (34 * gap2)) / 35);
+                const clampedDot2 = Math.min(Math.max(dotSize2, 5), 10);
+                return (
+                  <View style={{ backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 12, marginBottom: 16 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                      <Ionicons name="grid" size={16} color={colors.emerald} />
+                      <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: colors.text }}>Activity Heatmap</Text>
+                      <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: colors.textSecondary, marginLeft: "auto" }}>Last 30 days</Text>
+                    </View>
+                    {(["fajr", "dhuhr", "asr", "maghrib", "isha"] as const).map((prayer) => (
+                      <View key={prayer} style={{ flexDirection: "row", alignItems: "center", marginBottom: 3 }}>
+                        <Text style={{ fontFamily: "Inter_500Medium", fontSize: 10, color: colors.textSecondary, width: labelW2, textTransform: "capitalize" }}>{prayer}</Text>
+                        <View style={{ flexDirection: "row", gap: gap2, flexWrap: "nowrap", flex: 1 }}>
+                          {heatDays.map((day, di) => {
+                            const status = day[prayer];
+                            let dotColor = colors.surfaceSecondary;
+                            if (status === 1) dotColor = colors.emerald;
+                            else if (status === 2) dotColor = colors.gold;
+                            else if (status === 3) dotColor = colors.emerald + "50";
+                            else if (status === 4) dotColor = "#EF4444";
+                            return <View key={di} style={{ flex: 1, aspectRatio: 1, maxWidth: clampedDot2, maxHeight: clampedDot2, borderRadius: 1.5, backgroundColor: dotColor }} />;
+                          })}
+                        </View>
+                      </View>
+                    ))}
+                    <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 3 }}>
+                      <Text style={{ fontFamily: "Inter_500Medium", fontSize: 10, color: colors.gold, width: labelW2 }}>Quran</Text>
+                      <View style={{ flexDirection: "row", gap: gap2, flexWrap: "nowrap", flex: 1 }}>
+                        {heatDays.map((day, di) => (
+                          <View key={di} style={{ flex: 1, aspectRatio: 1, maxWidth: clampedDot2, maxHeight: clampedDot2, borderRadius: 1.5, backgroundColor: day.quran ? colors.gold : colors.surfaceSecondary }} />
+                        ))}
+                      </View>
+                    </View>
+                    <View style={{ flexDirection: "row", justifyContent: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+                      {[
+                        { color: colors.emerald, label: "On time" },
+                        { color: colors.gold, label: "Masjid / Quran" },
+                        { color: colors.emerald + "50", label: "Made up" },
+                        { color: "#EF4444", label: "Excused" },
+                        { color: colors.surfaceSecondary, label: "Missed" },
+                      ].map(l => (
+                        <View key={l.label} style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                          <View style={{ width: 6, height: 6, borderRadius: 1.5, backgroundColor: l.color }} />
+                          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: colors.textSecondary }}>{l.label}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                );
+              })()}
+
               <View style={{ backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16, marginBottom: 16 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 16 }}>
                   <Ionicons name="moon" size={18} color={colors.emerald} />
@@ -1847,12 +1928,12 @@ export default function SettingsScreen() {
                     <Text style={{ fontFamily: "Inter_500Medium", fontSize: 11, color: colors.textSecondary, marginTop: 2 }}>Day Streak</Text>
                   </View>
                   <View style={{ flex: 1, padding: 12, borderRadius: 12, backgroundColor: colors.surfaceSecondary, alignItems: "center" }}>
-                    <Text style={{ fontFamily: "Inter_700Bold", fontSize: 24, color: colors.emerald }}>{growthData.quranConsistency}%</Text>
-                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 11, color: colors.textSecondary, marginTop: 2 }}>30-Day Consistency</Text>
+                    <Text style={{ fontFamily: "Inter_700Bold", fontSize: 24, color: colors.emerald }}>{growthData.quranPagesRead}</Text>
+                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 11, color: colors.textSecondary, marginTop: 2 }}>Pages Read</Text>
                   </View>
                   <View style={{ flex: 1, padding: 12, borderRadius: 12, backgroundColor: colors.surfaceSecondary, alignItems: "center" }}>
-                    <Text style={{ fontFamily: "Inter_700Bold", fontSize: 24, color: colors.text }}>{growthData.quranTotalDays}</Text>
-                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 11, color: colors.textSecondary, marginTop: 2 }}>Total Days</Text>
+                    <Text style={{ fontFamily: "Inter_700Bold", fontSize: 24, color: colors.text }}>{growthData.quranAyahsRead}</Text>
+                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 11, color: colors.textSecondary, marginTop: 2 }}>Ayahs Read</Text>
                   </View>
                 </View>
 

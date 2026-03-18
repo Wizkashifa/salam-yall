@@ -161,6 +161,77 @@ export async function resetSurahProgress(surahId: number): Promise<void> {
   }
 }
 
+const QURAN_STATS_KEY = "quran_reading_stats";
+
+export interface QuranReadingStats {
+  totalPagesRead: number;
+  totalAyahsRead: number;
+}
+
+async function loadStats(): Promise<QuranReadingStats> {
+  try {
+    const raw = await AsyncStorage.getItem(QURAN_STATS_KEY);
+    if (!raw) return { totalPagesRead: 0, totalAyahsRead: 0 };
+    return JSON.parse(raw);
+  } catch {
+    return { totalPagesRead: 0, totalAyahsRead: 0 };
+  }
+}
+
+async function saveStats(stats: QuranReadingStats): Promise<void> {
+  await AsyncStorage.setItem(QURAN_STATS_KEY, JSON.stringify(stats));
+}
+
+export async function getQuranStats(): Promise<QuranReadingStats> {
+  return loadStats();
+}
+
+export async function addQuranReading(pages: number, ayahs: number): Promise<QuranReadingStats> {
+  const stats = await loadStats();
+  stats.totalPagesRead += pages;
+  stats.totalAyahsRead += ayahs;
+  await saveStats(stats);
+  await logQuranRead();
+  return stats;
+}
+
+export async function logPhysicalSurahReading(
+  startSurah: number,
+  startAyah: number,
+  endSurah: number,
+  endAyah: number,
+  surahVersesCounts: number[]
+): Promise<void> {
+  let totalAyahs = 0;
+  if (startSurah === endSurah) {
+    totalAyahs = Math.max(0, endAyah - startAyah + 1);
+  } else {
+    totalAyahs += surahVersesCounts[startSurah - 1] - startAyah + 1;
+    for (let s = startSurah + 1; s < endSurah; s++) {
+      totalAyahs += surahVersesCounts[s - 1];
+    }
+    totalAyahs += endAyah;
+  }
+
+  const pages = Math.max(1, Math.round(totalAyahs / 15));
+
+  for (let s = startSurah; s <= endSurah; s++) {
+    const surahTotal = surahVersesCounts[s - 1];
+    const startsAtBeginning = s === startSurah ? startAyah === 1 : true;
+    const endsAtEnd = s === endSurah ? endAyah >= surahTotal : true;
+    if (startsAtBeginning && endsAtEnd) {
+      await markSurahRead(s);
+    }
+  }
+  await addQuranReading(pages, totalAyahs);
+}
+
+export async function logPhysicalPageReading(startPage: number, endPage: number): Promise<void> {
+  const pages = Math.max(1, endPage - startPage + 1);
+  const estimatedAyahs = pages * 15;
+  await addQuranReading(pages, estimatedAyahs);
+}
+
 const READING_POS_KEY = "quran_reading_position";
 
 export interface ReadingPosition {

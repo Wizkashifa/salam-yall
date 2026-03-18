@@ -14,6 +14,9 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
   useColorScheme,
+  Modal,
+  ScrollView,
+  Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -26,9 +29,13 @@ import {
   getReadingPosition,
   saveSurahProgress,
   getSurahProgress,
+  logPhysicalSurahReading,
+  logPhysicalPageReading,
+  addQuranReading,
   type KhatamProgress,
   type ReadingPosition,
 } from "@/lib/quran-tracker";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const VERSES_PER_PAGE = 50;
 const API_BASE = "https://api.quran.com/api/v4";
@@ -104,7 +111,18 @@ interface ApiSearchResult {
   text?: string;
 }
 
-type QuranSection = "surahList" | "verseView" | "search";
+type QuranSection = "surahList" | "verseView" | "search" | "mushafView";
+type ViewMode = "verses" | "mushaf";
+const VIEW_MODE_KEY = "quran_view_mode";
+const TOTAL_MUSHAF_PAGES = 604;
+
+interface MushafVerse {
+  id: number;
+  verse_number: number;
+  verse_key: string;
+  text_uthmani: string;
+  page_number: number;
+}
 
 export interface QuranReaderHandle {
   goBack: () => boolean;
@@ -137,6 +155,23 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
   const [readUpToIndex, setReadUpToIndex] = useState(-1);
   const [bannerCollapsed, setBannerCollapsed] = useState(false);
   const [resumePos, setResumePos] = useState<ReadingPosition | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>("verses");
+  const [mushafPage, setMushafPage] = useState(1);
+  const [mushafVerses, setMushafVerses] = useState<MushafVerse[]>([]);
+  const [mushafLoading, setMushafLoading] = useState(false);
+  const [mushafSurahName, setMushafSurahName] = useState("");
+  const [showPhysicalModal, setShowPhysicalModal] = useState(false);
+  const [physicalTab, setPhysicalTab] = useState<"surahs" | "pages">("surahs");
+  const [physStartSurah, setPhysStartSurah] = useState(1);
+  const [physStartAyah, setPhysStartAyah] = useState(1);
+  const [physEndSurah, setPhysEndSurah] = useState(1);
+  const [physEndAyah, setPhysEndAyah] = useState(1);
+  const [physStartPage, setPhysStartPage] = useState(1);
+  const [physEndPage, setPhysEndPage] = useState(1);
+  const [mushafError, setMushafError] = useState(false);
+  const [showSurahPicker, setShowSurahPicker] = useState<"start" | "end" | null>(null);
+  const [surahPickerSearch, setSurahPickerSearch] = useState("");
+  const mushafFetchId = useRef(0);
 
   const versesListRef = useRef<FlatList>(null);
   const fetchIdRef = useRef(0);
@@ -153,7 +188,7 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
 
   useImperativeHandle(ref, () => ({
     goBack: () => {
-      if (qSectionRef.current === "verseView" || qSectionRef.current === "search") {
+      if (qSectionRef.current === "verseView" || qSectionRef.current === "search" || qSectionRef.current === "mushafView") {
         handleBackRef.current();
         return true;
       }
@@ -169,6 +204,9 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
     logQuranRead();
     getKhatamProgress().then(setKhatam).catch(() => {});
     getReadingPosition().then(setResumePos).catch(() => {});
+    AsyncStorage.getItem(VIEW_MODE_KEY).then(v => {
+      if (v === "mushaf") setViewMode("mushaf");
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -374,6 +412,78 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
       fetchVerses(selectedSurah.id, versesPage + 1, selectedTranslationIds, true);
     }
   }, [versesHasMore, versesLoading, selectedSurah, versesPage, selectedTranslationIds, fetchVerses]);
+
+  const toggleViewMode = useCallback(() => {
+    const newMode = viewMode === "verses" ? "mushaf" : "verses";
+    setViewMode(newMode);
+    AsyncStorage.setItem(VIEW_MODE_KEY, newMode).catch(() => {});
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, [viewMode]);
+
+  const fetchMushafPage = useCallback(async (page: number) => {
+    const thisId = ++mushafFetchId.current;
+    try {
+      setMushafLoading(true);
+      setMushafError(false);
+      const res = await fetch(`${API_BASE}/verses/by_page/${page}?language=en&fields=text_uthmani,page_number`);
+      if (!res.ok) throw new Error("Failed");
+      if (thisId !== mushafFetchId.current) return;
+      const data = await res.json();
+      const parsed: MushafVerse[] = (data.verses || []).map((v: any) => ({
+        id: v.id,
+        verse_number: v.verse_number,
+        verse_key: v.verse_key,
+        text_uthmani: v.text_uthmani,
+        page_number: v.page_number || page,
+      }));
+      setMushafVerses(parsed);
+      setMushafPage(page);
+      if (parsed.length > 0) {
+        const surahNum = parseInt(parsed[0].verse_key.split(":")[0]);
+        const s = surahs.find(s => s.id === surahNum);
+        setMushafSurahName(s?.name_simple || `Surah ${surahNum}`);
+      }
+      addQuranReading(1, parsed.length);
+    } catch {
+      if (thisId === mushafFetchId.current) {
+        setMushafError(true);
+        setMushafVerses([]);
+      }
+    } finally {
+      if (thisId === mushafFetchId.current) {
+        setMushafLoading(false);
+      }
+    }
+  }, [surahs]);
+
+  const handlePhysicalSubmit = useCallback(async () => {
+    try {
+      if (physicalTab === "surahs") {
+        const startSurahData = surahs.find(s => s.id === physStartSurah);
+        const endSurahData = surahs.find(s => s.id === physEndSurah);
+        const clampedStartAyah = Math.min(physStartAyah, startSurahData?.verses_count || 999);
+        const clampedEndAyah = Math.min(physEndAyah, endSurahData?.verses_count || 999);
+        if (physEndSurah < physStartSurah || (physEndSurah === physStartSurah && clampedEndAyah < clampedStartAyah)) {
+          Alert.alert("Invalid Range", "End position must be after start position.");
+          return;
+        }
+        const verseCounts = surahs.map(s => s.verses_count);
+        await logPhysicalSurahReading(physStartSurah, clampedStartAyah, physEndSurah, clampedEndAyah, verseCounts);
+      } else {
+        if (physEndPage < physStartPage) {
+          Alert.alert("Invalid Range", "End page must be after start page.");
+          return;
+        }
+        await logPhysicalPageReading(physStartPage, physEndPage);
+      }
+      await getKhatamProgress().then(setKhatam);
+      setShowPhysicalModal(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert("Recorded", "Your physical Quran reading has been logged.");
+    } catch {
+      Alert.alert("Error", "Failed to save reading.");
+    }
+  }, [physicalTab, physStartSurah, physStartAyah, physEndSurah, physEndAyah, physStartPage, physEndPage, surahs]);
 
   const handleBackFromVerses = useCallback(() => {
     try {
@@ -692,6 +802,12 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
     </>
   ), [resumePos, khatam, colors, handleResumeReading]);
 
+  const filteredPickerSurahs = useMemo(() => {
+    if (!surahPickerSearch.trim()) return surahs;
+    const q = surahPickerSearch.toLowerCase();
+    return surahs.filter(s => s.name_simple.toLowerCase().includes(q) || String(s.id).includes(q));
+  }, [surahs, surahPickerSearch]);
+
   if (qSection === "search") {
     return (
       <View style={{ flex: 1 }}>
@@ -907,15 +1023,288 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
     );
   }
 
+  if (qSection === "mushafView") {
+    return (
+      <View style={{ flex: 1 }}>
+        <View style={qStyles.verseViewHeader}>
+          <Pressable style={qStyles.backBtn} onPress={() => { setQSection("surahList"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}>
+            <Ionicons name="chevron-back" size={22} color={colors.text} />
+          </Pressable>
+          <View style={qStyles.headerTitleArea}>
+            <Text style={[qStyles.backLabel, { color: colors.text }]} numberOfLines={1}>
+              Page {mushafPage} · {mushafSurahName}
+            </Text>
+          </View>
+        </View>
+
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <Pressable
+            style={{ opacity: mushafPage <= 1 ? 0.3 : 1, padding: 8, backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1, borderColor: colors.border }}
+            onPress={() => { if (mushafPage > 1) fetchMushafPage(mushafPage - 1); }}
+            disabled={mushafPage <= 1}
+          >
+            <Ionicons name="chevron-back" size={20} color={colors.text} />
+          </Pressable>
+          <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: colors.textSecondary }}>
+            {mushafPage} / {TOTAL_MUSHAF_PAGES}
+          </Text>
+          <Pressable
+            style={{ opacity: mushafPage >= TOTAL_MUSHAF_PAGES ? 0.3 : 1, padding: 8, backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1, borderColor: colors.border }}
+            onPress={() => { if (mushafPage < TOTAL_MUSHAF_PAGES) fetchMushafPage(mushafPage + 1); }}
+            disabled={mushafPage >= TOTAL_MUSHAF_PAGES}
+          >
+            <Ionicons name="chevron-forward" size={20} color={colors.text} />
+          </Pressable>
+        </View>
+
+        {mushafLoading ? (
+          <ActivityIndicator size="small" color={colors.emerald} style={{ marginTop: 24 }} />
+        ) : mushafError ? (
+          <View style={{ alignItems: "center", marginTop: 40, gap: 12 }}>
+            <Ionicons name="cloud-offline-outline" size={32} color={colors.textSecondary} />
+            <Text style={{ fontFamily: "Inter_500Medium", fontSize: 14, color: colors.textSecondary }}>Failed to load page</Text>
+            <Pressable style={{ backgroundColor: colors.emerald, borderRadius: 10, paddingHorizontal: 20, paddingVertical: 10 }} onPress={() => fetchMushafPage(mushafPage)}>
+              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff" }}>Retry</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40, paddingHorizontal: 4 }}>
+            <View style={{ backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 20, minHeight: 400 }}>
+              <Text style={{ fontFamily: Platform.OS === "web" ? "serif" : undefined, fontSize: 26, lineHeight: 48, textAlign: "right", color: colors.text, writingDirection: "rtl" }}>
+                {mushafVerses.map((v, i) => (
+                  <React.Fragment key={v.id}>
+                    {v.text_uthmani}
+                    <Text style={{ fontSize: 16, color: colors.emerald }}> ﴿{v.verse_number}﴾ </Text>
+                  </React.Fragment>
+                ))}
+              </Text>
+            </View>
+          </ScrollView>
+        )}
+      </View>
+    );
+  }
+
+  const surahPickerModal = (
+    <Modal visible={showSurahPicker !== null} transparent animationType="slide" onRequestClose={() => { setShowSurahPicker(null); setSurahPickerSearch(""); }}>
+      <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }} onPress={() => { setShowSurahPicker(null); setSurahPickerSearch(""); }}>
+        <Pressable style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: Dimensions.get("window").height * 0.65 }} onPress={() => {}}>
+          <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+            <Text style={{ fontFamily: "Inter_700Bold", fontSize: 16, color: colors.text, textAlign: "center", marginBottom: 12 }}>
+              Select {showSurahPicker === "start" ? "Start" : "End"} Surah
+            </Text>
+            <View style={{ backgroundColor: colors.surfaceSecondary, borderRadius: 10, flexDirection: "row", alignItems: "center", paddingHorizontal: 12, gap: 8 }}>
+              <Ionicons name="search" size={16} color={colors.textTertiary} />
+              <TextInput
+                style={{ flex: 1, paddingVertical: 10, fontFamily: "Inter_400Regular", fontSize: 14, color: colors.text }}
+                placeholder="Search surah..."
+                placeholderTextColor={colors.textTertiary}
+                value={surahPickerSearch}
+                onChangeText={setSurahPickerSearch}
+                autoFocus
+              />
+            </View>
+          </View>
+          <FlatList
+            data={filteredPickerSurahs}
+            keyExtractor={s => String(s.id)}
+            style={{ maxHeight: Dimensions.get("window").height * 0.45 }}
+            renderItem={({ item: s }) => (
+              <Pressable
+                style={{ flexDirection: "row", alignItems: "center", paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: colors.border + "30", gap: 12 }}
+                onPress={() => {
+                  if (showSurahPicker === "start") {
+                    setPhysStartSurah(s.id);
+                    setPhysStartAyah(1);
+                  } else {
+                    setPhysEndSurah(s.id);
+                    setPhysEndAyah(s.verses_count);
+                  }
+                  setShowSurahPicker(null);
+                  setSurahPickerSearch("");
+                }}
+              >
+                <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.emerald + "18", alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, color: colors.emerald }}>{s.id}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: colors.text }}>{s.name_simple}</Text>
+                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: colors.textTertiary }}>{s.verses_count} ayahs</Text>
+                </View>
+                <Text style={{ fontFamily: "Inter_400Regular", fontSize: 16, color: colors.textTertiary }}>{s.name_arabic}</Text>
+              </Pressable>
+            )}
+          />
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+
+  const physicalReadingModal = (
+    <>
+      {surahPickerModal}
+      <Modal visible={showPhysicalModal} transparent animationType="slide" onRequestClose={() => setShowPhysicalModal(false)}>
+        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }} onPress={() => setShowPhysicalModal(false)}>
+          <Pressable style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: Dimensions.get("window").height * 0.7 }} onPress={() => {}}>
+            <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: "center", marginBottom: 16 }} />
+            <Text style={{ fontFamily: "Inter_700Bold", fontSize: 18, color: colors.text, textAlign: "center", marginBottom: 16 }}>Add Physical Reading</Text>
+
+            <View style={{ flexDirection: "row", backgroundColor: colors.surfaceSecondary, borderRadius: 10, padding: 3, marginBottom: 20 }}>
+              {(["surahs", "pages"] as const).map(t => (
+                <Pressable key={t} onPress={() => setPhysicalTab(t)} style={{ flex: 1, paddingVertical: 8, borderRadius: 8, backgroundColor: physicalTab === t ? colors.emerald : "transparent", alignItems: "center" }}>
+                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: physicalTab === t ? "#fff" : colors.textSecondary }}>
+                    {t === "surahs" ? "Surahs Read" : "Pages Completed"}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            {physicalTab === "surahs" ? (
+              <ScrollView style={{ maxHeight: 300 }}>
+                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: colors.textSecondary, marginBottom: 8 }}>Start</Text>
+                <View style={{ flexDirection: "row", gap: 10, marginBottom: 16 }}>
+                  <View style={{ flex: 2 }}>
+                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: colors.textTertiary, marginBottom: 4 }}>Surah</Text>
+                    <Pressable
+                      style={{ backgroundColor: colors.surfaceSecondary, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: colors.border, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+                      onPress={() => setShowSurahPicker("start")}
+                    >
+                      <Text style={{ fontFamily: "Inter_500Medium", fontSize: 14, color: colors.text }} numberOfLines={1}>
+                        {surahs.find(s => s.id === physStartSurah)?.name_simple || `Surah ${physStartSurah}`}
+                      </Text>
+                      <Ionicons name="chevron-down" size={14} color={colors.textTertiary} />
+                    </Pressable>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: colors.textTertiary, marginBottom: 4 }}>Ayah</Text>
+                    <View style={{ backgroundColor: colors.surfaceSecondary, borderRadius: 10, borderWidth: 1, borderColor: colors.border }}>
+                      <TextInput
+                        style={{ padding: 12, fontFamily: "Inter_500Medium", fontSize: 14, color: colors.text }}
+                        keyboardType="number-pad"
+                        value={String(physStartAyah)}
+                        onChangeText={t => {
+                          const n = parseInt(t) || 1;
+                          const max = surahs.find(s => s.id === physStartSurah)?.verses_count || 999;
+                          setPhysStartAyah(Math.max(1, Math.min(n, max)));
+                        }}
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: colors.textSecondary, marginBottom: 8 }}>End</Text>
+                <View style={{ flexDirection: "row", gap: 10, marginBottom: 16 }}>
+                  <View style={{ flex: 2 }}>
+                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: colors.textTertiary, marginBottom: 4 }}>Surah</Text>
+                    <Pressable
+                      style={{ backgroundColor: colors.surfaceSecondary, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: colors.border, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+                      onPress={() => setShowSurahPicker("end")}
+                    >
+                      <Text style={{ fontFamily: "Inter_500Medium", fontSize: 14, color: colors.text }} numberOfLines={1}>
+                        {surahs.find(s => s.id === physEndSurah)?.name_simple || `Surah ${physEndSurah}`}
+                      </Text>
+                      <Ionicons name="chevron-down" size={14} color={colors.textTertiary} />
+                    </Pressable>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: colors.textTertiary, marginBottom: 4 }}>Ayah</Text>
+                    <View style={{ backgroundColor: colors.surfaceSecondary, borderRadius: 10, borderWidth: 1, borderColor: colors.border }}>
+                      <TextInput
+                        style={{ padding: 12, fontFamily: "Inter_500Medium", fontSize: 14, color: colors.text }}
+                        keyboardType="number-pad"
+                        value={String(physEndAyah)}
+                        onChangeText={t => {
+                          const n = parseInt(t) || 1;
+                          const max = surahs.find(s => s.id === physEndSurah)?.verses_count || 999;
+                          setPhysEndAyah(Math.max(1, Math.min(n, max)));
+                        }}
+                      />
+                    </View>
+                  </View>
+                </View>
+              </ScrollView>
+            ) : (
+              <View>
+                <View style={{ flexDirection: "row", gap: 12, marginBottom: 16 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: colors.textTertiary, marginBottom: 4 }}>Start Page</Text>
+                    <View style={{ backgroundColor: colors.surfaceSecondary, borderRadius: 10, borderWidth: 1, borderColor: colors.border }}>
+                      <TextInput
+                        style={{ padding: 12, fontFamily: "Inter_500Medium", fontSize: 14, color: colors.text, textAlign: "center" }}
+                        keyboardType="number-pad"
+                        value={String(physStartPage)}
+                        onChangeText={t => { const n = parseInt(t) || 1; setPhysStartPage(Math.max(1, Math.min(TOTAL_MUSHAF_PAGES, n))); }}
+                      />
+                    </View>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: colors.textTertiary, marginBottom: 4 }}>End Page</Text>
+                    <View style={{ backgroundColor: colors.surfaceSecondary, borderRadius: 10, borderWidth: 1, borderColor: colors.border }}>
+                      <TextInput
+                        style={{ padding: 12, fontFamily: "Inter_500Medium", fontSize: 14, color: colors.text, textAlign: "center" }}
+                        keyboardType="number-pad"
+                        value={String(physEndPage)}
+                        onChangeText={t => { const n = parseInt(t) || 1; setPhysEndPage(Math.max(1, Math.min(TOTAL_MUSHAF_PAGES, n))); }}
+                      />
+                    </View>
+                  </View>
+                </View>
+                <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textTertiary, textAlign: "center" }}>
+                  Pages 1–{TOTAL_MUSHAF_PAGES} (Medina Mushaf)
+                </Text>
+              </View>
+            )}
+
+            <Pressable
+              style={{ backgroundColor: colors.emerald, borderRadius: 12, paddingVertical: 14, alignItems: "center", marginTop: 20 }}
+              onPress={handlePhysicalSubmit}
+            >
+              <Text style={{ fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" }}>Save Reading</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
+  );
+
   return (
     <View style={{ flex: 1 }}>
+      {physicalReadingModal}
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <Pressable
+          style={[qStyles.searchBar, { flex: 1, marginBottom: 0, backgroundColor: colors.surface, borderColor: colors.border }]}
+          onPress={() => { setQSection("search"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+          testID="quran-search-bar"
+        >
+          <Ionicons name="search" size={18} color={colors.textSecondary} />
+          <Text style={[qStyles.searchPlaceholder, { color: colors.textTertiary }]}>Search verses...</Text>
+        </Pressable>
+        <Pressable
+          style={{ padding: 10, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border }}
+          onPress={toggleViewMode}
+        >
+          <Ionicons name={viewMode === "verses" ? "book-outline" : "list-outline"} size={20} color={colors.emerald} />
+        </Pressable>
+      </View>
+
+      {viewMode === "mushaf" && (
+        <Pressable
+          style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: colors.emerald + "12", borderRadius: 10, paddingVertical: 10, marginBottom: 10, borderWidth: 1, borderColor: colors.emerald + "30" }}
+          onPress={() => { setQSection("mushafView"); fetchMushafPage(mushafPage || 1); }}
+        >
+          <Ionicons name="book" size={16} color={colors.emerald} />
+          <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: colors.emerald }}>
+            Open Mushaf — Page {mushafPage}
+          </Text>
+        </Pressable>
+      )}
+
       <Pressable
-        style={[qStyles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}
-        onPress={() => { setQSection("search"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-        testID="quran-search-bar"
+        style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: colors.gold + "12", borderRadius: 10, paddingVertical: 8, marginBottom: 10, borderWidth: 1, borderColor: colors.gold + "30" }}
+        onPress={() => setShowPhysicalModal(true)}
       >
-        <Ionicons name="search" size={18} color={colors.textSecondary} />
-        <Text style={[qStyles.searchPlaceholder, { color: colors.textTertiary }]}>Search verses...</Text>
+        <Ionicons name="add-circle-outline" size={16} color={colors.gold} />
+        <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: colors.gold }}>Add Physical Reading</Text>
       </Pressable>
 
       {surahsLoading ? (

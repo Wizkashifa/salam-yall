@@ -183,7 +183,7 @@ export async function cyclePrayerStatus(
 
   let next: PrayerStatus;
   if (expired) {
-    next = current === 0 ? 3 : current === 3 ? 4 : current === 4 ? 2 : 0;
+    next = current === 0 ? 1 : current === 1 ? 2 : current === 2 ? 3 : current === 3 ? 4 : 0;
   } else {
     next = current === 0 ? 1 : current === 1 ? 2 : current === 2 ? 4 : 0;
   }
