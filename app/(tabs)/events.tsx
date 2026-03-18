@@ -511,8 +511,8 @@ export default function EventsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [showCalendar, setShowCalendar] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
-  const [calendarScrolledPast, setCalendarScrolledPast] = useState(false);
   const calendarScrolledPastRef = useRef(false);
   const { pendingTarget, consumeTarget } = useDeepLink();
   const [distanceFilter, setDistanceFilter] = useState<DistanceFilter>(50);
@@ -664,27 +664,57 @@ export default function EventsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <GlassHeader onHeaderHeight={setHeaderHeight}>
-        <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <View>
-            <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>Community Events</Text>
-            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
-              {selectedDateLabel ? `Showing ${selectedDateLabel}` : "Programs and events in the local area"}
-            </Text>
-          </View>
-          {calendarScrolledPast && (
+        <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 14 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF" }}>Community Events</Text>
+              <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
+                {selectedDateLabel ? `Showing ${selectedDateLabel}` : "Programs and events in the local area"}
+              </Text>
+            </View>
             <Pressable
-              onPress={scrollToTop}
+              onPress={() => { setShowCalendar(!showCalendar); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
               style={({ pressed }) => ({
                 width: 36,
                 height: 36,
                 borderRadius: 10,
-                backgroundColor: pressed ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.12)",
+                backgroundColor: pressed ? "rgba(255,255,255,0.2)" : (showCalendar ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.12)"),
                 alignItems: "center",
                 justifyContent: "center",
               })}
             >
-              <Ionicons name="calendar" size={20} color="#fff" />
+              <Ionicons name={showCalendar ? "calendar" : "map"} size={20} color="#fff" />
             </Pressable>
+          </View>
+          {!isLoading && !error && activeEvents.length > 0 && (
+            <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+              {DISTANCE_OPTIONS.map((opt) => {
+                const isActive = distanceFilter === opt.value;
+                return (
+                  <Pressable
+                    key={opt.label}
+                    onPress={() => {
+                      setDistanceFilter(opt.value);
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }}
+                    style={{
+                      paddingHorizontal: 10,
+                      paddingVertical: 6,
+                      borderRadius: 16,
+                      backgroundColor: isActive ? colors.emerald : colors.surface,
+                      borderWidth: 1,
+                      borderColor: isActive ? colors.emerald : colors.border,
+                    }}
+                  >
+                    <Text style={{
+                      fontSize: 13,
+                      fontFamily: isActive ? "Inter_600SemiBold" : "Inter_400Regular",
+                      color: isActive ? "#fff" : colors.textSecondary,
+                    }}>{opt.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           )}
         </View>
         <TickerBanner />
@@ -702,8 +732,8 @@ export default function EventsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />
         }
       >
-        {!isLoading && !error && activeEvents.length > 0 && (
-          <View style={{ marginBottom: 8 }}>
+        {showCalendar && !isLoading && !error && activeEvents.length > 0 && (
+          <View style={{ marginBottom: 8, marginHorizontal: 16 }}>
             <EventCalendar
               events={activeEvents}
               selectedDate={selectedDate}
@@ -714,34 +744,11 @@ export default function EventsScreen() {
           </View>
         )}
 
-        {!isLoading && !error && activeEvents.length > 0 && (
-          <View style={{ flexDirection: "row", paddingHorizontal: 20, marginBottom: 12, gap: 8 }}>
-            {DISTANCE_OPTIONS.map((opt) => {
-              const isActive = distanceFilter === opt.value;
-              return (
-                <Pressable
-                  key={opt.label}
-                  onPress={() => {
-                    setDistanceFilter(opt.value);
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }}
-                  style={{
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                    borderRadius: 16,
-                    backgroundColor: isActive ? colors.emerald : colors.surface,
-                    borderWidth: 1,
-                    borderColor: isActive ? colors.emerald : colors.border,
-                  }}
-                >
-                  <Text style={{
-                    fontSize: 13,
-                    fontFamily: isActive ? "Inter_600SemiBold" : "Inter_400Regular",
-                    color: isActive ? "#fff" : colors.textSecondary,
-                  }}>{opt.label}</Text>
-                </Pressable>
-              );
-            })}
+        {!showCalendar && !isLoading && !error && activeEvents.length > 0 && (
+          <View style={{ height: 240, marginHorizontal: 16, marginBottom: 12, borderRadius: 14, overflow: "hidden", backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, justifyContent: "center", alignItems: "center" }}>
+            <Ionicons name="map" size={48} color={colors.emerald} />
+            <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.text, marginTop: 12 }}>Events Map</Text>
+            <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.textSecondary, marginTop: 4 }}>View events within {distanceFilter}mi radius</Text>
           </View>
         )}
 
