@@ -11,6 +11,7 @@ import {
   Linking,
   ScrollView,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Location from "expo-location";
@@ -19,6 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { NEARBY_MASJIDS, type Masjid } from "@/lib/prayer-utils";
 import { useSettings, type AsrCalc } from "@/lib/settings-context";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/lib/auth-context";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -454,56 +456,148 @@ const communityStyles = StyleSheet.create({
 });
 
 function SignInScreen({ isActive }: { isActive: boolean }) {
+  const { user, isLoading, signInWithApple } = useAuth();
+  const [signingIn, setSigningIn] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const canSignIn = Platform.OS !== "web";
+
+  const handleSignIn = async () => {
+    setSigningIn(true);
+    setError(null);
+    try {
+      await signInWithApple();
+    } catch (e: unknown) {
+      const err = e as { code?: string; message?: string } | undefined;
+      if (err?.code !== "ERR_REQUEST_CANCELED") {
+        setError(err?.message || "Sign-in failed. Please try again.");
+      }
+    } finally {
+      setSigningIn(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <View style={screenStyles.container}>
+        <ActivityIndicator size="large" color={richGold} />
+      </View>
+    );
+  }
+
+  const isSignedIn = !!user;
+  const displayName = user?.displayName || user?.email || "your account";
+
   return (
     <View style={screenStyles.container}>
       <AnimatedContent isActive={isActive}>
         <View style={screenStyles.iconWrap}>
-          <Ionicons name="person-circle" size={48} color={richGold} />
+          <Ionicons name={isSignedIn ? "checkmark-circle" : "person-circle"} size={48} color={isSignedIn ? emerald : richGold} />
         </View>
-        <Text style={screenStyles.title}>Sign In</Text>
+        <Text style={screenStyles.title}>{isSignedIn ? "You're In!" : "Sign In"}</Text>
         <Text style={screenStyles.body}>
-          Create an account to unlock the full experience.
+          {isSignedIn
+            ? `Signed in as ${displayName}`
+            : "Create an account to unlock the full experience."}
         </Text>
 
-        <View style={{ width: "100%", maxWidth: 320, gap: 12, marginTop: 4 }}>
-          <View style={communityStyles.card}>
-            <View style={communityStyles.cardHeader}>
-              <Ionicons name="bookmark" size={20} color={richGold} />
-              <Text style={communityStyles.cardTitle}>Save Events</Text>
-            </View>
-            <Text style={communityStyles.cardBody}>
-              Bookmark events and get a reminder 1 hour before they start.
-            </Text>
-          </View>
+        {!isSignedIn && (
+          <>
+            <View style={{ width: "100%", maxWidth: 320, gap: 12, marginTop: 4 }}>
+              <View style={communityStyles.card}>
+                <View style={communityStyles.cardHeader}>
+                  <Ionicons name="bookmark" size={20} color={richGold} />
+                  <Text style={communityStyles.cardTitle}>Save Events</Text>
+                </View>
+                <Text style={communityStyles.cardBody}>
+                  Bookmark events and get a reminder 1 hour before they start.
+                </Text>
+              </View>
 
-          <View style={communityStyles.card}>
-            <View style={communityStyles.cardHeader}>
-              <Ionicons name="star" size={20} color={richGold} />
-              <Text style={communityStyles.cardTitle}>Rate & Review</Text>
-            </View>
-            <Text style={communityStyles.cardBody}>
-              Rate halal restaurants and local businesses to help the community.
-            </Text>
-          </View>
+              <View style={communityStyles.card}>
+                <View style={communityStyles.cardHeader}>
+                  <Ionicons name="star" size={20} color={richGold} />
+                  <Text style={communityStyles.cardTitle}>Rate & Review</Text>
+                </View>
+                <Text style={communityStyles.cardBody}>
+                  Rate halal restaurants and local businesses to help the community.
+                </Text>
+              </View>
 
-          <View style={communityStyles.card}>
-            <View style={communityStyles.cardHeader}>
-              <Ionicons name="trophy" size={20} color={richGold} />
-              <Text style={communityStyles.cardTitle}>Compete with Friends</Text>
+              <View style={communityStyles.card}>
+                <View style={communityStyles.cardHeader}>
+                  <Ionicons name="trophy" size={20} color={richGold} />
+                  <Text style={communityStyles.cardTitle}>Compete with Friends</Text>
+                </View>
+                <Text style={communityStyles.cardBody}>
+                  Track your prayer streaks and dhikr counts on the leaderboard.
+                </Text>
+              </View>
             </View>
-            <Text style={communityStyles.cardBody}>
-              Track your prayer streaks and dhikr counts on the leaderboard.
-            </Text>
-          </View>
-        </View>
 
-        <Text style={[screenStyles.body, { marginBottom: 0, marginTop: 12, fontSize: 13, opacity: 0.5 }]}>
-          You can always sign in later from the Worship tab menu.
-        </Text>
+            {canSignIn ? (
+              <Pressable
+                style={[signInBtnStyles.appleBtn, signingIn && { opacity: 0.6 }]}
+                onPress={handleSignIn}
+                disabled={signingIn}
+              >
+                {signingIn ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Ionicons name="logo-apple" size={20} color="#FFFFFF" />
+                    <Text style={signInBtnStyles.appleBtnText}>Sign in with Apple</Text>
+                  </>
+                )}
+              </Pressable>
+            ) : (
+              <Text style={[screenStyles.body, { marginBottom: 0, marginTop: 16, fontSize: 14 }]}>
+                Use the mobile app to sign in with Apple.
+              </Text>
+            )}
+
+            {error && (
+              <Text style={signInBtnStyles.errorText}>{error}</Text>
+            )}
+
+            <Text style={[screenStyles.body, { marginBottom: 0, marginTop: 12, fontSize: 13, opacity: 0.5 }]}>
+              You can always sign in later from the Worship tab menu.
+            </Text>
+          </>
+        )}
       </AnimatedContent>
     </View>
   );
 }
+
+const signInBtnStyles = StyleSheet.create({
+  appleBtn: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    backgroundColor: "#000000",
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 14,
+    gap: 10,
+    alignSelf: "center" as const,
+    marginTop: 20,
+    minWidth: 220,
+  },
+  appleBtnText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 16,
+    color: "#FFFFFF",
+  },
+  errorText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: "#EF4444",
+    textAlign: "center" as const,
+    marginTop: 12,
+    maxWidth: 300,
+  },
+});
 
 function MasjidScreen({ isActive, onSelect }: { isActive: boolean; onSelect: (name: string | null) => void }) {
   const [selected, setSelected] = useState<string | null>(null);
