@@ -143,8 +143,8 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
   const [versesLoading, setVersesLoading] = useState(false);
   const [versesPage, setVersesPage] = useState(1);
   const [versesHasMore, setVersesHasMore] = useState(false);
-  const [selectedTranslationIds, setSelectedTranslationIds] = useState<number[]>([20]);
-  const [showTransliteration, setShowTransliteration] = useState(true);
+  const [selectedTranslationIds, setSelectedTranslationIds] = useState<number[]>([]);
+  const [showTransliteration, setShowTransliteration] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -391,7 +391,6 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
   const handleToggleTranslation = useCallback((id: number) => {
     setSelectedTranslationIds(prev => {
       if (prev.includes(id)) {
-        if (prev.length <= 1) return prev;
         return prev.filter(x => x !== id);
       }
       return [...prev, id];
