@@ -196,7 +196,7 @@ export const COMMUNITY_ORGS: CommunityOrg[] = [
     website: "https://www.rootsdfw.org/",
     description: "Building community among young Muslim professionals through social, spiritual, and service-oriented programming in the DFW metroplex.",
     matchTerms: ["roots dfw", "rootsdfw"],
-    logo: { uri: "https://images.squarespace-cdn.com/content/v1/65b71011051609329578e6c0/08b0276a-6c2a-4614-8f87-8e968561949a/Roots-Community.png" },
+    logo: require("@/assets/logos/roots-preview.jpeg"),
   },
 ];
 
