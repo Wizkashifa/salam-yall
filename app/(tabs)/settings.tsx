@@ -27,6 +27,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
 import { GlassHeader } from "@/components/GlassHeader";
+import { GlassModalContainer } from "@/components/GlassModal";
 import { useSettings } from "@/lib/settings-context";
 import { useAuth } from "@/lib/auth-context";
 import PrayerPillMockup from "@/components/PrayerPillMockup";
@@ -1095,7 +1096,7 @@ export default function SettingsScreen() {
             };
             const modalImageSource = ev.imageUrl ? { uri: ev.imageUrl } : selectedCommunityOrg?.logo || null;
             return (
-              <View style={{ flex: 1, backgroundColor: colors.background }}>
+              <GlassModalContainer>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingTop: Platform.OS === "web" ? 67 : 12, paddingHorizontal: 16, position: "absolute", top: 0, left: 0, right: 0, zIndex: 10 }}>
                   <Pressable onPress={() => setSelectedOrgEvent(null)} hitSlop={8} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.85)", justifyContent: "center", alignItems: "center" }}>
                     <Ionicons name="close" size={20} color={isDark ? "#fff" : "#374151"} />
@@ -1157,7 +1158,7 @@ export default function SettingsScreen() {
                     </View>
                   </View>
                 </ScrollView>
-              </View>
+              </GlassModalContainer>
             );
           })()}
         </Modal>

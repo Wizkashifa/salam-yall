@@ -28,6 +28,7 @@ import { useDeepLink } from "@/lib/deeplink-context";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
+import { GlassModalContainer } from "@/components/GlassModal";
 import { GlassHeader } from "@/components/GlassHeader";
 import { useSettings } from "@/lib/settings-context";
 import { registerPushToken } from "@/lib/push-utils";
@@ -110,7 +111,7 @@ function HomeEventDetailModal({ event, visible, onClose }: { event: CalendarEven
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <GlassModalContainer>
         <View style={{ position: "absolute", top: Platform.OS === "web" ? 67 : insets.top + 12, left: 16, right: 16, zIndex: 10, flexDirection: "row", justifyContent: "space-between" }}>
           <Pressable onPress={onClose} hitSlop={8} style={{ width: 32, height: 32, borderRadius: 16, justifyContent: "center", alignItems: "center", backgroundColor: isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.85)" }}>
             <Ionicons name="close" size={20} color={isDark ? "#fff" : "#374151"} />
@@ -197,7 +198,7 @@ function HomeEventDetailModal({ event, visible, onClose }: { event: CalendarEven
             </View>
           </View>
         </ScrollView>
-      </View>
+      </GlassModalContainer>
     </Modal>
   );
 }
@@ -1542,7 +1543,7 @@ export default function PrayerScreen() {
         onClose={() => setSelectedEvent(null)}
       />
       <Modal visible={searchVisible} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setSearchVisible(false)}>
-        <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <GlassModalContainer>
           <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingTop: Platform.OS === "web" ? 67 : insets.top + 12, paddingBottom: 12, gap: 10, backgroundColor: colors.surface, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }}>
             <View style={{ flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: colors.surfaceSecondary, borderRadius: 10, paddingHorizontal: 10, height: 40 }}>
               <Ionicons name="search" size={18} color={colors.textTertiary} />
@@ -1673,12 +1674,12 @@ export default function PrayerScreen() {
               );
             })()}
           </ScrollView>
-        </View>
+        </GlassModalContainer>
       </Modal>
 
       <Modal visible={showVerseModal} transparent animationType="slide" onRequestClose={() => { if (tafsirAbortRef.current) tafsirAbortRef.current.abort(); setShowVerseModal(false); }}>
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}>
-          <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "85%", paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 16 }}>
+          <GlassModalContainer style={{ borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "85%", paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 16, flex: 0 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: 20, paddingBottom: 12 }}>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontFamily: "PlayfairDisplay_700Bold", fontSize: 18, color: colors.text }}>Daily Verse</Text>
@@ -1758,7 +1759,7 @@ export default function PrayerScreen() {
                 ) : null}
               </View>
             </ScrollView>
-          </View>
+          </GlassModalContainer>
         </View>
       </Modal>
     </View>

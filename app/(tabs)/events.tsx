@@ -29,6 +29,7 @@ import * as Location from "expo-location";
 import { useAuth } from "@/lib/auth-context";
 import { getApiUrl, apiRequest } from "@/lib/query-client";
 import { EventsMap } from "@/components/EventsMap";
+import { GlassModalContainer } from "@/components/GlassModal";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 import { getDistanceKm, kmToMiles, COMMUNITY_ORGS } from "@/lib/prayer-utils";
 
@@ -394,7 +395,7 @@ function EventDetailModal({ event, visible, onClose, isSaved, onToggleSave }: { 
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+      <GlassModalContainer style={styles.modalContainer}>
         <View style={[styles.modalHeader, { paddingTop: Platform.OS === "web" ? 67 : insets.top + 12, justifyContent: "space-between" }]}>
           <Pressable onPress={onClose} hitSlop={8} style={[styles.modalCloseBtn, { backgroundColor: isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.85)" }]}>
             <Ionicons name="close" size={20} color={isDark ? "#fff" : "#374151"} />
@@ -507,7 +508,7 @@ function EventDetailModal({ event, visible, onClose, isSaved, onToggleSave }: { 
             </View>
           </View>
         </ScrollView>
-      </View>
+      </GlassModalContainer>
     </Modal>
   );
 }

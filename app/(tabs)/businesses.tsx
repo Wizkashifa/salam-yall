@@ -25,6 +25,7 @@ import * as Haptics from "expo-haptics";
 import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
 import { GlassHeader } from "@/components/GlassHeader";
+import { GlassModalContainer } from "@/components/GlassModal";
 import { useDeepLink } from "@/lib/deeplink-context";
 import { apiRequest, getApiUrl } from "@/lib/query-client";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
@@ -279,7 +280,7 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+      <GlassModalContainer style={styles.modalContainer}>
         <View style={[styles.detailHeader, { paddingTop: Platform.OS === "web" ? 67 : insets.top + 12, justifyContent: "space-between" }]}>
           <Pressable onPress={onClose} hitSlop={8} style={[styles.closeButton, { backgroundColor: isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.85)" }]}>
             <Ionicons name="close" size={20} color={isDark ? "#fff" : "#374151"} />
@@ -490,7 +491,7 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
             ) : null}
           </View>
         </ScrollView>
-      </View>
+      </GlassModalContainer>
     </Modal>
   );
 }
@@ -594,7 +595,7 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
   if (submitted) {
     return (
       <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+        <GlassModalContainer style={styles.modalContainer}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.divider, paddingTop: Platform.OS === "web" ? 67 : insets.top + 12 }]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>Submitted!</Text>
             <Pressable onPress={handleClose} hitSlop={8}>
@@ -616,7 +617,7 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
               <Text style={styles.successButtonText}>Done</Text>
             </Pressable>
           </View>
-        </View>
+        </GlassModalContainer>
       </Modal>
     );
   }
@@ -628,7 +629,7 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={0}
       >
-        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+        <GlassModalContainer style={styles.modalContainer}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.divider, paddingTop: Platform.OS === "web" ? 67 : insets.top + 12 }]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>Submit Your Business</Text>
             <Pressable onPress={handleClose} hitSlop={8}>
@@ -939,7 +940,7 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
               )}
             </Pressable>
           </ScrollView>
-        </View>
+        </GlassModalContainer>
       </KeyboardAvoidingView>
     </Modal>
   );

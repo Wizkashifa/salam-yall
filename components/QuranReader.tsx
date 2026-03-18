@@ -19,6 +19,7 @@ import {
   Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { GlassModalContainer } from "@/components/GlassModal";
 import * as Haptics from "expo-haptics";
 import {
   logQuranRead,
@@ -1133,7 +1134,8 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
   const surahPickerModal = (
     <Modal visible={showSurahPicker !== null} transparent animationType="slide" onRequestClose={() => { setShowSurahPicker(null); setSurahPickerSearch(""); }}>
       <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }} onPress={() => { setShowSurahPicker(null); setSurahPickerSearch(""); }}>
-        <Pressable style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: Dimensions.get("window").height * 0.65 }} onPress={() => {}}>
+        <Pressable onPress={() => {}}>
+          <GlassModalContainer style={{ borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: Dimensions.get("window").height * 0.65, flex: 0 }}>
           <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
             <Text style={{ fontFamily: "Inter_700Bold", fontSize: 16, color: colors.text, textAlign: "center", marginBottom: 12 }}>
               Select {showSurahPicker === "start" ? "Start" : "End"} Surah
@@ -1180,6 +1182,7 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
               </Pressable>
             )}
           />
+        </GlassModalContainer>
         </Pressable>
       </Pressable>
     </Modal>
@@ -1190,7 +1193,8 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
       {surahPickerModal}
       <Modal visible={showPhysicalModal} transparent animationType="slide" onRequestClose={() => setShowPhysicalModal(false)}>
         <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }} onPress={() => setShowPhysicalModal(false)}>
-          <Pressable style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: Dimensions.get("window").height * 0.7 }} onPress={() => {}}>
+          <Pressable onPress={() => {}}>
+            <GlassModalContainer style={{ borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: Dimensions.get("window").height * 0.7, flex: 0 }}>
             <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: "center", marginBottom: 16 }} />
             <Text style={{ fontFamily: "Inter_700Bold", fontSize: 18, color: colors.text, textAlign: "center", marginBottom: 16 }}>Add Physical Reading</Text>
 
@@ -1306,6 +1310,7 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
             >
               <Text style={{ fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" }}>Save Reading</Text>
             </Pressable>
+          </GlassModalContainer>
           </Pressable>
         </Pressable>
       </Modal>
