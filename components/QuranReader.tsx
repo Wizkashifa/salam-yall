@@ -1036,26 +1036,6 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
           </View>
         </View>
 
-        {/* Surah header for mushaf view */}
-        {mushafVerses.length > 0 && (
-          <View style={{ backgroundColor: colors.surface, padding: 20, borderBottomWidth: 1, borderBottomColor: colors.border, alignItems: "center" }}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 8, gap: 10 }}>
-              <Text style={{ fontSize: 24, fontFamily: "Inter_700Bold", color: colors.emerald }}>
-                {mushafVerses[0].verse_key.split(":")[0]}.
-              </Text>
-              <Text style={{ fontSize: 20, fontFamily: "Inter_700Bold", color: colors.text }}>
-                {mushafSurahName}
-              </Text>
-              <View style={{ backgroundColor: colors.emerald + "20", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
-                <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.emerald }}>info</Text>
-              </View>
-            </View>
-            <Text style={{ fontSize: 32, fontFamily: Platform.OS === "web" ? "serif" : undefined, color: colors.text, marginTop: 12, textAlign: "center" }}>
-              {mushafVerses.length > 0 ? surahs.find(s => s.id === parseInt(mushafVerses[0].verse_key.split(":")[0]))?.name_arabic : ""}
-            </Text>
-          </View>
-        )}
-
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 12, paddingVertical: 8, marginBottom: 4 }}>
           <Pressable
             style={{ opacity: mushafPage <= 1 ? 0.3 : 1, padding: 8, backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1, borderColor: colors.border }}
@@ -1087,36 +1067,63 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
             </Pressable>
           </View>
         ) : (
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40, paddingHorizontal: 12 }}>
-            {/* Bismillah */}
-            {mushafVerses.length > 0 && mushafVerses[0].verse_number === 1 && parseInt(mushafVerses[0].verse_key.split(":")[0]) !== 9 && (
-              <View style={{ paddingVertical: 20, alignItems: "center", borderBottomWidth: 1, borderBottomColor: colors.border + "30" }}>
-                <Text style={{ fontSize: 20, fontFamily: Platform.OS === "web" ? "serif" : undefined, lineHeight: 36, textAlign: "center", color: colors.text, marginBottom: 6 }}>
-                  بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
-                </Text>
-                <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center", color: colors.textSecondary }}>
-                  In the Name of Allah—the Most Compassionate, Most Merciful
-                </Text>
-              </View>
-            )}
-
-            {/* Verses with improved layout */}
-            <View style={{ paddingVertical: 12 }}>
-              {mushafVerses.map((v, i) => (
-                <View key={v.id} style={{ marginBottom: 16, flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
-                  <Text style={{ fontSize: 22, lineHeight: 44, textAlign: "right", color: colors.text, fontFamily: Platform.OS === "web" ? "serif" : undefined, flex: 1, fontWeight: "500" }}>
-                    {v.text_uthmani}
-                  </Text>
-                  <View style={{ flexDirection: "column", alignItems: "center", gap: 6, minWidth: 32, marginTop: 2 }}>
-                    <View style={{ width: 32, height: 32, borderRadius: 16, borderWidth: 1.5, borderColor: colors.emerald + "40", justifyContent: "center", alignItems: "center" }}>
-                      <Text style={{ fontSize: 12, fontFamily: "Inter_700Bold", color: colors.emerald }}>
-                        {v.verse_number}
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40, paddingHorizontal: 20 }}>
+            {(() => {
+              const toArabicNumeral = (n: number): string => {
+                const digits = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+                return n.toString().split('').map(d => digits[parseInt(d)]).join('');
+              };
+              const groups: { surahId: number; surahName: string; startsNewSurah: boolean; verses: typeof mushafVerses }[] = [];
+              let currentSurahId = -1;
+              for (const v of mushafVerses) {
+                const sid = parseInt(v.verse_key.split(":")[0]);
+                if (sid !== currentSurahId) {
+                  const surah = surahs.find(s => s.id === sid);
+                  groups.push({ surahId: sid, surahName: surah?.name_arabic || "", startsNewSurah: v.verse_number === 1, verses: [v] });
+                  currentSurahId = sid;
+                } else {
+                  groups[groups.length - 1].verses.push(v);
+                }
+              }
+              return groups.map((group, gi) => (
+                <View key={`group-${gi}`}>
+                  {group.startsNewSurah && group.surahId !== 1 && (
+                    <View style={{ alignItems: "center", marginTop: gi > 0 ? 24 : 16, marginBottom: 16 }}>
+                      <View style={{ width: "100%", borderWidth: 1.5, borderColor: colors.emerald + "30", borderRadius: 12, paddingVertical: 14, paddingHorizontal: 20, alignItems: "center", backgroundColor: colors.emerald + "08" }}>
+                        <Text style={{ fontSize: 28, color: colors.text, textAlign: "center" }}>
+                          {group.surahName}
+                        </Text>
+                      </View>
+                      {group.surahId !== 9 && (
+                        <Text style={{ fontSize: 22, color: colors.text, textAlign: "center", marginTop: 16, lineHeight: 40 }}>
+                          بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+                        </Text>
+                      )}
+                    </View>
+                  )}
+                  {group.startsNewSurah && group.surahId === 1 && (
+                    <View style={{ alignItems: "center", marginTop: 16, marginBottom: 16 }}>
+                      <View style={{ width: "100%", borderWidth: 1.5, borderColor: colors.emerald + "30", borderRadius: 12, paddingVertical: 14, paddingHorizontal: 20, alignItems: "center", backgroundColor: colors.emerald + "08" }}>
+                        <Text style={{ fontSize: 28, color: colors.text, textAlign: "center" }}>
+                          {group.surahName}
+                        </Text>
+                      </View>
+                      <Text style={{ fontSize: 22, color: colors.text, textAlign: "center", marginTop: 16, lineHeight: 40 }}>
+                        بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
                       </Text>
                     </View>
-                  </View>
+                  )}
+                  <Text style={{ fontSize: 24, lineHeight: 52, textAlign: "right", color: colors.text, writingDirection: "rtl" }}>
+                    {group.verses.map((v, vi) => (
+                      <React.Fragment key={v.id}>
+                        <Text>{v.text_uthmani}</Text>
+                        <Text style={{ fontSize: 18, color: colors.emerald }}>{" \u06DD" + toArabicNumeral(v.verse_number) + " "}</Text>
+                      </React.Fragment>
+                    ))}
+                  </Text>
                 </View>
-              ))}
-            </View>
+              ));
+            })()}
           </ScrollView>
         )}
       </View>
