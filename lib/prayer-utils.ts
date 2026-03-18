@@ -172,7 +172,7 @@ export const COMMUNITY_ORGS: CommunityOrg[] = [
     website: "https://www.taleefcollective.org/",
     description: "A welcoming space for Muslims to learn, grow, and connect — especially those new or returning to the faith.",
     matchTerms: ["taleef collective", "taleef"],
-    logo: require("@/assets/logos/taleef.png"),
+    logo: require("@/assets/logos/taleef.jpeg"),
     campuses: [
       {
         name: "Fremont Campus",
