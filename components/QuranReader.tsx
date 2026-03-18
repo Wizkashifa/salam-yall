@@ -694,41 +694,34 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
     return (
       <View
         style={[
-          qStyles.versePageItem,
+          qStyles.verseItem,
           {
-            backgroundColor: isHighlighted ? colors.emerald + "08" : "transparent",
+            backgroundColor: isHighlighted ? colors.emerald + "15" : colors.surface,
+            borderColor: colors.border,
           },
         ]}
         testID={`verse-${item.verse_key}`}
       >
-        <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
-          <Text style={[qStyles.arabicText, { color: colors.text, flex: 1, marginBottom: 0 }]}>{item.text_uthmani}</Text>
-          <View style={{ flexDirection: "column", alignItems: "center", gap: 6, minWidth: 32, marginTop: 2 }}>
-            <View style={[qStyles.verseCircle, { borderColor: colors.emerald + "40", backgroundColor: isRead || isCurrent ? (isRead ? colors.emerald + "18" : colors.gold + "18") : "transparent" }]}>
-              <Text style={[qStyles.verseNumText, { color: colors.emerald }]}>{item.verse_number}</Text>
-            </View>
-            {(isRead || isCurrent) && (
-              <View style={[qStyles.readDot, { backgroundColor: dotColor, marginTop: 2 }]} />
-            )}
+        <View style={qStyles.verseHeader}>
+          <View style={[qStyles.verseNumBadge, { backgroundColor: colors.prayerIconBg }]}>
+            <Text style={[qStyles.verseNumText, { color: colors.emerald }]}>{item.verse_number}</Text>
           </View>
+          {(isRead || isCurrent) && (
+            <View style={[qStyles.readDot, { backgroundColor: dotColor }]} />
+          )}
         </View>
-        
+        <Text style={[qStyles.arabicText, { color: colors.text, marginBottom: showTransliteration && item.transliteration ? 6 : 12 }]}>{item.text_uthmani}</Text>
         {showTransliteration && item.transliteration ? (
-          <Text style={[qStyles.translitText, { color: colors.textSecondary, marginTop: 12 }]}>{item.transliteration}</Text>
+          <Text style={[qStyles.translitText, { color: colors.textSecondary }]}>{item.transliteration}</Text>
         ) : null}
-        
-        {item.translations.length > 0 && (
-          <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border + "30" }}>
-            {item.translations.map((t) => (
-              <View key={t.id} style={qStyles.translationBlock}>
-                {item.translations.length > 1 && (
-                  <Text style={[qStyles.translationLabel, { color: colors.textTertiary, marginBottom: 4 }]}>{t.label}</Text>
-                )}
-                <Text style={[qStyles.translationText, { color: colors.textSecondary, lineHeight: 22 }]}>{t.text}</Text>
-              </View>
-            ))}
+        {item.translations.map((t) => (
+          <View key={t.id} style={qStyles.translationBlock}>
+            {item.translations.length > 1 && (
+              <Text style={[qStyles.translationLabel, { color: colors.textTertiary }]}>{t.label}</Text>
+            )}
+            <Text style={[qStyles.translationText, { color: colors.textSecondary }]}>{t.text}</Text>
           </View>
-        )}
+        ))}
       </View>
     );
   }, [colors, showTransliteration, scrollToVerse, readUpToIndex]);
@@ -927,24 +920,11 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
           </Pressable>
         </View>
 
-        <Animated.View style={[qStyles.bannerAnimWrap, { height: bannerHeight, backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={[qStyles.surahBannerInner, { paddingVertical: 20 }]}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 8, gap: 10 }}>
-              <Text style={[qStyles.bannerSurahNum, { color: colors.emerald }]}>
-                {selectedSurah.id}.
-              </Text>
-              <Text style={[qStyles.bannerSurahName, { color: colors.text }]}>
-                {selectedSurah.name_simple}
-              </Text>
-              <View style={{ backgroundColor: colors.emerald + "20", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
-                <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.emerald }}>info</Text>
-              </View>
-            </View>
-            <Text style={[qStyles.bannerEnglish, { color: colors.textSecondary, fontSize: 16, fontFamily: "Inter_600SemiBold" }]}>
-              {selectedSurah.translated_name.name}
-            </Text>
-            <Text style={[qStyles.bannerArabic, { color: colors.text, marginTop: 12, fontSize: 32 }]}>
-              {selectedSurah.name_arabic}
+        <Animated.View style={[qStyles.bannerAnimWrap, { height: bannerHeight, backgroundColor: colors.emerald, borderColor: colors.emerald }]}>
+          <View style={qStyles.surahBannerInner}>
+            <Text style={[qStyles.bannerArabic, { color: "#FFFFFF" }]}>{selectedSurah.name_arabic}</Text>
+            <Text style={[qStyles.bannerEnglish, { color: "rgba(255,255,255,0.8)" }]}>
+              {selectedSurah.translated_name.name} · {selectedSurah.verses_count} verses
             </Text>
           </View>
         </Animated.View>
@@ -1014,18 +994,6 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
             data={verses}
             keyExtractor={(item) => item.verse_key}
             renderItem={renderVerseItem}
-            ListHeaderComponent={
-              selectedSurah && selectedSurah.id !== 9 ? (
-                <View style={[qStyles.bismillah, { borderBottomColor: colors.border + "30" }]}>
-                  <Text style={[qStyles.bismillahArabic, { color: colors.text }]}>
-                    بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
-                  </Text>
-                  <Text style={[qStyles.bismillahEnglish, { color: colors.textSecondary }]}>
-                    In the Name of Allah—the Most Compassionate, Most Merciful
-                  </Text>
-                </View>
-              ) : null
-            }
             onEndReached={handleLoadMore}
             onEndReachedThreshold={0.5}
             onScroll={handleScroll}
@@ -1069,7 +1037,27 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
           </View>
         </View>
 
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        {/* Surah header for mushaf view */}
+        {mushafVerses.length > 0 && (
+          <View style={{ backgroundColor: colors.surface, padding: 20, borderBottomWidth: 1, borderBottomColor: colors.border, alignItems: "center" }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", marginBottom: 8, gap: 10 }}>
+              <Text style={{ fontSize: 24, fontFamily: "Inter_700Bold", color: colors.emerald }}>
+                {mushafVerses[0].verse_key.split(":")[0]}.
+              </Text>
+              <Text style={{ fontSize: 20, fontFamily: "Inter_700Bold", color: colors.text }}>
+                {mushafSurahName}
+              </Text>
+              <View style={{ backgroundColor: colors.emerald + "20", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+                <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.emerald }}>info</Text>
+              </View>
+            </View>
+            <Text style={{ fontSize: 32, fontFamily: Platform.OS === "web" ? "serif" : undefined, color: colors.text, marginTop: 12, textAlign: "center" }}>
+              {mushafVerses.length > 0 ? surahs.find(s => s.id === parseInt(mushafVerses[0].verse_key.split(":")[0]))?.name_arabic : ""}
+            </Text>
+          </View>
+        )}
+
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 12, paddingVertical: 8, marginBottom: 4 }}>
           <Pressable
             style={{ opacity: mushafPage <= 1 ? 0.3 : 1, padding: 8, backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1, borderColor: colors.border }}
             onPress={() => { if (mushafPage > 1) fetchMushafPage(mushafPage - 1); }}
@@ -1100,16 +1088,35 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
             </Pressable>
           </View>
         ) : (
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40, paddingHorizontal: 4 }}>
-            <View style={{ backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 20, minHeight: 400 }}>
-              <Text style={{ fontFamily: Platform.OS === "web" ? "serif" : undefined, fontSize: 26, lineHeight: 48, textAlign: "right", color: colors.text, writingDirection: "rtl" }}>
-                {mushafVerses.map((v, i) => (
-                  <React.Fragment key={v.id}>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40, paddingHorizontal: 12 }}>
+            {/* Bismillah */}
+            {mushafVerses.length > 0 && mushafVerses[0].verse_number === 1 && parseInt(mushafVerses[0].verse_key.split(":")[0]) !== 9 && (
+              <View style={{ paddingVertical: 20, alignItems: "center", borderBottomWidth: 1, borderBottomColor: colors.border + "30" }}>
+                <Text style={{ fontSize: 20, fontFamily: Platform.OS === "web" ? "serif" : undefined, lineHeight: 36, textAlign: "center", color: colors.text, marginBottom: 6 }}>
+                  بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+                </Text>
+                <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center", color: colors.textSecondary }}>
+                  In the Name of Allah—the Most Compassionate, Most Merciful
+                </Text>
+              </View>
+            )}
+
+            {/* Verses with improved layout */}
+            <View style={{ paddingVertical: 12 }}>
+              {mushafVerses.map((v, i) => (
+                <View key={v.id} style={{ marginBottom: 16, flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
+                  <Text style={{ fontSize: 22, lineHeight: 44, textAlign: "right", color: colors.text, fontFamily: Platform.OS === "web" ? "serif" : undefined, flex: 1, fontWeight: "500" }}>
                     {v.text_uthmani}
-                    <Text style={{ fontSize: 16, color: colors.emerald }}> ﴿{v.verse_number}﴾ </Text>
-                  </React.Fragment>
-                ))}
-              </Text>
+                  </Text>
+                  <View style={{ flexDirection: "column", alignItems: "center", gap: 6, minWidth: 32, marginTop: 2 }}>
+                    <View style={{ width: 32, height: 32, borderRadius: 16, borderWidth: 1.5, borderColor: colors.emerald + "40", justifyContent: "center", alignItems: "center" }}>
+                      <Text style={{ fontSize: 12, fontFamily: "Inter_700Bold", color: colors.emerald }}>
+                        {v.verse_number}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              ))}
             </View>
           </ScrollView>
         )}
@@ -1626,12 +1633,11 @@ const qStyles = StyleSheet.create({
     marginLeft: "auto" as const,
   },
   arabicText: {
-    fontSize: 22,
-    lineHeight: 44,
+    fontSize: 24,
+    lineHeight: 42,
     textAlign: "right" as const,
     fontFamily: Platform.OS === "web" ? "serif" : undefined,
-    marginBottom: 0,
-    fontWeight: "500" as const,
+    marginBottom: 12,
   },
   translitText: {
     fontSize: 14,
