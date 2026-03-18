@@ -162,7 +162,7 @@ export const COMMUNITY_ORGS: CommunityOrg[] = [
     website: "https://www.lhproj.com/",
     description: "Community space fostering connection, dialogue, and personal growth through events, mentorship, and creative programming.",
     matchTerms: ["light house project", "lighthouse project", "lhproj"],
-    logo: require("@/assets/logos/lighthouse.png"),
+    logo: require("@/assets/logos/lighthouse.jpeg"),
   },
   {
     name: "Taleef Collective",
