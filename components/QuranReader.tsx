@@ -384,11 +384,16 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
 
   const handleResumeReading = useCallback(() => {
     if (!resumePos || surahs.length === 0) return;
+    if (viewMode === "mushaf" && resumePos.mushafPage) {
+      setQSection("mushafView");
+      fetchMushafPage(resumePos.mushafPage);
+      return;
+    }
     const surah = surahs.find(s => s.id === resumePos.surahId);
     if (surah) {
       handleSelectSurah(surah, resumePos.page, resumePos.verseKey);
     }
-  }, [resumePos, surahs, handleSelectSurah]);
+  }, [resumePos, surahs, handleSelectSurah, viewMode, fetchMushafPage]);
 
   const handleToggleTranslation = useCallback((id: number) => {
     setSelectedTranslationIds(prev => {
@@ -745,7 +750,7 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
           <View style={{ flex: 1 }}>
             <Text style={[qStyles.resumeTitle, { color: colors.text }]}>Continue Reading</Text>
             <Text style={[qStyles.resumeSub, { color: colors.textSecondary }]}>
-              {resumePos.surahName} · Ayah {resumePos.verseNumber} of {resumePos.totalVerses}
+              {resumePos.surahName} · {viewMode === "mushaf" && resumePos.mushafPage ? `Page ${resumePos.mushafPage}` : `Ayah ${resumePos.verseNumber} of ${resumePos.totalVerses}`}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.emerald} />
@@ -1028,7 +1033,30 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
     return (
       <View style={{ flex: 1 }}>
         <View style={qStyles.verseViewHeader}>
-          <Pressable style={qStyles.backBtn} onPress={() => { setQSection("surahList"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}>
+          <Pressable style={qStyles.backBtn} onPress={async () => {
+            if (mushafVerses.length > 0) {
+              const firstVerse = mushafVerses[0];
+              const sid = parseInt(firstVerse.verse_key.split(":")[0]);
+              const surah = surahs.find(s => s.id === sid);
+              if (surah) {
+                try {
+                  await saveReadingPosition({
+                    surahId: surah.id,
+                    surahName: surah.name_simple,
+                    surahNameArabic: surah.name_arabic,
+                    page: 1,
+                    verseKey: firstVerse.verse_key,
+                    verseNumber: firstVerse.verse_number,
+                    totalVerses: surah.verses_count,
+                    mushafPage,
+                  });
+                } catch {}
+              }
+            }
+            getReadingPosition().then(setResumePos).catch(() => {});
+            setQSection("surahList");
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          }}>
             <Ionicons name="chevron-back" size={22} color={colors.text} />
           </Pressable>
           <View style={qStyles.headerTitleArea}>
@@ -1393,8 +1421,8 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
             </Pressable>
           </View>
           <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-            <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: colors.textTertiary, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Juz Pages</Text>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: colors.textTertiary, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10, textAlign: "center" }}>Juz Pages</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 8 }}>
               {Array.from({ length: 30 }, (_, i) => {
                 const juzPage = [1,22,42,62,82,102,121,142,162,182,201,222,242,262,282,302,322,342,362,382,402,422,442,462,483,502,522,542,562,582][i];
                 return (

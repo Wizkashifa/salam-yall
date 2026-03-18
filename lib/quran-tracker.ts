@@ -242,6 +242,7 @@ export interface ReadingPosition {
   verseKey: string;
   verseNumber: number;
   totalVerses: number;
+  mushafPage?: number;
 }
 
 export async function saveReadingPosition(pos: ReadingPosition | null): Promise<void> {
