@@ -55,9 +55,11 @@ export function EventsMap({ events, userLocation, borderColor, backgroundColor, 
       : { latitude: 35.78, longitude: -78.64, latitudeDelta: delta, longitudeDelta: delta };
 
   useEffect(() => {
-    if (mapRef.current) {
-      mapRef.current.animateToRegion(region, 500);
-    }
+    try {
+      if (mapRef.current) {
+        mapRef.current.animateToRegion(region, 500);
+      }
+    } catch {}
   }, [userLocation, distanceFilter]);
 
   return (

@@ -647,7 +647,7 @@ export default function EventsScreen() {
     if (distanceFilter === "all" || !userLocation) return nonFeatured;
     return nonFeatured.filter((ev) => {
       if (ev.isVirtual) return true;
-      if (ev.latitude == null || ev.longitude == null) return true;
+      if (ev.latitude == null || ev.longitude == null) return distanceFilter >= 100;
       const km = getDistanceKm(userLocation.latitude, userLocation.longitude, ev.latitude, ev.longitude);
       const miles = kmToMiles(km);
       return miles <= distanceFilter;
@@ -749,14 +749,16 @@ export default function EventsScreen() {
               />
             ) : (
               <EventsMap
-                events={distanceFilteredEvents.map((e) => ({
-                  id: e.id,
-                  title: e.title,
-                  latitude: e.latitude!,
-                  longitude: e.longitude!,
-                  isVirtual: e.isVirtual,
-                  organizer: e.organizer,
-                }))}
+                events={distanceFilteredEvents
+                  .filter((e) => (e.latitude != null && e.longitude != null) || e.isVirtual)
+                  .map((e) => ({
+                    id: e.id,
+                    title: e.title,
+                    latitude: e.latitude ?? 0,
+                    longitude: e.longitude ?? 0,
+                    isVirtual: e.isVirtual,
+                    organizer: e.organizer,
+                  }))}
                 userLocation={userLocation}
                 borderColor={isDark ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.8)"}
                 backgroundColor={isDark ? "rgba(22,22,22,0.9)" : "rgba(255,255,255,0.85)"}
