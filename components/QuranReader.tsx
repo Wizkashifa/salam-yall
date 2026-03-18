@@ -1437,30 +1437,40 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
           <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
             <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: colors.textTertiary, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10, textAlign: "center" }}>Juz Pages</Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 8 }}>
-              {Array.from({ length: 30 }, (_, i) => {
-                const juzPage = [1,22,42,62,82,102,121,142,162,182,201,222,242,262,282,302,322,342,362,382,402,422,442,462,483,502,522,542,562,582][i];
-                return (
-                  <Pressable
-                    key={i}
-                    style={({ pressed }) => ({
-                      width: "18.5%" as any,
-                      backgroundColor: pressed ? colors.emerald + "30" : colors.surface,
-                      borderRadius: 10,
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                      paddingVertical: 10,
-                      alignItems: "center" as const,
-                    })}
-                    onPress={() => {
-                      setQSection("mushafView");
-                      fetchMushafPage(juzPage);
-                    }}
-                  >
-                    <Text style={{ fontFamily: "Inter_700Bold", fontSize: 14, color: colors.text }}>Juz {i + 1}</Text>
-                    <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: colors.textTertiary, marginTop: 2 }}>p. {juzPage}</Text>
-                  </Pressable>
-                );
-              })}
+              {(() => {
+                const juzPages = [1,22,42,62,82,102,121,142,162,182,201,222,242,262,282,302,322,342,362,382,402,422,442,462,483,502,522,542,562,582];
+                const currentJuz = resumePos?.mushafPage
+                  ? juzPages.reduce((juz, start, i) => (resumePos.mushafPage! >= start ? i : juz), 0)
+                  : -1;
+                return Array.from({ length: 30 }, (_, i) => {
+                  const juzPage = juzPages[i];
+                  const isCurrent = i === currentJuz;
+                  return (
+                    <Pressable
+                      key={i}
+                      style={({ pressed }) => ({
+                        width: "18.5%" as any,
+                        backgroundColor: pressed ? colors.emerald + "30" : isCurrent ? colors.emerald + "12" : colors.surface,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: isCurrent ? colors.emerald + "50" : colors.border,
+                        paddingVertical: 10,
+                        alignItems: "center" as const,
+                      })}
+                      onPress={() => {
+                        setQSection("mushafView");
+                        fetchMushafPage(juzPage);
+                      }}
+                    >
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                        {isCurrent && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.emerald }} />}
+                        <Text style={{ fontFamily: "Inter_700Bold", fontSize: 14, color: isCurrent ? colors.emerald : colors.text }}>Juz {i + 1}</Text>
+                      </View>
+                      <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: isCurrent ? colors.emerald : colors.textTertiary, marginTop: 2 }}>p. {juzPage}</Text>
+                    </Pressable>
+                  );
+                });
+              })()}
             </View>
           </ScrollView>
         </View>
