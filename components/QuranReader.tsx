@@ -1117,7 +1117,7 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
                     {group.verses.map((v, vi) => (
                       <React.Fragment key={v.id}>
                         <Text>{v.text_uthmani}</Text>
-                        <Text style={{ fontSize: 18, color: colors.emerald }}>{" \u06DD" + toArabicNumeral(v.verse_number) + " "}</Text>
+                        <Text style={{ fontSize: 18, color: colors.emerald }}>{" \uFD3F" + toArabicNumeral(v.verse_number) + "\uFD3E "}</Text>
                       </React.Fragment>
                     ))}
                   </Text>
