@@ -10,6 +10,8 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const CALENDAR_ID = "5c6138b3c670e90f28b9ec65a6650268569a070eff5ae0ae919129f763d216af@group.calendar.google.com";
 
+const photoCache = new Map<string, { buffer: Buffer; contentType: string }>();
+
 const NAME_MATCHES: [string, string][] = [
   ["islamic association of raleigh", "Islamic Association of Raleigh"],
   ["iar masjid", "Islamic Association of Raleigh"],
@@ -1519,6 +1521,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (biz.rows.length === 0 || !biz.rows[0].photo_reference) {
         return res.status(404).json({ error: "No photo available" });
       }
+      const cacheKey = `biz_${id}`;
+      const cached = photoCache.get(cacheKey);
+      if (cached) {
+        res.set("Content-Type", cached.contentType);
+        res.set("Cache-Control", "public, max-age=604800");
+        return res.send(cached.buffer);
+      }
       const apiKey = process.env.GOOGLE_PLACES_API_KEY;
       if (!apiKey) return res.status(500).json({ error: "No API key" });
 
@@ -1526,9 +1535,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const photoResp = await fetch(photoUrl);
       if (!photoResp.ok) return res.status(404).json({ error: "Photo not found" });
 
-      res.set("Content-Type", photoResp.headers.get("content-type") || "image/jpeg");
-      res.set("Cache-Control", "public, max-age=86400");
+      const contentType = photoResp.headers.get("content-type") || "image/jpeg";
       const buffer = Buffer.from(await photoResp.arrayBuffer());
+      photoCache.set(cacheKey, { buffer, contentType });
+      res.set("Content-Type", contentType);
+      res.set("Cache-Control", "public, max-age=604800");
       res.send(buffer);
     } catch (error: any) {
       console.error("Error proxying photo:", error.message);
@@ -1543,6 +1554,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (result.rows.length === 0 || !result.rows[0].photo_reference) {
         return res.status(404).json({ error: "No photo available" });
       }
+      const cacheKey = `halal_${id}`;
+      const cached = photoCache.get(cacheKey);
+      if (cached) {
+        res.set("Content-Type", cached.contentType);
+        res.set("Cache-Control", "public, max-age=604800");
+        return res.send(cached.buffer);
+      }
       const apiKey = process.env.GOOGLE_PLACES_API_KEY;
       if (!apiKey) return res.status(500).json({ error: "No API key" });
 
@@ -1550,9 +1568,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const photoResp = await fetch(photoUrl);
       if (!photoResp.ok) return res.status(404).json({ error: "Photo not found" });
 
-      res.set("Content-Type", photoResp.headers.get("content-type") || "image/jpeg");
-      res.set("Cache-Control", "public, max-age=86400");
+      const contentType = photoResp.headers.get("content-type") || "image/jpeg";
       const buffer = Buffer.from(await photoResp.arrayBuffer());
+      photoCache.set(cacheKey, { buffer, contentType });
+      res.set("Content-Type", contentType);
+      res.set("Cache-Control", "public, max-age=604800");
       res.send(buffer);
     } catch (error: any) {
       console.error("Error proxying halal photo:", error.message);
@@ -2289,10 +2309,12 @@ Return ONLY the description text, nothing else.`,
     }
   });
 
-  setTimeout(() => dailyBusinessEnrichment(), 15000);
-  setTimeout(() => dailyHalalEnrichment(), 30000);
-  setInterval(() => dailyBusinessEnrichment(), 24 * 60 * 60 * 1000);
-  setInterval(() => dailyHalalEnrichment(), 24 * 60 * 60 * 1000);
+  // Automated enrichment disabled to prevent excessive Google Places API costs.
+  // Use admin endpoints /api/admin/enrich-halal and /api/admin/enrich-businesses to trigger manually.
+  // setTimeout(() => dailyBusinessEnrichment(), 15000);
+  // setTimeout(() => dailyHalalEnrichment(), 30000);
+  // setInterval(() => dailyBusinessEnrichment(), 24 * 60 * 60 * 1000);
+  // setInterval(() => dailyHalalEnrichment(), 24 * 60 * 60 * 1000);
 
   app.patch("/api/admin/businesses/:id", async (req, res) => {
     try {
