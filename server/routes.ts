@@ -58,6 +58,9 @@ const NAME_MATCHES: [string, string][] = [
   ["iqra academy", "Iqra Academy"],
   ["al-iman school", "Al-Iman School"],
   ["deen academy", "Deen Academy"],
+  ["san ramon valley islamic center", "San Ramon Valley Islamic Center"],
+  ["san ramon valley islamic", "San Ramon Valley Islamic Center"],
+  ["srvic", "San Ramon Valley Islamic Center"],
   ["muslim community association", "Muslim Community Association"],
   ["mca bay area", "Muslim Community Association"],
   ["mca santa clara", "Muslim Community Association"],
@@ -1284,7 +1287,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return `${y}-${mo}-${d}`;
   }
 
-  function parseICalFeed(icalText: string): CachedEvent[] {
+  function parseICalFeed(icalText: string, opts: { idPrefix: string; defaultOrganizer: string; defaultLocation: string }): CachedEvent[] {
     const events: CachedEvent[] = [];
     const blocks = icalText.split("BEGIN:VEVENT");
     const now = new Date();
@@ -1327,7 +1330,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const url = getField("URL");
       const imageUrl = getField("ATTACH");
       const organizerLine = lines.find(l => l.startsWith("ORGANIZER"));
-      let organizer = "Muslim Community Center of the East Bay";
+      let organizer = opts.defaultOrganizer;
       if (organizerLine) {
         const cnMatch = organizerLine.match(/CN="?([^"";:]+)"?/);
         if (cnMatch) {
@@ -1345,12 +1348,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const startDate = new Date(start);
       if (startDate < now || startDate > threeMonthsLater) continue;
 
-      const resolvedLocation = location || "5724 W Las Positas Blvd, Pleasanton, CA 94588";
+      const resolvedLocation = location || opts.defaultLocation;
       const coords = resolveCoordinates(organizer, resolvedLocation);
       const registrationUrl = url || "";
 
       events.push({
-        id: `mcc_eastbay_${uid || Date.now().toString() + Math.random().toString(36).slice(2)}`,
+        id: `${opts.idPrefix}_${uid || Date.now().toString() + Math.random().toString(36).slice(2)}`,
         title: summary || "Untitled Event",
         description: description.slice(0, 500),
         location: resolvedLocation,
@@ -1380,7 +1383,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const response = await fetch(MCC_EASTBAY_ICAL_URL);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const icalText = await response.text();
-      const events = parseICalFeed(icalText);
+      const events = parseICalFeed(icalText, {
+        idPrefix: "mcc_eastbay",
+        defaultOrganizer: "Muslim Community Center of the East Bay",
+        defaultLocation: "5724 W Las Positas Blvd, Pleasanton, CA 94588",
+      });
       cachedMCCEastBayEvents = events;
       mccEastBayLastFetch = Date.now();
       console.log(`[MCC East Bay] Fetched ${events.length} events from iCal feed`);
@@ -1388,6 +1395,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       console.error("[MCC East Bay] iCal fetch error:", err.message);
       return cachedMCCEastBayEvents.filter(e => new Date(e.end || e.start) >= new Date());
+    }
+  }
+
+  const SRVIC_ICAL_URL = "https://srvic.org/?post_type=tribe_events&ical=1&eventDisplay=list";
+  let cachedSRVICEvents: CachedEvent[] = [];
+  let srvicLastFetch = 0;
+  const SRVIC_CACHE_TTL = 15 * 60 * 1000;
+
+  async function fetchSRVICEvents(): Promise<CachedEvent[]> {
+    const now = Date.now();
+    if (cachedSRVICEvents.length > 0 && (now - srvicLastFetch) < SRVIC_CACHE_TTL) {
+      return cachedSRVICEvents.filter(e => new Date(e.end || e.start) >= new Date());
+    }
+    try {
+      const response = await fetch(SRVIC_ICAL_URL);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const icalText = await response.text();
+      const events = parseICalFeed(icalText, {
+        idPrefix: "srvic",
+        defaultOrganizer: "San Ramon Valley Islamic Center",
+        defaultLocation: "2232 San Ramon Valley Blvd, San Ramon, CA 94583",
+      });
+      cachedSRVICEvents = events;
+      srvicLastFetch = Date.now();
+      console.log(`[SRVIC] Fetched ${events.length} events from iCal feed`);
+      return events;
+    } catch (err: any) {
+      console.error("[SRVIC] iCal fetch error:", err.message);
+      return cachedSRVICEvents.filter(e => new Date(e.end || e.start) >= new Date());
     }
   }
 
@@ -1543,8 +1579,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const communityEvents = await getCommunityEvents(req);
       const rootsDfwEvents = await fetchRootsDfwEvents();
       const mccEastBayEvents = await fetchMCCEastBayEvents();
+      const srvicEvents = await fetchSRVICEvents();
       const mcaEvents = await fetchMCAEvents();
-      const merged = [...withOverrides, ...communityEvents, ...rootsDfwEvents, ...mccEastBayEvents, ...mcaEvents];
+      const merged = [...withOverrides, ...communityEvents, ...rootsDfwEvents, ...mccEastBayEvents, ...srvicEvents, ...mcaEvents];
       const seen = new Set<string>();
       const allEvents = merged.filter(ev => {
         const key = `${ev.title.toLowerCase().replace(/[^a-z0-9]/g, "")}_${new Date(ev.start).toISOString().slice(0, 10)}`;
