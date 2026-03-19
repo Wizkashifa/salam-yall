@@ -1577,11 +1577,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const withOverrides = await applyEventOverrides(events);
       const communityEvents = await getCommunityEvents(req);
-      // const rootsDfwEvents = await fetchRootsDfwEvents();
-      // const mccEastBayEvents = await fetchMCCEastBayEvents();
-      // const srvicEvents = await fetchSRVICEvents();
-      // const mcaEvents = await fetchMCAEvents();
-      const merged = [...withOverrides, ...communityEvents];
+      const rootsDfwEvents = await fetchRootsDfwEvents();
+      const mccEastBayEvents = await fetchMCCEastBayEvents();
+      const srvicEvents = await fetchSRVICEvents();
+      const mcaEvents = await fetchMCAEvents();
+      const merged = [...withOverrides, ...communityEvents, ...rootsDfwEvents, ...mccEastBayEvents, ...srvicEvents, ...mcaEvents]
+        .filter(ev => !ev.title.toLowerCase().includes("private event"));
       const seen = new Set<string>();
       const allEvents = merged.filter(ev => {
         const key = `${ev.title.toLowerCase().replace(/[^a-z0-9]/g, "")}_${new Date(ev.start).toISOString().slice(0, 10)}`;
