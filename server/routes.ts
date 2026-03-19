@@ -384,6 +384,39 @@ function resolveLocation(location: string): string {
   return location;
 }
 
+const ORGANIZER_ADDRESS_MAP: Record<string, string> = {
+  "Islamic Association of Raleigh": "808 Atwater St, Raleigh, NC 27607",
+  "Islamic Association of Raleigh (Atwater)": "808 Atwater St, Raleigh, NC 27607",
+  "Islamic Association of Raleigh (Page Rd)": "9108 Page Rd, Durham, NC 27703",
+  "Islamic Center of Morrisville": "101 Quail Fields Ct, Morrisville, NC 27560",
+  "Islamic Center of Cary": "2206 W Chatham St, Cary, NC 27513",
+  "Al-Noor Islamic Center": "1409 Ligon St, Raleigh, NC 27603",
+  "Apex Masjid": "225 N Center St, Apex, NC 27502",
+  "As-Salaam Islamic Center": "801 Woods Edge Ct, Raleigh, NC 27609",
+  "Chapel Hill Islamic Society": "1005 Old Legion Rd, Chapel Hill, NC 27517",
+  "Ar-Razzaq Islamic Center": "1009 Chapel Hill Rd, Durham, NC 27707",
+  "North Raleigh Masjid": "5017 Deah Way, Raleigh, NC 27616",
+  "Masjid King Khalid": "1309 Martin Luther King Jr Blvd, Raleigh, NC 27610",
+  "Jamaat Ibad Ar-Rahman (Parkwood)": "4408 Revere Rd, Durham, NC 27713",
+  "Light House Project": "1127 Kildaire Farm Rd, Cary, NC 27511",
+  "Madinah Quran & Youth Center": "1329 Ridge Rd, Raleigh, NC 27607",
+  "Muslim Community Center of the East Bay": "5724 W Las Positas Blvd, Pleasanton, CA 94588",
+  "Muslim Community Association": "3003 Scott Blvd, Santa Clara, CA 95054",
+  "San Ramon Valley Islamic Center": "2232 San Ramon Valley Blvd, San Ramon, CA 94583",
+  "Roots DFW": "4200 International Pkwy, Carrollton, TX 75007",
+};
+
+function resolveLocationFromOrganizer(organizer: string): string {
+  if (!organizer) return "";
+  if (ORGANIZER_ADDRESS_MAP[organizer]) return ORGANIZER_ADDRESS_MAP[organizer];
+  for (const [name, addr] of Object.entries(ORGANIZER_ADDRESS_MAP)) {
+    if (organizer.toLowerCase().includes(name.toLowerCase()) || name.toLowerCase().includes(organizer.toLowerCase())) {
+      return addr;
+    }
+  }
+  return "";
+}
+
 const SPEAKER_PATTERNS = [
   /(?:with|featuring|by|speaker[:\s]*)\s+(?:Sheikh|Shaykh|Imam|Ustadh|Ustadha|Dr\.?|Mufti|Hafiz|Qari)\s+([A-Z][a-zA-Z'-]+(?:\s+[A-Z][a-zA-Z'-]+){0,3})/i,
   /(?:Sheikh|Shaykh|Imam|Ustadh|Ustadha|Dr\.?|Mufti|Hafiz|Qari)\s+([A-Z][a-zA-Z'-]+(?:\s+[A-Z][a-zA-Z'-]+){0,3})/,
@@ -1155,8 +1188,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const baseUrl = `${protocol}://${host}`;
       return rows.map((r: any) => {
         const organizer = r.organizer || "";
-        const location = r.location || "";
-        const coords = resolveCoordinates(organizer, location);
+        const rawLocation = r.location || "";
+        const coords = resolveCoordinates(organizer, rawLocation);
+        const location = rawLocation || resolveLocationFromOrganizer(organizer);
         return {
           id: `community_${r.id}`,
           title: r.title,
@@ -4563,6 +4597,12 @@ Return ONLY the JSON object, no markdown, no explanation.`,
       console.error("[Community Events] Delete error:", error.message);
       res.status(500).json({ error: "Failed to delete event" });
     }
+  });
+
+  app.get("/api/admin/known-organizers", (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    const organizers = Object.entries(ORGANIZER_ADDRESS_MAP).map(([name, address]) => ({ name, address }));
+    res.json(organizers);
   });
 
   const httpServer = createServer(app);
