@@ -4613,12 +4613,6 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     }
   });
 
-  app.get("/api/admin/known-organizers", (req, res) => {
-    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
-    const organizers = Object.entries(ORGANIZER_ADDRESS_MAP).map(([name, address]) => ({ name, address }));
-    res.json(organizers);
-  });
-
   const httpServer = createServer(app);
   return httpServer;
 }
