@@ -1247,6 +1247,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const MCC_EASTBAY_ICAL_URL = "https://mcceastbay.org/?post_type=tribe_events&ical=1&eventDisplay=list";
+  let cachedMCCEastBayEvents: CachedEvent[] = [];
+  let mccEastBayLastFetch = 0;
+  const MCC_EASTBAY_CACHE_TTL = 15 * 60 * 1000;
+
+  function parseICalDate(dtStr: string, tzid?: string): string {
+    const clean = dtStr.replace(/\r/g, "").trim();
+    if (clean.includes("T")) {
+      const y = clean.slice(0, 4), mo = clean.slice(4, 6), d = clean.slice(6, 8);
+      const h = clean.slice(9, 11), mi = clean.slice(11, 13), s = clean.slice(13, 15);
+      if (clean.endsWith("Z")) {
+        return `${y}-${mo}-${d}T${h}:${mi}:${s}.000Z`;
+      }
+      const tz = tzid || "America/Los_Angeles";
+      const local = new Date(`${y}-${mo}-${d}T${h}:${mi}:${s}`);
+      const formatter = new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName: "shortOffset" });
+      const parts = formatter.formatToParts(local);
+      const offsetPart = parts.find(p => p.type === "timeZoneName");
+      let offset = "-07:00";
+      if (offsetPart) {
+        const m = offsetPart.value.match(/GMT([+-]\d+(?::\d+)?)/);
+        if (m) {
+          const raw = m[1];
+          offset = raw.includes(":") ? raw : (raw.length <= 3 ? raw + ":00" : raw.slice(0, 3) + ":" + raw.slice(3));
+          if (offset.length === 5) offset = offset[0] + "0" + offset.slice(1);
+        }
+      }
+      return `${y}-${mo}-${d}T${h}:${mi}:${s}${offset}`;
+    }
+    const y = clean.slice(0, 4), mo = clean.slice(4, 6), d = clean.slice(6, 8);
+    return `${y}-${mo}-${d}`;
+  }
+
+  function parseICalFeed(icalText: string): CachedEvent[] {
+    const events: CachedEvent[] = [];
+    const blocks = icalText.split("BEGIN:VEVENT");
+    const now = new Date();
+    const threeMonthsLater = new Date();
+    threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
+
+    for (let i = 1; i < blocks.length; i++) {
+      const block = blocks[i].split("END:VEVENT")[0];
+      const lines: string[] = [];
+      for (const rawLine of block.split("\n")) {
+        if (rawLine.startsWith(" ") || rawLine.startsWith("\t")) {
+          if (lines.length > 0) lines[lines.length - 1] += rawLine.slice(1);
+        } else {
+          lines.push(rawLine);
+        }
+      }
+
+      const getField = (key: string): string => {
+        const line = lines.find(l => l.startsWith(key + ":") || l.startsWith(key + ";"));
+        if (!line) return "";
+        const colonIdx = line.indexOf(":");
+        return colonIdx >= 0 ? line.slice(colonIdx + 1).replace(/\r/g, "").trim() : "";
+      };
+
+      const getTzField = (key: string): { value: string; tzid?: string } => {
+        const line = lines.find(l => l.startsWith(key + ":") || l.startsWith(key + ";"));
+        if (!line) return { value: "" };
+        const tzMatch = line.match(/TZID=([^:;]+)/);
+        const colonIdx = line.indexOf(":");
+        const value = colonIdx >= 0 ? line.slice(colonIdx + 1).replace(/\r/g, "").trim() : "";
+        return { value, tzid: tzMatch?.[1] };
+      };
+
+      const uid = getField("UID");
+      const summary = getField("SUMMARY");
+      const description = getField("DESCRIPTION")
+        .replace(/\\n/g, "\n").replace(/\\,/g, ",").replace(/\\\\/g, "\\");
+      const location = getField("LOCATION")
+        .replace(/\\,/g, ",").replace(/\\\\/g, "\\");
+      const url = getField("URL");
+      const imageUrl = getField("ATTACH");
+      const organizerLine = lines.find(l => l.startsWith("ORGANIZER"));
+      let organizer = "Muslim Community Center of the East Bay";
+      if (organizerLine) {
+        const cnMatch = organizerLine.match(/CN="?([^"";:]+)"?/);
+        if (cnMatch) {
+          const cn = cnMatch[1].trim();
+          organizer = resolveOrgName(cn) || cn;
+        }
+      }
+
+      const dtStart = getTzField("DTSTART");
+      const dtEnd = getTzField("DTEND");
+      const start = parseICalDate(dtStart.value, dtStart.tzid);
+      const end = dtEnd.value ? parseICalDate(dtEnd.value, dtEnd.tzid) : start;
+      const isAllDay = !dtStart.value.includes("T");
+
+      const startDate = new Date(start);
+      if (startDate < now || startDate > threeMonthsLater) continue;
+
+      const resolvedLocation = location || "5724 W Las Positas Blvd, Pleasanton, CA 94588";
+      const coords = resolveCoordinates(organizer, resolvedLocation);
+      const registrationUrl = url || "";
+
+      events.push({
+        id: `mcc_eastbay_${uid || Date.now().toString() + Math.random().toString(36).slice(2)}`,
+        title: summary || "Untitled Event",
+        description: description.slice(0, 500),
+        location: resolvedLocation,
+        start,
+        end,
+        isAllDay,
+        organizer,
+        imageUrl: imageUrl || "",
+        registrationUrl,
+        speaker: extractSpeaker(description),
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        isVirtual: false,
+        isFeatured: false,
+      });
+    }
+
+    return events.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+  }
+
+  async function fetchMCCEastBayEvents(): Promise<CachedEvent[]> {
+    const now = Date.now();
+    if (cachedMCCEastBayEvents.length > 0 && (now - mccEastBayLastFetch) < MCC_EASTBAY_CACHE_TTL) {
+      return cachedMCCEastBayEvents.filter(e => new Date(e.end || e.start) >= new Date());
+    }
+    try {
+      const response = await fetch(MCC_EASTBAY_ICAL_URL);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const icalText = await response.text();
+      const events = parseICalFeed(icalText);
+      cachedMCCEastBayEvents = events;
+      mccEastBayLastFetch = Date.now();
+      console.log(`[MCC East Bay] Fetched ${events.length} events from iCal feed`);
+      return events;
+    } catch (err: any) {
+      console.error("[MCC East Bay] iCal fetch error:", err.message);
+      return cachedMCCEastBayEvents.filter(e => new Date(e.end || e.start) >= new Date());
+    }
+  }
+
   const ROOTS_DFW_CALENDAR_ID = "3vdosst5ebluhk5eucg6kgrrl8@group.calendar.google.com";
   let cachedRootsDfwEvents: CachedEvent[] = [];
   let rootsDfwLastFetch = 0;
@@ -1326,7 +1466,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const withOverrides = await applyEventOverrides(events);
       const communityEvents = await getCommunityEvents(req);
       const rootsDfwEvents = await fetchRootsDfwEvents();
-      const allEvents = [...withOverrides, ...communityEvents, ...rootsDfwEvents].sort((a, b) => {
+      const mccEastBayEvents = await fetchMCCEastBayEvents();
+      const merged = [...withOverrides, ...communityEvents, ...rootsDfwEvents, ...mccEastBayEvents];
+      const seen = new Set<string>();
+      const allEvents = merged.filter(ev => {
+        const key = `${ev.title.toLowerCase().replace(/[^a-z0-9]/g, "")}_${new Date(ev.start).toISOString().slice(0, 10)}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      }).sort((a, b) => {
         const aTime = new Date(a.start).getTime();
         const bTime = new Date(b.start).getTime();
         return aTime - bTime;
