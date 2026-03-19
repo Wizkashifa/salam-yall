@@ -59,6 +59,7 @@ const NAME_MATCHES: [string, string][] = [
   ["al-iman school", "Al-Iman School"],
   ["deen academy", "Deen Academy"],
   ["muslim community center of the east bay", "Muslim Community Center of the East Bay"],
+  ["muslim community center", "Muslim Community Center of the East Bay"],
   ["mcc east bay", "Muslim Community Center of the East Bay"],
   ["mcc pleasanton", "Muslim Community Center of the East Bay"],
   ["mcceastbay", "Muslim Community Center of the East Bay"],
@@ -405,6 +406,17 @@ const ORGANIZER_ADDRESS_MAP: Record<string, string> = {
   "San Ramon Valley Islamic Center": "2232 San Ramon Valley Blvd, San Ramon, CA 94583",
   "Roots DFW": "4200 International Pkwy, Carrollton, TX 75007",
 };
+
+function resolveOrgName(rawOrg: string): string {
+  if (!rawOrg) return "";
+  const lower = rawOrg.toLowerCase().trim();
+  for (const [pattern, canonical] of NAME_MATCHES) {
+    if (lower.includes(pattern) || pattern.includes(lower)) {
+      return canonical;
+    }
+  }
+  return "";
+}
 
 function resolveLocationFromOrganizer(organizer: string): string {
   if (!organizer) return "";
@@ -1187,10 +1199,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const host = req.headers["host"] || "localhost:5000";
       const baseUrl = `${protocol}://${host}`;
       return rows.map((r: any) => {
-        const organizer = r.organizer || "";
+        const rawOrganizer = r.organizer || "";
+        const resolvedOrgName = resolveOrgName(rawOrganizer);
+        const organizer = resolvedOrgName || rawOrganizer;
         const rawLocation = r.location || "";
         const coords = resolveCoordinates(organizer, rawLocation);
-        const location = rawLocation || resolveLocationFromOrganizer(organizer);
+        const location = resolveLocation(rawLocation) || resolveLocationFromOrganizer(organizer) || rawLocation;
         return {
           id: `community_${r.id}`,
           title: r.title,

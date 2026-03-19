@@ -132,6 +132,7 @@ export const NEARBY_MASJIDS: Masjid[] = [
   { name: "San Ramon Valley Islamic Center", latitude: 37.7770, longitude: -121.9691, address: "2230 Camino Ramon, San Ramon, CA 94583", website: "https://srvic.org", matchTerms: ["srvic", "san ramon valley islamic", "camino ramon"], hasIqama: true },
   { name: "Muslim Community Association", latitude: 37.3769, longitude: -121.9595, address: "3003 Scott Blvd, Santa Clara, CA 95054", website: "https://www.mcabayarea.org", matchTerms: ["mca", "muslim community association", "scott blvd", "mcabayarea"], hasIqama: true },
   { name: "MCA Al-Noor", latitude: 37.3530, longitude: -121.9535, address: "1755 Catherine St, Santa Clara, CA 95050", website: "https://www.mcabayarea.org", matchTerms: ["mca al-noor", "mca alnoor", "mca noor", "catherine st"], hasIqama: true },
+  { name: "Muslim Community Center of the East Bay", latitude: 37.6925, longitude: -121.9040, address: "5724 W Las Positas Blvd, Pleasanton, CA 94588", website: "https://mcceastbay.org", matchTerms: ["mcc", "mcc east bay", "muslim community center of the east bay", "las positas", "pleasanton", "mcceastbay"], hasIqama: true },
 ];
 
 export interface OrgCampus {
