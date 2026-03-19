@@ -85,7 +85,7 @@ function PushNotificationHandler() {
   useEffect(() => {
     if (Platform.OS === "web") return;
 
-    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+    const sub = Notifications.addNotificationResponseReceivedListener(async (response) => {
       const data = response.notification.request.content.data;
       if (data?.type === "janaza") {
         setPendingTarget({ type: "janaza", id: "" });
@@ -93,6 +93,9 @@ function PushNotificationHandler() {
       } else if (data?.type === "event" && data?.eventId) {
         setPendingTarget({ type: "event", id: String(data.eventId) });
         setTimeout(() => router.replace("/(tabs)/events" as Href), 100);
+      } else if (data?.type === "url" && data?.url) {
+        const { Linking } = await import("react-native");
+        Linking.openURL(String(data.url));
       }
     });
 

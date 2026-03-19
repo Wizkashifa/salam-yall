@@ -3906,7 +3906,7 @@ Return ONLY the description text, nothing else.`,
       if (!isAdminAuthorized(req)) {
         return res.status(401).json({ error: "Unauthorized" });
       }
-      const { title, body } = req.body;
+      const { title, body, url } = req.body;
       if (!title || !body) {
         return res.status(400).json({ error: "Title and body are required" });
       }
@@ -3915,7 +3915,8 @@ Return ONLY the description text, nothing else.`,
       if (!tokens.length) {
         return res.json({ sent: 0, message: "No devices registered for push notifications" });
       }
-      const pushResult = await sendPushToTokens(tokens, title, body);
+      const data = url ? { type: "url", url } : undefined;
+      const pushResult = await sendPushToTokens(tokens, title, body, data);
       res.json(pushResult);
     } catch (error: any) {
       console.error("Error sending push:", error.message);

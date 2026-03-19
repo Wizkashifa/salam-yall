@@ -135,6 +135,8 @@
           <input type="text" id="pushTitle" placeholder="Notification title">
           <label>Body</label>
           <textarea id="pushBody" placeholder="Notification message..."></textarea>
+          <label>Link URL (optional — opens when user taps notification)</label>
+          <input type="url" id="pushUrl" placeholder="https://...">
           <button class="btn btn-gold" onclick="sendPush()" id="sendPushBtn">Send Notification</button>
         </div>
 
@@ -987,20 +989,24 @@
     async function sendPush() {
       var title = document.getElementById('pushTitle').value.trim();
       var body = document.getElementById('pushBody').value.trim();
+      var url = document.getElementById('pushUrl').value.trim();
       if (!title || !body) { showToast('Title and body are required', true); return; }
       var btn = document.getElementById('sendPushBtn');
       btn.disabled = true;
       try {
+        var payload = { title: title, body: body };
+        if (url) payload.url = url;
         var res = await fetch('/api/admin/push', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
-          body: JSON.stringify({ title: title, body: body }),
+          body: JSON.stringify(payload),
         });
         var data = await res.json();
         if (res.ok) {
           showToast('Notification sent to ' + (data.sent || 0) + ' device(s)');
           document.getElementById('pushTitle').value = '';
           document.getElementById('pushBody').value = '';
+          document.getElementById('pushUrl').value = '';
         } else {
           showToast(data.error || 'Failed to send', true);
         }
