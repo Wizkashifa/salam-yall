@@ -58,6 +58,10 @@ const NAME_MATCHES: [string, string][] = [
   ["iqra academy", "Iqra Academy"],
   ["al-iman school", "Al-Iman School"],
   ["deen academy", "Deen Academy"],
+  ["muslim community association", "Muslim Community Association"],
+  ["mca bay area", "Muslim Community Association"],
+  ["mca santa clara", "Muslim Community Association"],
+  ["mcabayarea", "Muslim Community Association"],
   ["muslim community center of the east bay", "Muslim Community Center of the East Bay"],
   ["muslim community center", "Muslim Community Center of the East Bay"],
   ["mcc east bay", "Muslim Community Center of the East Bay"],
@@ -1454,6 +1458,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  const MCA_CALENDAR_ID = "c_0f12fe7cae6832644dd87c48e910a7e82060b70a81d12cd9def13d6764be61bf@group.calendar.google.com";
+  let cachedMCAEvents: CachedEvent[] = [];
+  let mcaLastFetch = 0;
+  const MCA_CACHE_TTL = 5 * 60 * 1000;
+
+  async function fetchMCAEvents(): Promise<CachedEvent[]> {
+    const now = Date.now();
+    if (cachedMCAEvents.length > 0 && (now - mcaLastFetch) < MCA_CACHE_TTL) {
+      return cachedMCAEvents.filter(e => new Date(e.end || e.start) >= new Date());
+    }
+    try {
+      const calendar = await getUncachableGoogleCalendarClient();
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      const threeMonthsLater = new Date();
+      threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
+
+      const response = await calendar.events.list({
+        calendarId: MCA_CALENDAR_ID,
+        timeMin: startOfToday.toISOString(),
+        timeMax: threeMonthsLater.toISOString(),
+        singleEvents: true,
+        orderBy: "startTime",
+        maxResults: 100,
+      });
+
+      const events: CachedEvent[] = (response.data.items || []).map((event: any) => {
+        const desc = event.description || "";
+        const imgMatch = desc.match(/src="([^"]+)"/);
+        const imageUrl = imgMatch ? imgMatch[1] : "";
+        const allLinks = desc.match(/https?:\/\/[^\s)"<>]+/g) || [];
+        const registrationUrl = allLinks.find((url: string) =>
+          !url.includes("drive.google.com/thumbnail") &&
+          (url.includes("forms.gle") || url.includes("docs.google.com/forms") ||
+           url.includes("eventbrite") || url.includes("register") || url.includes("rsvp") ||
+           url.includes("bit.ly") || url.includes("tinyurl.com") || url.includes("mcabayarea.org"))
+        ) || allLinks.find((url: string) => !url.includes("drive.google.com/thumbnail")) || "";
+
+        const rawLocation = event.location || "";
+        const resolvedLocation = resolveLocation(rawLocation) || rawLocation || "3003 Scott Blvd, Santa Clara, CA 95054";
+        const organizer = "Muslim Community Association";
+        const coords = resolveCoordinates(organizer, resolvedLocation);
+
+        return {
+          id: `mca_${event.id}`,
+          title: event.summary || "Untitled Event",
+          description: cleanDescription(desc),
+          location: resolvedLocation,
+          start: event.start?.dateTime || event.start?.date || "",
+          end: event.end?.dateTime || event.end?.date || "",
+          isAllDay: !event.start?.dateTime,
+          organizer,
+          imageUrl,
+          registrationUrl: registrationUrl || "",
+          speaker: extractSpeaker(desc),
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          isVirtual: false,
+          isFeatured: false,
+        };
+      });
+
+      cachedMCAEvents = events;
+      mcaLastFetch = Date.now();
+      console.log(`[MCA] Fetched ${events.length} events from Google Calendar`);
+      return events.filter(e => new Date(e.end || e.start) >= new Date());
+    } catch (err: any) {
+      console.error("[MCA] Calendar fetch error:", err.message);
+      return cachedMCAEvents.filter(e => new Date(e.end || e.start) >= new Date());
+    }
+  }
+
   app.get("/api/events", async (req, res) => {
     try {
       const now = Date.now();
@@ -1467,7 +1543,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const communityEvents = await getCommunityEvents(req);
       const rootsDfwEvents = await fetchRootsDfwEvents();
       const mccEastBayEvents = await fetchMCCEastBayEvents();
-      const merged = [...withOverrides, ...communityEvents, ...rootsDfwEvents, ...mccEastBayEvents];
+      const mcaEvents = await fetchMCAEvents();
+      const merged = [...withOverrides, ...communityEvents, ...rootsDfwEvents, ...mccEastBayEvents, ...mcaEvents];
       const seen = new Set<string>();
       const allEvents = merged.filter(ev => {
         const key = `${ev.title.toLowerCase().replace(/[^a-z0-9]/g, "")}_${new Date(ev.start).toISOString().slice(0, 10)}`;
