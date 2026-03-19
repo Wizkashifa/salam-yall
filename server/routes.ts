@@ -58,6 +58,10 @@ const NAME_MATCHES: [string, string][] = [
   ["iqra academy", "Iqra Academy"],
   ["al-iman school", "Al-Iman School"],
   ["deen academy", "Deen Academy"],
+  ["muslim community center of the east bay", "Muslim Community Center of the East Bay"],
+  ["mcc east bay", "Muslim Community Center of the East Bay"],
+  ["mcc pleasanton", "Muslim Community Center of the East Bay"],
+  ["mcceastbay", "Muslim Community Center of the East Bay"],
 ];
 
 const STREET_MATCHES: [string, string][] = [
@@ -85,6 +89,7 @@ const STREET_MATCHES: [string, string][] = [
   ["barber mill", "Islamic Center of Clayton"],
   ["method road", "Triangle Islamic Center"],
   ["method rd", "Triangle Islamic Center"],
+  ["las positas", "Muslim Community Center of the East Bay"],
 ];
 
 const CALENDAR_LEVEL_NAMES = new Set([
@@ -300,6 +305,8 @@ const LOCATION_ADDRESS_MAP: Record<string, string> = {
   "Light House Project": "1127 Kildaire Farm Rd, Cary, NC 27511",
   "The Light House Project": "1127 Kildaire Farm Rd, Cary, NC 27511",
   "The McKimmon Center": "1101 Gorman St, Raleigh, NC 27606",
+  "Muslim Community Center of the East Bay": "5724 W Las Positas Blvd, Pleasanton, CA 94588",
+  "MCC East Bay": "5724 W Las Positas Blvd, Pleasanton, CA 94588",
 };
 
 const KNOWN_COORDINATES: Record<string, { lat: number; lng: number }> = {
@@ -326,6 +333,7 @@ const KNOWN_COORDINATES: Record<string, { lat: number; lng: number }> = {
   "Cary Mosque": { lat: 35.7731, lng: -78.8028 },
   "San Ramon Valley Islamic Center": { lat: 37.7770, lng: -121.9691 },
   "Muslim Community Association": { lat: 37.3769, lng: -121.9595 },
+  "Muslim Community Center of the East Bay": { lat: 37.6925, lng: -121.9040 },
   "MCA Al-Noor": { lat: 37.3530, lng: -121.9535 },
   "Taleef Collective": { lat: 37.5484, lng: -121.9886 },
   "Roots DFW": { lat: 32.9857, lng: -96.7502 },
@@ -4107,16 +4115,41 @@ Return ONLY the description text, nothing else.`,
   const personSvg = `<svg viewBox="0 0 14 14"><circle cx="7" cy="4.5" r="2.5" stroke="#6B7280" stroke-width="1.2" fill="none"/><path d="M2.5 12.5c0-2.485 2.015-4.5 4.5-4.5s4.5 2.015 4.5 4.5" stroke="#6B7280" stroke-width="1.2" stroke-linecap="round" fill="none"/></svg>`;
   const starSvg = `<svg viewBox="0 0 14 14" width="14" height="14"><path d="M7 1l1.76 3.57 3.94.57-2.85 2.78.67 3.93L7 10.07l-3.52 1.78.67-3.93L1.3 5.14l3.94-.57L7 1z" fill="#D4A843"/></svg>`;
 
-  function formatShareDate(dateStr: string): string {
+  const WEST_COAST_ORGS = new Set([
+    "San Ramon Valley Islamic Center",
+    "Muslim Community Association",
+    "Muslim Community Center of the East Bay",
+    "MCA Al-Noor",
+    "Taleef Collective",
+  ]);
+  const CENTRAL_ORGS = new Set([
+    "Roots DFW",
+    "Roots Community",
+  ]);
+
+  function resolveTimezone(organizer: string): string {
+    if (WEST_COAST_ORGS.has(organizer)) return "America/Los_Angeles";
+    if (CENTRAL_ORGS.has(organizer)) return "America/Chicago";
+    return "America/New_York";
+  }
+
+  function formatShareDate(dateStr: string, organizer?: string): string {
     try {
       const d = new Date(dateStr);
-      return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York" });
+      const tz = resolveTimezone(organizer || "");
+      return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: tz });
     } catch { return ""; }
   }
-  function formatShareTime(dateStr: string): string {
+  function formatShareTime(dateStr: string, organizer?: string): string {
     try {
       const d = new Date(dateStr);
-      return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/New_York" });
+      const tz = resolveTimezone(organizer || "");
+      const timeStr = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: tz });
+      if (tz !== "America/New_York") {
+        const abbr = tz === "America/Los_Angeles" ? "PT" : "CT";
+        return `${timeStr} ${abbr}`;
+      }
+      return timeStr;
     } catch { return ""; }
   }
 
@@ -4161,8 +4194,9 @@ Return ONLY the description text, nothing else.`,
       const pageUrl = `https://${host}/share/event/${safeId}`;
       const deepLink = `salamyall://event/${safeId}`;
 
-      const dateStr = event ? formatShareDate(event.start) : "";
-      const timeStr = event ? `${formatShareTime(event.start)}${event.end ? " – " + formatShareTime(event.end) : ""}` : "";
+      const eventOrg = event?.organizer || "";
+      const dateStr = event ? formatShareDate(event.start, eventOrg) : "";
+      const timeStr = event ? `${formatShareTime(event.start, eventOrg)}${event.end ? " – " + formatShareTime(event.end, eventOrg) : ""}` : "";
       const location = event?.location || "";
       const organizer = event?.organizer || "";
 
