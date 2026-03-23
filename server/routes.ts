@@ -557,9 +557,13 @@ function startAutoRefresh() {
 }
 
 function getDbPool() {
-  return new pg.Pool({
+  const pool = new pg.Pool({
     connectionString: process.env.DATABASE_URL,
   });
+  pool.on("error", (err) => {
+    console.error("[DB Pool] Unexpected error on idle client:", err.message);
+  });
+  return pool;
 }
 
 async function ensureJumuahTable(pool: pg.Pool) {
