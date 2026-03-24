@@ -364,7 +364,69 @@ function resolveCoordinates(organizer: string, location: string): { latitude: nu
       return { latitude: coords.lat, longitude: coords.lng };
     }
   }
+
+  if (location) {
+    const loc = location.toLowerCase();
+    for (const [city, coords] of Object.entries(NC_CITY_COORDINATES)) {
+      if (loc.includes(city.toLowerCase())) {
+        return { latitude: coords.lat, longitude: coords.lng };
+      }
+    }
+  }
+
   return { latitude: null, longitude: null };
+}
+
+const NC_CITY_COORDINATES: Record<string, { lat: number; lng: number }> = {
+  "Raleigh": { lat: 35.7796, lng: -78.6382 },
+  "Durham": { lat: 35.9940, lng: -78.8986 },
+  "Cary": { lat: 35.7915, lng: -78.7811 },
+  "Chapel Hill": { lat: 35.9132, lng: -79.0558 },
+  "Morrisville": { lat: 35.8235, lng: -78.8256 },
+  "Apex": { lat: 35.7327, lng: -78.8503 },
+  "Holly Springs": { lat: 35.6513, lng: -78.8336 },
+  "Fuquay-Varina": { lat: 35.5843, lng: -78.8000 },
+  "Fuquay": { lat: 35.5843, lng: -78.8000 },
+  "Wake Forest": { lat: 35.9799, lng: -78.5097 },
+  "Garner": { lat: 35.7113, lng: -78.6142 },
+  "Knightdale": { lat: 35.7968, lng: -78.4806 },
+  "Hillsborough": { lat: 36.0754, lng: -79.0998 },
+  "Carrboro": { lat: 35.9101, lng: -79.0753 },
+  "Pittsboro": { lat: 35.7202, lng: -79.1773 },
+  "Clayton": { lat: 35.6507, lng: -78.4564 },
+  "Sanford": { lat: 35.4799, lng: -79.1803 },
+  "Fayetteville": { lat: 35.0527, lng: -78.8784 },
+  "Greensboro": { lat: 36.0726, lng: -79.7920 },
+  "Charlotte": { lat: 35.2271, lng: -80.8431 },
+  "Wilson": { lat: 35.7212, lng: -77.9156 },
+  "Greenville": { lat: 35.6127, lng: -77.3664 },
+  "Concord": { lat: 35.4088, lng: -80.5795 },
+};
+
+async function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
+  try {
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+    if (!apiKey) return null;
+    const resp = await fetch("https://places.googleapis.com/v1/places:searchText", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": "places.location",
+      },
+      body: JSON.stringify({ textQuery: address }),
+    });
+    const data = await resp.json();
+    const place = data.places?.[0];
+    if (place?.location?.latitude && place?.location?.longitude) {
+      console.log(`[Geocode] Resolved "${address}" -> ${place.location.latitude}, ${place.location.longitude}`);
+      return { lat: place.location.latitude, lng: place.location.longitude };
+    }
+    return null;
+  } catch (err: any) {
+    console.error(`[Geocode] Error geocoding "${address}":`, err.message);
+    return null;
+  }
 }
 
 const LOCATION_STRIP_PREFIXES = [
@@ -1172,6 +1234,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   await pool.query("ALTER TABLE community_events ADD COLUMN IF NOT EXISTS is_virtual BOOLEAN DEFAULT false").catch(() => {});
   await pool.query("ALTER TABLE community_events ADD COLUMN IF NOT EXISTS is_featured BOOLEAN DEFAULT false").catch(() => {});
+  await pool.query("ALTER TABLE community_events ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION").catch(() => {});
+  await pool.query("ALTER TABLE community_events ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION").catch(() => {});
   await pool.query("ALTER TABLE event_overrides ADD COLUMN IF NOT EXISTS is_virtual BOOLEAN").catch(() => {});
   await pool.query("ALTER TABLE event_overrides ADD COLUMN IF NOT EXISTS is_featured BOOLEAN").catch(() => {});
 
@@ -1219,7 +1283,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const resolvedOrgName = resolveOrgName(rawOrganizer);
         const organizer = resolvedOrgName || rawOrganizer;
         const rawLocation = r.location || "";
-        const coords = resolveCoordinates(organizer, rawLocation);
+        const storedCoords = (r.lat && r.lng) ? { latitude: r.lat, longitude: r.lng } : null;
+        const coords = storedCoords || resolveCoordinates(organizer, rawLocation);
         const location = resolveLocation(rawLocation) || resolveLocationFromOrganizer(organizer) || rawLocation;
         return {
           id: `community_${r.id}`,
@@ -4889,6 +4954,18 @@ Return ONLY the JSON object, no markdown, no explanation.`,
         }
       }
 
+      let eventLat: number | null = null;
+      let eventLng: number | null = null;
+      const resolvedOrg = resolveOrgName(organizer || "") || organizer || "";
+      const resolved = resolveCoordinates(resolvedOrg, location || "");
+      if (resolved.latitude && resolved.longitude) {
+        eventLat = resolved.latitude;
+        eventLng = resolved.longitude;
+      } else if (location) {
+        const geocoded = await geocodeAddress(location);
+        if (geocoded) { eventLat = geocoded.lat; eventLng = geocoded.lng; }
+      }
+
       const weeks = recurring ? 12 : 1;
       const baseStart = new Date(startTime);
       const baseEnd = endTime ? new Date(endTime) : null;
@@ -4899,10 +4976,10 @@ Return ONLY the JSON object, no markdown, no explanation.`,
         const wStart = new Date(baseStart.getTime() + w * 7 * 24 * 60 * 60 * 1000);
         const wEnd = baseEnd ? new Date(wStart.getTime() + durationMs) : null;
         const result = await pool.query(
-          `INSERT INTO community_events (title, description, location, start_time, end_time, organizer, registration_url, image_data, image_mime, is_virtual, is_featured, status)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'approved')
+          `INSERT INTO community_events (title, description, location, start_time, end_time, organizer, registration_url, image_data, image_mime, is_virtual, is_featured, status, lat, lng)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'approved', $12, $13)
            RETURNING id`,
-          [title, description || null, location || null, wStart, wEnd, organizer || null, registrationUrl || null, image || null, imageMime || "image/jpeg", !!isVirtual, !!isFeatured]
+          [title, description || null, location || null, wStart, wEnd, organizer || null, registrationUrl || null, image || null, imageMime || "image/jpeg", !!isVirtual, !!isFeatured, eventLat, eventLng]
         );
         ids.push(result.rows[0].id);
       }
