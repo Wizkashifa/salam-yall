@@ -873,9 +873,9 @@ async function syncHalalRestaurants(pool: pg.Pool) {
       const nameCheck = await pool.query("SELECT id FROM halal_restaurants WHERE LOWER(name) = LOWER($1)", [name]);
       if (nameCheck.rows.length > 0) continue;
 
-      await pool.query(
+      const syncInsert = await pool.query(
         `INSERT INTO halal_restaurants (external_id, name, formatted_address, formatted_phone, url, lat, lng, is_halal, halal_comment, cuisine_types, emoji, evidence, considerations, opening_hours)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id`,
         [
           externalId || null,
           name,
@@ -893,6 +893,10 @@ async function syncHalalRestaurants(pool: pg.Pool) {
           r.openingHours || r.opening_hours ? JSON.stringify(r.openingHours || r.opening_hours) : null,
         ]
       );
+      if (syncInsert.rows[0]?.id) {
+        enrichHalalRestaurantWithPlaces(syncInsert.rows[0].id).catch(() => {});
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
       newCount++;
     }
 
@@ -2314,6 +2318,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  async function enrichHalalRestaurantWithPlaces(restaurantId: number) {
+    try {
+      const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+      if (!apiKey) return;
+      const res = await pool.query("SELECT * FROM halal_restaurants WHERE id = $1", [restaurantId]);
+      if (res.rows.length === 0) return;
+      const restaurant = res.rows[0];
+
+      if (restaurant.place_id && restaurant.rating && restaurant.photo_reference) return;
+
+      const searchQuery = restaurant.place_id && restaurant.place_id !== 'none'
+        ? null
+        : `${restaurant.name} ${restaurant.formatted_address || ''}`.trim();
+
+      let place: any = null;
+
+      if (restaurant.place_id && restaurant.place_id !== 'none') {
+        const detailResp = await fetch(
+          `https://places.googleapis.com/v1/places/${restaurant.place_id}`,
+          {
+            headers: {
+              "X-Goog-Api-Key": apiKey,
+              "X-Goog-FieldMask": "id,rating,userRatingCount,photos,regularOpeningHours,location,websiteUri,googleMapsUri,nationalPhoneNumber,formattedAddress",
+            },
+          }
+        );
+        place = await detailResp.json();
+        if (place.error) place = null;
+      } else if (searchQuery) {
+        const searchResp = await fetch(
+          `https://places.googleapis.com/v1/places:searchText`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Goog-Api-Key": apiKey,
+              "X-Goog-FieldMask": "places.id,places.rating,places.userRatingCount,places.photos,places.regularOpeningHours,places.location,places.websiteUri,places.googleMapsUri,places.nationalPhoneNumber,places.formattedAddress",
+            },
+            body: JSON.stringify({ textQuery: searchQuery }),
+          }
+        );
+        const searchData = await searchResp.json();
+        place = searchData.places?.[0];
+      }
+
+      if (!place) {
+        console.log(`[Halal Enrich] No Places result for restaurant #${restaurantId} "${restaurant.name}"`);
+        return;
+      }
+
+      const photoRef = place.photos?.[0]?.name || null;
+      const hours = place.regularOpeningHours?.weekdayDescriptions || null;
+      await pool.query(
+        `UPDATE halal_restaurants SET
+          place_id = COALESCE($1, place_id),
+          rating = COALESCE($2, rating),
+          user_ratings_total = COALESCE($3, user_ratings_total),
+          photo_reference = COALESCE(NULLIF($4, ''), photo_reference),
+          opening_hours = COALESCE($5, opening_hours),
+          lat = COALESCE($6, lat),
+          lng = COALESCE($7, lng),
+          website = COALESCE(NULLIF($8, ''), website),
+          url = COALESCE(NULLIF($9, ''), url),
+          formatted_phone = COALESCE(NULLIF($10, ''), formatted_phone),
+          formatted_address = COALESCE(NULLIF($11, ''), formatted_address),
+          hours_last_updated = NOW()
+        WHERE id = $12`,
+        [
+          place.id || null,
+          place.rating || null,
+          place.userRatingCount || null,
+          photoRef || '',
+          hours ? JSON.stringify(hours) : null,
+          place.location?.latitude || null,
+          place.location?.longitude || null,
+          place.websiteUri || '',
+          place.googleMapsUri || '',
+          place.nationalPhoneNumber || '',
+          place.formattedAddress || '',
+          restaurantId,
+        ]
+      );
+      console.log(`[Halal Enrich] Enriched restaurant #${restaurantId} "${restaurant.name}" with Places data`);
+    } catch (err: any) {
+      console.error(`[Halal Enrich] Error enriching restaurant #${restaurantId}:`, err.message);
+    }
+  }
+
   async function dailyBusinessEnrichment() {
     try {
       const result = await pool.query(
@@ -2929,6 +3021,7 @@ Return ONLY the description text, nothing else.`,
         ]
       );
       console.log(`[Admin] Restaurant added: ${result.rows[0].name} (ID ${result.rows[0].id})`);
+      enrichHalalRestaurantWithPlaces(result.rows[0].id).catch(() => {});
       res.json(result.rows[0]);
     } catch (error: any) {
       console.error("Error adding restaurant:", error.message);
@@ -3781,12 +3874,16 @@ Return ONLY the description text, nothing else.`,
 
       const halalStatus = (req.body.halalStatus as string) || "IS_HALAL";
 
-      await pool.query(
+      const insertResult = await pool.query(
         `INSERT INTO halal_restaurants (name, formatted_address, url, lat, lng, is_halal, place_id, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) RETURNING id`,
         [s.name || "Community Submitted", s.address, s.google_maps_url, s.lat, s.lng, halalStatus, s.place_id]
       );
       await pool.query("UPDATE restaurant_submissions SET status = 'approved' WHERE id = $1", [submissionId]);
+
+      if (insertResult.rows[0]?.id) {
+        enrichHalalRestaurantWithPlaces(insertResult.rows[0].id).catch(() => {});
+      }
 
       res.json({ success: true });
     } catch (error: any) {
