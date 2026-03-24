@@ -4873,7 +4873,7 @@ Return ONLY the JSON object, no markdown, no explanation.`,
   app.post("/api/admin/events/publish", async (req, res) => {
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {
-      const { title, description, location, startTime, endTime, organizer, registrationUrl, image, imageMime, isVirtual, isFeatured } = req.body;
+      const { title, description, location, startTime, endTime, organizer, registrationUrl, image, imageMime, isVirtual, isFeatured, recurring } = req.body;
       if (!title || !startTime) return res.status(400).json({ error: "Title and start time are required" });
 
       if (isFeatured) {
@@ -4889,14 +4889,26 @@ Return ONLY the JSON object, no markdown, no explanation.`,
         }
       }
 
-      const result = await pool.query(
-        `INSERT INTO community_events (title, description, location, start_time, end_time, organizer, registration_url, image_data, image_mime, is_virtual, is_featured, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'approved')
-         RETURNING id, title, start_time, status, created_at`,
-        [title, description || null, location || null, new Date(startTime), endTime ? new Date(endTime) : null, organizer || null, registrationUrl || null, image || null, imageMime || "image/jpeg", !!isVirtual, !!isFeatured]
-      );
-      console.log(`[Community Events] Published: "${title}" (ID ${result.rows[0].id})`);
-      res.json(result.rows[0]);
+      const weeks = recurring ? 12 : 1;
+      const baseStart = new Date(startTime);
+      const baseEnd = endTime ? new Date(endTime) : null;
+      const durationMs = baseEnd ? baseEnd.getTime() - baseStart.getTime() : 0;
+      const ids: number[] = [];
+
+      for (let w = 0; w < weeks; w++) {
+        const wStart = new Date(baseStart.getTime() + w * 7 * 24 * 60 * 60 * 1000);
+        const wEnd = baseEnd ? new Date(wStart.getTime() + durationMs) : null;
+        const result = await pool.query(
+          `INSERT INTO community_events (title, description, location, start_time, end_time, organizer, registration_url, image_data, image_mime, is_virtual, is_featured, status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'approved')
+           RETURNING id`,
+          [title, description || null, location || null, wStart, wEnd, organizer || null, registrationUrl || null, image || null, imageMime || "image/jpeg", !!isVirtual, !!isFeatured]
+        );
+        ids.push(result.rows[0].id);
+      }
+
+      console.log(`[Community Events] Published: "${title}" (${weeks} ${recurring ? 'weekly ' : ''}event${weeks > 1 ? 's' : ''}, IDs ${ids.join(', ')})`);
+      res.json({ id: ids[0], title, start_time: baseStart, status: "approved", count: weeks });
     } catch (error: any) {
       console.error("[Community Events] Publish error:", error.message);
       res.status(500).json({ error: "Failed to publish event" });
