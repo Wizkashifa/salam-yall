@@ -3656,6 +3656,19 @@ Return ONLY the description text, nothing else.`,
     }
   });
 
+  app.get("/api/organizer-follows/:organizer/count", async (req, res) => {
+    try {
+      const organizer = decodeURIComponent(req.params.organizer);
+      const { rows } = await pool.query(
+        "SELECT COUNT(*) as count FROM organizer_follows WHERE organizer_name = $1",
+        [organizer]
+      );
+      res.json({ organizer, count: parseInt(rows[0].count) });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to get follower count" });
+    }
+  });
+
   app.post("/api/organizer-follows", async (req, res) => {
     try {
       const userId = await getUserIdFromRequest(req);

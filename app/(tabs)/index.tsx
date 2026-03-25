@@ -471,11 +471,39 @@ export default function PrayerScreen() {
 
   useEffect(() => { trackScreenView("Home"); return () => { if (tafsirAbortRef.current) tafsirAbortRef.current.abort(); }; }, []);
 
+  const { user, getAuthHeaders } = useAuth();
+
   const { data: calendarEvents } = useQuery<any[]>({
     queryKey: ["/api/events"],
     staleTime: 2 * 60 * 1000,
     refetchInterval: 2 * 60 * 1000,
   });
+
+  const { data: followedOrgs } = useQuery<{ follows: string[] }>({
+    queryKey: ["/api/organizer-follows"],
+    enabled: !!user,
+    staleTime: 30 * 1000,
+    queryFn: async () => {
+      const baseUrl = getApiUrl();
+      const res = await fetch(new URL("/api/organizer-follows", baseUrl).toString(), { headers: getAuthHeaders() });
+      if (!res.ok) return { follows: [] };
+      return res.json();
+    },
+  });
+
+  const followedOrgEvents = useMemo(() => {
+    const follows = followedOrgs?.follows || [];
+    if (!follows.length || !calendarEvents) return [];
+    const now = new Date();
+    return calendarEvents
+      .filter((ev: any) => {
+        if (!ev.organizer || !follows.includes(ev.organizer)) return false;
+        const start = new Date(ev.start);
+        return start >= now;
+      })
+      .sort((a: any, b: any) => new Date(a.start).getTime() - new Date(b.start).getTime())
+      .slice(0, 5);
+  }, [calendarEvents, followedOrgs]);
 
   const { data: halalRestaurants } = useQuery<HalalRestaurant[]>({
     queryKey: ["/api/halal-restaurants"],
@@ -1393,6 +1421,48 @@ export default function PrayerScreen() {
               Enable location for accurate prayer times & Qibla direction
             </Text>
           </Pressable>
+        ) : null}
+
+        {followedOrgEvents.length > 0 ? (
+          <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
+            <View style={styles.sectionCardHeader}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Ionicons name="notifications" size={14} color={colors.emerald} />
+                <Text style={[styles.sectionCardTitle, { color: colors.text }]}>From Organizers You Follow</Text>
+              </View>
+            </View>
+            {followedOrgEvents.map((ev: any, idx: number) => {
+              const d = new Date(ev.start);
+              const dateStr = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+              const timeStr = ev.isAllDay ? "All Day" : d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+              return (
+                <Pressable
+                  key={ev.id}
+                  onPress={() => {
+                    const fullEvent = calendarEvents?.find((e: any) => e.id === ev.id);
+                    if (fullEvent) { setSelectedEvent(fullEvent as CalendarEvent); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }
+                  }}
+                  style={({ pressed }) => [
+                    styles.eventRow,
+                    idx < followedOrgEvents.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight },
+                    pressed && { opacity: 0.7 },
+                  ]}
+                >
+                  <View style={[styles.eventIcon, { backgroundColor: colors.emerald + "18" }]}>
+                    <Ionicons name="heart" size={14} color={colors.emerald} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={1}>{ev.title}</Text>
+                    <Text style={[styles.eventVenue, { color: colors.textSecondary }]} numberOfLines={1}>{ev.organizer}</Text>
+                  </View>
+                  <View style={{ alignItems: "flex-end" }}>
+                    <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.gold }}>{dateStr}</Text>
+                    <Text style={{ fontSize: 10, fontFamily: "Inter_400Regular", color: colors.textSecondary }}>{timeStr}</Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
         ) : null}
 
         {communityEvents.length > 0 ? (
