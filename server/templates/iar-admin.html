@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Islamic Association of Raleigh — Organizer Portal</title>
+  <link rel="icon" type="image/png" sizes="48x48" href="/assets/images/favicon.png" />
+  <style>
+    :root {
+      --bg: #0A0A0A;
+      --text: #F5F5F5;
+      --text-secondary: #9CA3AF;
+      --text-muted: #6B7280;
+      --text-dim: #4B5563;
+      --surface: #141414;
+      --surface-alt: #1C1C1C;
+      --surface-hover: #1A1A1A;
+      --border: #232323;
+      --border-light: #2E2E2E;
+      --gold: #D4A843;
+      --gold-dark: #B8902E;
+      --gold-glow: rgba(212,168,67,0.08);
+      --emerald: #10B981;
+      --emerald-bg: #1B6B4A;
+      --emerald-bg-hover: #14523A;
+      --emerald-light: #6EE7B7;
+      --emerald-surface: #0F2618;
+      --emerald-glow: rgba(16,185,129,0.08);
+      --red: #F87171;
+      --red-bg: #7F1D1D;
+      --red-bg-hover: #991B1B;
+      --red-surface: #2A1818;
+      --input-bg: #181818;
+      --disabled-bg: #2A2A2A;
+      --disabled-text: #555;
+      --preview-value: #D1D5DB;
+      --modal-backdrop: rgba(0,0,0,0.75);
+      --toast-text: #fff;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+      color-scheme: dark;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #F3F4F6;
+        --text: #111827;
+        --text-secondary: #6B7280;
+        --text-muted: #9CA3AF;
+        --text-dim: #B0B0B0;
+        --surface: #FFFFFF;
+        --surface-alt: #F9FAFB;
+        --surface-hover: #F3F4F6;
+        --border: #E5E7EB;
+        --border-light: #D1D5DB;
+        --gold: #B8902E;
+        --gold-dark: #96750F;
+        --gold-glow: rgba(184,144,46,0.06);
+        --emerald: #059669;
+        --emerald-bg: #059669;
+        --emerald-bg-hover: #047857;
+        --emerald-light: #059669;
+        --emerald-surface: #ECFDF5;
+        --emerald-glow: rgba(5,150,105,0.06);
+        --red: #DC2626;
+        --red-bg: #FEE2E2;
+        --red-bg-hover: #FECACA;
+        --red-surface: #FEF2F2;
+        --input-bg: #F9FAFB;
+        --disabled-bg: #E5E7EB;
+        --disabled-text: #9CA3AF;
+        --preview-value: #374151;
+        --modal-backdrop: rgba(0,0,0,0.35);
+        --toast-text: #fff;
+        --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+        --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+        --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+        color-scheme: light;
+      }
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+    .login-wrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; background: var(--bg); }
+    .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 48px 36px; max-width: 380px; width: 100%; text-align: center; box-shadow: var(--shadow-lg); }
+    .login-logo { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 16px; border: 3px solid var(--border); box-shadow: 0 0 0 4px var(--gold-glow); }
+    .login-card h1 { font-size: 24px; color: var(--gold); margin-bottom: 4px; letter-spacing: -0.3px; }
+    .login-card .subtitle { font-size: 13px; color: var(--emerald); margin-bottom: 6px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+    .login-card p { font-size: 13px; color: var(--text-secondary); margin-bottom: 28px; }
+    .login-card input { width: 100%; padding: 13px 16px; background: var(--input-bg); border: 1px solid var(--border-light); border-radius: 12px; color: var(--text); font-size: 15px; outline: none; margin-bottom: 16px; transition: border-color 0.2s, box-shadow 0.2s; }
+    .login-card input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-glow); }
+    .login-card button { width: 100%; padding: 13px; background: var(--emerald-bg); color: var(--toast-text); border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s, transform 0.1s; }
+    .login-card button:hover { background: var(--emerald-bg-hover); }
+    .login-card button:active { transform: scale(0.98); }
+    .login-error { color: var(--red); font-size: 13px; margin-bottom: 12px; display: none; }
+
+    .app-wrap { display: none; width: 100%; margin: 0 auto; padding: 24px 20px; padding-top: 88px; padding-bottom: 48px; max-width: 720px; }
+    .top-bar { position: fixed; top: 0; left: 0; right: 0; background: color-mix(in srgb, var(--surface) 85%, transparent); backdrop-filter: blur(16px) saturate(180%); -webkit-backdrop-filter: blur(16px) saturate(180%); border-bottom: 1px solid var(--border); z-index: 10; padding: 12px 20px; display: none; }
+    .top-bar-inner { max-width: 720px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+    .top-bar .brand { display: flex; align-items: center; gap: 12px; }
+    .top-bar .brand-logo { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--border-light); box-shadow: var(--shadow-sm); }
+    .top-bar .brand-name { font-size: 16px; color: var(--gold); font-weight: 700; letter-spacing: -0.2px; }
+    .top-bar .brand-org { font-size: 11px; color: var(--emerald); font-weight: 600; letter-spacing: 0.3px; }
+    .top-bar button.sign-out { background: none; border: 1px solid var(--border-light); color: var(--text-secondary); padding: 7px 16px; border-radius: 8px; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+    .top-bar button.sign-out:hover { color: var(--text); border-color: var(--text-muted); background: var(--surface-hover); }
+
+    .tab-bar { display: flex; gap: 4px; margin-bottom: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; padding: 4px; box-shadow: var(--shadow-sm); }
+    .tab-btn { flex: 1; padding: 10px 8px; background: none; border: none; color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; text-align: center; border-radius: 10px; }
+    .tab-btn:hover { color: var(--preview-value); background: var(--surface-hover); }
+    .tab-btn.active { color: var(--gold); background: var(--surface-alt); box-shadow: var(--shadow-sm); }
+    .tab-btn .tab-icon { display: block; font-size: 18px; margin-bottom: 3px; }
+    .tab-content { display: none; animation: fadeIn 0.25s ease; }
+    .tab-content.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    .section { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; margin-bottom: 20px; box-shadow: var(--shadow-sm); }
+    .section-title { font-size: 15px; font-weight: 700; color: var(--gold); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .section-title .icon { font-size: 16px; }
+
+    label { display: block; font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; margin-top: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; }
+    label:first-child { margin-top: 0; }
+    input[type="text"], input[type="datetime-local"], input[type="url"], textarea, select {
+      width: 100%; padding: 11px 14px; background: var(--input-bg); border: 1px solid var(--border-light); border-radius: 10px;
+      color: var(--text); font-size: 14px; outline: none; font-family: inherit; transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input:focus, textarea:focus, select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-glow); }
+    textarea { min-height: 80px; resize: vertical; }
+    ::placeholder { color: var(--text-dim); }
+
+    .btn { padding: 11px 20px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--emerald-bg); color: var(--toast-text); box-shadow: 0 2px 8px rgba(27,107,74,0.25); }
+    .btn-primary:hover { background: var(--emerald-bg-hover); box-shadow: 0 4px 12px rgba(27,107,74,0.3); }
+    .btn-primary:disabled { background: var(--disabled-bg); color: var(--disabled-text); cursor: not-allowed; box-shadow: none; }
+    .btn-gold { background: linear-gradient(135deg, var(--gold), var(--gold-dark)); color: #000; box-shadow: 0 2px 8px rgba(212,168,67,0.25); }
+    .btn-gold:hover { box-shadow: 0 4px 12px rgba(212,168,67,0.35); }
+    .btn-gold:disabled { background: var(--disabled-bg); color: var(--disabled-text); cursor: not-allowed; box-shadow: none; }
+    .btn-danger { background: var(--red-bg); color: var(--red); }
+    .btn-danger:hover { background: var(--red-bg-hover); }
+    .btn-sm { padding: 7px 14px; font-size: 12px; border-radius: 8px; }
+    .btn-outline { background: none; border: 1px solid var(--border-light); color: var(--text-secondary); }
+    .btn-outline:hover { border-color: var(--text-muted); color: var(--text); background: var(--surface-hover); }
+
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 500px) { .row { grid-template-columns: 1fr; } }
+
+    .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--emerald-bg); color: var(--toast-text); padding: 12px 28px; border-radius: 12px; font-size: 14px; font-weight: 500; z-index: 9999; opacity: 0; transition: opacity 0.3s, transform 0.3s; pointer-events: none; max-width: 90%; text-align: center; box-shadow: var(--shadow-lg); }
+    .toast.error { background: var(--red-bg); color: var(--red); }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    .event-card { background: var(--surface-alt); border: 1px solid var(--border-light); border-radius: 14px; padding: 16px; margin-bottom: 12px; transition: border-color 0.2s, box-shadow 0.2s; }
+    .event-card:hover { border-color: var(--text-dim); box-shadow: var(--shadow-sm); }
+    .event-card h3 { font-size: 15px; color: var(--text); margin-bottom: 6px; font-weight: 600; }
+    .event-card .meta { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+    .event-card .meta span { margin-right: 12px; }
+    .event-card .actions { display: flex; gap: 8px; margin-top: 10px; }
+    .event-card img.thumb { width: 64px; height: 64px; object-fit: cover; border-radius: 10px; float: right; margin-left: 12px; box-shadow: var(--shadow-sm); }
+
+    .stat-row { display: flex; gap: 14px; margin-bottom: 20px; }
+    .stat-card { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px 16px; text-align: center; box-shadow: var(--shadow-sm); position: relative; overflow: hidden; }
+    .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--gold), var(--emerald)); opacity: 0.6; }
+    .stat-card .stat-num { font-size: 32px; font-weight: 800; color: var(--gold); letter-spacing: -1px; }
+    .stat-card .stat-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px; margin-top: 4px; font-weight: 500; }
+
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px; }
+
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--modal-backdrop); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 1000; overflow: auto; padding: 20px; animation: fadeIn 0.2s ease; }
+    .modal-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; max-width: 500px; margin: 40px auto; padding: 28px; box-shadow: var(--shadow-lg); }
+    .modal-card .modal-title { font-size: 18px; font-weight: 700; color: var(--gold); margin-bottom: 20px; }
+    .modal-card .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+
+    .profile-header { display: flex; flex-direction: column; align-items: center; margin-bottom: 24px; padding: 8px 0; }
+    .profile-logo { width: 88px; height: 88px; border-radius: 50%; object-fit: cover; border: 3px solid var(--border-light); margin-bottom: 14px; box-shadow: 0 0 0 4px var(--gold-glow), var(--shadow-md); }
+    .profile-name { font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 4px; letter-spacing: -0.3px; }
+    .profile-subtitle { font-size: 12px; color: var(--emerald); font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+
+    .profile-preview { background: var(--surface-alt); border: 1px solid var(--border-light); border-radius: 14px; padding: 18px; margin-bottom: 20px; }
+    .profile-preview .preview-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .profile-preview .preview-row:last-child { border-bottom: none; }
+    .profile-preview .preview-icon { font-size: 16px; flex-shrink: 0; margin-top: 2px; }
+    .profile-preview .preview-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 3px; font-weight: 600; }
+    .profile-preview .preview-value { font-size: 14px; color: var(--preview-value); line-height: 1.5; word-break: break-word; }
+    .profile-preview .preview-value a { color: var(--gold); text-decoration: none; transition: opacity 0.2s; }
+    .profile-preview .preview-value a:hover { opacity: 0.8; text-decoration: underline; }
+    .profile-preview .preview-empty { color: var(--text-dim); font-style: italic; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="login-wrap" id="loginScreen">
+    <div class="login-card">
+      <div class="login-logo" style="display:flex;align-items:center;justify-content:center;background:var(--emerald-surface);font-size:40px;">🕌</div>
+      <h1>Salam Y'all</h1>
+      <div class="subtitle">Organizer Portal</div>
+      <p>Sign in to manage IAR events &amp; updates</p>
+      <div class="login-error" id="loginError">Invalid password</div>
+      <input type="password" id="loginPassword" placeholder="Enter your password" onkeydown="if(event.key==='Enter')doLogin()">
+      <button onclick="doLogin()">Sign In</button>
+    </div>
+  </div>
+
+  <div class="top-bar" id="topBar">
+    <div class="top-bar-inner">
+      <div class="brand">
+        <div class="brand-logo" id="topBarLogo" style="display:flex;align-items:center;justify-content:center;background:var(--emerald-surface);font-size:20px;">🕌</div>
+        <div>
+          <div class="brand-name">Salam Y'all</div>
+          <div class="brand-org" id="topBarOrgName">Islamic Association of Raleigh</div>
+        </div>
+      </div>
+      <button class="sign-out" onclick="signOut()">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="app-wrap" id="appWrap">
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-num" id="followerCount">—</div>
+        <div class="stat-label">Followers</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="eventCount">—</div>
+        <div class="stat-label">Published Events</div>
+      </div>
+    </div>
+
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('updates')" id="tabBtnUpdates">
+        <span class="tab-icon">📣</span> Updates
+      </button>
+      <button class="tab-btn" onclick="switchTab('events')" id="tabBtnEvents">
+        <span class="tab-icon">🗓️</span> Events
+      </button>
+      <button class="tab-btn" onclick="switchTab('profile')" id="tabBtnProfile">
+        <span class="tab-icon">🏢</span> Profile
+      </button>
+    </div>
+
+    <!-- UPDATES TAB -->
+    <div class="tab-content active" id="tabUpdates">
+      <div class="section">
+        <div class="section-title"><span class="icon">📣</span> Send Update to Followers</div>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Send a push notification to everyone following your organization in the app.</p>
+        <label>Title *</label>
+        <input type="text" id="pushTitle" placeholder="e.g., Tonight's event starts at 7pm!">
+        <label>Message *</label>
+        <textarea id="pushBody" placeholder="Write your update message..." style="min-height:60px;"></textarea>
+        <label>Link (optional)</label>
+        <input type="text" id="pushLink" placeholder="https://... — event page, registration, or donation link">
+        <p style="font-size:11px;color:var(--text-muted);margin-top:2px;margin-bottom:10px;">Tapping the notification will open this link in the browser.</p>
+        <button class="btn btn-primary" onclick="sendPush()" id="sendPushBtn" style="margin-top:4px;width:100%;">Send Notification</button>
+      </div>
+    </div>
+
+    <!-- EVENTS TAB -->
+    <div class="tab-content" id="tabEvents">
+      <div class="section">
+        <div class="section-title"><span class="icon">📸</span> Add New Event</div>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Upload a flyer image to automatically extract event details, or enter them manually.</p>
+
+        <div id="flyerUploadArea" style="border:2px dashed var(--border-light);border-radius:12px;padding:30px;text-align:center;cursor:pointer;margin-bottom:14px;transition:border-color 0.2s;" ondragover="event.preventDefault();this.style.borderColor='var(--gold)';" ondragleave="this.style.borderColor='var(--border-light)';" ondrop="handleFlyerDrop(event)" onclick="document.getElementById('flyerFileInput').click()">
+          <div style="font-size:28px;margin-bottom:8px;">📸</div>
+          <div style="font-size:14px;color:var(--text-secondary);">Drop a flyer image here or click to upload</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">JPG, PNG, or WebP</div>
+          <input type="file" id="flyerFileInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleFlyerSelect(event)">
+        </div>
+
+        <div id="flyerPreview" style="display:none;margin-bottom:14px;text-align:center;">
+          <img id="flyerPreviewImg" style="max-width:100%;max-height:300px;border-radius:10px;border:1px solid var(--border-light);">
+          <button class="btn btn-sm" onclick="clearFlyer()" style="margin-top:8px;background:var(--disabled-bg);color:var(--text-secondary);">Remove Image</button>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <button class="btn btn-gold" onclick="extractFlyer()" id="extractFlyerBtn" disabled>✨ Extract Details with AI</button>
+          <button class="btn btn-sm" onclick="toggleManualEntry()" style="background:var(--surface-alt);color:var(--text-secondary);">Manual Entry</button>
+        </div>
+
+        <div id="extractStatus" style="display:none;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:14px;"></div>
+
+        <div id="flyerForm" style="display:none;">
+          <label>Event Title *</label>
+          <input type="text" id="flyerTitle" placeholder="e.g., Community Iftar Night">
+          <label>Description</label>
+          <textarea id="flyerDescription" placeholder="Brief description of the event..."></textarea>
+          <label>Location *</label>
+          <input type="text" id="flyerLocation" placeholder="Full address or venue name">
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Events don't have to be at your location — enter any venue address.</div>
+          <div class="row">
+            <div>
+              <label>Start Date & Time *</label>
+              <input type="datetime-local" id="flyerStartTime">
+            </div>
+            <div>
+              <label>End Date & Time</label>
+              <input type="datetime-local" id="flyerEndTime">
+            </div>
+          </div>
+          <label>Registration / RSVP URL (optional)</label>
+          <input type="text" id="flyerRegUrl" placeholder="https://...">
+          <div style="display:flex;align-items:center;gap:8px;margin:12px 0;">
+            <label style="margin:0;cursor:pointer;display:flex;align-items:center;gap:6px;">
+              <input type="checkbox" id="flyerRecurring" style="width:16px;height:16px;accent-color:var(--emerald);">
+              <span style="font-size:13px;color:var(--preview-value);">Repeat weekly for 12 weeks</span>
+            </label>
+          </div>
+          <button class="btn btn-primary" onclick="publishEvent()" id="publishEventBtn" style="margin-top:8px;width:100%;">Publish Event</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="icon">🗓️</span> Your Published Events</div>
+        <div id="eventList"><div class="empty-state">Loading events...</div></div>
+      </div>
+    </div>
+
+    <!-- PROFILE TAB -->
+    <div class="tab-content" id="tabProfile">
+      <div class="profile-header">
+        <div class="profile-logo" id="profileLogo" style="display:flex;align-items:center;justify-content:center;background:var(--emerald-surface);font-size:44px;">🕌</div>
+        <div class="profile-name" id="profileOrgName">Islamic Association of Raleigh</div>
+        <div class="profile-subtitle">Organizer on Salam Y'all</div>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="icon">👁️</span> Current Profile (as shown in app)</div>
+        <div class="profile-preview" id="profilePreview">
+          <div class="preview-row">
+            <span class="preview-icon">📝</span>
+            <div style="flex:1;">
+              <div class="preview-label">Description</div>
+              <div class="preview-value" id="previewDescription"><span class="preview-empty">Not set</span></div>
+            </div>
+          </div>
+          <div class="preview-row">
+            <span class="preview-icon">🌐</span>
+            <div style="flex:1;">
+              <div class="preview-label">Website</div>
+              <div class="preview-value" id="previewWebsite"><span class="preview-empty">Not set</span></div>
+            </div>
+          </div>
+          <div class="preview-row">
+            <span class="preview-icon">📍</span>
+            <div style="flex:1;">
+              <div class="preview-label">Address</div>
+              <div class="preview-value" id="previewAddress"><span class="preview-empty">Not set</span></div>
+            </div>
+          </div>
+          <div class="preview-row">
+            <span class="preview-icon">💝</span>
+            <div style="flex:1;">
+              <div class="preview-label">Donation Link</div>
+              <div class="preview-value" id="previewDonation"><span class="preview-empty">Not set</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="icon">✏️</span> Edit Profile</div>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Changes here will update how your masjid appears in the Salam Y'all app's Masjid Directory.</p>
+        <label>Description</label>
+        <textarea id="orgDescription" placeholder="Brief description of your organization..."></textarea>
+        <label>Website</label>
+        <input type="text" id="orgWebsite" placeholder="https://...">
+        <label>Address</label>
+        <input type="text" id="orgAddress" placeholder="Full address">
+        <label>Donation Link</label>
+        <input type="text" id="orgDonationUrl" placeholder="https://... — your donation or giving page">
+        <p style="font-size:11px;color:var(--text-muted);margin-top:2px;">A "Donate" button will appear on your org/masjid page in the app.</p>
+        <button class="btn btn-primary" onclick="saveOrgProfile()" id="saveOrgBtn" style="margin-top:14px;width:100%;">Save Profile</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="editModal">
+    <div class="modal-card">
+      <div class="modal-title">Edit Event</div>
+      <input type="hidden" id="editEventId">
+      <label>Title *</label>
+      <input type="text" id="editTitle">
+      <label>Description</label>
+      <textarea id="editDescription"></textarea>
+      <label>Location</label>
+      <input type="text" id="editLocation">
+      <div class="row">
+        <div>
+          <label>Start Date & Time</label>
+          <input type="datetime-local" id="editStartTime">
+        </div>
+        <div>
+          <label>End Date & Time</label>
+          <input type="datetime-local" id="editEndTime">
+        </div>
+      </div>
+      <label>Registration URL</label>
+      <input type="text" id="editRegUrl" placeholder="https://...">
+      <div class="modal-actions">
+        <button class="btn btn-primary" onclick="saveEdit()" id="saveEditBtn" style="flex:1;">Save Changes</button>
+        <button class="btn btn-outline" onclick="closeEditModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    var ORG_NAME = 'Islamic Association of Raleigh';
+    var ORG_PATH = '/api/portal/' + encodeURIComponent(ORG_NAME);
+    var adminToken = localStorage.getItem('iar_token') || '';
+    var flyerBase64 = null;
+    var flyerMime = null;
+    var cachedEvents = [];
+    var currentProfile = {};
+
+    if (adminToken) verifyToken();
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+      document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+      document.getElementById('tabBtn' + tabName.charAt(0).toUpperCase() + tabName.slice(1)).classList.add('active');
+      document.getElementById('tab' + tabName.charAt(0).toUpperCase() + tabName.slice(1)).classList.add('active');
+    }
+
+    async function doLogin() {
+      var pw = document.getElementById('loginPassword').value;
+      if (!pw) return;
+      try {
+        var res = await fetch(ORG_PATH + '/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: pw }),
+        });
+        var data = await res.json();
+        if (!res.ok) {
+          document.getElementById('loginError').style.display = 'block';
+          return;
+        }
+        adminToken = data.token;
+        localStorage.setItem('iar_token', adminToken);
+        showApp();
+      } catch(e) {
+        document.getElementById('loginError').style.display = 'block';
+      }
+    }
+
+    async function verifyToken() {
+      try {
+        var res = await fetch(ORG_PATH + '/verify', {
+          headers: { 'Authorization': 'Bearer ' + adminToken },
+        });
+        if (res.ok) { showApp(); }
+        else { signOut(); }
+      } catch(e) { signOut(); }
+    }
+
+    function showApp() {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('topBar').style.display = 'block';
+      document.getElementById('appWrap').style.display = 'block';
+      loadEvents();
+      loadFollowerCount();
+      loadOrgProfile();
+    }
+
+    function signOut() {
+      adminToken = '';
+      localStorage.removeItem('iar_token');
+      document.getElementById('loginScreen').style.display = 'flex';
+      document.getElementById('topBar').style.display = 'none';
+      document.getElementById('appWrap').style.display = 'none';
+    }
+
+    function handleUnauthorized() {
+      showToast('Session expired — please sign in again', true);
+      signOut();
+    }
+
+    function showToast(msg, isError) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast show' + (isError ? ' error' : '');
+      setTimeout(function() { t.className = 'toast'; }, 3000);
+    }
+
+    async function loadFollowerCount() {
+      try {
+        var res = await fetch(ORG_PATH + '/followers/count', {
+          headers: { 'Authorization': 'Bearer ' + adminToken },
+        });
+        if (res.ok) {
+          var data = await res.json();
+          document.getElementById('followerCount').textContent = data.count;
+        }
+      } catch(e) {}
+    }
+
+    var ORG_DEFAULTS = {
+      'Islamic Association of Raleigh': {
+        description: 'One of the largest mosques in the Triangle, serving the Muslim community with daily prayers, educational programs, and community services.',
+        website: 'https://www.raleighmasjid.org',
+        address: '808 Atwater St, Raleigh, NC 27607',
+      }
+    };
+
+    async function loadOrgProfile() {
+      try {
+        var res = await fetch('/api/org-profiles/' + encodeURIComponent(ORG_NAME));
+        if (res.ok) {
+          var data = await res.json();
+          var defaults = ORG_DEFAULTS[ORG_NAME] || {};
+          if (data) {
+            currentProfile = data;
+          } else {
+            currentProfile = { description: defaults.description || '', website: defaults.website || '', address: defaults.address || '', donation_url: '' };
+          }
+          document.getElementById('orgDescription').value = currentProfile.description || defaults.description || '';
+          document.getElementById('orgWebsite').value = currentProfile.website || defaults.website || '';
+          document.getElementById('orgAddress').value = currentProfile.address || defaults.address || '';
+          document.getElementById('orgDonationUrl').value = currentProfile.donation_url || '';
+          updateProfilePreview(currentProfile, defaults);
+        }
+      } catch(e) {}
+    }
+
+    function updateProfilePreview(data, defaults) {
+      defaults = defaults || ORG_DEFAULTS[ORG_NAME] || {};
+      var descEl = document.getElementById('previewDescription');
+      var webEl = document.getElementById('previewWebsite');
+      var addrEl = document.getElementById('previewAddress');
+      var donEl = document.getElementById('previewDonation');
+      var desc = data.description || defaults.description;
+      var web = data.website || defaults.website;
+      var addr = data.address || defaults.address;
+      var don = data.donation_url;
+      if (desc) {
+        descEl.textContent = desc;
+      } else {
+        descEl.innerHTML = '<span class="preview-empty">Not set</span>';
+      }
+      if (web) {
+        webEl.innerHTML = '<a href="' + escapeHtml(web) + '" target="_blank">' + escapeHtml(web.replace(/^https?:\/\/(www\.)?/, '')) + '</a>';
+      } else {
+        webEl.innerHTML = '<span class="preview-empty">Not set</span>';
+      }
+      if (addr) {
+        addrEl.textContent = addr;
+      } else {
+        addrEl.innerHTML = '<span class="preview-empty">Not set</span>';
+      }
+      if (don) {
+        donEl.innerHTML = '<a href="' + escapeHtml(don) + '" target="_blank">' + escapeHtml(don.replace(/^https?:\/\/(www\.)?/, '')) + '</a>';
+      } else {
+        donEl.innerHTML = '<span class="preview-empty">Not set</span>';
+      }
+    }
+
+    async function saveOrgProfile() {
+      var btn = document.getElementById('saveOrgBtn');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+      try {
+        var body = {
+          description: document.getElementById('orgDescription').value.trim(),
+          website: document.getElementById('orgWebsite').value.trim(),
+          address: document.getElementById('orgAddress').value.trim(),
+          donationUrl: document.getElementById('orgDonationUrl').value.trim(),
+        };
+        var res = await fetch(ORG_PATH + '/organization', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify(body),
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        if (res.ok) {
+          showToast('Organization profile updated!');
+          currentProfile = Object.assign(currentProfile, body, { donation_url: body.donationUrl });
+          updateProfilePreview(currentProfile);
+        }
+        else { showToast('Failed to save profile', true); }
+      } catch(e) { showToast('Connection error', true); }
+      finally {
+        btn.disabled = false;
+        btn.textContent = 'Save Profile';
+      }
+    }
+
+    async function sendPush() {
+      var title = document.getElementById('pushTitle').value.trim();
+      var body = document.getElementById('pushBody').value.trim();
+      var link = document.getElementById('pushLink').value.trim();
+      if (!title) { showToast('Title is required', true); return; }
+      if (!body) { showToast('Message is required', true); return; }
+      var btn = document.getElementById('sendPushBtn');
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+      try {
+        var payload = { title: title, body: body };
+        if (link) payload.link = link;
+        var res = await fetch(ORG_PATH + '/push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify(payload),
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        var data = await res.json();
+        if (!res.ok) { showToast(data.error || 'Failed to send', true); return; }
+        if (data.sent === 0) {
+          showToast(data.message || 'No followers to notify', true);
+        } else {
+          showToast('Notification sent to ' + data.sent + ' follower' + (data.sent !== 1 ? 's' : '') + '!');
+        }
+        document.getElementById('pushTitle').value = '';
+        document.getElementById('pushBody').value = '';
+        document.getElementById('pushLink').value = '';
+      } catch(e) { showToast('Connection error', true); }
+      finally {
+        btn.disabled = false;
+        btn.textContent = 'Send Notification';
+      }
+    }
+
+    function handleFlyerDrop(e) {
+      e.preventDefault();
+      document.getElementById('flyerUploadArea').style.borderColor = getComputedStyle(document.documentElement).getPropertyValue('--border-light');
+      var file = e.dataTransfer.files[0];
+      if (file) processFlyer(file);
+    }
+
+    function handleFlyerSelect(e) {
+      var file = e.target.files[0];
+      if (file) processFlyer(file);
+    }
+
+    function processFlyer(file) {
+      if (!file.type.startsWith('image/')) { showToast('Please upload an image file', true); return; }
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var base64 = e.target.result.split(',')[1];
+        flyerBase64 = base64;
+        flyerMime = file.type;
+        document.getElementById('flyerPreviewImg').src = e.target.result;
+        document.getElementById('flyerPreview').style.display = 'block';
+        document.getElementById('flyerUploadArea').style.display = 'none';
+        document.getElementById('extractFlyerBtn').disabled = false;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearFlyer() {
+      flyerBase64 = null;
+      flyerMime = null;
+      document.getElementById('flyerPreview').style.display = 'none';
+      document.getElementById('flyerUploadArea').style.display = 'block';
+      document.getElementById('extractFlyerBtn').disabled = true;
+      document.getElementById('flyerFileInput').value = '';
+    }
+
+    function toggleManualEntry() {
+      var form = document.getElementById('flyerForm');
+      form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    }
+
+    async function extractFlyer() {
+      if (!flyerBase64) { showToast('Upload a flyer image first', true); return; }
+      var btn = document.getElementById('extractFlyerBtn');
+      var status = document.getElementById('extractStatus');
+      btn.disabled = true;
+      btn.textContent = 'Extracting...';
+      status.style.display = 'block';
+      var cs = getComputedStyle(document.documentElement);
+      status.style.background = cs.getPropertyValue('--emerald-surface');
+      status.style.color = cs.getPropertyValue('--emerald-light');
+      status.textContent = 'Sending image to AI for analysis...';
+      try {
+        var res = await fetch(ORG_PATH + '/extract-flyer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify({ image: flyerBase64, mimeType: flyerMime }),
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        var data = await res.json();
+        if (!res.ok) {
+          status.style.background = cs.getPropertyValue('--red-surface');
+          status.style.color = cs.getPropertyValue('--red');
+          status.textContent = data.error || 'Extraction failed';
+          return;
+        }
+        document.getElementById('flyerTitle').value = data.title || '';
+        document.getElementById('flyerDescription').value = data.description || '';
+        document.getElementById('flyerLocation').value = data.location || '';
+        document.getElementById('flyerRegUrl').value = data.registrationUrl || '';
+        if (data.date) {
+          var startDT = data.date + 'T' + (data.startTime || '00:00');
+          document.getElementById('flyerStartTime').value = startDT;
+          if (data.endTime) {
+            document.getElementById('flyerEndTime').value = data.date + 'T' + data.endTime;
+          }
+        }
+        document.getElementById('flyerForm').style.display = 'block';
+        status.style.background = cs.getPropertyValue('--emerald-surface');
+        status.style.color = cs.getPropertyValue('--emerald-light');
+        status.textContent = 'Details extracted! Review and edit below, then publish.';
+      } catch(e) {
+        status.style.background = cs.getPropertyValue('--red-surface');
+        status.style.color = cs.getPropertyValue('--red');
+        status.textContent = 'Connection error';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '✨ Extract Details with AI';
+      }
+    }
+
+    async function publishEvent() {
+      var title = document.getElementById('flyerTitle').value.trim();
+      var startTime = document.getElementById('flyerStartTime').value;
+      var location = document.getElementById('flyerLocation').value.trim();
+      if (!title) { showToast('Title is required', true); return; }
+      if (!startTime) { showToast('Start date & time is required', true); return; }
+      if (!location) { showToast('Location is required', true); return; }
+      var btn = document.getElementById('publishEventBtn');
+      btn.disabled = true;
+      btn.textContent = 'Publishing...';
+      try {
+        var isRecurring = document.getElementById('flyerRecurring').checked;
+        var body = {
+          title: title,
+          description: document.getElementById('flyerDescription').value.trim(),
+          location: location,
+          startTime: new Date(startTime).toISOString(),
+          endTime: document.getElementById('flyerEndTime').value ? new Date(document.getElementById('flyerEndTime').value).toISOString() : null,
+          registrationUrl: document.getElementById('flyerRegUrl').value.trim(),
+          image: flyerBase64,
+          imageMime: flyerMime,
+          recurring: isRecurring,
+        };
+        var res = await fetch(ORG_PATH + '/events/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify(body),
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        var data = await res.json();
+        if (!res.ok) { showToast(data.error || 'Failed to publish', true); return; }
+        var msg = isRecurring ? 'Published ' + (data.count || 12) + ' weekly events!' : 'Event published!';
+        showToast(msg);
+        document.getElementById('flyerTitle').value = '';
+        document.getElementById('flyerDescription').value = '';
+        document.getElementById('flyerLocation').value = '';
+        document.getElementById('flyerStartTime').value = '';
+        document.getElementById('flyerEndTime').value = '';
+        document.getElementById('flyerRegUrl').value = '';
+        document.getElementById('flyerRecurring').checked = false;
+        document.getElementById('flyerForm').style.display = 'none';
+        document.getElementById('extractStatus').style.display = 'none';
+        clearFlyer();
+        loadEvents();
+      } catch(e) { showToast('Connection error', true); }
+      finally {
+        btn.disabled = false;
+        btn.textContent = 'Publish Event';
+      }
+    }
+
+    async function loadEvents() {
+      var list = document.getElementById('eventList');
+      list.innerHTML = '<div class="empty-state">Loading events...</div>';
+      try {
+        var res = await fetch(ORG_PATH + '/events', {
+          headers: { 'Authorization': 'Bearer ' + adminToken },
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        var events = await res.json();
+        cachedEvents = events;
+        document.getElementById('eventCount').textContent = events.length;
+        if (!events.length) {
+          list.innerHTML = '<div class="empty-state">No events published yet. Upload a flyer to get started!</div>';
+          return;
+        }
+        list.innerHTML = '';
+        events.forEach(function(ev) {
+          var card = document.createElement('div');
+          card.className = 'event-card';
+          var d = new Date(ev.start_time);
+          var dateStr = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+          var timeStr = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+          var imgHtml = ev.image_url ? '<img class="thumb" src="' + ev.image_url + '" alt="">' : '';
+          card.innerHTML = imgHtml +
+            '<h3>' + escapeHtml(ev.title) + '</h3>' +
+            '<div class="meta"><span>📅 ' + dateStr + ' at ' + timeStr + '</span></div>' +
+            '<div class="meta"><span>📍 ' + escapeHtml(ev.location || 'No location') + '</span></div>' +
+            (ev.description ? '<p style="font-size:12px;color:var(--text-secondary);margin-top:4px;">' + escapeHtml(ev.description.substring(0, 120)) + (ev.description.length > 120 ? '...' : '') + '</p>' : '') +
+            '<div class="actions">' +
+              '<button class="btn btn-sm btn-outline" onclick="openEditModal(' + ev.id + ')">Edit</button>' +
+              '<button class="btn btn-sm btn-danger" onclick="deleteEvent(' + ev.id + ')">Delete</button>' +
+            '</div>';
+          list.appendChild(card);
+        });
+      } catch(e) {
+        list.innerHTML = '<div class="empty-state">Failed to load events</div>';
+      }
+    }
+
+    function toLocalDatetimeStr(d) {
+      var yr = d.getFullYear();
+      var mo = String(d.getMonth() + 1).padStart(2, '0');
+      var dy = String(d.getDate()).padStart(2, '0');
+      var hr = String(d.getHours()).padStart(2, '0');
+      var mn = String(d.getMinutes()).padStart(2, '0');
+      return yr + '-' + mo + '-' + dy + 'T' + hr + ':' + mn;
+    }
+
+    function openEditModal(id) {
+      var ev = cachedEvents.find(function(e) { return e.id === id; });
+      if (!ev) return;
+      document.getElementById('editEventId').value = id;
+      document.getElementById('editTitle').value = ev.title || '';
+      document.getElementById('editDescription').value = ev.description || '';
+      document.getElementById('editLocation').value = ev.location || '';
+      document.getElementById('editRegUrl').value = ev.registration_url || '';
+      if (ev.start_time) {
+        document.getElementById('editStartTime').value = toLocalDatetimeStr(new Date(ev.start_time));
+      }
+      if (ev.end_time) {
+        document.getElementById('editEndTime').value = toLocalDatetimeStr(new Date(ev.end_time));
+      } else {
+        document.getElementById('editEndTime').value = '';
+      }
+      document.getElementById('editModal').style.display = 'block';
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').style.display = 'none';
+    }
+
+    async function saveEdit() {
+      var id = document.getElementById('editEventId').value;
+      var title = document.getElementById('editTitle').value.trim();
+      if (!title) { showToast('Title is required', true); return; }
+      var btn = document.getElementById('saveEditBtn');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+      try {
+        var startVal = document.getElementById('editStartTime').value;
+        var endVal = document.getElementById('editEndTime').value;
+        var body = {
+          title: title,
+          description: document.getElementById('editDescription').value.trim(),
+          location: document.getElementById('editLocation').value.trim(),
+          startTime: startVal ? new Date(startVal).toISOString() : null,
+          endTime: endVal ? new Date(endVal).toISOString() : null,
+          registrationUrl: document.getElementById('editRegUrl').value.trim(),
+        };
+        var res = await fetch(ORG_PATH + '/events/' + id, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify(body),
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        var data = await res.json();
+        if (!res.ok) { showToast(data.error || 'Failed to save', true); return; }
+        showToast('Event updated!');
+        closeEditModal();
+        loadEvents();
+      } catch(e) { showToast('Connection error', true); }
+      finally {
+        btn.disabled = false;
+        btn.textContent = 'Save Changes';
+      }
+    }
+
+    async function deleteEvent(id) {
+      if (!confirm('Are you sure you want to delete this event?')) return;
+      try {
+        var res = await fetch(ORG_PATH + '/events/' + id, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + adminToken },
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        if (res.ok) {
+          showToast('Event deleted');
+          loadEvents();
+        } else {
+          showToast('Failed to delete event', true);
+        }
+      } catch(e) { showToast('Connection error', true); }
+    }
+
+    function escapeHtml(s) {
+      if (!s) return '';
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+  </script>
+</body>
+</html>
