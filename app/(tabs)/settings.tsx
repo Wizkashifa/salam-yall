@@ -201,6 +201,40 @@ export default function SettingsScreen() {
   const [locationRequested, setLocationRequested] = useState(false);
   const [badgeStates, setBadgeStates] = useState<BadgeState[]>([]);
   const [newBadgeKey, setNewBadgeKey] = useState<string | null>(null);
+
+  const { data: followedOrgs = [], refetch: refetchFollows } = useQuery<string[]>({
+    queryKey: ["/api/organizer-follows"],
+    enabled: !!user,
+    staleTime: 30 * 1000,
+    queryFn: async () => {
+      const baseUrl = getApiUrl();
+      const res = await fetch(new URL("/api/organizer-follows", baseUrl).toString(), { headers: getAuthHeaders() });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.follows || [];
+    },
+  });
+
+  const toggleFollow = async (organizer: string) => {
+    if (!user) {
+      Alert.alert("Sign In Required", "Please sign in to follow organizers and get notified about their events.", [{ text: "OK" }]);
+      return;
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const baseUrl = getApiUrl();
+    const headers = { ...getAuthHeaders(), "Content-Type": "application/json" };
+    const isFollowing = followedOrgs.includes(organizer);
+    try {
+      if (isFollowing) {
+        const res = await fetch(new URL(`/api/organizer-follows/${encodeURIComponent(organizer)}`, baseUrl).toString(), { method: "DELETE", headers });
+        if (!res.ok) { Alert.alert("Error", "Could not unfollow. Please try again."); return; }
+      } else {
+        const res = await fetch(new URL("/api/organizer-follows", baseUrl).toString(), { method: "POST", headers, body: JSON.stringify({ organizer }) });
+        if (!res.ok) { Alert.alert("Error", "Could not follow. Please try again."); return; }
+      }
+      refetchFollows();
+    } catch { Alert.alert("Error", "Connection error. Please try again."); }
+  };
   const [heatmapData, setHeatmapData] = useState<{ date: string; fajr: PrayerStatus; dhuhr: PrayerStatus; asr: PrayerStatus; maghrib: PrayerStatus; isha: PrayerStatus }[]>([]);
   const [missedPrayerCount, setMissedPrayerCount] = useState(0);
   const [showTrackerOnboarding, setShowTrackerOnboarding] = useState(false);
@@ -829,7 +863,11 @@ export default function SettingsScreen() {
         </View>
         <View style={[styles.legendItem, { alignItems: "flex-start" }]}>
           <Ionicons name="star" size={11} color={colors.gold} style={{ marginTop: 2 }} />
-          <Text style={[styles.legendText, { color: colors.textSecondary, flex: 1 }]}>Starring a masjid with iqama times will show those times on your Home screen</Text>
+          <Text style={[styles.legendText, { color: colors.textSecondary, flex: 1 }]}>Preferred — shows iqama times on your Home screen</Text>
+        </View>
+        <View style={[styles.legendItem, { alignItems: "flex-start" }]}>
+          <Ionicons name="notifications" size={11} color={colors.emerald} style={{ marginTop: 2 }} />
+          <Text style={[styles.legendText, { color: colors.textSecondary, flex: 1 }]}>Follow — get notified about events and updates</Text>
         </View>
       </View>
 
@@ -858,6 +896,13 @@ export default function SettingsScreen() {
                 <Text style={[styles.distanceText, { color: colors.emerald }]}>{distanceLabel}</Text>
               </View>
             ) : null}
+            <Pressable
+              onPress={(e) => { e.stopPropagation(); toggleFollow(masjid.name); }}
+              hitSlop={8}
+              style={{ padding: 4 }}
+            >
+              <Ionicons name={followedOrgs.includes(masjid.name) ? "notifications" : "notifications-outline"} size={18} color={followedOrgs.includes(masjid.name) ? colors.emerald : colors.textSecondary} />
+            </Pressable>
             <Pressable
               onPress={(e) => {
                 e.stopPropagation();
@@ -889,46 +934,9 @@ export default function SettingsScreen() {
   );
 
   const SettingsFollowButton = ({ organizer }: { organizer: string }) => {
-    const [isFollowing, setIsFollowing] = useState(false);
-    const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-      if (!user) { setIsFollowing(false); return; }
-      const baseUrl = getApiUrl();
-      fetch(new URL("/api/organizer-follows", baseUrl).toString(), { headers: getAuthHeaders() })
-        .then(r => r.json())
-        .then(data => {
-          if (data.follows && data.follows.includes(organizer)) setIsFollowing(true);
-          else setIsFollowing(false);
-        })
-        .catch(() => {});
-    }, [user, organizer]);
-
-    const toggle = async () => {
-      if (!user) {
-        Alert.alert("Sign In Required", "Please sign in to follow organizers and get notified about their new events.", [{ text: "OK" }]);
-        return;
-      }
-      setLoading(true);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      try {
-        const baseUrl = getApiUrl();
-        const headers = { ...getAuthHeaders(), "Content-Type": "application/json" };
-        if (isFollowing) {
-          const res = await fetch(new URL(`/api/organizer-follows/${encodeURIComponent(organizer)}`, baseUrl).toString(), { method: "DELETE", headers });
-          if (res.ok) setIsFollowing(false);
-          else Alert.alert("Error", "Could not unfollow. Please try again.");
-        } else {
-          const res = await fetch(new URL("/api/organizer-follows", baseUrl).toString(), { method: "POST", headers, body: JSON.stringify({ organizer }) });
-          if (res.ok) setIsFollowing(true);
-          else Alert.alert("Error", "Could not follow. Please try again.");
-        }
-      } catch { Alert.alert("Error", "Connection error. Please try again."); }
-      setLoading(false);
-    };
-
+    const isFollowing = followedOrgs.includes(organizer);
     return (
-      <Pressable onPress={toggle} disabled={loading} hitSlop={6}
+      <Pressable onPress={() => toggleFollow(organizer)} hitSlop={6}
         style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: isFollowing ? colors.emerald + "20" : "transparent", borderWidth: 1, borderColor: isFollowing ? colors.emerald + "40" : colors.gold + "30", marginTop: 8 }}>
         <Ionicons name={isFollowing ? "notifications" : "notifications-outline"} size={14} color={isFollowing ? colors.emerald : colors.gold} />
         <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: isFollowing ? colors.emerald : colors.gold }}>{isFollowing ? "Following" : "Follow"}</Text>
@@ -1063,6 +1071,13 @@ export default function SettingsScreen() {
                 <Text style={[styles.distanceText, { color: colors.emerald }]}>{distanceLabel}</Text>
               </View>
             ) : null}
+            <Pressable
+              onPress={(e) => { e.stopPropagation(); toggleFollow(org.name); }}
+              hitSlop={8}
+              style={{ padding: 4 }}
+            >
+              <Ionicons name={followedOrgs.includes(org.name) ? "notifications" : "notifications-outline"} size={18} color={followedOrgs.includes(org.name) ? colors.emerald : colors.textSecondary} />
+            </Pressable>
             <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
           </Pressable>
         );

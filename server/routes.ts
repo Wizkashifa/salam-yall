@@ -1164,6 +1164,18 @@ async function ensureOrgPortalsTable(pool: pg.Pool) {
       ["The Light House Project", hash]
     );
   }
+
+  const iarKey = process.env.IAR_ADMIN_KEY;
+  if (iarKey) {
+    const crypto = await import("crypto");
+    const hash = crypto.createHash("sha256").update(iarKey).digest("hex");
+    await pool.query(
+      `INSERT INTO org_portals (org_name, password_hash)
+       VALUES ($1, $2)
+       ON CONFLICT (org_name) DO UPDATE SET password_hash = $2`,
+      ["Islamic Association of Raleigh", hash]
+    );
+  }
 }
 
 async function ensureOrganizerFollowsTable(pool: pg.Pool) {
@@ -5532,6 +5544,16 @@ Return ONLY the JSON object, no markdown, no explanation.`,
   app.get("/lighthouse-admin", (_req, res) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.send(lighthouseHtml);
+  });
+
+  const iarHtml = fs.readFileSync(
+    path.resolve(process.cwd(), "server", "templates", "iar-admin.html"),
+    "utf-8"
+  );
+
+  app.get("/iar-admin", (_req, res) => {
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.send(iarHtml);
   });
 
   const httpServer = createServer(app);
