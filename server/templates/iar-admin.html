@@ -228,6 +228,9 @@
       <button class="tab-btn active" onclick="switchTab('updates')" id="tabBtnUpdates">
         <span class="tab-icon">📣</span> Updates
       </button>
+      <button class="tab-btn" onclick="switchTab('janaza')" id="tabBtnJanaza">
+        <span class="tab-icon">🕊️</span> Janaza
+      </button>
       <button class="tab-btn" onclick="switchTab('events')" id="tabBtnEvents">
         <span class="tab-icon">🗓️</span> Events
       </button>
@@ -249,6 +252,64 @@
         <input type="text" id="pushLink" placeholder="https://... — event page, registration, or donation link">
         <p style="font-size:11px;color:var(--text-muted);margin-top:2px;margin-bottom:10px;">Tapping the notification will open this link in the browser.</p>
         <button class="btn btn-primary" onclick="sendPush()" id="sendPushBtn" style="margin-top:4px;width:100%;">Send Notification</button>
+      </div>
+    </div>
+
+    <!-- JANAZA TAB -->
+    <div class="tab-content" id="tabJanaza">
+      <div class="section">
+        <div class="section-title"><span class="icon">🕊️</span> New Janaza Alert</div>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Upload a janaza announcement image to auto-extract details, or enter them manually.</p>
+
+        <div id="janazaUploadArea" style="border:2px dashed var(--border-light);border-radius:12px;padding:30px;text-align:center;cursor:pointer;margin-bottom:14px;transition:border-color 0.2s;" ondragover="event.preventDefault();this.style.borderColor='var(--gold)';" ondragleave="this.style.borderColor='var(--border-light)';" ondrop="handleJanazaDrop(event)" onclick="document.getElementById('janazaFileInput').click()">
+          <div style="font-size:28px;margin-bottom:8px;">🕊️</div>
+          <div style="font-size:14px;color:var(--text-secondary);">Drop a janaza announcement image here or click to upload</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">JPG, PNG, or WebP</div>
+          <input type="file" id="janazaFileInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleJanazaSelect(event)">
+        </div>
+
+        <div id="janazaPreview" style="display:none;margin-bottom:14px;text-align:center;">
+          <img id="janazaPreviewImg" style="max-width:100%;max-height:300px;border-radius:10px;border:1px solid var(--border-light);">
+          <button class="btn btn-sm" onclick="clearJanaza()" style="margin-top:8px;background:var(--disabled-bg);color:var(--text-secondary);">Remove Image</button>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <button class="btn btn-gold" onclick="extractJanaza()" id="extractJanazaBtn" disabled>✨ Extract Details with AI</button>
+          <button class="btn btn-sm" onclick="toggleJanazaForm()" style="background:var(--surface-alt);color:var(--text-secondary);">Manual Entry</button>
+        </div>
+
+        <div id="janazaExtractStatus" style="display:none;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:14px;"></div>
+
+        <div id="janazaForm" style="display:none;">
+          <label>Deceased Name *</label>
+          <input type="text" id="janazaDeceasedName" placeholder="e.g., Sr. Ijatu Barrie">
+          <label>Country of Origin</label>
+          <input type="text" id="janazaCountry" placeholder="e.g., Sierra Leone">
+          <label>Relatives</label>
+          <input type="text" id="janazaRelatives" placeholder="e.g., Wife of Alieu Badara Wurie">
+          <label>Prayer Time</label>
+          <input type="text" id="janazaPrayerTime" placeholder="e.g., Saturday 03/21 After Dhuhr - 1:35 PM">
+          <label>Prayer Location</label>
+          <input type="text" id="janazaPrayerLocation" placeholder="e.g., IAR Mosque — 808 Atwater St, Raleigh, NC">
+          <label>Burial Info</label>
+          <input type="text" id="janazaBurialInfo" placeholder="e.g., IAR Cemetery (6711 Hankinson Rd, Wendell, NC 27591)">
+
+          <div style="margin-top:16px;padding:14px;background:var(--surface-alt);border:1px solid var(--border-light);border-radius:12px;">
+            <label style="margin-top:0;">Schedule Alert (optional)</label>
+            <input type="datetime-local" id="janazaScheduleTime">
+            <p style="font-size:11px;color:var(--text-muted);margin-top:4px;">Leave blank to send immediately. Set a time to queue the alert.</p>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:14px;">
+            <button class="btn btn-primary" onclick="publishJanaza()" id="publishJanazaBtn" style="flex:1;">Send Now</button>
+            <button class="btn btn-gold" onclick="scheduleJanaza()" id="scheduleJanazaBtn" style="flex:1;">Schedule</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="icon">📋</span> Janaza History</div>
+        <div id="janazaList"><div class="empty-state">Loading...</div></div>
       </div>
     </div>
 
@@ -409,7 +470,10 @@
     var adminToken = localStorage.getItem('iar_token') || '';
     var flyerBase64 = null;
     var flyerMime = null;
+    var janazaBase64 = null;
+    var janazaMime = null;
     var cachedEvents = [];
+    var cachedJanaza = [];
     var currentProfile = {};
 
     if (adminToken) verifyToken();
@@ -460,6 +524,7 @@
       loadEvents();
       loadFollowerCount();
       loadOrgProfile();
+      loadJanazaHistory();
     }
 
     function signOut() {
@@ -583,6 +648,217 @@
         btn.textContent = 'Save Profile';
       }
     }
+
+    function handleJanazaDrop(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      document.getElementById('janazaUploadArea').style.borderColor = 'var(--border-light)';
+      var file = e.dataTransfer.files[0];
+      if (file) processJanazaFile(file);
+    }
+    function handleJanazaSelect(e) {
+      var file = e.target.files[0];
+      if (file) processJanazaFile(file);
+    }
+    function processJanazaFile(file) {
+      if (!file.type.match(/^image\/(jpeg|png|webp)$/)) {
+        showToast('Please upload a JPG, PNG, or WebP image', true);
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function(ev) {
+        janazaBase64 = ev.target.result.split(',')[1];
+        janazaMime = file.type;
+        document.getElementById('janazaPreviewImg').src = ev.target.result;
+        document.getElementById('janazaPreview').style.display = 'block';
+        document.getElementById('janazaUploadArea').style.display = 'none';
+        document.getElementById('extractJanazaBtn').disabled = false;
+      };
+      reader.readAsDataURL(file);
+    }
+    function clearJanaza() {
+      janazaBase64 = null;
+      janazaMime = null;
+      document.getElementById('janazaPreview').style.display = 'none';
+      document.getElementById('janazaUploadArea').style.display = 'block';
+      document.getElementById('extractJanazaBtn').disabled = true;
+      document.getElementById('janazaFileInput').value = '';
+    }
+    function toggleJanazaForm() {
+      var f = document.getElementById('janazaForm');
+      f.style.display = f.style.display === 'none' ? 'block' : 'none';
+    }
+    async function extractJanaza() {
+      if (!janazaBase64) { showToast('Upload an image first', true); return; }
+      var btn = document.getElementById('extractJanazaBtn');
+      var status = document.getElementById('janazaExtractStatus');
+      btn.disabled = true;
+      btn.textContent = 'Extracting...';
+      status.style.display = 'block';
+      status.style.background = 'var(--surface-alt)';
+      status.style.color = 'var(--text-secondary)';
+      status.textContent = 'Analyzing image with AI...';
+      try {
+        var res = await fetch(ORG_PATH + '/janaza/extract', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify({ image: janazaBase64, mimeType: janazaMime })
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Extraction failed');
+        document.getElementById('janazaDeceasedName').value = data.deceasedName || data.deceased_name || '';
+        document.getElementById('janazaCountry').value = data.countryOfOrigin || data.country_of_origin || '';
+        document.getElementById('janazaRelatives').value = data.relatives || '';
+        document.getElementById('janazaPrayerTime').value = data.prayerTime || data.prayer_time || '';
+        document.getElementById('janazaPrayerLocation').value = data.prayerLocation || data.prayer_location || '';
+        document.getElementById('janazaBurialInfo').value = data.burialInfo || data.burial_info || '';
+        document.getElementById('janazaForm').style.display = 'block';
+        status.style.background = 'rgba(16,185,129,0.1)';
+        status.style.color = 'var(--emerald)';
+        status.textContent = 'Details extracted — review and edit below before sending.';
+      } catch(e) {
+        status.style.background = 'rgba(239,68,68,0.1)';
+        status.style.color = '#ef4444';
+        status.textContent = 'Error: ' + e.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '✨ Extract Details with AI';
+      }
+    }
+    async function publishJanaza() {
+      var name = document.getElementById('janazaDeceasedName').value.trim();
+      if (!name) { showToast('Deceased name is required', true); return; }
+      var btn = document.getElementById('publishJanazaBtn');
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+      try {
+        var body = {
+          deceasedName: name,
+          countryOfOrigin: document.getElementById('janazaCountry').value.trim(),
+          relatives: document.getElementById('janazaRelatives').value.trim(),
+          prayerTime: document.getElementById('janazaPrayerTime').value.trim(),
+          prayerLocation: document.getElementById('janazaPrayerLocation').value.trim(),
+          burialInfo: document.getElementById('janazaBurialInfo').value.trim()
+        };
+        var res = await fetch(ORG_PATH + '/janaza/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify(body)
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed');
+        showToast('Janaza alert sent to ' + (data.sent || 0) + ' nearby devices');
+        resetJanazaForm();
+        loadJanazaHistory();
+      } catch(e) {
+        showToast('Error: ' + e.message, true);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Send Now';
+      }
+    }
+    async function scheduleJanaza() {
+      var name = document.getElementById('janazaDeceasedName').value.trim();
+      if (!name) { showToast('Deceased name is required', true); return; }
+      var schedTime = document.getElementById('janazaScheduleTime').value;
+      if (!schedTime) { showToast('Select a scheduled time', true); return; }
+      var btn = document.getElementById('scheduleJanazaBtn');
+      btn.disabled = true;
+      btn.textContent = 'Scheduling...';
+      try {
+        var body = {
+          deceasedName: name,
+          countryOfOrigin: document.getElementById('janazaCountry').value.trim(),
+          relatives: document.getElementById('janazaRelatives').value.trim(),
+          prayerTime: document.getElementById('janazaPrayerTime').value.trim(),
+          prayerLocation: document.getElementById('janazaPrayerLocation').value.trim(),
+          burialInfo: document.getElementById('janazaBurialInfo').value.trim(),
+          scheduledAt: new Date(schedTime).toISOString()
+        };
+        var res = await fetch(ORG_PATH + '/janaza/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify(body)
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed');
+        showToast('Janaza alert scheduled');
+        resetJanazaForm();
+        loadJanazaHistory();
+      } catch(e) {
+        showToast('Error: ' + e.message, true);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Schedule';
+      }
+    }
+    function resetJanazaForm() {
+      document.getElementById('janazaDeceasedName').value = '';
+      document.getElementById('janazaCountry').value = '';
+      document.getElementById('janazaRelatives').value = '';
+      document.getElementById('janazaPrayerTime').value = '';
+      document.getElementById('janazaPrayerLocation').value = '';
+      document.getElementById('janazaBurialInfo').value = '';
+      document.getElementById('janazaScheduleTime').value = '';
+      document.getElementById('janazaForm').style.display = 'none';
+      document.getElementById('janazaExtractStatus').style.display = 'none';
+      clearJanaza();
+    }
+    async function loadJanazaHistory() {
+      try {
+        var res = await fetch(ORG_PATH + '/janaza', {
+          headers: { 'Authorization': 'Bearer ' + adminToken }
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed');
+        cachedJanaza = data;
+        renderJanazaList();
+      } catch(e) {
+        document.getElementById('janazaList').innerHTML = '<div class="empty-state">Failed to load</div>';
+      }
+    }
+    function renderJanazaList() {
+      var container = document.getElementById('janazaList');
+      if (!cachedJanaza.length) {
+        container.innerHTML = '<div class="empty-state">No janaza alerts yet</div>';
+        return;
+      }
+      var html = '';
+      cachedJanaza.forEach(function(j) {
+        var statusBadge = j.status === 'scheduled'
+          ? '<span style="background:rgba(234,179,8,0.15);color:#eab308;padding:2px 8px;border-radius:6px;font-size:11px;">Scheduled</span>'
+          : '<span style="background:rgba(16,185,129,0.15);color:var(--emerald);padding:2px 8px;border-radius:6px;font-size:11px;">Sent</span>';
+        var dateStr = j.created_at ? new Date(j.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+        html += '<div class="event-card">'
+          + '<div style="display:flex;justify-content:space-between;align-items:center;">'
+          + '<div style="font-weight:600;font-size:15px;">🕊️ ' + escapeH(j.deceased_name || 'Unknown') + '</div>'
+          + statusBadge
+          + '</div>'
+          + (j.prayer_time ? '<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">🕐 ' + escapeH(j.prayer_time) + '</div>' : '')
+          + (j.prayer_location ? '<div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">📍 ' + escapeH(j.prayer_location) + '</div>' : '')
+          + '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">'
+          + '<span style="font-size:11px;color:var(--text-muted);">' + dateStr + '</span>'
+          + '<div style="display:flex;gap:6px;">'
+          + (j.status === 'scheduled' ? '<button class="btn btn-sm" onclick="deleteJanaza(' + j.id + ')" style="background:rgba(239,68,68,0.1);color:#ef4444;font-size:11px;padding:4px 10px;">Cancel</button>' : '')
+          + '</div></div></div>';
+      });
+      container.innerHTML = html;
+    }
+    async function deleteJanaza(id) {
+      if (!confirm('Cancel this scheduled janaza alert?')) return;
+      try {
+        var res = await fetch(ORG_PATH + '/janaza/' + id, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + adminToken }
+        });
+        if (!res.ok) throw new Error('Failed');
+        showToast('Janaza alert cancelled');
+        loadJanazaHistory();
+      } catch(e) {
+        showToast('Error: ' + e.message, true);
+      }
+    }
+    function escapeH(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
     async function sendPush() {
       var title = document.getElementById('pushTitle').value.trim();

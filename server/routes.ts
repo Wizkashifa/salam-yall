@@ -845,6 +845,17 @@ async function ensureJanazaAlertsTable(pool: pg.Pool) {
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
   `);
+
+  await pool.query(`ALTER TABLE janaza_alerts ADD COLUMN IF NOT EXISTS deceased_name VARCHAR(500)`).catch(() => {});
+  await pool.query(`ALTER TABLE janaza_alerts ADD COLUMN IF NOT EXISTS country_of_origin VARCHAR(255)`).catch(() => {});
+  await pool.query(`ALTER TABLE janaza_alerts ADD COLUMN IF NOT EXISTS relatives TEXT`).catch(() => {});
+  await pool.query(`ALTER TABLE janaza_alerts ADD COLUMN IF NOT EXISTS prayer_time VARCHAR(255)`).catch(() => {});
+  await pool.query(`ALTER TABLE janaza_alerts ADD COLUMN IF NOT EXISTS prayer_location VARCHAR(500)`).catch(() => {});
+  await pool.query(`ALTER TABLE janaza_alerts ADD COLUMN IF NOT EXISTS burial_info TEXT`).catch(() => {});
+  await pool.query(`ALTER TABLE janaza_alerts ADD COLUMN IF NOT EXISTS org_name VARCHAR(255)`).catch(() => {});
+  await pool.query(`ALTER TABLE janaza_alerts ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'published'`).catch(() => {});
+  await pool.query(`ALTER TABLE janaza_alerts ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMPTZ`).catch(() => {});
+  await pool.query(`ALTER TABLE janaza_alerts ADD COLUMN IF NOT EXISTS sent BOOLEAN DEFAULT false`).catch(() => {});
 }
 
 async function ensureHalalRestaurantsTable(pool: pg.Pool) {
@@ -5495,6 +5506,162 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     }
   });
 
+  app.post("/api/portal/:org/janaza/extract", async (req, res) => {
+    const orgName = decodeURIComponent(req.params.org);
+    if (!isPortalAuthorized(req, orgName)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { image, mimeType } = req.body;
+      if (!image) return res.status(400).json({ error: "Image data is required" });
+      const mediaType = (mimeType || "image/jpeg") as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+      const message = await anthropic.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 1500,
+        messages: [{
+          role: "user",
+          content: [
+            { type: "image", source: { type: "base64", media_type: mediaType, data: image } },
+            {
+              type: "text",
+              text: `Extract janaza (funeral) prayer details from this image. Today's date is ${new Date().toISOString().split("T")[0]}.
+IMPORTANT: If the image does not specify a year, assume the current year ${new Date().getFullYear()}.
+
+Return ONLY a JSON object with these fields (use null for any field you cannot determine):
+{
+  "deceasedName": "full name of the deceased (include title like Sr./Br. if shown)",
+  "countryOfOrigin": "country of origin if mentioned",
+  "relatives": "relationship info (e.g. 'Wife of ...' or 'Son of ...')",
+  "prayerTime": "when the janaza prayer is (e.g. 'Saturday 03/21 After Dhuhr - 1:35 PM')",
+  "prayerLocation": "where the janaza prayer will be held (full address if available)",
+  "burialInfo": "burial location and details (full address if available)",
+  "masjidName": "name of the masjid if mentioned"
+}
+Return ONLY the JSON object, no markdown, no explanation.`,
+            },
+          ],
+        }],
+      });
+      const textContent = message.content.find((c: any) => c.type === "text");
+      if (!textContent || textContent.type !== "text") return res.status(500).json({ error: "No text response from AI" });
+      let extracted;
+      try {
+        let jsonStr = textContent.text.trim();
+        const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+        if (jsonMatch) jsonStr = jsonMatch[0];
+        extracted = JSON.parse(jsonStr);
+      } catch {
+        return res.status(500).json({ error: "Failed to parse AI response", raw: textContent.text });
+      }
+      res.json(extracted);
+    } catch (error: any) {
+      console.error(`[Portal:${orgName}] Janaza extract error:`, error.message);
+      res.status(500).json({ error: "Failed to extract janaza details" });
+    }
+  });
+
+  app.post("/api/portal/:org/janaza/publish", async (req, res) => {
+    const orgName = decodeURIComponent(req.params.org);
+    if (!isPortalAuthorized(req, orgName)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { deceasedName, countryOfOrigin, relatives, prayerTime, prayerLocation, burialInfo, scheduledAt } = req.body;
+      if (!deceasedName) return res.status(400).json({ error: "Deceased name is required" });
+
+      const masjidLookup = MASJID_LOCATIONS[orgName] || MASJID_LOCATIONS["Islamic Association of Raleigh"];
+      const lat = masjidLookup?.lat || 35.7898;
+      const lng = masjidLookup?.lng || -78.6912;
+
+      const details = [
+        deceasedName,
+        countryOfOrigin ? `Country: ${countryOfOrigin}` : null,
+        relatives || null,
+        prayerTime ? `Prayer: ${prayerTime}` : null,
+        prayerLocation ? `Location: ${prayerLocation}` : null,
+        burialInfo ? `Burial: ${burialInfo}` : null,
+      ].filter(Boolean).join(" | ");
+
+      const status = scheduledAt ? "scheduled" : "published";
+      const sent = scheduledAt ? false : true;
+
+      const { rows } = await pool.query(
+        `INSERT INTO janaza_alerts (masjid_name, masjid_lat, masjid_lng, details, deceased_name, country_of_origin, relatives, prayer_time, prayer_location, burial_info, org_name, status, scheduled_at, sent)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING id`,
+        [orgName, lat, lng, details, deceasedName, countryOfOrigin || null, relatives || null, prayerTime || null, prayerLocation || null, burialInfo || null, orgName, status, scheduledAt || null, sent]
+      );
+
+      if (!scheduledAt) {
+        const result = await pool.query("SELECT token, lat, lng FROM push_tokens WHERE lat IS NOT NULL AND lng IS NOT NULL");
+        const nearbyTokens = result.rows
+          .filter((r: any) => haversineDistance(r.lat, r.lng, lat, lng) <= 50)
+          .map((r: any) => r.token);
+
+        if (nearbyTokens.length > 0) {
+          const pushBody = `Janaza for ${deceasedName}${prayerTime ? ` — ${prayerTime}` : ""}${prayerLocation ? ` at ${prayerLocation}` : ""}`;
+          await sendPushToTokens(nearbyTokens, "Inna Lillahi wa Inna Ilayhi Raji'un", pushBody, { type: "janaza" });
+          console.log(`[Portal:${orgName}] Janaza alert sent to ${nearbyTokens.length} devices for ${deceasedName}`);
+          res.json({ id: rows[0].id, sent: nearbyTokens.length, status: "published" });
+        } else {
+          res.json({ id: rows[0].id, sent: 0, status: "published", message: "Alert stored but no devices within 50 miles" });
+        }
+      } else {
+        console.log(`[Portal:${orgName}] Janaza alert scheduled for ${scheduledAt} for ${deceasedName}`);
+        res.json({ id: rows[0].id, sent: 0, status: "scheduled", scheduledAt });
+      }
+    } catch (error: any) {
+      console.error(`[Portal:${orgName}] Janaza publish error:`, error.message);
+      res.status(500).json({ error: "Failed to publish janaza alert" });
+    }
+  });
+
+  app.get("/api/portal/:org/janaza", async (req, res) => {
+    const orgName = decodeURIComponent(req.params.org);
+    if (!isPortalAuthorized(req, orgName)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { rows } = await pool.query(
+        `SELECT id, deceased_name, country_of_origin, relatives, prayer_time, prayer_location, burial_info, status, scheduled_at, sent, created_at
+         FROM janaza_alerts WHERE org_name = $1 ORDER BY created_at DESC LIMIT 20`,
+        [orgName]
+      );
+      res.json(rows);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch janaza alerts" });
+    }
+  });
+
+  app.put("/api/portal/:org/janaza/:id", async (req, res) => {
+    const orgName = decodeURIComponent(req.params.org);
+    if (!isPortalAuthorized(req, orgName)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { deceasedName, countryOfOrigin, relatives, prayerTime, prayerLocation, burialInfo, scheduledAt } = req.body;
+      const details = [
+        deceasedName,
+        countryOfOrigin ? `Country: ${countryOfOrigin}` : null,
+        relatives || null,
+        prayerTime ? `Prayer: ${prayerTime}` : null,
+        prayerLocation ? `Location: ${prayerLocation}` : null,
+        burialInfo ? `Burial: ${burialInfo}` : null,
+      ].filter(Boolean).join(" | ");
+
+      await pool.query(
+        `UPDATE janaza_alerts SET deceased_name=$1, country_of_origin=$2, relatives=$3, prayer_time=$4, prayer_location=$5, burial_info=$6, details=$7, scheduled_at=$8, status=$9
+         WHERE id=$10 AND org_name=$11`,
+        [deceasedName, countryOfOrigin || null, relatives || null, prayerTime || null, prayerLocation || null, burialInfo || null, details, scheduledAt || null, scheduledAt ? "scheduled" : "published", req.params.id, orgName]
+      );
+      res.json({ updated: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to update janaza alert" });
+    }
+  });
+
+  app.delete("/api/portal/:org/janaza/:id", async (req, res) => {
+    const orgName = decodeURIComponent(req.params.org);
+    if (!isPortalAuthorized(req, orgName)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      await pool.query("DELETE FROM janaza_alerts WHERE id=$1 AND org_name=$2", [req.params.id, orgName]);
+      res.json({ deleted: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to delete janaza alert" });
+    }
+  });
+
   app.put("/api/portal/:org/organization", async (req, res) => {
     const orgName = decodeURIComponent(req.params.org);
     if (!isPortalAuthorized(req, orgName)) return res.status(401).json({ error: "Unauthorized" });
@@ -5555,6 +5722,30 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.send(iarHtml);
   });
+
+  setInterval(async () => {
+    try {
+      const { rows } = await pool.query(
+        `SELECT id, masjid_name, masjid_lat, masjid_lng, deceased_name, prayer_time, prayer_location, details
+         FROM janaza_alerts WHERE status = 'scheduled' AND sent = false AND scheduled_at <= NOW()`
+      );
+      for (const alert of rows) {
+        const result = await pool.query("SELECT token, lat, lng FROM push_tokens WHERE lat IS NOT NULL AND lng IS NOT NULL");
+        const nearbyTokens = result.rows
+          .filter((r: any) => haversineDistance(r.lat, r.lng, alert.masjid_lat, alert.masjid_lng) <= 50)
+          .map((r: any) => r.token);
+
+        if (nearbyTokens.length > 0) {
+          const pushBody = `Janaza for ${alert.deceased_name}${alert.prayer_time ? ` — ${alert.prayer_time}` : ""}${alert.prayer_location ? ` at ${alert.prayer_location}` : ""}`;
+          await sendPushToTokens(nearbyTokens, "Inna Lillahi wa Inna Ilayhi Raji'un", pushBody, { type: "janaza" });
+          console.log(`[Janaza Scheduler] Sent scheduled alert for ${alert.deceased_name} to ${nearbyTokens.length} devices`);
+        }
+        await pool.query("UPDATE janaza_alerts SET sent = true, status = 'published' WHERE id = $1", [alert.id]);
+      }
+    } catch (err: any) {
+      console.error("[Janaza Scheduler] Error:", err.message);
+    }
+  }, 60000);
 
   const httpServer = createServer(app);
   return httpServer;
