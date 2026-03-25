@@ -1163,6 +1163,8 @@ async function ensureOrgPortalsTable(pool: pg.Pool) {
   `);
 
   await pool.query(`ALTER TABLE org_profiles ADD COLUMN IF NOT EXISTS donation_url VARCHAR(500)`).catch(() => {});
+  await pool.query(`ALTER TABLE org_profiles ADD COLUMN IF NOT EXISTS logo_data TEXT`).catch(() => {});
+  await pool.query(`ALTER TABLE org_profiles ADD COLUMN IF NOT EXISTS logo_mime VARCHAR(100)`).catch(() => {});
 
   const lhpKey = process.env.LIGHTHOUSE_ADMIN_KEY;
   if (lhpKey) {
@@ -5416,16 +5418,76 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     try {
       const orgName = decodeURIComponent(req.params.orgName);
       const { rows } = await pool.query(
-        "SELECT org_name, description, website, address, logo_url, donation_url, updated_at FROM org_profiles WHERE org_name = $1",
+        "SELECT org_name, description, website, address, logo_url, donation_url, updated_at, CASE WHEN logo_data IS NOT NULL THEN true ELSE false END as has_logo FROM org_profiles WHERE org_name = $1",
         [orgName]
       );
       if (rows.length > 0) {
-        res.json(rows[0]);
+        const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
+        const host = req.headers["host"] || "localhost:5000";
+        const baseUrl = `${protocol}://${host}`;
+        const row = rows[0];
+        if (row.has_logo) {
+          row.logo_url = `${baseUrl}/api/org-profiles/${encodeURIComponent(orgName)}/logo`;
+        }
+        delete row.has_logo;
+        res.json(row);
       } else {
         res.json(null);
       }
     } catch (error: any) {
       res.status(500).json({ error: "Failed to fetch org profile" });
+    }
+  });
+
+  app.get("/api/org-profiles/:orgName/logo", async (req, res) => {
+    try {
+      const orgName = decodeURIComponent(req.params.orgName);
+      const { rows } = await pool.query(
+        "SELECT logo_data, logo_mime FROM org_profiles WHERE org_name = $1 AND logo_data IS NOT NULL",
+        [orgName]
+      );
+      if (!rows.length) return res.status(404).json({ error: "Logo not found" });
+      const buffer = Buffer.from(rows[0].logo_data, "base64");
+      res.set("Content-Type", rows[0].logo_mime || "image/png");
+      res.set("Cache-Control", "public, max-age=3600");
+      res.send(buffer);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch logo" });
+    }
+  });
+
+  app.post("/api/portal/:org/logo", async (req, res) => {
+    const orgName = decodeURIComponent(req.params.org);
+    if (!isPortalAuthorized(req, orgName)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { image, imageMime } = req.body;
+      if (!image) return res.status(400).json({ error: "Image data required" });
+      await pool.query(
+        `INSERT INTO org_profiles (org_name, logo_data, logo_mime, updated_at)
+         VALUES ($1, $2, $3, NOW())
+         ON CONFLICT (org_name) DO UPDATE SET
+           logo_data = $2, logo_mime = $3, updated_at = NOW()`,
+        [orgName, image, imageMime || "image/png"]
+      );
+      console.log(`[Portal:${orgName}] Logo uploaded`);
+      res.json({ uploaded: true });
+    } catch (error: any) {
+      console.error(`[Portal:${orgName}] Logo upload error:`, error.message);
+      res.status(500).json({ error: "Failed to upload logo" });
+    }
+  });
+
+  app.delete("/api/portal/:org/logo", async (req, res) => {
+    const orgName = decodeURIComponent(req.params.org);
+    if (!isPortalAuthorized(req, orgName)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      await pool.query(
+        "UPDATE org_profiles SET logo_data = NULL, logo_mime = NULL, logo_url = NULL, updated_at = NOW() WHERE org_name = $1",
+        [orgName]
+      );
+      res.json({ deleted: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to delete logo" });
     }
   });
 
