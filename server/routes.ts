@@ -337,7 +337,7 @@ const KNOWN_COORDINATES: Record<string, { lat: number; lng: number }> = {
   "Muslim American Society (MAS Raleigh)": { lat: 35.7800, lng: -78.7000 },
   "Raleigh Islamic Institute": { lat: 35.7500, lng: -78.6200 },
   "Madinah Quran & Youth Center": { lat: 35.8200, lng: -78.5800 },
-  "Rumman Room": { lat: 35.7898, lng: -78.6912 },
+  "Rumman Room": { lat: 35.7834, lng: -78.6758 },
   "Cary Mosque": { lat: 35.7731, lng: -78.8028 },
   "San Ramon Valley Islamic Center": { lat: 37.7770, lng: -121.9691 },
   "Muslim Community Association": { lat: 37.3769, lng: -121.9595 },
