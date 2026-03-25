@@ -4309,6 +4309,133 @@ Return ONLY the description text, nothing else.`,
     }
   });
 
+  app.post("/api/admin/janaza/extract", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { image, mimeType } = req.body;
+      if (!image) return res.status(400).json({ error: "Image data is required" });
+      const mediaType = (mimeType || "image/jpeg") as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+      const message = await anthropic.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 1500,
+        messages: [{
+          role: "user",
+          content: [
+            { type: "image", source: { type: "base64", media_type: mediaType, data: image } },
+            {
+              type: "text",
+              text: `Extract janaza (funeral) prayer details from this image. Today's date is ${new Date().toISOString().split("T")[0]}.
+IMPORTANT: If the image does not specify a year, assume the current year ${new Date().getFullYear()}.
+
+Return ONLY a JSON object with these fields (use null for any field you cannot determine):
+{
+  "deceasedName": "full name of the deceased (include title like Sr./Br. if shown)",
+  "countryOfOrigin": "country of origin if mentioned",
+  "relatives": "relationship info (e.g. 'Wife of ...' or 'Son of ...')",
+  "prayerTime": "when the janaza prayer is (e.g. 'Saturday 03/21 After Dhuhr - 1:35 PM')",
+  "prayerLocation": "where the janaza prayer will be held (full address if available)",
+  "burialInfo": "burial location and details (full address if available)",
+  "masjidName": "name of the masjid if mentioned"
+}
+Return ONLY the JSON object, no markdown, no explanation.`,
+            },
+          ],
+        }],
+      });
+      const textContent = message.content.find((c: any) => c.type === "text");
+      if (!textContent || textContent.type !== "text") return res.status(500).json({ error: "No text response from AI" });
+      let extracted;
+      try {
+        let jsonStr = textContent.text.trim();
+        const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+        if (jsonMatch) jsonStr = jsonMatch[0];
+        extracted = JSON.parse(jsonStr);
+      } catch {
+        return res.status(500).json({ error: "Failed to parse AI response", raw: textContent.text });
+      }
+      res.json(extracted);
+    } catch (error: any) {
+      console.error("[Admin] Janaza extract error:", error.message);
+      res.status(500).json({ error: "Failed to extract janaza details" });
+    }
+  });
+
+  app.post("/api/admin/janaza/publish", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { masjidName, deceasedName, countryOfOrigin, relatives, prayerTime, prayerLocation, burialInfo, scheduledAt } = req.body;
+      if (!deceasedName) return res.status(400).json({ error: "Deceased name is required" });
+      if (!masjidName) return res.status(400).json({ error: "Masjid is required" });
+
+      const masjidLookup = MASJID_LOCATIONS[masjidName] || MASJID_LOCATIONS["Islamic Association of Raleigh"];
+      const lat = masjidLookup?.lat || 35.7898;
+      const lng = masjidLookup?.lng || -78.6912;
+
+      const details = [
+        deceasedName,
+        countryOfOrigin ? `Country: ${countryOfOrigin}` : null,
+        relatives || null,
+        prayerTime ? `Prayer: ${prayerTime}` : null,
+        prayerLocation ? `Location: ${prayerLocation}` : null,
+        burialInfo ? `Burial: ${burialInfo}` : null,
+      ].filter(Boolean).join(" | ");
+
+      const status = scheduledAt ? "scheduled" : "published";
+      const sent = !scheduledAt;
+
+      const { rows } = await pool.query(
+        `INSERT INTO janaza_alerts (masjid_name, masjid_lat, masjid_lng, details, deceased_name, country_of_origin, relatives, prayer_time, prayer_location, burial_info, org_name, status, scheduled_at, sent)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING id`,
+        [masjidName, lat, lng, details, deceasedName, countryOfOrigin || null, relatives || null, prayerTime || null, prayerLocation || null, burialInfo || null, masjidName, status, scheduledAt || null, sent]
+      );
+
+      if (!scheduledAt) {
+        const result = await pool.query("SELECT token, lat, lng FROM push_tokens WHERE lat IS NOT NULL AND lng IS NOT NULL");
+        const nearbyTokens = result.rows
+          .filter((r: any) => haversineDistance(r.lat, r.lng, lat, lng) <= 50)
+          .map((r: any) => r.token);
+
+        if (nearbyTokens.length > 0) {
+          const pushBody = `Janaza for ${deceasedName}${prayerTime ? ` — ${prayerTime}` : ""}${prayerLocation ? ` at ${prayerLocation}` : ""}`;
+          await sendPushToTokens(nearbyTokens, "Inna Lillahi wa Inna Ilayhi Raji'un", pushBody, { type: "janaza" });
+          console.log(`[Admin] Janaza alert sent to ${nearbyTokens.length} devices for ${deceasedName}`);
+          res.json({ id: rows[0].id, sent: nearbyTokens.length, status: "published" });
+        } else {
+          res.json({ id: rows[0].id, sent: 0, status: "published", message: "Alert stored but no devices within 50 miles" });
+        }
+      } else {
+        console.log(`[Admin] Janaza alert scheduled for ${scheduledAt} for ${deceasedName}`);
+        res.json({ id: rows[0].id, sent: 0, status: "scheduled", scheduledAt });
+      }
+    } catch (error: any) {
+      console.error("[Admin] Janaza publish error:", error.message);
+      res.status(500).json({ error: "Failed to publish janaza alert" });
+    }
+  });
+
+  app.get("/api/admin/janaza", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { rows } = await pool.query(
+        `SELECT id, masjid_name, deceased_name, country_of_origin, relatives, prayer_time, prayer_location, burial_info, status, scheduled_at, sent, created_at
+         FROM janaza_alerts ORDER BY created_at DESC LIMIT 30`
+      );
+      res.json(rows);
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch janaza alerts" });
+    }
+  });
+
+  app.delete("/api/admin/janaza/:id", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      await pool.query("DELETE FROM janaza_alerts WHERE id = $1", [req.params.id]);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to delete janaza alert" });
+    }
+  });
+
   app.post("/api/admin/push/event", async (req, res) => {
     try {
       if (!isAdminAuthorized(req)) {

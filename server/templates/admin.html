@@ -111,6 +111,7 @@
         </div>
         <div class="tab-bar" id="tabBar">
           <button class="tab-btn active" data-tab="comms" onclick="switchTab('comms')">Notifications & Ticker</button>
+          <button class="tab-btn" data-tab="janaza" onclick="switchTab('janaza')">Janaza</button>
           <button class="tab-btn" data-tab="events" onclick="switchTab('events')">Events</button>
           <button class="tab-btn" data-tab="businesses" onclick="switchTab('businesses')">Business Submissions</button>
           <button class="tab-btn" data-tab="restaurants" onclick="switchTab('restaurants')">Restaurants</button>
@@ -213,6 +214,67 @@
           <button class="btn btn-primary" onclick="updateCommunityGoal()" id="updateCommunityGoalBtn">Update Target</button>
         </div>
         <div id="communityGoalStatus" style="margin-top:12px;"></div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-janaza">
+      <div class="section">
+        <div class="section-title"><span class="icon">🕊️</span> New Janaza Alert</div>
+        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Upload a janaza announcement image to auto-extract details, or enter them manually.</p>
+
+        <div id="jzUploadArea" style="border:2px dashed #333;border-radius:12px;padding:30px;text-align:center;cursor:pointer;margin-bottom:14px;transition:border-color 0.2s;" ondragover="event.preventDefault();this.style.borderColor='#D4A843';" ondragleave="this.style.borderColor='#333';" ondrop="handleJzDrop(event)" onclick="document.getElementById('jzFileInput').click()">
+          <div style="font-size:28px;margin-bottom:8px;">🕊️</div>
+          <div style="font-size:14px;color:#9CA3AF;">Drop a janaza announcement image here or click to upload</div>
+          <div style="font-size:11px;color:#6B7280;margin-top:4px;">JPG, PNG, or WebP</div>
+          <input type="file" id="jzFileInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleJzSelect(event)">
+        </div>
+
+        <div id="jzPreview" style="display:none;margin-bottom:14px;text-align:center;">
+          <img id="jzPreviewImg" style="max-width:100%;max-height:300px;border-radius:10px;border:1px solid #333;">
+          <button class="btn btn-sm" onclick="clearJz()" style="margin-top:8px;background:#2A2A2A;color:#9CA3AF;">Remove Image</button>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <button class="btn btn-gold" onclick="extractJz()" id="extractJzBtn" disabled>✨ Extract Details with AI</button>
+          <button class="btn btn-sm" onclick="toggleJzForm()" style="background:#1C1C1C;color:#9CA3AF;">Manual Entry</button>
+        </div>
+
+        <div id="jzExtractStatus" style="display:none;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:14px;"></div>
+
+        <div id="jzForm" style="display:none;">
+          <label>Masjid *</label>
+          <select id="jzMasjid" style="width:100%;padding:10px 14px;background:#1E1E1E;border:1px solid #333;border-radius:10px;color:#F5F5F5;font-size:14px;margin-bottom:14px;">
+            <option value="">Select masjid...</option>
+          </select>
+          <label>Deceased Name *</label>
+          <input type="text" id="jzDeceasedName" placeholder="e.g., Sr. Ijatu Barrie">
+          <label>Country of Origin</label>
+          <input type="text" id="jzCountry" placeholder="e.g., Sierra Leone">
+          <label>Relatives</label>
+          <input type="text" id="jzRelatives" placeholder="e.g., Wife of Alieu Badara Wurie">
+          <label>Prayer Time</label>
+          <input type="text" id="jzPrayerTime" placeholder="e.g., Saturday 03/21 After Dhuhr - 1:35 PM">
+          <label>Prayer Location</label>
+          <input type="text" id="jzPrayerLocation" placeholder="e.g., IAR Mosque — 808 Atwater St, Raleigh, NC">
+          <label>Burial Info</label>
+          <input type="text" id="jzBurialInfo" placeholder="e.g., IAR Cemetery (6711 Hankinson Rd, Wendell, NC 27591)">
+
+          <div style="margin-top:16px;padding:14px;background:#1C1C1C;border:1px solid #333;border-radius:12px;">
+            <label style="margin-top:0;">Schedule Alert (optional)</label>
+            <input type="datetime-local" id="jzScheduleTime" style="width:100%;padding:10px 14px;background:#1E1E1E;border:1px solid #333;border-radius:10px;color:#F5F5F5;font-size:14px;">
+            <p style="font-size:11px;color:#6B7280;margin-top:4px;">Leave blank to send immediately. Set a time to queue the alert.</p>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:14px;">
+            <button class="btn btn-primary" onclick="publishJz()" id="publishJzBtn" style="flex:1;">Send Now</button>
+            <button class="btn btn-gold" onclick="scheduleJz()" id="scheduleJzBtn" style="flex:1;">Schedule</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title"><span class="icon">📋</span> Janaza History</div>
+        <div id="jzList"><div class="empty-state">Loading...</div></div>
       </div>
     </div>
 
@@ -816,6 +878,8 @@
           loadEvents();
           loadCommunityEvents();
           loadCommunityGoal();
+          loadJzMasjids();
+          loadJzHistory();
         } else {
           document.getElementById('loginError').style.display = 'block';
         }
@@ -1018,6 +1082,210 @@
         }
       } catch { showToast('Connection error', true); }
       btn.disabled = false;
+    }
+
+    var jzBase64 = null, jzMime = null, cachedJz = [];
+    function handleJzDrop(e) {
+      e.preventDefault(); e.stopPropagation();
+      document.getElementById('jzUploadArea').style.borderColor = '#333';
+      if (e.dataTransfer.files[0]) processJzFile(e.dataTransfer.files[0]);
+    }
+    function handleJzSelect(e) { if (e.target.files[0]) processJzFile(e.target.files[0]); }
+    function processJzFile(file) {
+      if (!file.type.match(/^image\/(jpeg|png|webp)$/)) { showToast('Please upload a JPG, PNG, or WebP image', true); return; }
+      var reader = new FileReader();
+      reader.onload = function(ev) {
+        jzBase64 = ev.target.result.split(',')[1];
+        jzMime = file.type;
+        document.getElementById('jzPreviewImg').src = ev.target.result;
+        document.getElementById('jzPreview').style.display = 'block';
+        document.getElementById('jzUploadArea').style.display = 'none';
+        document.getElementById('extractJzBtn').disabled = false;
+      };
+      reader.readAsDataURL(file);
+    }
+    function clearJz() {
+      jzBase64 = null; jzMime = null;
+      document.getElementById('jzPreview').style.display = 'none';
+      document.getElementById('jzUploadArea').style.display = 'block';
+      document.getElementById('extractJzBtn').disabled = true;
+      document.getElementById('jzFileInput').value = '';
+    }
+    function toggleJzForm() {
+      var f = document.getElementById('jzForm');
+      f.style.display = f.style.display === 'none' ? 'block' : 'none';
+    }
+    async function loadJzMasjids() {
+      try {
+        var res = await fetch('/api/masjids');
+        var masjids = await res.json();
+        var sel = document.getElementById('jzMasjid');
+        sel.innerHTML = '<option value="">Select masjid...</option>';
+        masjids.forEach(function(m) {
+          sel.innerHTML += '<option value="' + m.name + '">' + m.name + '</option>';
+        });
+      } catch {}
+    }
+    async function extractJz() {
+      if (!jzBase64) { showToast('Upload an image first', true); return; }
+      var btn = document.getElementById('extractJzBtn');
+      var status = document.getElementById('jzExtractStatus');
+      btn.disabled = true; btn.textContent = 'Extracting...';
+      status.style.display = 'block';
+      status.style.background = '#1C1C1C'; status.style.color = '#9CA3AF';
+      status.textContent = 'Analyzing image with AI...';
+      try {
+        var res = await fetch('/api/admin/janaza/extract', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify({ image: jzBase64, mimeType: jzMime })
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Extraction failed');
+        document.getElementById('jzDeceasedName').value = data.deceasedName || '';
+        document.getElementById('jzCountry').value = data.countryOfOrigin || '';
+        document.getElementById('jzRelatives').value = data.relatives || '';
+        document.getElementById('jzPrayerTime').value = data.prayerTime || '';
+        document.getElementById('jzPrayerLocation').value = data.prayerLocation || '';
+        document.getElementById('jzBurialInfo').value = data.burialInfo || '';
+        if (data.masjidName) {
+          var sel = document.getElementById('jzMasjid');
+          for (var i = 0; i < sel.options.length; i++) {
+            if (sel.options[i].value.toLowerCase().includes(data.masjidName.toLowerCase())) {
+              sel.selectedIndex = i; break;
+            }
+          }
+        }
+        document.getElementById('jzForm').style.display = 'block';
+        status.style.background = 'rgba(16,185,129,0.1)'; status.style.color = '#10B981';
+        status.textContent = 'Details extracted — review and edit below before sending.';
+      } catch(e) {
+        status.style.background = 'rgba(239,68,68,0.1)'; status.style.color = '#F87171';
+        status.textContent = 'Error: ' + e.message;
+      } finally {
+        btn.disabled = false; btn.textContent = '✨ Extract Details with AI';
+      }
+    }
+    async function publishJz() {
+      var name = document.getElementById('jzDeceasedName').value.trim();
+      var masjid = document.getElementById('jzMasjid').value;
+      if (!name) { showToast('Deceased name is required', true); return; }
+      if (!masjid) { showToast('Select a masjid', true); return; }
+      var btn = document.getElementById('publishJzBtn');
+      btn.disabled = true; btn.textContent = 'Sending...';
+      try {
+        var body = {
+          masjidName: masjid, deceasedName: name,
+          countryOfOrigin: document.getElementById('jzCountry').value.trim(),
+          relatives: document.getElementById('jzRelatives').value.trim(),
+          prayerTime: document.getElementById('jzPrayerTime').value.trim(),
+          prayerLocation: document.getElementById('jzPrayerLocation').value.trim(),
+          burialInfo: document.getElementById('jzBurialInfo').value.trim()
+        };
+        var res = await fetch('/api/admin/janaza/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify(body)
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed');
+        showToast('Janaza alert sent to ' + (data.sent || 0) + ' nearby devices');
+        resetJzForm(); loadJzHistory();
+      } catch(e) { showToast('Error: ' + e.message, true); }
+      finally { btn.disabled = false; btn.textContent = 'Send Now'; }
+    }
+    async function scheduleJz() {
+      var name = document.getElementById('jzDeceasedName').value.trim();
+      var masjid = document.getElementById('jzMasjid').value;
+      if (!name) { showToast('Deceased name is required', true); return; }
+      if (!masjid) { showToast('Select a masjid', true); return; }
+      var schedTime = document.getElementById('jzScheduleTime').value;
+      if (!schedTime) { showToast('Select a scheduled time', true); return; }
+      var btn = document.getElementById('scheduleJzBtn');
+      btn.disabled = true; btn.textContent = 'Scheduling...';
+      try {
+        var body = {
+          masjidName: masjid, deceasedName: name,
+          countryOfOrigin: document.getElementById('jzCountry').value.trim(),
+          relatives: document.getElementById('jzRelatives').value.trim(),
+          prayerTime: document.getElementById('jzPrayerTime').value.trim(),
+          prayerLocation: document.getElementById('jzPrayerLocation').value.trim(),
+          burialInfo: document.getElementById('jzBurialInfo').value.trim(),
+          scheduledAt: new Date(schedTime).toISOString()
+        };
+        var res = await fetch('/api/admin/janaza/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify(body)
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed');
+        showToast('Janaza alert scheduled');
+        resetJzForm(); loadJzHistory();
+      } catch(e) { showToast('Error: ' + e.message, true); }
+      finally { btn.disabled = false; btn.textContent = 'Schedule'; }
+    }
+    function resetJzForm() {
+      document.getElementById('jzDeceasedName').value = '';
+      document.getElementById('jzCountry').value = '';
+      document.getElementById('jzRelatives').value = '';
+      document.getElementById('jzPrayerTime').value = '';
+      document.getElementById('jzPrayerLocation').value = '';
+      document.getElementById('jzBurialInfo').value = '';
+      document.getElementById('jzScheduleTime').value = '';
+      document.getElementById('jzMasjid').selectedIndex = 0;
+      document.getElementById('jzForm').style.display = 'none';
+      document.getElementById('jzExtractStatus').style.display = 'none';
+      clearJz();
+    }
+    async function loadJzHistory() {
+      try {
+        var res = await fetch('/api/admin/janaza', {
+          headers: { 'Authorization': 'Bearer ' + adminToken }
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed');
+        cachedJz = data;
+        renderJzList();
+      } catch(e) {
+        document.getElementById('jzList').innerHTML = '<div class="empty-state">Failed to load</div>';
+      }
+    }
+    function renderJzList() {
+      var container = document.getElementById('jzList');
+      if (!cachedJz.length) { container.innerHTML = '<div class="empty-state">No janaza alerts yet</div>'; return; }
+      var html = '';
+      cachedJz.forEach(function(j) {
+        var statusBadge = j.status === 'scheduled'
+          ? '<span style="background:rgba(234,179,8,0.15);color:#eab308;padding:2px 8px;border-radius:6px;font-size:11px;">Scheduled</span>'
+          : '<span style="background:rgba(16,185,129,0.15);color:#10B981;padding:2px 8px;border-radius:6px;font-size:11px;">Sent</span>';
+        var dateStr = j.created_at ? new Date(j.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+        var escN = function(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
+        html += '<div style="background:#1C1C1C;border:1px solid #333;border-radius:14px;padding:16px;margin-bottom:12px;">'
+          + '<div style="display:flex;justify-content:space-between;align-items:center;">'
+          + '<div style="font-weight:600;font-size:15px;">🕊️ ' + escN(j.deceased_name || 'Unknown') + '</div>'
+          + statusBadge + '</div>'
+          + (j.masjid_name ? '<div style="font-size:12px;color:#9CA3AF;margin-top:4px;">🕌 ' + escN(j.masjid_name) + '</div>' : '')
+          + (j.prayer_time ? '<div style="font-size:12px;color:#9CA3AF;margin-top:2px;">🕐 ' + escN(j.prayer_time) + '</div>' : '')
+          + (j.prayer_location ? '<div style="font-size:12px;color:#9CA3AF;margin-top:2px;">📍 ' + escN(j.prayer_location) + '</div>' : '')
+          + '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">'
+          + '<span style="font-size:11px;color:#6B7280;">' + dateStr + '</span>'
+          + (j.status === 'scheduled' ? '<button class="btn btn-sm" onclick="deleteJz(' + j.id + ')" style="background:rgba(239,68,68,0.1);color:#F87171;font-size:11px;padding:4px 10px;">Cancel</button>' : '')
+          + '</div></div>';
+      });
+      container.innerHTML = html;
+    }
+    async function deleteJz(id) {
+      if (!confirm('Cancel this scheduled janaza alert?')) return;
+      try {
+        var res = await fetch('/api/admin/janaza/' + id, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + adminToken }
+        });
+        if (!res.ok) throw new Error('Failed');
+        showToast('Janaza alert cancelled');
+        loadJzHistory();
+      } catch(e) { showToast('Error: ' + e.message, true); }
     }
 
     async function sendJanazaPush() {
@@ -2668,6 +2936,8 @@
             loadEvents();
             loadCommunityEvents();
             loadCommunityGoal();
+            loadJzMasjids();
+            loadJzHistory();
           } else {
             handleUnauthorized();
           }
