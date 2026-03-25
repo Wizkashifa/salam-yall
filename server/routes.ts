@@ -1483,15 +1483,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .replace(/\\,/g, ",").replace(/\\\\/g, "\\");
       const url = getField("URL");
       const imageUrl = getField("ATTACH");
-      const organizerLine = lines.find(l => l.startsWith("ORGANIZER"));
-      let organizer = opts.defaultOrganizer;
-      if (organizerLine) {
-        const cnMatch = organizerLine.match(/CN="?([^"";:]+)"?/);
-        if (cnMatch) {
-          const cn = cnMatch[1].trim();
-          organizer = resolveOrgName(cn) || cn;
-        }
-      }
+      const organizer = opts.defaultOrganizer;
 
       const dtStart = getTzField("DTSTART");
       const dtEnd = getTzField("DTEND");
@@ -1502,7 +1494,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const startDate = new Date(start);
       if (startDate < now || startDate > threeMonthsLater) continue;
 
-      const resolvedLocation = location || opts.defaultLocation;
+      const resolvedLocation = opts.defaultLocation;
       const coords = resolveCoordinates(organizer, resolvedLocation);
       const registrationUrl = url || "";
 
