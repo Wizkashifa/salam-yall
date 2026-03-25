@@ -245,7 +245,10 @@
         <input type="text" id="pushTitle" placeholder="e.g., Tonight's event starts at 7pm!">
         <label>Message *</label>
         <textarea id="pushBody" placeholder="Write your update message..." style="min-height:60px;"></textarea>
-        <button class="btn btn-primary" onclick="sendPush()" id="sendPushBtn" style="margin-top:10px;width:100%;">Send Notification</button>
+        <label>Link (optional)</label>
+        <input type="text" id="pushLink" placeholder="https://... — event page, registration, or donation link">
+        <p style="font-size:11px;color:var(--text-muted);margin-top:2px;margin-bottom:10px;">Tapping the notification will open this link in the browser.</p>
+        <button class="btn btn-primary" onclick="sendPush()" id="sendPushBtn" style="margin-top:4px;width:100%;">Send Notification</button>
       </div>
     </div>
 
@@ -342,6 +345,13 @@
               <div class="preview-value" id="previewAddress"><span class="preview-empty">Not set</span></div>
             </div>
           </div>
+          <div class="preview-row">
+            <span class="preview-icon">💝</span>
+            <div style="flex:1;">
+              <div class="preview-label">Donation Link</div>
+              <div class="preview-value" id="previewDonation"><span class="preview-empty">Not set</span></div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -354,7 +364,10 @@
         <input type="text" id="orgWebsite" placeholder="https://...">
         <label>Address</label>
         <input type="text" id="orgAddress" placeholder="Full address">
-        <button class="btn btn-primary" onclick="saveOrgProfile()" id="saveOrgBtn" style="margin-top:10px;width:100%;">Save Profile</button>
+        <label>Donation Link</label>
+        <input type="text" id="orgDonationUrl" placeholder="https://... — your donation or giving page">
+        <p style="font-size:11px;color:var(--text-muted);margin-top:2px;">A "Donate" button will appear on your org/masjid page in the app.</p>
+        <button class="btn btn-primary" onclick="saveOrgProfile()" id="saveOrgBtn" style="margin-top:14px;width:100%;">Save Profile</button>
       </div>
     </div>
   </div>
@@ -481,40 +494,63 @@
       } catch(e) {}
     }
 
+    var ORG_DEFAULTS = {
+      'The Light House Project': {
+        description: 'Community space fostering connection, dialogue, and personal growth through events, mentorship, and creative programming.',
+        website: 'https://www.lhproj.com/',
+        address: '1127 Kildaire Farm Rd, Cary, NC 27511',
+      }
+    };
+
     async function loadOrgProfile() {
       try {
         var res = await fetch('/api/org-profiles/' + encodeURIComponent(ORG_NAME));
         if (res.ok) {
           var data = await res.json();
+          var defaults = ORG_DEFAULTS[ORG_NAME] || {};
           if (data) {
             currentProfile = data;
-            document.getElementById('orgDescription').value = data.description || '';
-            document.getElementById('orgWebsite').value = data.website || '';
-            document.getElementById('orgAddress').value = data.address || '';
-            updateProfilePreview(data);
+          } else {
+            currentProfile = { description: defaults.description || '', website: defaults.website || '', address: defaults.address || '', donation_url: '' };
           }
+          document.getElementById('orgDescription').value = currentProfile.description || defaults.description || '';
+          document.getElementById('orgWebsite').value = currentProfile.website || defaults.website || '';
+          document.getElementById('orgAddress').value = currentProfile.address || defaults.address || '';
+          document.getElementById('orgDonationUrl').value = currentProfile.donation_url || '';
+          updateProfilePreview(currentProfile, defaults);
         }
       } catch(e) {}
     }
 
-    function updateProfilePreview(data) {
+    function updateProfilePreview(data, defaults) {
+      defaults = defaults || ORG_DEFAULTS[ORG_NAME] || {};
       var descEl = document.getElementById('previewDescription');
       var webEl = document.getElementById('previewWebsite');
       var addrEl = document.getElementById('previewAddress');
-      if (data.description) {
-        descEl.textContent = data.description;
+      var donEl = document.getElementById('previewDonation');
+      var desc = data.description || defaults.description;
+      var web = data.website || defaults.website;
+      var addr = data.address || defaults.address;
+      var don = data.donation_url;
+      if (desc) {
+        descEl.textContent = desc;
       } else {
         descEl.innerHTML = '<span class="preview-empty">Not set</span>';
       }
-      if (data.website) {
-        webEl.innerHTML = '<a href="' + escapeHtml(data.website) + '" target="_blank">' + escapeHtml(data.website.replace(/^https?:\/\/(www\.)?/, '')) + '</a>';
+      if (web) {
+        webEl.innerHTML = '<a href="' + escapeHtml(web) + '" target="_blank">' + escapeHtml(web.replace(/^https?:\/\/(www\.)?/, '')) + '</a>';
       } else {
         webEl.innerHTML = '<span class="preview-empty">Not set</span>';
       }
-      if (data.address) {
-        addrEl.textContent = data.address;
+      if (addr) {
+        addrEl.textContent = addr;
       } else {
         addrEl.innerHTML = '<span class="preview-empty">Not set</span>';
+      }
+      if (don) {
+        donEl.innerHTML = '<a href="' + escapeHtml(don) + '" target="_blank">' + escapeHtml(don.replace(/^https?:\/\/(www\.)?/, '')) + '</a>';
+      } else {
+        donEl.innerHTML = '<span class="preview-empty">Not set</span>';
       }
     }
 
@@ -527,6 +563,7 @@
           description: document.getElementById('orgDescription').value.trim(),
           website: document.getElementById('orgWebsite').value.trim(),
           address: document.getElementById('orgAddress').value.trim(),
+          donationUrl: document.getElementById('orgDonationUrl').value.trim(),
         };
         var res = await fetch(ORG_PATH + '/organization', {
           method: 'PUT',
@@ -536,7 +573,7 @@
         if (res.status === 401) { handleUnauthorized(); return; }
         if (res.ok) {
           showToast('Organization profile updated!');
-          currentProfile = Object.assign(currentProfile, body);
+          currentProfile = Object.assign(currentProfile, body, { donation_url: body.donationUrl });
           updateProfilePreview(currentProfile);
         }
         else { showToast('Failed to save profile', true); }
@@ -550,16 +587,19 @@
     async function sendPush() {
       var title = document.getElementById('pushTitle').value.trim();
       var body = document.getElementById('pushBody').value.trim();
+      var link = document.getElementById('pushLink').value.trim();
       if (!title) { showToast('Title is required', true); return; }
       if (!body) { showToast('Message is required', true); return; }
       var btn = document.getElementById('sendPushBtn');
       btn.disabled = true;
       btn.textContent = 'Sending...';
       try {
+        var payload = { title: title, body: body };
+        if (link) payload.link = link;
         var res = await fetch(ORG_PATH + '/push', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
-          body: JSON.stringify({ title: title, body: body }),
+          body: JSON.stringify(payload),
         });
         if (res.status === 401) { handleUnauthorized(); return; }
         var data = await res.json();
@@ -571,6 +611,7 @@
         }
         document.getElementById('pushTitle').value = '';
         document.getElementById('pushBody').value = '';
+        document.getElementById('pushLink').value = '';
       } catch(e) { showToast('Connection error', true); }
       finally {
         btn.disabled = false;

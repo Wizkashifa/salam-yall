@@ -936,8 +936,22 @@ export default function SettingsScreen() {
     );
   };
 
+  const { data: masjidProfileData } = useQuery<any>({
+    queryKey: ["/api/org-profiles", selectedMasjid?.name],
+    enabled: !!selectedMasjid,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      if (!selectedMasjid) return null;
+      const baseUrl = getApiUrl();
+      const res = await fetch(new URL(`/api/org-profiles/${encodeURIComponent(selectedMasjid.name)}`, baseUrl).toString());
+      if (!res.ok) return null;
+      return res.json();
+    },
+  });
+
   const renderMasjidDetail = () => {
     if (!selectedMasjid) return null;
+    const masjidDonationUrl = masjidProfileData?.donation_url;
     return (
       <>
         <Pressable
@@ -972,6 +986,16 @@ export default function SettingsScreen() {
             </Pressable>
           ) : null}
         </View>
+
+        {masjidDonationUrl ? (
+          <Pressable
+            style={{ marginTop: 14, backgroundColor: colors.gold, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 20, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}
+            onPress={() => Linking.openURL(masjidDonationUrl).catch(() => {})}
+          >
+            <Ionicons name="heart" size={18} color="#000" />
+            <Text style={{ color: "#000", fontSize: 15, fontFamily: "Inter_600SemiBold" }}>Donate</Text>
+          </Pressable>
+        ) : null}
 
         <Text style={[styles.sectionLabel, { color: colors.textSecondary, marginTop: 20 }]}>UPCOMING EVENTS</Text>
         {masjidEvents.length > 0 ? masjidEvents.map((ev) => {
@@ -1066,6 +1090,7 @@ export default function SettingsScreen() {
     const orgDescription = profileOverride?.description || selectedCommunityOrg.description;
     const orgWebsite = profileOverride?.website || selectedCommunityOrg.website;
     const orgAddress = profileOverride?.address || selectedCommunityOrg.address;
+    const orgDonationUrl = profileOverride?.donation_url;
     return (
       <>
         <Pressable
@@ -1119,6 +1144,16 @@ export default function SettingsScreen() {
             </Pressable>
           ) : null}
         </View>
+
+        {orgDonationUrl ? (
+          <Pressable
+            style={{ marginTop: 14, backgroundColor: colors.gold, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 20, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}
+            onPress={() => Linking.openURL(orgDonationUrl).catch(() => {})}
+          >
+            <Ionicons name="heart" size={18} color="#000" />
+            <Text style={{ color: "#000", fontSize: 15, fontFamily: "Inter_600SemiBold" }}>Donate</Text>
+          </Pressable>
+        ) : null}
 
         <Text style={[styles.sectionLabel, { color: colors.textSecondary, marginTop: 20 }]}>UPCOMING EVENTS</Text>
         {communityOrgEvents.length > 0 ? communityOrgEvents.map((ev) => {

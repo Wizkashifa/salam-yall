@@ -1146,9 +1146,12 @@ async function ensureOrgPortalsTable(pool: pg.Pool) {
       website VARCHAR(500),
       address TEXT,
       logo_url TEXT,
+      donation_url VARCHAR(500),
       updated_at TIMESTAMP DEFAULT NOW()
     );
   `);
+
+  await pool.query(`ALTER TABLE org_profiles ADD COLUMN IF NOT EXISTS donation_url VARCHAR(500)`).catch(() => {});
 
   const lhpKey = process.env.LIGHTHOUSE_ADMIN_KEY;
   if (lhpKey) {
@@ -5219,7 +5222,7 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     try {
       const orgName = decodeURIComponent(req.params.orgName);
       const { rows } = await pool.query(
-        "SELECT org_name, description, website, address, logo_url, updated_at FROM org_profiles WHERE org_name = $1",
+        "SELECT org_name, description, website, address, logo_url, donation_url, updated_at FROM org_profiles WHERE org_name = $1",
         [orgName]
       );
       if (rows.length > 0) {
@@ -5407,7 +5410,7 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     const orgName = decodeURIComponent(req.params.org);
     if (!isPortalAuthorized(req, orgName)) return res.status(401).json({ error: "Unauthorized" });
     try {
-      const { title, body } = req.body;
+      const { title, body, link } = req.body;
       if (!title || !body) return res.status(400).json({ error: "Title and message are required" });
 
       const { rows: followerTokens } = await pool.query(
@@ -5418,8 +5421,10 @@ Return ONLY the JSON object, no markdown, no explanation.`,
       );
       const tokens = followerTokens.map((r: any) => r.token);
       if (!tokens.length) return res.json({ sent: 0, total: 0, message: "No followers with push notifications enabled" });
-      const pushResult = await sendPushToTokens(tokens, title, body);
-      console.log(`[Portal:${orgName}] Custom push sent: "${title}" to ${pushResult.sent} followers`);
+      const pushData: Record<string, string> = {};
+      if (link) { pushData.url = link; pushData.type = "url"; }
+      const pushResult = await sendPushToTokens(tokens, title, body, Object.keys(pushData).length > 0 ? pushData : undefined);
+      console.log(`[Portal:${orgName}] Custom push sent: "${title}" to ${pushResult.sent} followers${link ? ` with link: ${link}` : ""}`);
       res.json(pushResult);
     } catch (error: any) {
       console.error(`[Portal:${orgName}] Push error:`, error.message);
@@ -5482,16 +5487,17 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     const orgName = decodeURIComponent(req.params.org);
     if (!isPortalAuthorized(req, orgName)) return res.status(401).json({ error: "Unauthorized" });
     try {
-      const { description, website, address } = req.body;
+      const { description, website, address, donationUrl } = req.body;
       await pool.query(
-        `INSERT INTO org_profiles (org_name, description, website, address, updated_at)
-         VALUES ($1, $2, $3, $4, NOW())
+        `INSERT INTO org_profiles (org_name, description, website, address, donation_url, updated_at)
+         VALUES ($1, $2, $3, $4, $5, NOW())
          ON CONFLICT (org_name) DO UPDATE SET
            description = COALESCE($2, org_profiles.description),
            website = COALESCE($3, org_profiles.website),
            address = COALESCE($4, org_profiles.address),
+           donation_url = COALESCE($5, org_profiles.donation_url),
            updated_at = NOW()`,
-        [orgName, description || null, website || null, address || null]
+        [orgName, description || null, website || null, address || null, donationUrl || null]
       );
       console.log(`[Portal:${orgName}] Updated organization profile`);
       res.json({ updated: true });
