@@ -1284,7 +1284,8 @@ async function ensureHalalCheckinsTable(pool: pg.Pool) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  startAutoRefresh();
+  // Main Google Calendar disconnected - events now managed via admin portal
+  // startAutoRefresh();
 
   const pool = getDbPool();
   await ensureAnalyticsTable(pool).catch(err => console.error("[DB] Analytics table init error:", err.message));
@@ -1719,20 +1720,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/events", async (req, res) => {
     try {
-      const now = Date.now();
-      let events: CachedEvent[];
-      if (cachedEvents.length > 0 && (now - lastFetchTime) < CACHE_TTL) {
-        events = cachedEvents;
-      } else {
-        events = await fetchAndCacheEvents();
-      }
-      const withOverrides = await applyEventOverrides(events);
       const communityEvents = await getCommunityEvents(req);
       const rootsDfwEvents = await fetchRootsDfwEvents();
       const mccEastBayEvents = await fetchMCCEastBayEvents();
       const srvicEvents = await fetchSRVICEvents();
       const mcaEvents = await fetchMCAEvents();
-      const merged = [...withOverrides, ...communityEvents, ...rootsDfwEvents, ...mccEastBayEvents, ...srvicEvents, ...mcaEvents]
+      const merged = [...communityEvents, ...rootsDfwEvents, ...mccEastBayEvents, ...srvicEvents, ...mcaEvents]
         .filter(ev => !ev.title.toLowerCase().includes("private event"));
       const seen = new Set<string>();
       const allEvents = merged.filter(ev => {
@@ -1755,9 +1748,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/events/refresh", async (req, res) => {
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {
-      const events = await fetchAndCacheEvents();
-      const withOverrides = await applyEventOverrides(events);
-      res.json({ refreshed: true, count: withOverrides.length });
+      res.json({ refreshed: true, message: "Events are now managed through the admin portal" });
     } catch (error: any) {
       console.error("Error refreshing events:", error.message);
       res.status(500).json({ error: "Failed to refresh events" });
@@ -3061,18 +3052,8 @@ Return ONLY the description text, nothing else.`,
   app.get("/api/admin/events", async (req, res) => {
     try {
       if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
-      const now = Date.now();
-      let events: CachedEvent[];
-      if (cachedEvents.length > 0 && (now - lastFetchTime) < CACHE_TTL) {
-        events = cachedEvents;
-      } else {
-        events = await fetchAndCacheEvents();
-      }
-      const withOverrides = await applyEventOverrides(events);
-      const { rows: overrides } = await pool.query("SELECT event_id FROM event_overrides");
-      const overrideSet = new Set(overrides.map((o: any) => o.event_id));
-      const enriched = withOverrides.map(e => ({ ...e, hasOverride: overrideSet.has(e.id) }));
-      res.json(enriched);
+      const communityEvents = await getCommunityEvents(req);
+      res.json(communityEvents);
     } catch (error: any) {
       console.error("Error fetching admin events:", error.message);
       res.status(500).json({ error: "Failed to fetch events" });
