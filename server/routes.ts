@@ -5068,6 +5068,171 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     }
   });
 
+  const LIGHTHOUSE_KEY = process.env.LIGHTHOUSE_ADMIN_KEY;
+  const lighthouseSessions = new Set<string>();
+  const LIGHTHOUSE_ORG = "The Light House Project";
+
+  function isLighthouseAuthorized(req: any): boolean {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return false;
+    const token = authHeader.replace("Bearer ", "");
+    return lighthouseSessions.has(token) || token === LIGHTHOUSE_KEY;
+  }
+
+  app.post("/api/lighthouse/login", async (req, res) => {
+    const { password } = req.body;
+    if (!password || !LIGHTHOUSE_KEY || password !== LIGHTHOUSE_KEY) {
+      return res.status(401).json({ error: "Invalid password" });
+    }
+    const crypto = await import("crypto");
+    const sessionToken = crypto.randomBytes(32).toString("hex");
+    lighthouseSessions.add(sessionToken);
+    res.json({ token: sessionToken });
+  });
+
+  app.get("/api/lighthouse/verify", (req, res) => {
+    if (!isLighthouseAuthorized(req)) return res.status(401).json({ valid: false });
+    res.json({ valid: true });
+  });
+
+  app.post("/api/lighthouse/extract-flyer", async (req, res) => {
+    if (!isLighthouseAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { image, mimeType } = req.body;
+      if (!image) return res.status(400).json({ error: "Image data is required" });
+      const mediaType = (mimeType || "image/jpeg") as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+      const message = await anthropic.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 1500,
+        messages: [{
+          role: "user",
+          content: [
+            { type: "image", source: { type: "base64", media_type: mediaType, data: image } },
+            {
+              type: "text",
+              text: `Extract event details from this flyer image. Today's date is ${new Date().toISOString().split("T")[0]}. IMPORTANT: If the flyer does not specify a year, assume the next upcoming occurrence of that date (i.e. use ${new Date().getFullYear()} or ${new Date().getFullYear() + 1}, whichever makes the date in the future). Also look carefully for any QR codes in the image — if you find one, decode it and use the URL as the registrationUrl.
+
+Return ONLY a JSON object with these fields (use null for any field you cannot determine):
+{
+  "title": "event title",
+  "date": "YYYY-MM-DD",
+  "startTime": "HH:MM" (24-hour format),
+  "endTime": "HH:MM" (24-hour format, null if not shown),
+  "location": "full address or venue name",
+  "description": "brief description of the event (2-3 sentences max)",
+  "registrationUrl": "decoded QR code URL, or visible registration/RSVP URL"
+}
+Return ONLY the JSON object, no markdown, no explanation.`,
+            },
+          ],
+        }],
+      });
+      const textContent = message.content.find((c: any) => c.type === "text");
+      if (!textContent || textContent.type !== "text") {
+        return res.status(500).json({ error: "No text response from AI" });
+      }
+      let extracted;
+      try {
+        let jsonStr = textContent.text.trim();
+        const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+        if (jsonMatch) jsonStr = jsonMatch[0];
+        extracted = JSON.parse(jsonStr);
+      } catch {
+        return res.status(500).json({ error: "Failed to parse AI response", raw: textContent.text });
+      }
+      res.json(extracted);
+    } catch (error: any) {
+      console.error("[Lighthouse Flyer Extract] Error:", error.message);
+      res.status(500).json({ error: "Failed to extract flyer details" });
+    }
+  });
+
+  app.post("/api/lighthouse/events/publish", async (req, res) => {
+    if (!isLighthouseAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { title, description, location, startTime, endTime, registrationUrl, image, imageMime, recurring } = req.body;
+      if (!title || !startTime) return res.status(400).json({ error: "Title and start time are required" });
+
+      let eventLat: number | null = null;
+      let eventLng: number | null = null;
+      const resolved = resolveCoordinates(LIGHTHOUSE_ORG, location || "");
+      if (resolved.latitude && resolved.longitude) {
+        eventLat = resolved.latitude;
+        eventLng = resolved.longitude;
+      } else if (location) {
+        const geocoded = await geocodeAddress(location);
+        if (geocoded) { eventLat = geocoded.lat; eventLng = geocoded.lng; }
+      }
+
+      const weeks = recurring ? 12 : 1;
+      const baseStart = new Date(startTime);
+      const baseEnd = endTime ? new Date(endTime) : null;
+      const durationMs = baseEnd ? baseEnd.getTime() - baseStart.getTime() : 0;
+      const ids: number[] = [];
+
+      for (let w = 0; w < weeks; w++) {
+        const wStart = new Date(baseStart.getTime() + w * 7 * 24 * 60 * 60 * 1000);
+        const wEnd = baseEnd ? new Date(wStart.getTime() + durationMs) : null;
+        const result = await pool.query(
+          `INSERT INTO community_events (title, description, location, start_time, end_time, organizer, registration_url, image_data, image_mime, is_virtual, is_featured, status, lat, lng)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, false, 'approved', $10, $11)
+           RETURNING id`,
+          [title, description || null, location || null, wStart, wEnd, LIGHTHOUSE_ORG, registrationUrl || null, image || null, imageMime || "image/jpeg", eventLat, eventLng]
+        );
+        ids.push(result.rows[0].id);
+      }
+
+      console.log(`[Light House Project] Published: "${title}" (${weeks} event${weeks > 1 ? 's' : ''}, IDs ${ids.join(', ')})`);
+      res.json({ id: ids[0], title, start_time: baseStart, status: "approved", count: weeks });
+    } catch (error: any) {
+      console.error("[Light House Project] Publish error:", error.message);
+      res.status(500).json({ error: "Failed to publish event" });
+    }
+  });
+
+  app.get("/api/lighthouse/events", async (req, res) => {
+    if (!isLighthouseAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { rows } = await pool.query(
+        `SELECT id, title, description, location, start_time, end_time, registration_url, status, created_at,
+         CASE WHEN image_data IS NOT NULL THEN '/api/community-events/' || id || '/image' ELSE NULL END as image_url
+         FROM community_events WHERE organizer = $1 ORDER BY start_time DESC`,
+        [LIGHTHOUSE_ORG]
+      );
+      res.json(rows);
+    } catch (error: any) {
+      console.error("[Light House Project] List error:", error.message);
+      res.status(500).json({ error: "Failed to list events" });
+    }
+  });
+
+  app.delete("/api/lighthouse/events/:id", async (req, res) => {
+    if (!isLighthouseAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { id } = req.params;
+      const result = await pool.query(
+        "DELETE FROM community_events WHERE id = $1 AND organizer = $2 RETURNING id",
+        [id, LIGHTHOUSE_ORG]
+      );
+      if (!result.rows.length) return res.status(404).json({ error: "Event not found or not yours" });
+      console.log(`[Light House Project] Deleted event ID ${id}`);
+      res.json({ deleted: true });
+    } catch (error: any) {
+      console.error("[Light House Project] Delete error:", error.message);
+      res.status(500).json({ error: "Failed to delete event" });
+    }
+  });
+
+  const lighthouseHtml = fs.readFileSync(
+    path.resolve(process.cwd(), "server", "templates", "lighthouse-admin.html"),
+    "utf-8"
+  );
+
+  app.get("/lighthouse-admin", (_req, res) => {
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.send(lighthouseHtml);
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
