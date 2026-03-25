@@ -189,6 +189,18 @@
     </div>
 
     <div class="section">
+      <div class="section-title"><span class="icon">🏢</span> Organization Profile</div>
+      <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Edit how your organization appears in the Salam Y'all app's Community Directory.</p>
+      <label>Description</label>
+      <textarea id="orgDescription" placeholder="Brief description of your organization..."></textarea>
+      <label>Website</label>
+      <input type="text" id="orgWebsite" placeholder="https://...">
+      <label>Address</label>
+      <input type="text" id="orgAddress" placeholder="Full address">
+      <button class="btn btn-primary" onclick="saveOrgProfile()" id="saveOrgBtn" style="margin-top:10px;width:100%;">Save Profile</button>
+    </div>
+
+    <div class="section">
       <div class="section-title"><span class="icon">🗓️</span> Your Published Events</div>
       <div id="eventList"><div class="empty-state">Loading events...</div></div>
     </div>
@@ -271,6 +283,7 @@
       document.getElementById('appWrap').style.display = 'block';
       loadEvents();
       loadFollowerCount();
+      loadOrgProfile();
     }
 
     function signOut() {
@@ -303,6 +316,45 @@
           document.getElementById('followerCount').textContent = data.count;
         }
       } catch(e) {}
+    }
+
+    async function loadOrgProfile() {
+      try {
+        var res = await fetch('/api/org-profiles/' + encodeURIComponent('The Light House Project'));
+        if (res.ok) {
+          var data = await res.json();
+          if (data) {
+            document.getElementById('orgDescription').value = data.description || '';
+            document.getElementById('orgWebsite').value = data.website || '';
+            document.getElementById('orgAddress').value = data.address || '';
+          }
+        }
+      } catch(e) {}
+    }
+
+    async function saveOrgProfile() {
+      var btn = document.getElementById('saveOrgBtn');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+      try {
+        var body = {
+          description: document.getElementById('orgDescription').value.trim(),
+          website: document.getElementById('orgWebsite').value.trim(),
+          address: document.getElementById('orgAddress').value.trim(),
+        };
+        var res = await fetch('/api/lighthouse/organization', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify(body),
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        if (res.ok) { showToast('Organization profile updated!'); }
+        else { showToast('Failed to save profile', true); }
+      } catch(e) { showToast('Connection error', true); }
+      finally {
+        btn.disabled = false;
+        btn.textContent = 'Save Profile';
+      }
     }
 
     async function sendPush() {

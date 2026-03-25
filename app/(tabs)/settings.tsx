@@ -888,6 +888,54 @@ export default function SettingsScreen() {
     </>
   );
 
+  const SettingsFollowButton = ({ organizer }: { organizer: string }) => {
+    const [isFollowing, setIsFollowing] = useState(false);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+      if (!user) { setIsFollowing(false); return; }
+      const baseUrl = getApiUrl();
+      fetch(new URL("/api/organizer-follows", baseUrl).toString(), { headers: getAuthHeaders() })
+        .then(r => r.json())
+        .then(data => {
+          if (data.follows && data.follows.includes(organizer)) setIsFollowing(true);
+          else setIsFollowing(false);
+        })
+        .catch(() => {});
+    }, [user, organizer]);
+
+    const toggle = async () => {
+      if (!user) {
+        Alert.alert("Sign In Required", "Please sign in to follow organizers and get notified about their new events.", [{ text: "OK" }]);
+        return;
+      }
+      setLoading(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      try {
+        const baseUrl = getApiUrl();
+        const headers = { ...getAuthHeaders(), "Content-Type": "application/json" };
+        if (isFollowing) {
+          const res = await fetch(new URL(`/api/organizer-follows/${encodeURIComponent(organizer)}`, baseUrl).toString(), { method: "DELETE", headers });
+          if (res.ok) setIsFollowing(false);
+          else Alert.alert("Error", "Could not unfollow. Please try again.");
+        } else {
+          const res = await fetch(new URL("/api/organizer-follows", baseUrl).toString(), { method: "POST", headers, body: JSON.stringify({ organizer }) });
+          if (res.ok) setIsFollowing(true);
+          else Alert.alert("Error", "Could not follow. Please try again.");
+        }
+      } catch { Alert.alert("Error", "Connection error. Please try again."); }
+      setLoading(false);
+    };
+
+    return (
+      <Pressable onPress={toggle} disabled={loading} hitSlop={6}
+        style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: isFollowing ? colors.emerald + "20" : "transparent", borderWidth: 1, borderColor: isFollowing ? colors.emerald + "40" : colors.gold + "30", marginTop: 8 }}>
+        <Ionicons name={isFollowing ? "notifications" : "notifications-outline"} size={14} color={isFollowing ? colors.emerald : colors.gold} />
+        <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: isFollowing ? colors.emerald : colors.gold }}>{isFollowing ? "Following" : "Follow"}</Text>
+      </Pressable>
+    );
+  };
+
   const renderMasjidDetail = () => {
     if (!selectedMasjid) return null;
     return (
@@ -905,6 +953,7 @@ export default function SettingsScreen() {
             <MaterialCommunityIcons name="mosque" size={28} color={colors.emerald} />
           </View>
           <Text style={[styles.masjidDetailName, { color: colors.text }]}>{selectedMasjid.name}</Text>
+          <SettingsFollowButton organizer={selectedMasjid.name} />
         </View>
 
         <View style={[styles.detailCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -997,9 +1046,26 @@ export default function SettingsScreen() {
     </>
   );
 
+  const { data: orgProfileData } = useQuery<any>({
+    queryKey: ["/api/org-profiles", selectedCommunityOrg?.name],
+    enabled: !!selectedCommunityOrg,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      if (!selectedCommunityOrg) return null;
+      const baseUrl = getApiUrl();
+      const res = await fetch(new URL(`/api/org-profiles/${encodeURIComponent(selectedCommunityOrg.name)}`, baseUrl).toString());
+      if (!res.ok) return null;
+      return res.json();
+    },
+  });
+
   const renderCommunityOrgDetail = () => {
     if (!selectedCommunityOrg) return null;
     const campuses = selectedCommunityOrg.campuses;
+    const profileOverride = orgProfileData;
+    const orgDescription = profileOverride?.description || selectedCommunityOrg.description;
+    const orgWebsite = profileOverride?.website || selectedCommunityOrg.website;
+    const orgAddress = profileOverride?.address || selectedCommunityOrg.address;
     return (
       <>
         <Pressable
@@ -1019,10 +1085,11 @@ export default function SettingsScreen() {
             </View>
           )}
           <Text style={[styles.masjidDetailName, { color: colors.text }]}>{selectedCommunityOrg.name}</Text>
+          <SettingsFollowButton organizer={selectedCommunityOrg.name} />
         </View>
 
-        {selectedCommunityOrg.description ? (
-          <Text style={{ color: colors.textSecondary, fontSize: 14, fontFamily: "Inter_400Regular", marginBottom: 16, lineHeight: 20 }}>{selectedCommunityOrg.description}</Text>
+        {orgDescription ? (
+          <Text style={{ color: colors.textSecondary, fontSize: 14, fontFamily: "Inter_400Regular", marginBottom: 16, lineHeight: 20 }}>{orgDescription}</Text>
         ) : null}
 
         <View style={[styles.detailCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -1036,19 +1103,21 @@ export default function SettingsScreen() {
               <Ionicons name="navigate-outline" size={14} color={colors.gold} />
             </Pressable>
           )) : (
-            <Pressable style={styles.detailRow} onPress={() => openMasjidDirections(selectedCommunityOrg.address)}>
+            <Pressable style={styles.detailRow} onPress={() => openMasjidDirections(orgAddress)}>
               <Ionicons name="location-outline" size={18} color={colors.emerald} />
-              <Text style={[styles.detailText, { color: colors.text, flex: 1 }]}>{selectedCommunityOrg.address}</Text>
+              <Text style={[styles.detailText, { color: colors.text, flex: 1 }]}>{orgAddress}</Text>
               <Ionicons name="navigate-outline" size={14} color={colors.gold} />
             </Pressable>
           )}
-          <Pressable style={[styles.detailRow, { borderTopWidth: 1, borderTopColor: colors.border }]} onPress={() => Linking.openURL(selectedCommunityOrg.website).catch(() => {})}>
-            <Ionicons name="globe-outline" size={18} color={colors.emerald} />
-            <Text style={[styles.detailText, { color: colors.gold, flex: 1 }]} numberOfLines={1}>
-              {selectedCommunityOrg.website.replace(/^https?:\/\/(www\.)?/, "")}
-            </Text>
-            <Ionicons name="open-outline" size={14} color={colors.gold} />
-          </Pressable>
+          {orgWebsite ? (
+            <Pressable style={[styles.detailRow, { borderTopWidth: 1, borderTopColor: colors.border }]} onPress={() => Linking.openURL(orgWebsite).catch(() => {})}>
+              <Ionicons name="globe-outline" size={18} color={colors.emerald} />
+              <Text style={[styles.detailText, { color: colors.gold, flex: 1 }]} numberOfLines={1}>
+                {orgWebsite.replace(/^https?:\/\/(www\.)?/, "")}
+              </Text>
+              <Ionicons name="open-outline" size={14} color={colors.gold} />
+            </Pressable>
+          ) : null}
         </View>
 
         <Text style={[styles.sectionLabel, { color: colors.textSecondary, marginTop: 20 }]}>UPCOMING EVENTS</Text>

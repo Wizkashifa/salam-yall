@@ -1129,6 +1129,40 @@ async function ensureUserAccountsTable(pool: pg.Pool) {
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions(user_id);`);
 }
 
+async function ensureOrgPortalsTable(pool: pg.Pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS org_portals (
+      id SERIAL PRIMARY KEY,
+      org_name VARCHAR(255) NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS org_profiles (
+      id SERIAL PRIMARY KEY,
+      org_name VARCHAR(255) NOT NULL UNIQUE,
+      description TEXT,
+      website VARCHAR(500),
+      address TEXT,
+      logo_url TEXT,
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+
+  const lhpKey = process.env.LIGHTHOUSE_ADMIN_KEY;
+  if (lhpKey) {
+    const crypto = await import("crypto");
+    const hash = crypto.createHash("sha256").update(lhpKey).digest("hex");
+    await pool.query(
+      `INSERT INTO org_portals (org_name, password_hash)
+       VALUES ($1, $2)
+       ON CONFLICT (org_name) DO UPDATE SET password_hash = $2`,
+      ["The Light House Project", hash]
+    );
+  }
+}
+
 async function ensureOrganizerFollowsTable(pool: pg.Pool) {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS organizer_follows (
@@ -1243,6 +1277,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await ensureUserAccountsTable(pool).catch(err => console.error("[DB] User accounts table init error:", err.message));
   await ensureUserRatingsTable(pool).catch(err => console.error("[DB] User ratings table init error:", err.message));
   await ensureSavedEventsTable(pool).catch(err => console.error("[DB] Saved events table init error:", err.message));
+  await ensureOrgPortalsTable(pool).catch(err => console.error("[DB] Org portals table init error:", err.message));
   await ensureOrganizerFollowsTable(pool).catch(err => console.error("[DB] Organizer follows table init error:", err.message));
   await ensureHalalCheckinsTable(pool).catch(err => console.error("[DB] Halal checkins table init error:", err.message));
   await ensureRestaurantSubmissionsTable(pool).catch(err => console.error("[DB] Restaurant submissions table init error:", err.message));
@@ -5139,30 +5174,80 @@ Return ONLY the JSON object, no markdown, no explanation.`,
   });
 
   const LIGHTHOUSE_KEY = process.env.LIGHTHOUSE_ADMIN_KEY;
-  const lighthouseSessions = new Set<string>();
   const LIGHTHOUSE_ORG = "The Light House Project";
 
-  function isLighthouseAuthorized(req: any): boolean {
+  const portalSessions = new Map<string, string>();
+
+  function getPortalOrg(req: any): string | null {
     const authHeader = req.headers.authorization;
-    if (!authHeader) return false;
+    if (!authHeader) return null;
     const token = authHeader.replace("Bearer ", "");
-    return lighthouseSessions.has(token) || token === LIGHTHOUSE_KEY;
+    if (portalSessions.has(token)) return portalSessions.get(token)!;
+    if (token === LIGHTHOUSE_KEY) return LIGHTHOUSE_ORG;
+    return null;
   }
+
+  function isLighthouseAuthorized(req: any): boolean {
+    const org = getPortalOrg(req);
+    return org === LIGHTHOUSE_ORG;
+  }
+
+  function isPortalAuthorized(req: any, orgName: string): boolean {
+    const org = getPortalOrg(req);
+    return org === orgName;
+  }
+
+  app.post("/api/portal/:org/login", async (req, res) => {
+    const orgName = decodeURIComponent(req.params.org);
+    const { password } = req.body;
+    if (!password) return res.status(401).json({ error: "Password required" });
+    try {
+      const { rows } = await pool.query("SELECT password_hash FROM org_portals WHERE org_name = $1", [orgName]);
+      if (!rows.length) return res.status(401).json({ error: "Organization not found" });
+      const crypto = await import("crypto");
+      const hash = crypto.createHash("sha256").update(password).digest("hex");
+      if (hash !== rows[0].password_hash) return res.status(401).json({ error: "Invalid password" });
+      const sessionToken = crypto.randomBytes(32).toString("hex");
+      portalSessions.set(sessionToken, orgName);
+      res.json({ token: sessionToken, org: orgName });
+    } catch (error: any) {
+      console.error(`[Portal] Login error for ${orgName}:`, error.message);
+      res.status(500).json({ error: "Login failed" });
+    }
+  });
 
   app.post("/api/lighthouse/login", async (req, res) => {
     const { password } = req.body;
-    if (!password || !LIGHTHOUSE_KEY || password !== LIGHTHOUSE_KEY) {
-      return res.status(401).json({ error: "Invalid password" });
-    }
+    if (!password) return res.status(401).json({ error: "Password required" });
     const crypto = await import("crypto");
-    const sessionToken = crypto.randomBytes(32).toString("hex");
-    lighthouseSessions.add(sessionToken);
-    res.json({ token: sessionToken });
+    if (LIGHTHOUSE_KEY && password === LIGHTHOUSE_KEY) {
+      const sessionToken = crypto.randomBytes(32).toString("hex");
+      portalSessions.set(sessionToken, LIGHTHOUSE_ORG);
+      return res.json({ token: sessionToken });
+    }
+    try {
+      const { rows } = await pool.query("SELECT password_hash FROM org_portals WHERE org_name = $1", [LIGHTHOUSE_ORG]);
+      if (rows.length) {
+        const hash = crypto.createHash("sha256").update(password).digest("hex");
+        if (hash === rows[0].password_hash) {
+          const sessionToken = crypto.randomBytes(32).toString("hex");
+          portalSessions.set(sessionToken, LIGHTHOUSE_ORG);
+          return res.json({ token: sessionToken });
+        }
+      }
+    } catch {}
+    return res.status(401).json({ error: "Invalid password" });
   });
 
   app.get("/api/lighthouse/verify", (req, res) => {
     if (!isLighthouseAuthorized(req)) return res.status(401).json({ valid: false });
     res.json({ valid: true });
+  });
+
+  app.get("/api/portal/:org/verify", (req, res) => {
+    const orgName = decodeURIComponent(req.params.org);
+    if (!isPortalAuthorized(req, orgName)) return res.status(401).json({ valid: false });
+    res.json({ valid: true, org: orgName });
   });
 
   app.post("/api/lighthouse/extract-flyer", async (req, res) => {
@@ -5391,10 +5476,358 @@ Return ONLY the JSON object, no markdown, no explanation.`,
       );
 
       console.log(`[Light House Project] Updated event ID ${id}: "${title}"`);
+
+      try {
+        const { rows: saverTokens } = await pool.query(
+          `SELECT DISTINCT pt.token FROM push_tokens pt
+           INNER JOIN saved_events se ON pt.user_id = se.user_id
+           WHERE se.event_id = $1 AND pt.token IS NOT NULL`,
+          [`community_${id}`]
+        );
+        const saverTokenList = saverTokens.map((r: any) => r.token);
+        if (saverTokenList.length > 0) {
+          await sendPushToTokens(
+            saverTokenList,
+            "Event Updated",
+            `"${title}" has been updated — tap to see what's new`,
+            { type: "event", eventId: `community_${id}` }
+          );
+          console.log(`[Light House Project] Notified ${saverTokenList.length} savers about update to event ${id}`);
+        }
+      } catch (notifErr: any) {
+        console.error("[Light House Project] Update notification error:", notifErr.message);
+      }
+
       res.json({ updated: true, id: parseInt(id as string) });
     } catch (error: any) {
       console.error("[Light House Project] Update error:", error.message);
       res.status(500).json({ error: "Failed to update event" });
+    }
+  });
+
+  app.get("/api/org-profiles/:orgName", async (req, res) => {
+    try {
+      const orgName = decodeURIComponent(req.params.orgName);
+      const { rows } = await pool.query(
+        "SELECT org_name, description, website, address, logo_url, updated_at FROM org_profiles WHERE org_name = $1",
+        [orgName]
+      );
+      if (rows.length > 0) {
+        res.json(rows[0]);
+      } else {
+        res.json(null);
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch org profile" });
+    }
+  });
+
+  app.put("/api/lighthouse/organization", async (req, res) => {
+    if (!isLighthouseAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { description, website, address } = req.body;
+      await pool.query(
+        `INSERT INTO org_profiles (org_name, description, website, address, updated_at)
+         VALUES ($1, $2, $3, $4, NOW())
+         ON CONFLICT (org_name) DO UPDATE SET
+           description = COALESCE($2, org_profiles.description),
+           website = COALESCE($3, org_profiles.website),
+           address = COALESCE($4, org_profiles.address),
+           updated_at = NOW()`,
+        [LIGHTHOUSE_ORG, description || null, website || null, address || null]
+      );
+      console.log(`[Light House Project] Updated organization profile`);
+      res.json({ updated: true });
+    } catch (error: any) {
+      console.error("[Light House Project] Org profile update error:", error.message);
+      res.status(500).json({ error: "Failed to update organization profile" });
+    }
+  });
+
+
+  app.post("/api/portal/:org/events/publish", async (req, res) => {
+    const orgName = decodeURIComponent(req.params.org);
+    if (!isPortalAuthorized(req, orgName)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { title, description, location, startTime, endTime, registrationUrl, image, imageMime, recurring } = req.body;
+      if (!title || !startTime) return res.status(400).json({ error: "Title and start time are required" });
+
+      let eventLat: number | null = null;
+      let eventLng: number | null = null;
+      const resolved = resolveCoordinates(orgName, location || "");
+      if (resolved.latitude && resolved.longitude) {
+        eventLat = resolved.latitude; eventLng = resolved.longitude;
+      } else if (location) {
+        const geocoded = await geocodeAddress(location);
+        if (geocoded) { eventLat = geocoded.lat; eventLng = geocoded.lng; }
+      }
+
+      const weeks = recurring ? 12 : 1;
+      const baseStart = new Date(startTime);
+      const baseEnd = endTime ? new Date(endTime) : null;
+      const durationMs = baseEnd ? baseEnd.getTime() - baseStart.getTime() : 0;
+      const ids: number[] = [];
+
+      for (let w = 0; w < weeks; w++) {
+        const wStart = new Date(baseStart.getTime() + w * 7 * 24 * 60 * 60 * 1000);
+        const wEnd = baseEnd ? new Date(wStart.getTime() + durationMs) : null;
+        const result = await pool.query(
+          `INSERT INTO community_events (title, description, location, start_time, end_time, organizer, registration_url, image_data, image_mime, is_virtual, is_featured, status, lat, lng)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, false, 'approved', $10, $11)
+           RETURNING id`,
+          [title, description || null, location || null, wStart, wEnd, orgName, registrationUrl || null, image || null, imageMime || "image/jpeg", eventLat, eventLng]
+        );
+        ids.push(result.rows[0].id);
+      }
+
+      console.log(`[Portal:${orgName}] Published: "${title}" (${weeks} event${weeks > 1 ? 's' : ''}, IDs ${ids.join(', ')})`);
+
+      try {
+        const { rows: followerTokens } = await pool.query(
+          `SELECT DISTINCT pt.token FROM push_tokens pt
+           INNER JOIN organizer_follows of2 ON pt.user_id = of2.user_id
+           WHERE of2.organizer_name = $1 AND pt.token IS NOT NULL`,
+          [orgName]
+        );
+        const tokens = followerTokens.map((r: any) => r.token);
+        if (tokens.length > 0) {
+          const pushDate = baseStart.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+          await sendPushToTokens(tokens, `New Event from ${orgName}`, `${title} — ${pushDate}`, { type: "event", eventId: `community_${ids[0]}` });
+          console.log(`[Portal:${orgName}] Notified ${tokens.length} followers about "${title}"`);
+        }
+      } catch (pushErr: any) {
+        console.error(`[Portal:${orgName}] Auto-push error:`, pushErr.message);
+      }
+
+      res.json({ id: ids[0], title, start_time: baseStart, status: "approved", count: weeks });
+    } catch (error: any) {
+      console.error(`[Portal:${orgName}] Publish error:`, error.message);
+      res.status(500).json({ error: "Failed to publish event" });
+    }
+  });
+
+  app.get("/api/portal/:org/events", async (req, res) => {
+    const orgName = decodeURIComponent(req.params.org);
+    if (!isPortalAuthorized(req, orgName)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { rows } = await pool.query(
+        `SELECT id, title, description, location, start_time, end_time, registration_url, status, created_at,
+         CASE WHEN image_data IS NOT NULL THEN '/api/community-events/' || id || '/image' ELSE NULL END as image_url
+         FROM community_events WHERE organizer = $1 ORDER BY start_time DESC`,
+        [orgName]
+      );
+      res.json(rows);
+    } catch (error: any) {
+      console.error(`[Portal:${orgName}] List error:`, error.message);
+      res.status(500).json({ error: "Failed to list events" });
+    }
+  });
+
+  app.put("/api/portal/:org/events/:id", async (req, res) => {
+    const orgName = decodeURIComponent(req.params.org);
+    if (!isPortalAuthorized(req, orgName)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { id } = req.params;
+      const { title, description, location, startTime, endTime, registrationUrl } = req.body;
+      if (!title) return res.status(400).json({ error: "Title is required" });
+
+      const { rows: existing } = await pool.query(
+        "SELECT id, location, start_time, end_time, registration_url FROM community_events WHERE id = $1 AND organizer = $2",
+        [id, orgName]
+      );
+      if (!existing.length) return res.status(404).json({ error: "Event not found or not yours" });
+
+      let eventLat: number | null = null;
+      let eventLng: number | null = null;
+      if (location) {
+        const resolved = resolveCoordinates(orgName, location);
+        if (resolved.latitude && resolved.longitude) {
+          eventLat = resolved.latitude; eventLng = resolved.longitude;
+        } else {
+          const geocoded = await geocodeAddress(location);
+          if (geocoded) { eventLat = geocoded.lat; eventLng = geocoded.lng; }
+        }
+      }
+
+      await pool.query(
+        `UPDATE community_events SET title = $1, description = $2, location = $3,
+         start_time = $4, end_time = $5, registration_url = $6, lat = $7, lng = $8
+         WHERE id = $9 AND organizer = $10`,
+        [title, description || null, location || null,
+         startTime ? new Date(startTime) : existing[0].start_time,
+         endTime ? new Date(endTime) : null,
+         registrationUrl || null, eventLat, eventLng, id, orgName]
+      );
+
+      console.log(`[Portal:${orgName}] Updated event ID ${id}: "${title}"`);
+
+      try {
+        const { rows: saverTokens } = await pool.query(
+          `SELECT DISTINCT pt.token FROM push_tokens pt
+           INNER JOIN saved_events se ON pt.user_id = se.user_id
+           WHERE se.event_id = $1 AND pt.token IS NOT NULL`,
+          [`community_${id}`]
+        );
+        const saverTokenList = saverTokens.map((r: any) => r.token);
+        if (saverTokenList.length > 0) {
+          await sendPushToTokens(saverTokenList, "Event Updated", `"${title}" has been updated — tap to see what's new`, { type: "event", eventId: `community_${id}` });
+          console.log(`[Portal:${orgName}] Notified ${saverTokenList.length} savers about update to event ${id}`);
+        }
+      } catch (notifErr: any) {
+        console.error(`[Portal:${orgName}] Update notification error:`, notifErr.message);
+      }
+
+      res.json({ updated: true, id: parseInt(id as string) });
+    } catch (error: any) {
+      console.error(`[Portal:${orgName}] Update error:`, error.message);
+      res.status(500).json({ error: "Failed to update event" });
+    }
+  });
+
+  app.delete("/api/portal/:org/events/:id", async (req, res) => {
+    const orgName = decodeURIComponent(req.params.org);
+    if (!isPortalAuthorized(req, orgName)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { id } = req.params;
+      const result = await pool.query(
+        "DELETE FROM community_events WHERE id = $1 AND organizer = $2 RETURNING id",
+        [id, orgName]
+      );
+      if (!result.rows.length) return res.status(404).json({ error: "Event not found or not yours" });
+      console.log(`[Portal:${orgName}] Deleted event ID ${id}`);
+      res.json({ deleted: true });
+    } catch (error: any) {
+      console.error(`[Portal:${orgName}] Delete error:`, error.message);
+      res.status(500).json({ error: "Failed to delete event" });
+    }
+  });
+
+  app.get("/api/portal/:org/followers/count", async (req, res) => {
+    const orgName = decodeURIComponent(req.params.org);
+    if (!isPortalAuthorized(req, orgName)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { rows } = await pool.query(
+        "SELECT COUNT(*) as count FROM organizer_follows WHERE organizer_name = $1",
+        [orgName]
+      );
+      res.json({ count: parseInt(rows[0].count) });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to get follower count" });
+    }
+  });
+
+  app.post("/api/portal/:org/push", async (req, res) => {
+    const orgName = decodeURIComponent(req.params.org);
+    if (!isPortalAuthorized(req, orgName)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { title, body } = req.body;
+      if (!title || !body) return res.status(400).json({ error: "Title and message are required" });
+
+      const { rows: followerTokens } = await pool.query(
+        `SELECT DISTINCT pt.token FROM push_tokens pt
+         INNER JOIN organizer_follows of2 ON pt.user_id = of2.user_id
+         WHERE of2.organizer_name = $1 AND pt.token IS NOT NULL`,
+        [orgName]
+      );
+      const tokens = followerTokens.map((r: any) => r.token);
+      if (!tokens.length) return res.json({ sent: 0, total: 0, message: "No followers with push notifications enabled" });
+      const pushResult = await sendPushToTokens(tokens, title, body);
+      console.log(`[Portal:${orgName}] Custom push sent: "${title}" to ${pushResult.sent} followers`);
+      res.json(pushResult);
+    } catch (error: any) {
+      console.error(`[Portal:${orgName}] Push error:`, error.message);
+      res.status(500).json({ error: "Failed to send notification" });
+    }
+  });
+
+  app.post("/api/portal/:org/extract-flyer", async (req, res) => {
+    const orgName = decodeURIComponent(req.params.org);
+    if (!isPortalAuthorized(req, orgName)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { image, mimeType } = req.body;
+      if (!image) return res.status(400).json({ error: "Image data is required" });
+      const mediaType = (mimeType || "image/jpeg") as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+      const message = await anthropic.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 1500,
+        messages: [{
+          role: "user",
+          content: [
+            { type: "image", source: { type: "base64", media_type: mediaType, data: image } },
+            {
+              type: "text",
+              text: `Extract event details from this flyer image. Today's date is ${new Date().toISOString().split("T")[0]}. IMPORTANT: If the flyer does not specify a year, assume the next upcoming occurrence of that date (i.e. use ${new Date().getFullYear()} or ${new Date().getFullYear() + 1}, whichever makes the date in the future). Also look carefully for any QR codes in the image — if you find one, decode it and use the URL as the registrationUrl.
+
+Return ONLY a JSON object with these fields (use null for any field you cannot determine):
+{
+  "title": "event title",
+  "date": "YYYY-MM-DD",
+  "startTime": "HH:MM" (24-hour format),
+  "endTime": "HH:MM" (24-hour format, null if not shown),
+  "location": "full address or venue name",
+  "description": "brief description of the event (2-3 sentences max)",
+  "registrationUrl": "decoded QR code URL, or visible registration/RSVP URL"
+}
+Return ONLY the JSON object, no markdown, no explanation.`,
+            },
+          ],
+        }],
+      });
+      const textContent = message.content.find((c: any) => c.type === "text");
+      if (!textContent || textContent.type !== "text") return res.status(500).json({ error: "No text response from AI" });
+      let extracted;
+      try {
+        let jsonStr = textContent.text.trim();
+        const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+        if (jsonMatch) jsonStr = jsonMatch[0];
+        extracted = JSON.parse(jsonStr);
+      } catch {
+        return res.status(500).json({ error: "Failed to parse AI response", raw: textContent.text });
+      }
+      res.json(extracted);
+    } catch (error: any) {
+      console.error(`[Portal:${orgName}] Flyer extract error:`, error.message);
+      res.status(500).json({ error: "Failed to extract flyer details" });
+    }
+  });
+
+  app.put("/api/portal/:org/organization", async (req, res) => {
+    const orgName = decodeURIComponent(req.params.org);
+    if (!isPortalAuthorized(req, orgName)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { description, website, address } = req.body;
+      await pool.query(
+        `INSERT INTO org_profiles (org_name, description, website, address, updated_at)
+         VALUES ($1, $2, $3, $4, NOW())
+         ON CONFLICT (org_name) DO UPDATE SET
+           description = COALESCE($2, org_profiles.description),
+           website = COALESCE($3, org_profiles.website),
+           address = COALESCE($4, org_profiles.address),
+           updated_at = NOW()`,
+        [orgName, description || null, website || null, address || null]
+      );
+      console.log(`[Portal:${orgName}] Updated organization profile`);
+      res.json({ updated: true });
+    } catch (error: any) {
+      console.error(`[Portal:${orgName}] Org profile update error:`, error.message);
+      res.status(500).json({ error: "Failed to update organization profile" });
+    }
+  });
+
+  app.get("/api/portal/:org/stats", async (req, res) => {
+    const orgName = decodeURIComponent(req.params.org);
+    if (!isPortalAuthorized(req, orgName)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const [followers, events] = await Promise.all([
+        pool.query("SELECT COUNT(*) as count FROM organizer_follows WHERE organizer_name = $1", [orgName]),
+        pool.query("SELECT COUNT(*) as count FROM community_events WHERE organizer = $1", [orgName]),
+      ]);
+      res.json({
+        followers: parseInt(followers.rows[0].count),
+        totalEvents: parseInt(events.rows[0].count),
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to get stats" });
     }
   });
 

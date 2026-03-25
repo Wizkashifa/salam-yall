@@ -633,6 +633,42 @@ export default function EventsScreen() {
         scheduleEventReminder(event);
         queryClient.invalidateQueries({ queryKey: ["/api/saved-events"] });
         trackEvent("event_saved", { title: event.title });
+
+        if (event.organizer && user) {
+          try {
+            const orgKey = `org_save_count_${event.organizer}`;
+            const dismissKey = `org_follow_dismissed_${event.organizer}`;
+            const dismissed = await AsyncStorage.getItem(dismissKey);
+            if (!dismissed) {
+              const countStr = await AsyncStorage.getItem(orgKey);
+              const newCount = (parseInt(countStr || "0") || 0) + 1;
+              await AsyncStorage.setItem(orgKey, String(newCount));
+              if (newCount >= 3) {
+                const baseUrl = getApiUrl();
+                const followRes = await fetch(new URL("/api/organizer-follows", baseUrl).toString(), { headers: getAuthHeaders() });
+                const followData = await followRes.json();
+                const alreadyFollowing = followData.follows?.includes(event.organizer);
+                if (!alreadyFollowing) {
+                  Alert.alert(
+                    "Follow " + event.organizer + "?",
+                    `We noticed you enjoy events from ${event.organizer}. Follow them to get notified about every new event!`,
+                    [
+                      { text: "Not Now", style: "cancel", onPress: () => AsyncStorage.setItem(dismissKey, "true") },
+                      {
+                        text: "Follow",
+                        onPress: async () => {
+                          const fHeaders = { ...getAuthHeaders(), "Content-Type": "application/json" };
+                          await fetch(new URL("/api/organizer-follows", baseUrl).toString(), { method: "POST", headers: fHeaders, body: JSON.stringify({ organizer: event.organizer }) });
+                          await AsyncStorage.setItem(dismissKey, "true");
+                        },
+                      },
+                    ]
+                  );
+                }
+              }
+            }
+          } catch {}
+        }
       };
 
       if (!disclaimerShown) {
