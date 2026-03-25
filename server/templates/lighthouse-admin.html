@@ -519,6 +519,15 @@
       }
     }
 
+    function toLocalDatetimeStr(d) {
+      var yr = d.getFullYear();
+      var mo = String(d.getMonth() + 1).padStart(2, '0');
+      var dy = String(d.getDate()).padStart(2, '0');
+      var hr = String(d.getHours()).padStart(2, '0');
+      var mn = String(d.getMinutes()).padStart(2, '0');
+      return yr + '-' + mo + '-' + dy + 'T' + hr + ':' + mn;
+    }
+
     function openEditModal(id) {
       var ev = cachedEvents.find(function(e) { return e.id === id; });
       if (!ev) return;
@@ -528,12 +537,10 @@
       document.getElementById('editLocation').value = ev.location || '';
       document.getElementById('editRegUrl').value = ev.registration_url || '';
       if (ev.start_time) {
-        var s = new Date(ev.start_time);
-        document.getElementById('editStartTime').value = s.toISOString().slice(0, 16);
+        document.getElementById('editStartTime').value = toLocalDatetimeStr(new Date(ev.start_time));
       }
       if (ev.end_time) {
-        var e2 = new Date(ev.end_time);
-        document.getElementById('editEndTime').value = e2.toISOString().slice(0, 16);
+        document.getElementById('editEndTime').value = toLocalDatetimeStr(new Date(ev.end_time));
       } else {
         document.getElementById('editEndTime').value = '';
       }
