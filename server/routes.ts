@@ -1764,6 +1764,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/admin/import-calendar-events", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const events = await fetchAndCacheEvents();
+      const withOverrides = await applyEventOverrides(events);
+
+      let imported = 0;
+      let skipped = 0;
+      for (const ev of withOverrides) {
+        const { rows: existing } = await pool.query(
+          "SELECT id FROM community_events WHERE title = $1 AND start_time = $2",
+          [ev.title, ev.start ? new Date(ev.start) : null]
+        );
+        if (existing.length > 0) {
+          skipped++;
+          continue;
+        }
+
+        let imageData: string | null = null;
+        let imageMime = "image/jpeg";
+        if (ev.imageUrl && ev.imageUrl.startsWith("http")) {
+          try {
+            const imgRes = await fetch(ev.imageUrl);
+            if (imgRes.ok) {
+              const contentType = imgRes.headers.get("content-type") || "image/jpeg";
+              imageMime = contentType.split(";")[0];
+              const buf = Buffer.from(await imgRes.arrayBuffer());
+              imageData = buf.toString("base64");
+            }
+          } catch {}
+        }
+
+        const coords = resolveCoordinates(ev.organizer, ev.location);
+        await pool.query(
+          `INSERT INTO community_events (title, description, location, start_time, end_time, organizer, registration_url, image_data, image_mime, is_virtual, is_featured, lat, lng, status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'approved')`,
+          [
+            ev.title,
+            ev.description || null,
+            ev.location || null,
+            ev.start ? new Date(ev.start) : null,
+            ev.end ? new Date(ev.end) : null,
+            ev.organizer || null,
+            ev.registrationUrl || null,
+            imageData,
+            imageMime,
+            ev.isVirtual || false,
+            ev.isFeatured || false,
+            coords.latitude || ev.latitude || null,
+            coords.longitude || ev.longitude || null,
+          ]
+        );
+        imported++;
+      }
+
+      console.log(`[Admin] Imported ${imported} calendar events, skipped ${skipped} duplicates`);
+      res.json({ imported, skipped, total: withOverrides.length });
+    } catch (error: any) {
+      console.error("[Admin] Calendar import error:", error.message);
+      res.status(500).json({ error: "Failed to import events: " + error.message });
+    }
+  });
+
   app.get("/api/ticker", async (_req, res) => {
     try {
       const result = await pool.query(

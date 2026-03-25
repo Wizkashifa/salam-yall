@@ -279,6 +279,15 @@
     </div>
 
     <div class="tab-content" id="tab-events">
+      <div class="section" style="border-left:3px solid #D4A843;">
+        <div class="section-title"><span class="icon">📥</span> Import from Google Calendar</div>
+        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">One-time import: pulls all upcoming events from the main Google Calendar into the portal database. Duplicate events (same title + date) will be skipped. After importing, you can disconnect the Google Calendar.</p>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn btn-gold" onclick="importCalendarEvents()" id="importCalBtn">Import Calendar Events</button>
+          <span id="importCalStatus" style="font-size:12px;color:#6B7280;"></span>
+        </div>
+      </div>
+
       <div class="section">
         <div class="section-title"><span class="icon">📸</span> Scan Event Flyer</div>
         <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Upload a flyer image to automatically extract event details using AI, or fill in manually.</p>
@@ -1562,6 +1571,33 @@
     }
 
     let cachedAdminEvents = [];
+
+    async function importCalendarEvents() {
+      var btn = document.getElementById('importCalBtn');
+      var status = document.getElementById('importCalStatus');
+      btn.disabled = true; btn.textContent = 'Importing...';
+      status.textContent = 'Fetching events from Google Calendar...';
+      status.style.color = '#9CA3AF';
+      try {
+        var res = await fetch('/api/admin/import-calendar-events', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + adminToken },
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Import failed');
+        status.style.color = '#10B981';
+        status.textContent = 'Done! Imported ' + data.imported + ' events, skipped ' + data.skipped + ' duplicates.';
+        showToast('Imported ' + data.imported + ' events from Google Calendar');
+        loadEvents();
+        loadCommunityEvents();
+      } catch(e) {
+        status.style.color = '#F87171';
+        status.textContent = 'Error: ' + e.message;
+        showToast('Import failed: ' + e.message, true);
+      } finally {
+        btn.disabled = false; btn.textContent = 'Import Calendar Events';
+      }
+    }
 
     async function loadEvents() {
       const list = document.getElementById('eventList');
