@@ -31,6 +31,8 @@ import { TickerBanner } from "@/components/TickerBanner";
 import { GlassModalContainer } from "@/components/GlassModal";
 import { GlassHeader } from "@/components/GlassHeader";
 import { useSettings } from "@/lib/settings-context";
+import { useAuth } from "@/lib/auth-context";
+import { apiRequest } from "@/lib/query-client";
 import { registerPushToken } from "@/lib/push-utils";
 import {
   getPrayerTimes,
@@ -86,6 +88,56 @@ function isMasjidOrganizer(organizer: string): boolean {
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
+function HomeOrganizerFollowButton({ organizer }: { organizer: string }) {
+  const { colors } = useTheme();
+  const { user, getAuthHeaders } = useAuth();
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!user) { setIsFollowing(false); return; }
+    const baseUrl = getApiUrl();
+    fetch(new URL("/api/organizer-follows", baseUrl).toString(), { headers: getAuthHeaders() })
+      .then(r => r.json())
+      .then(data => {
+        if (data.follows && data.follows.includes(organizer)) setIsFollowing(true);
+        else setIsFollowing(false);
+      })
+      .catch(() => {});
+  }, [user, organizer]);
+
+  const toggle = async () => {
+    if (!user) {
+      Alert.alert("Sign In Required", "Please sign in to follow organizers and get notified about their new events.", [{ text: "OK" }]);
+      return;
+    }
+    setLoading(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      const baseUrl = getApiUrl();
+      const headers = { ...getAuthHeaders(), "Content-Type": "application/json" };
+      if (isFollowing) {
+        const res = await fetch(new URL(`/api/organizer-follows/${encodeURIComponent(organizer)}`, baseUrl).toString(), { method: "DELETE", headers });
+        if (res.ok) setIsFollowing(false);
+        else Alert.alert("Error", "Could not unfollow. Please try again.");
+      } else {
+        const res = await fetch(new URL("/api/organizer-follows", baseUrl).toString(), { method: "POST", headers, body: JSON.stringify({ organizer }) });
+        if (res.ok) setIsFollowing(true);
+        else Alert.alert("Error", "Could not follow. Please try again.");
+      }
+    } catch { Alert.alert("Error", "Connection error. Please try again."); }
+    setLoading(false);
+  };
+
+  return (
+    <Pressable onPress={toggle} disabled={loading} hitSlop={6}
+      style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 14, backgroundColor: isFollowing ? colors.emerald + "20" : "transparent", borderWidth: 1, borderColor: isFollowing ? colors.emerald + "40" : colors.gold + "30" }}>
+      <Ionicons name={isFollowing ? "notifications" : "notifications-outline"} size={12} color={isFollowing ? colors.emerald : colors.gold} />
+      <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: isFollowing ? colors.emerald : colors.gold }}>{isFollowing ? "Following" : "Follow"}</Text>
+    </Pressable>
+  );
+}
+
 function HomeEventDetailModal({ event, visible, onClose }: { event: CalendarEvent | null; visible: boolean; onClose: () => void }) {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
@@ -134,9 +186,12 @@ function HomeEventDetailModal({ event, visible, onClose }: { event: CalendarEven
           )}
           <View style={{ padding: 20 }}>
             {event.organizer ? (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, backgroundColor: colors.gold + "20", marginBottom: 12 }}>
-                <MaterialCommunityIcons name={isMasjidOrganizer(event.organizer) ? "mosque" : "office-building-outline"} size={12} color={colors.gold} />
-                <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.gold }}>{event.organizer}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, backgroundColor: colors.gold + "20" }}>
+                  <MaterialCommunityIcons name={isMasjidOrganizer(event.organizer) ? "mosque" : "office-building-outline"} size={12} color={colors.gold} />
+                  <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.gold }}>{event.organizer}</Text>
+                </View>
+                <HomeOrganizerFollowButton organizer={event.organizer} />
               </View>
             ) : null}
             <Text style={{ fontSize: 22, fontFamily: "Inter_700Bold", color: colors.text, marginBottom: 16 }}>{event.title}</Text>

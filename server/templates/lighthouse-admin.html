@@ -51,17 +51,19 @@
     .btn-danger { background: #7F1D1D; color: #F87171; }
     .btn-danger:hover { background: #991B1B; }
     .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+    .btn-outline { background: none; border: 1px solid #333; color: #9CA3AF; }
+    .btn-outline:hover { border-color: #555; color: #F5F5F5; }
 
     .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     @media (max-width: 500px) { .row { grid-template-columns: 1fr; } }
 
-    .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1B6B4A; color: #fff; padding: 12px 24px; border-radius: 12px; font-size: 14px; font-weight: 500; z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+    .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1B6B4A; color: #fff; padding: 12px 24px; border-radius: 12px; font-size: 14px; font-weight: 500; z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none; max-width: 90%; text-align: center; }
     .toast.error { background: #7F1D1D; color: #F87171; }
     .toast.show { opacity: 1; }
 
     .event-card { background: #1E1E1E; border: 1px solid #333; border-radius: 12px; padding: 14px; margin-bottom: 10px; }
     .event-card h3 { font-size: 14px; color: #F5F5F5; margin-bottom: 4px; }
-    .event-card .meta { font-size: 12px; color: #9CA3AF; margin-bottom: 6px; }
+    .event-card .meta { font-size: 12px; color: #9CA3AF; margin-bottom: 4px; }
     .event-card .meta span { margin-right: 12px; }
     .event-card .actions { display: flex; gap: 8px; margin-top: 8px; }
     .event-card img.thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; float: right; margin-left: 10px; }
@@ -70,7 +72,17 @@
     .info-banner p { font-size: 13px; color: #6EE7B7; line-height: 1.5; }
     .info-banner strong { color: #10B981; }
 
+    .stat-row { display: flex; gap: 12px; margin-bottom: 16px; }
+    .stat-card { flex: 1; background: #1E1E1E; border: 1px solid #333; border-radius: 12px; padding: 16px; text-align: center; }
+    .stat-card .stat-num { font-size: 28px; font-weight: 700; color: #D4A843; }
+    .stat-card .stat-label { font-size: 11px; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+
     .empty-state { text-align: center; padding: 30px 20px; color: #6B7280; font-size: 14px; }
+
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 1000; overflow: auto; padding: 20px; }
+    .modal-card { background: #161616; border: 1px solid #252525; border-radius: 14px; max-width: 500px; margin: 40px auto; padding: 20px; }
+    .modal-card .modal-title { font-size: 18px; font-weight: 700; color: #D4A843; margin-bottom: 16px; }
+    .modal-card .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
   </style>
 </head>
 <body>
@@ -102,6 +114,27 @@
       <p><strong>Welcome!</strong> Upload your event flyers and our AI will automatically extract the details. All events published here will appear in the Salam Y'all app with <strong>The Light House Project</strong> as the organizer.</p>
     </div>
 
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-num" id="followerCount">—</div>
+        <div class="stat-label">Followers</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="eventCount">—</div>
+        <div class="stat-label">Published Events</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="icon">📣</span> Send Update to Followers</div>
+      <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Send a push notification to everyone following The Light House Project in the app.</p>
+      <label>Title *</label>
+      <input type="text" id="pushTitle" placeholder="e.g., Tonight's event starts at 7pm!">
+      <label>Message *</label>
+      <textarea id="pushBody" placeholder="Write your update message..." style="min-height:60px;"></textarea>
+      <button class="btn btn-primary" onclick="sendPush()" id="sendPushBtn" style="margin-top:10px;width:100%;">Send Notification</button>
+    </div>
+
     <div class="section">
       <div class="section-title"><span class="icon">📸</span> Add New Event</div>
       <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Upload a flyer image to automatically extract event details, or enter them manually.</p>
@@ -109,7 +142,7 @@
       <div id="flyerUploadArea" style="border:2px dashed #333;border-radius:12px;padding:30px;text-align:center;cursor:pointer;margin-bottom:14px;transition:border-color 0.2s;" ondragover="event.preventDefault();this.style.borderColor='#D4A843';" ondragleave="this.style.borderColor='#333';" ondrop="handleFlyerDrop(event)" onclick="document.getElementById('flyerFileInput').click()">
         <div style="font-size:28px;margin-bottom:8px;">📸</div>
         <div style="font-size:14px;color:#9CA3AF;">Drop a flyer image here or click to upload</div>
-        <div style="font-size:11px;color:#6B7280;margin-top:4px;">JPG, PNG, or WebP • Max 10MB</div>
+        <div style="font-size:11px;color:#6B7280;margin-top:4px;">JPG, PNG, or WebP</div>
         <input type="file" id="flyerFileInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleFlyerSelect(event)">
       </div>
 
@@ -128,14 +161,11 @@
       <div id="flyerForm" style="display:none;">
         <label>Event Title *</label>
         <input type="text" id="flyerTitle" placeholder="e.g., Community Iftar Night">
-
         <label>Description</label>
         <textarea id="flyerDescription" placeholder="Brief description of the event..."></textarea>
-
         <label>Location *</label>
         <input type="text" id="flyerLocation" placeholder="Full address or venue name">
         <div style="font-size:11px;color:#6B7280;margin-top:2px;">Events don't have to be at The Light House Project — enter any venue address.</div>
-
         <div class="row">
           <div>
             <label>Start Date & Time *</label>
@@ -146,17 +176,14 @@
             <input type="datetime-local" id="flyerEndTime">
           </div>
         </div>
-
         <label>Registration / RSVP URL (optional)</label>
         <input type="text" id="flyerRegUrl" placeholder="https://...">
-
         <div style="display:flex;align-items:center;gap:8px;margin:12px 0;">
           <label style="margin:0;cursor:pointer;display:flex;align-items:center;gap:6px;">
             <input type="checkbox" id="flyerRecurring" style="width:16px;height:16px;accent-color:#10B981;">
             <span style="font-size:13px;color:#D1D5DB;">Repeat weekly for 12 weeks</span>
           </label>
         </div>
-
         <button class="btn btn-primary" onclick="publishEvent()" id="publishEventBtn" style="margin-top:8px;width:100%;">Publish Event</button>
       </div>
     </div>
@@ -167,12 +194,42 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="editModal">
+    <div class="modal-card">
+      <div class="modal-title">Edit Event</div>
+      <input type="hidden" id="editEventId">
+      <label>Title *</label>
+      <input type="text" id="editTitle">
+      <label>Description</label>
+      <textarea id="editDescription"></textarea>
+      <label>Location</label>
+      <input type="text" id="editLocation">
+      <div class="row">
+        <div>
+          <label>Start Date & Time</label>
+          <input type="datetime-local" id="editStartTime">
+        </div>
+        <div>
+          <label>End Date & Time</label>
+          <input type="datetime-local" id="editEndTime">
+        </div>
+      </div>
+      <label>Registration URL</label>
+      <input type="text" id="editRegUrl" placeholder="https://...">
+      <div class="modal-actions">
+        <button class="btn btn-primary" onclick="saveEdit()" id="saveEditBtn" style="flex:1;">Save Changes</button>
+        <button class="btn btn-outline" onclick="closeEditModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
   <script>
     var adminToken = localStorage.getItem('lighthouse_token') || '';
     var flyerBase64 = null;
     var flyerMime = null;
+    var cachedEvents = [];
 
     if (adminToken) verifyToken();
 
@@ -213,6 +270,7 @@
       document.getElementById('topBar').style.display = 'block';
       document.getElementById('appWrap').style.display = 'block';
       loadEvents();
+      loadFollowerCount();
     }
 
     function signOut() {
@@ -233,6 +291,49 @@
       t.textContent = msg;
       t.className = 'toast show' + (isError ? ' error' : '');
       setTimeout(function() { t.className = 'toast'; }, 3000);
+    }
+
+    async function loadFollowerCount() {
+      try {
+        var res = await fetch('/api/lighthouse/followers/count', {
+          headers: { 'Authorization': 'Bearer ' + adminToken },
+        });
+        if (res.ok) {
+          var data = await res.json();
+          document.getElementById('followerCount').textContent = data.count;
+        }
+      } catch(e) {}
+    }
+
+    async function sendPush() {
+      var title = document.getElementById('pushTitle').value.trim();
+      var body = document.getElementById('pushBody').value.trim();
+      if (!title) { showToast('Title is required', true); return; }
+      if (!body) { showToast('Message is required', true); return; }
+      var btn = document.getElementById('sendPushBtn');
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+      try {
+        var res = await fetch('/api/lighthouse/push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify({ title: title, body: body }),
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        var data = await res.json();
+        if (!res.ok) { showToast(data.error || 'Failed to send', true); return; }
+        if (data.sent === 0) {
+          showToast(data.message || 'No followers to notify', true);
+        } else {
+          showToast('Notification sent to ' + data.sent + ' follower' + (data.sent !== 1 ? 's' : '') + '!');
+        }
+        document.getElementById('pushTitle').value = '';
+        document.getElementById('pushBody').value = '';
+      } catch(e) { showToast('Connection error', true); }
+      finally {
+        btn.disabled = false;
+        btn.textContent = 'Send Notification';
+      }
     }
 
     function handleFlyerDrop(e) {
@@ -335,7 +436,6 @@
       if (!title) { showToast('Title is required', true); return; }
       if (!startTime) { showToast('Start date & time is required', true); return; }
       if (!location) { showToast('Location is required', true); return; }
-
       var btn = document.getElementById('publishEventBtn');
       btn.disabled = true;
       btn.textContent = 'Publishing...';
@@ -389,6 +489,8 @@
         });
         if (res.status === 401) { handleUnauthorized(); return; }
         var events = await res.json();
+        cachedEvents = events;
+        document.getElementById('eventCount').textContent = events.length;
         if (!events.length) {
           list.innerHTML = '<div class="empty-state">No events published yet. Upload a flyer to get started!</div>';
           return;
@@ -405,14 +507,76 @@
             '<h3>' + escapeHtml(ev.title) + '</h3>' +
             '<div class="meta"><span>📅 ' + dateStr + ' at ' + timeStr + '</span></div>' +
             '<div class="meta"><span>📍 ' + escapeHtml(ev.location || 'No location') + '</span></div>' +
-            (ev.description ? '<p style="font-size:12px;color:#9CA3AF;margin-top:6px;">' + escapeHtml(ev.description.substring(0, 120)) + (ev.description.length > 120 ? '...' : '') + '</p>' : '') +
+            (ev.description ? '<p style="font-size:12px;color:#9CA3AF;margin-top:4px;">' + escapeHtml(ev.description.substring(0, 120)) + (ev.description.length > 120 ? '...' : '') + '</p>' : '') +
             '<div class="actions">' +
+              '<button class="btn btn-sm btn-outline" onclick="openEditModal(' + ev.id + ')">Edit</button>' +
               '<button class="btn btn-sm btn-danger" onclick="deleteEvent(' + ev.id + ')">Delete</button>' +
             '</div>';
           list.appendChild(card);
         });
       } catch(e) {
         list.innerHTML = '<div class="empty-state">Failed to load events</div>';
+      }
+    }
+
+    function openEditModal(id) {
+      var ev = cachedEvents.find(function(e) { return e.id === id; });
+      if (!ev) return;
+      document.getElementById('editEventId').value = id;
+      document.getElementById('editTitle').value = ev.title || '';
+      document.getElementById('editDescription').value = ev.description || '';
+      document.getElementById('editLocation').value = ev.location || '';
+      document.getElementById('editRegUrl').value = ev.registration_url || '';
+      if (ev.start_time) {
+        var s = new Date(ev.start_time);
+        document.getElementById('editStartTime').value = s.toISOString().slice(0, 16);
+      }
+      if (ev.end_time) {
+        var e2 = new Date(ev.end_time);
+        document.getElementById('editEndTime').value = e2.toISOString().slice(0, 16);
+      } else {
+        document.getElementById('editEndTime').value = '';
+      }
+      document.getElementById('editModal').style.display = 'block';
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').style.display = 'none';
+    }
+
+    async function saveEdit() {
+      var id = document.getElementById('editEventId').value;
+      var title = document.getElementById('editTitle').value.trim();
+      if (!title) { showToast('Title is required', true); return; }
+      var btn = document.getElementById('saveEditBtn');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+      try {
+        var startVal = document.getElementById('editStartTime').value;
+        var endVal = document.getElementById('editEndTime').value;
+        var body = {
+          title: title,
+          description: document.getElementById('editDescription').value.trim(),
+          location: document.getElementById('editLocation').value.trim(),
+          startTime: startVal ? new Date(startVal).toISOString() : null,
+          endTime: endVal ? new Date(endVal).toISOString() : null,
+          registrationUrl: document.getElementById('editRegUrl').value.trim(),
+        };
+        var res = await fetch('/api/lighthouse/events/' + id, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify(body),
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        var data = await res.json();
+        if (!res.ok) { showToast(data.error || 'Failed to save', true); return; }
+        showToast('Event updated!');
+        closeEditModal();
+        loadEvents();
+      } catch(e) { showToast('Connection error', true); }
+      finally {
+        btn.disabled = false;
+        btn.textContent = 'Save Changes';
       }
     }
 

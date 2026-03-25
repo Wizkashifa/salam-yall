@@ -373,6 +373,56 @@ async function cancelEventReminder(eventId: string) {
   } catch {}
 }
 
+function OrganizerFollowButton({ organizer }: { organizer: string }) {
+  const { colors } = useTheme();
+  const { user, getAuthHeaders } = useAuth();
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!user) { setIsFollowing(false); return; }
+    const baseUrl = getApiUrl();
+    fetch(new URL("/api/organizer-follows", baseUrl).toString(), { headers: getAuthHeaders() })
+      .then(r => r.json())
+      .then(data => {
+        if (data.follows && data.follows.includes(organizer)) setIsFollowing(true);
+        else setIsFollowing(false);
+      })
+      .catch(() => {});
+  }, [user, organizer]);
+
+  const toggle = async () => {
+    if (!user) {
+      Alert.alert("Sign In Required", "Please sign in to follow organizers and get notified about their new events.", [{ text: "OK" }]);
+      return;
+    }
+    setLoading(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      const baseUrl = getApiUrl();
+      const headers = { ...getAuthHeaders(), "Content-Type": "application/json" };
+      if (isFollowing) {
+        const res = await fetch(new URL(`/api/organizer-follows/${encodeURIComponent(organizer)}`, baseUrl).toString(), { method: "DELETE", headers });
+        if (res.ok) setIsFollowing(false);
+        else Alert.alert("Error", "Could not unfollow. Please try again.");
+      } else {
+        const res = await fetch(new URL("/api/organizer-follows", baseUrl).toString(), { method: "POST", headers, body: JSON.stringify({ organizer }) });
+        if (res.ok) setIsFollowing(true);
+        else Alert.alert("Error", "Could not follow. Please try again.");
+      }
+    } catch { Alert.alert("Error", "Connection error. Please try again."); }
+    setLoading(false);
+  };
+
+  return (
+    <Pressable onPress={toggle} disabled={loading} hitSlop={6}
+      style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 14, backgroundColor: isFollowing ? colors.emerald + "20" : "transparent", borderWidth: 1, borderColor: isFollowing ? colors.emerald + "40" : colors.gold + "30" }}>
+      <Ionicons name={isFollowing ? "notifications" : "notifications-outline"} size={12} color={isFollowing ? colors.emerald : colors.gold} />
+      <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: isFollowing ? colors.emerald : colors.gold }}>{isFollowing ? "Following" : "Follow"}</Text>
+    </Pressable>
+  );
+}
+
 function EventDetailModal({ event, visible, onClose, isSaved, onToggleSave }: { event: CalendarEvent | null; visible: boolean; onClose: () => void; isSaved: boolean; onToggleSave: (event: CalendarEvent) => void }) {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
@@ -427,13 +477,16 @@ function EventDetailModal({ event, visible, onClose, isSaved, onToggleSave }: { 
 
           <View style={styles.modalBody}>
             {event.organizer ? (
-              <View style={[styles.modalOrganizerPill, { backgroundColor: colors.categoryBadgeBg ? colors.categoryBadgeBg(colors.gold) : (colors.gold + "20") }]}>
-                <MaterialCommunityIcons
-                  name={isMasjid(event.organizer) ? "mosque" : "office-building-outline"}
-                  size={12}
-                  color={colors.gold}
-                />
-                <Text style={[styles.modalOrganizerText, { color: colors.gold }]}>{event.organizer}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <View style={[styles.modalOrganizerPill, { backgroundColor: colors.categoryBadgeBg ? colors.categoryBadgeBg(colors.gold) : (colors.gold + "20"), marginBottom: 0 }]}>
+                  <MaterialCommunityIcons
+                    name={isMasjid(event.organizer) ? "mosque" : "office-building-outline"}
+                    size={12}
+                    color={colors.gold}
+                  />
+                  <Text style={[styles.modalOrganizerText, { color: colors.gold }]}>{event.organizer}</Text>
+                </View>
+                <OrganizerFollowButton organizer={event.organizer} />
               </View>
             ) : null}
 

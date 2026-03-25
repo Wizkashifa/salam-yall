@@ -1129,6 +1129,21 @@ async function ensureUserAccountsTable(pool: pg.Pool) {
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions(user_id);`);
 }
 
+async function ensureOrganizerFollowsTable(pool: pg.Pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS organizer_follows (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES user_accounts(id) ON DELETE CASCADE,
+      organizer_name VARCHAR(255) NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(user_id, organizer_name)
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_organizer_follows_user ON organizer_follows(user_id);`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_organizer_follows_org ON organizer_follows(organizer_name);`);
+  await pool.query(`ALTER TABLE push_tokens ADD COLUMN IF NOT EXISTS user_id INTEGER`);
+}
+
 async function ensureSavedEventsTable(pool: pg.Pool) {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS saved_events (
@@ -1228,6 +1243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await ensureUserAccountsTable(pool).catch(err => console.error("[DB] User accounts table init error:", err.message));
   await ensureUserRatingsTable(pool).catch(err => console.error("[DB] User ratings table init error:", err.message));
   await ensureSavedEventsTable(pool).catch(err => console.error("[DB] Saved events table init error:", err.message));
+  await ensureOrganizerFollowsTable(pool).catch(err => console.error("[DB] Organizer follows table init error:", err.message));
   await ensureHalalCheckinsTable(pool).catch(err => console.error("[DB] Halal checkins table init error:", err.message));
   await ensureRestaurantSubmissionsTable(pool).catch(err => console.error("[DB] Restaurant submissions table init error:", err.message));
   await ensureCommunityEventsTable(pool).catch(err => console.error("[DB] Community events table init error:", err.message));
@@ -3629,6 +3645,45 @@ Return ONLY the description text, nothing else.`,
     }
   });
 
+  app.get("/api/organizer-follows", async (req, res) => {
+    try {
+      const userId = await getUserIdFromRequest(req);
+      if (!userId) return res.json({ follows: [] });
+      const { rows } = await pool.query("SELECT organizer_name FROM organizer_follows WHERE user_id = $1", [userId]);
+      res.json({ follows: rows.map((r: any) => r.organizer_name) });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch follows" });
+    }
+  });
+
+  app.post("/api/organizer-follows", async (req, res) => {
+    try {
+      const userId = await getUserIdFromRequest(req);
+      if (!userId) return res.status(401).json({ error: "Sign in required" });
+      const { organizer } = req.body;
+      if (!organizer || typeof organizer !== "string") return res.status(400).json({ error: "Organizer name required" });
+      await pool.query(
+        "INSERT INTO organizer_follows (user_id, organizer_name) VALUES ($1, $2) ON CONFLICT (user_id, organizer_name) DO NOTHING",
+        [userId, organizer.trim()]
+      );
+      res.json({ following: true, organizer: organizer.trim() });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to follow organizer" });
+    }
+  });
+
+  app.delete("/api/organizer-follows/:organizer", async (req, res) => {
+    try {
+      const userId = await getUserIdFromRequest(req);
+      if (!userId) return res.status(401).json({ error: "Sign in required" });
+      const organizer = decodeURIComponent(req.params.organizer);
+      await pool.query("DELETE FROM organizer_follows WHERE user_id = $1 AND organizer_name = $2", [userId, organizer]);
+      res.json({ following: false, organizer });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to unfollow organizer" });
+    }
+  });
+
   app.post("/api/ratings", async (req, res) => {
     try {
       const userId = await getUserIdFromRequest(req);
@@ -4050,16 +4105,18 @@ Return ONLY the description text, nothing else.`,
       if (!isExpoToken) {
         return res.status(400).json({ error: "Invalid push token format" });
       }
+      const userId = await getUserIdFromRequest(req);
       if (lat != null && lng != null && typeof lat === "number" && typeof lng === "number") {
         await pool.query(
-          `INSERT INTO push_tokens (token, lat, lng) VALUES ($1, $2, $3)
-           ON CONFLICT (token) DO UPDATE SET lat = $2, lng = $3`,
-          [token, lat, lng]
+          `INSERT INTO push_tokens (token, lat, lng, user_id) VALUES ($1, $2, $3, $4)
+           ON CONFLICT (token) DO UPDATE SET lat = $2, lng = $3, user_id = COALESCE($4, push_tokens.user_id)`,
+          [token, lat, lng, userId]
         );
       } else {
         await pool.query(
-          `INSERT INTO push_tokens (token) VALUES ($1) ON CONFLICT (token) DO NOTHING`,
-          [token]
+          `INSERT INTO push_tokens (token, user_id) VALUES ($1, $2)
+           ON CONFLICT (token) DO UPDATE SET user_id = COALESCE($2, push_tokens.user_id)`,
+          [token, userId]
         );
       }
       res.json({ success: true });
@@ -5183,6 +5240,29 @@ Return ONLY the JSON object, no markdown, no explanation.`,
       }
 
       console.log(`[Light House Project] Published: "${title}" (${weeks} event${weeks > 1 ? 's' : ''}, IDs ${ids.join(', ')})`);
+
+      try {
+        const { rows: followerTokens } = await pool.query(
+          `SELECT DISTINCT pt.token FROM push_tokens pt
+           INNER JOIN organizer_follows of2 ON pt.user_id = of2.user_id
+           WHERE of2.organizer_name = $1 AND pt.token IS NOT NULL`,
+          [LIGHTHOUSE_ORG]
+        );
+        const tokens = followerTokens.map((r: any) => r.token);
+        if (tokens.length > 0) {
+          const pushDate = baseStart.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+          await sendPushToTokens(
+            tokens,
+            "New Event from The Light House Project",
+            `${title} — ${pushDate}`,
+            { type: "event", eventId: `community_${ids[0]}` }
+          );
+          console.log(`[Light House Project] Notified ${tokens.length} followers about "${title}"`);
+        }
+      } catch (pushErr: any) {
+        console.error("[Light House Project] Auto-push error:", pushErr.message);
+      }
+
       res.json({ id: ids[0], title, start_time: baseStart, status: "approved", count: weeks });
     } catch (error: any) {
       console.error("[Light House Project] Publish error:", error.message);
@@ -5220,6 +5300,88 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     } catch (error: any) {
       console.error("[Light House Project] Delete error:", error.message);
       res.status(500).json({ error: "Failed to delete event" });
+    }
+  });
+
+  app.get("/api/lighthouse/followers/count", async (req, res) => {
+    if (!isLighthouseAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { rows } = await pool.query(
+        "SELECT COUNT(*) as count FROM organizer_follows WHERE organizer_name = $1",
+        [LIGHTHOUSE_ORG]
+      );
+      res.json({ count: parseInt(rows[0].count) });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to get follower count" });
+    }
+  });
+
+  app.post("/api/lighthouse/push", async (req, res) => {
+    if (!isLighthouseAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { title, body } = req.body;
+      if (!title || !body) return res.status(400).json({ error: "Title and message are required" });
+
+      const { rows: followerTokens } = await pool.query(
+        `SELECT DISTINCT pt.token FROM push_tokens pt
+         INNER JOIN organizer_follows of2 ON pt.user_id = of2.user_id
+         WHERE of2.organizer_name = $1 AND pt.token IS NOT NULL`,
+        [LIGHTHOUSE_ORG]
+      );
+      const tokens = followerTokens.map((r: any) => r.token);
+      if (!tokens.length) {
+        return res.json({ sent: 0, total: 0, message: "No followers with push notifications enabled" });
+      }
+      const pushResult = await sendPushToTokens(tokens, title, body);
+      console.log(`[Light House Project] Custom push sent: "${title}" to ${pushResult.sent} followers`);
+      res.json(pushResult);
+    } catch (error: any) {
+      console.error("[Light House Project] Push error:", error.message);
+      res.status(500).json({ error: "Failed to send notification" });
+    }
+  });
+
+  app.put("/api/lighthouse/events/:id", async (req, res) => {
+    if (!isLighthouseAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { id } = req.params;
+      const { title, description, location, startTime, endTime, registrationUrl } = req.body;
+      if (!title) return res.status(400).json({ error: "Title is required" });
+
+      const { rows: existing } = await pool.query(
+        "SELECT id, location, start_time, end_time, registration_url FROM community_events WHERE id = $1 AND organizer = $2",
+        [id, LIGHTHOUSE_ORG]
+      );
+      if (!existing.length) return res.status(404).json({ error: "Event not found or not yours" });
+
+      let eventLat: number | null = null;
+      let eventLng: number | null = null;
+      if (location) {
+        const resolved = resolveCoordinates(LIGHTHOUSE_ORG, location);
+        if (resolved.latitude && resolved.longitude) {
+          eventLat = resolved.latitude;
+          eventLng = resolved.longitude;
+        } else {
+          const geocoded = await geocodeAddress(location);
+          if (geocoded) { eventLat = geocoded.lat; eventLng = geocoded.lng; }
+        }
+      }
+
+      await pool.query(
+        `UPDATE community_events SET title = $1, description = $2, location = $3,
+         start_time = $4, end_time = $5, registration_url = $6, lat = $7, lng = $8
+         WHERE id = $9 AND organizer = $10`,
+        [title, description || null, location || null,
+         startTime ? new Date(startTime) : existing[0].start_time,
+         endTime ? new Date(endTime) : null,
+         registrationUrl || null, eventLat, eventLng, id, LIGHTHOUSE_ORG]
+      );
+
+      console.log(`[Light House Project] Updated event ID ${id}: "${title}"`);
+      res.json({ updated: true, id: parseInt(id as string) });
+    } catch (error: any) {
+      console.error("[Light House Project] Update error:", error.message);
+      res.status(500).json({ error: "Failed to update event" });
     }
   });
 
