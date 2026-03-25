@@ -1319,6 +1319,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await pool.query("ALTER TABLE event_overrides ADD COLUMN IF NOT EXISTS is_virtual BOOLEAN").catch(() => {});
   await pool.query("ALTER TABLE event_overrides ADD COLUMN IF NOT EXISTS is_featured BOOLEAN").catch(() => {});
 
+  await pool.query("UPDATE community_events SET organizer = 'Islamic Association of Raleigh' WHERE organizer LIKE 'Islamic Association of Raleigh%' AND organizer != 'Islamic Association of Raleigh'").catch(() => {});
+  await pool.query("UPDATE community_events SET organizer = 'Al-Noor Islamic Center' WHERE organizer ILIKE '%alnoor islamic center%' AND organizer != 'Al-Noor Islamic Center'").catch(() => {});
+
   startHalalAutoSync(pool);
   startIqamaSync(pool);
 
@@ -5292,9 +5295,14 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {
       const { rows } = await pool.query(
-        "SELECT id, title, description, location, start_time, end_time, organizer, registration_url, is_virtual, is_featured, status, created_at, CASE WHEN image_data IS NOT NULL THEN true ELSE false END as has_image FROM community_events ORDER BY created_at DESC"
+        "SELECT id, title, description, location, start_time, end_time, organizer, registration_url, is_virtual, is_featured, status, created_at, CASE WHEN image_data IS NOT NULL THEN true ELSE false END as has_image FROM community_events ORDER BY start_time ASC"
       );
-      res.json(rows);
+      const normalized = rows.map((r: any) => {
+        const resolved = resolveOrgName(r.organizer || "");
+        if (resolved) r.organizer = resolved;
+        return r;
+      });
+      res.json(normalized);
     } catch (error: any) {
       console.error("[Community Events] List error:", error.message);
       res.status(500).json({ error: "Failed to list community events" });
