@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>The Light House Project — Event Manager</title>
+  <title>The Light House Project — Organizer Portal</title>
   <link rel="icon" type="image/png" sizes="48x48" href="/assets/images/favicon.png" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -11,6 +11,7 @@
 
     .login-wrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
     .login-card { background: #161616; border: 1px solid #252525; border-radius: 16px; padding: 40px; max-width: 360px; width: 100%; text-align: center; }
+    .login-logo { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; margin-bottom: 12px; border: 2px solid #252525; }
     .login-card h1 { font-size: 22px; color: #D4A843; margin-bottom: 4px; }
     .login-card .subtitle { font-size: 14px; color: #10B981; margin-bottom: 4px; font-weight: 600; }
     .login-card p { font-size: 13px; color: #9CA3AF; margin-bottom: 24px; }
@@ -21,13 +22,22 @@
     .login-error { color: #F87171; font-size: 13px; margin-bottom: 12px; display: none; }
 
     .app-wrap { display: none; width: 100%; margin: 0 auto; padding: 20px; padding-top: 90px; padding-bottom: 40px; max-width: 720px; }
-    .top-bar { position: fixed; top: 0; left: 0; right: 0; background: #161616; border-bottom: 1px solid #252525; z-index: 10; padding: 14px 20px; }
+    .top-bar { position: fixed; top: 0; left: 0; right: 0; background: #161616; border-bottom: 1px solid #252525; z-index: 10; padding: 14px 20px; display: none; }
     .top-bar-inner { max-width: 720px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
     .top-bar .brand { display: flex; align-items: center; gap: 10px; }
+    .top-bar .brand-logo { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid #333; }
     .top-bar .brand-name { font-size: 16px; color: #D4A843; font-weight: 700; }
     .top-bar .brand-org { font-size: 12px; color: #10B981; font-weight: 600; }
     .top-bar button.sign-out { background: none; border: 1px solid #333; color: #9CA3AF; padding: 6px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; }
     .top-bar button.sign-out:hover { color: #F5F5F5; border-color: #555; }
+
+    .tab-bar { display: flex; gap: 0; margin-bottom: 20px; background: #161616; border: 1px solid #252525; border-radius: 12px; overflow: hidden; }
+    .tab-btn { flex: 1; padding: 12px 8px; background: none; border: none; color: #6B7280; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; text-align: center; border-bottom: 2px solid transparent; }
+    .tab-btn:hover { color: #D1D5DB; background: #1A1A1A; }
+    .tab-btn.active { color: #D4A843; border-bottom-color: #D4A843; background: #1A1A1A; }
+    .tab-btn .tab-icon { display: block; font-size: 18px; margin-bottom: 2px; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
 
     .section { background: #161616; border: 1px solid #252525; border-radius: 14px; padding: 20px; margin-bottom: 16px; }
     .section-title { font-size: 15px; font-weight: 700; color: #D4A843; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
@@ -68,10 +78,6 @@
     .event-card .actions { display: flex; gap: 8px; margin-top: 8px; }
     .event-card img.thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; float: right; margin-left: 10px; }
 
-    .info-banner { background: #1A2E22; border: 1px solid #10B981; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
-    .info-banner p { font-size: 13px; color: #6EE7B7; line-height: 1.5; }
-    .info-banner strong { color: #10B981; }
-
     .stat-row { display: flex; gap: 12px; margin-bottom: 16px; }
     .stat-card { flex: 1; background: #1E1E1E; border: 1px solid #333; border-radius: 12px; padding: 16px; text-align: center; }
     .stat-card .stat-num { font-size: 28px; font-weight: 700; color: #D4A843; }
@@ -83,26 +89,43 @@
     .modal-card { background: #161616; border: 1px solid #252525; border-radius: 14px; max-width: 500px; margin: 40px auto; padding: 20px; }
     .modal-card .modal-title { font-size: 18px; font-weight: 700; color: #D4A843; margin-bottom: 16px; }
     .modal-card .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+
+    .profile-header { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }
+    .profile-logo { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid #333; margin-bottom: 12px; }
+    .profile-name { font-size: 20px; font-weight: 700; color: #F5F5F5; margin-bottom: 4px; }
+    .profile-subtitle { font-size: 13px; color: #10B981; font-weight: 600; }
+
+    .profile-preview { background: #1E1E1E; border: 1px solid #333; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+    .profile-preview .preview-row { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid #252525; }
+    .profile-preview .preview-row:last-child { border-bottom: none; }
+    .profile-preview .preview-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+    .profile-preview .preview-label { font-size: 11px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+    .profile-preview .preview-value { font-size: 14px; color: #D1D5DB; line-height: 1.4; word-break: break-word; }
+    .profile-preview .preview-value a { color: #D4A843; text-decoration: none; }
+    .profile-preview .preview-value a:hover { text-decoration: underline; }
+    .profile-preview .preview-empty { color: #4B5563; font-style: italic; }
   </style>
 </head>
 <body>
   <div class="login-wrap" id="loginScreen">
     <div class="login-card">
-      <h1>🏠 Salam Y'all</h1>
-      <div class="subtitle">The Light House Project</div>
-      <p>Event Manager Portal</p>
+      <img src="/assets/logos/lighthouse.jpeg" class="login-logo" alt="Logo">
+      <h1>Salam Y'all</h1>
+      <div class="subtitle">Organizer Portal</div>
+      <p>Sign in to manage your events</p>
       <div class="login-error" id="loginError">Invalid password</div>
       <input type="password" id="loginPassword" placeholder="Enter your password" onkeydown="if(event.key==='Enter')doLogin()">
       <button onclick="doLogin()">Sign In</button>
     </div>
   </div>
 
-  <div class="top-bar" id="topBar" style="display:none;">
+  <div class="top-bar" id="topBar">
     <div class="top-bar-inner">
       <div class="brand">
+        <img src="/assets/logos/lighthouse.jpeg" class="brand-logo" alt="Logo" id="topBarLogo">
         <div>
           <div class="brand-name">Salam Y'all</div>
-          <div class="brand-org">The Light House Project</div>
+          <div class="brand-org" id="topBarOrgName">The Light House Project</div>
         </div>
       </div>
       <button class="sign-out" onclick="signOut()">Sign Out</button>
@@ -110,10 +133,6 @@
   </div>
 
   <div class="app-wrap" id="appWrap">
-    <div class="info-banner">
-      <p><strong>Welcome!</strong> Upload your event flyers and our AI will automatically extract the details. All events published here will appear in the Salam Y'all app with <strong>The Light House Project</strong> as the organizer.</p>
-    </div>
-
     <div class="stat-row">
       <div class="stat-card">
         <div class="stat-num" id="followerCount">—</div>
@@ -125,84 +144,138 @@
       </div>
     </div>
 
-    <div class="section">
-      <div class="section-title"><span class="icon">📣</span> Send Update to Followers</div>
-      <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Send a push notification to everyone following The Light House Project in the app.</p>
-      <label>Title *</label>
-      <input type="text" id="pushTitle" placeholder="e.g., Tonight's event starts at 7pm!">
-      <label>Message *</label>
-      <textarea id="pushBody" placeholder="Write your update message..." style="min-height:60px;"></textarea>
-      <button class="btn btn-primary" onclick="sendPush()" id="sendPushBtn" style="margin-top:10px;width:100%;">Send Notification</button>
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('updates')" id="tabBtnUpdates">
+        <span class="tab-icon">📣</span> Updates
+      </button>
+      <button class="tab-btn" onclick="switchTab('events')" id="tabBtnEvents">
+        <span class="tab-icon">🗓️</span> Events
+      </button>
+      <button class="tab-btn" onclick="switchTab('profile')" id="tabBtnProfile">
+        <span class="tab-icon">🏢</span> Profile
+      </button>
     </div>
 
-    <div class="section">
-      <div class="section-title"><span class="icon">📸</span> Add New Event</div>
-      <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Upload a flyer image to automatically extract event details, or enter them manually.</p>
+    <!-- UPDATES TAB -->
+    <div class="tab-content active" id="tabUpdates">
+      <div class="section">
+        <div class="section-title"><span class="icon">📣</span> Send Update to Followers</div>
+        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Send a push notification to everyone following your organization in the app.</p>
+        <label>Title *</label>
+        <input type="text" id="pushTitle" placeholder="e.g., Tonight's event starts at 7pm!">
+        <label>Message *</label>
+        <textarea id="pushBody" placeholder="Write your update message..." style="min-height:60px;"></textarea>
+        <button class="btn btn-primary" onclick="sendPush()" id="sendPushBtn" style="margin-top:10px;width:100%;">Send Notification</button>
+      </div>
+    </div>
 
-      <div id="flyerUploadArea" style="border:2px dashed #333;border-radius:12px;padding:30px;text-align:center;cursor:pointer;margin-bottom:14px;transition:border-color 0.2s;" ondragover="event.preventDefault();this.style.borderColor='#D4A843';" ondragleave="this.style.borderColor='#333';" ondrop="handleFlyerDrop(event)" onclick="document.getElementById('flyerFileInput').click()">
-        <div style="font-size:28px;margin-bottom:8px;">📸</div>
-        <div style="font-size:14px;color:#9CA3AF;">Drop a flyer image here or click to upload</div>
-        <div style="font-size:11px;color:#6B7280;margin-top:4px;">JPG, PNG, or WebP</div>
-        <input type="file" id="flyerFileInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleFlyerSelect(event)">
+    <!-- EVENTS TAB -->
+    <div class="tab-content" id="tabEvents">
+      <div class="section">
+        <div class="section-title"><span class="icon">📸</span> Add New Event</div>
+        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Upload a flyer image to automatically extract event details, or enter them manually.</p>
+
+        <div id="flyerUploadArea" style="border:2px dashed #333;border-radius:12px;padding:30px;text-align:center;cursor:pointer;margin-bottom:14px;transition:border-color 0.2s;" ondragover="event.preventDefault();this.style.borderColor='#D4A843';" ondragleave="this.style.borderColor='#333';" ondrop="handleFlyerDrop(event)" onclick="document.getElementById('flyerFileInput').click()">
+          <div style="font-size:28px;margin-bottom:8px;">📸</div>
+          <div style="font-size:14px;color:#9CA3AF;">Drop a flyer image here or click to upload</div>
+          <div style="font-size:11px;color:#6B7280;margin-top:4px;">JPG, PNG, or WebP</div>
+          <input type="file" id="flyerFileInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleFlyerSelect(event)">
+        </div>
+
+        <div id="flyerPreview" style="display:none;margin-bottom:14px;text-align:center;">
+          <img id="flyerPreviewImg" style="max-width:100%;max-height:300px;border-radius:10px;border:1px solid #333;">
+          <button class="btn btn-sm" onclick="clearFlyer()" style="margin-top:8px;background:#333;color:#9CA3AF;">Remove Image</button>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <button class="btn btn-gold" onclick="extractFlyer()" id="extractFlyerBtn" disabled>✨ Extract Details with AI</button>
+          <button class="btn btn-sm" onclick="toggleManualEntry()" style="background:#1E1E1E;color:#9CA3AF;">Manual Entry</button>
+        </div>
+
+        <div id="extractStatus" style="display:none;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:14px;"></div>
+
+        <div id="flyerForm" style="display:none;">
+          <label>Event Title *</label>
+          <input type="text" id="flyerTitle" placeholder="e.g., Community Iftar Night">
+          <label>Description</label>
+          <textarea id="flyerDescription" placeholder="Brief description of the event..."></textarea>
+          <label>Location *</label>
+          <input type="text" id="flyerLocation" placeholder="Full address or venue name">
+          <div style="font-size:11px;color:#6B7280;margin-top:2px;">Events don't have to be at your location — enter any venue address.</div>
+          <div class="row">
+            <div>
+              <label>Start Date & Time *</label>
+              <input type="datetime-local" id="flyerStartTime">
+            </div>
+            <div>
+              <label>End Date & Time</label>
+              <input type="datetime-local" id="flyerEndTime">
+            </div>
+          </div>
+          <label>Registration / RSVP URL (optional)</label>
+          <input type="text" id="flyerRegUrl" placeholder="https://...">
+          <div style="display:flex;align-items:center;gap:8px;margin:12px 0;">
+            <label style="margin:0;cursor:pointer;display:flex;align-items:center;gap:6px;">
+              <input type="checkbox" id="flyerRecurring" style="width:16px;height:16px;accent-color:#10B981;">
+              <span style="font-size:13px;color:#D1D5DB;">Repeat weekly for 12 weeks</span>
+            </label>
+          </div>
+          <button class="btn btn-primary" onclick="publishEvent()" id="publishEventBtn" style="margin-top:8px;width:100%;">Publish Event</button>
+        </div>
       </div>
 
-      <div id="flyerPreview" style="display:none;margin-bottom:14px;text-align:center;">
-        <img id="flyerPreviewImg" style="max-width:100%;max-height:300px;border-radius:10px;border:1px solid #333;">
-        <button class="btn btn-sm" onclick="clearFlyer()" style="margin-top:8px;background:#333;color:#9CA3AF;">Remove Image</button>
+      <div class="section">
+        <div class="section-title"><span class="icon">🗓️</span> Your Published Events</div>
+        <div id="eventList"><div class="empty-state">Loading events...</div></div>
+      </div>
+    </div>
+
+    <!-- PROFILE TAB -->
+    <div class="tab-content" id="tabProfile">
+      <div class="profile-header">
+        <img src="/assets/logos/lighthouse.jpeg" class="profile-logo" alt="Logo" id="profileLogo">
+        <div class="profile-name" id="profileOrgName">The Light House Project</div>
+        <div class="profile-subtitle">Organizer on Salam Y'all</div>
       </div>
 
-      <div style="display:flex;gap:8px;margin-bottom:14px;">
-        <button class="btn btn-gold" onclick="extractFlyer()" id="extractFlyerBtn" disabled>✨ Extract Details with AI</button>
-        <button class="btn btn-sm" onclick="toggleManualEntry()" style="background:#1E1E1E;color:#9CA3AF;">Manual Entry</button>
+      <div class="section">
+        <div class="section-title"><span class="icon">👁️</span> Current Profile (as shown in app)</div>
+        <div class="profile-preview" id="profilePreview">
+          <div class="preview-row">
+            <span class="preview-icon">📝</span>
+            <div style="flex:1;">
+              <div class="preview-label">Description</div>
+              <div class="preview-value" id="previewDescription"><span class="preview-empty">Not set</span></div>
+            </div>
+          </div>
+          <div class="preview-row">
+            <span class="preview-icon">🌐</span>
+            <div style="flex:1;">
+              <div class="preview-label">Website</div>
+              <div class="preview-value" id="previewWebsite"><span class="preview-empty">Not set</span></div>
+            </div>
+          </div>
+          <div class="preview-row">
+            <span class="preview-icon">📍</span>
+            <div style="flex:1;">
+              <div class="preview-label">Address</div>
+              <div class="preview-value" id="previewAddress"><span class="preview-empty">Not set</span></div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div id="extractStatus" style="display:none;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:14px;"></div>
-
-      <div id="flyerForm" style="display:none;">
-        <label>Event Title *</label>
-        <input type="text" id="flyerTitle" placeholder="e.g., Community Iftar Night">
+      <div class="section">
+        <div class="section-title"><span class="icon">✏️</span> Edit Profile</div>
+        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Changes here will update how your organization appears in the Salam Y'all app's Community Directory.</p>
         <label>Description</label>
-        <textarea id="flyerDescription" placeholder="Brief description of the event..."></textarea>
-        <label>Location *</label>
-        <input type="text" id="flyerLocation" placeholder="Full address or venue name">
-        <div style="font-size:11px;color:#6B7280;margin-top:2px;">Events don't have to be at The Light House Project — enter any venue address.</div>
-        <div class="row">
-          <div>
-            <label>Start Date & Time *</label>
-            <input type="datetime-local" id="flyerStartTime">
-          </div>
-          <div>
-            <label>End Date & Time</label>
-            <input type="datetime-local" id="flyerEndTime">
-          </div>
-        </div>
-        <label>Registration / RSVP URL (optional)</label>
-        <input type="text" id="flyerRegUrl" placeholder="https://...">
-        <div style="display:flex;align-items:center;gap:8px;margin:12px 0;">
-          <label style="margin:0;cursor:pointer;display:flex;align-items:center;gap:6px;">
-            <input type="checkbox" id="flyerRecurring" style="width:16px;height:16px;accent-color:#10B981;">
-            <span style="font-size:13px;color:#D1D5DB;">Repeat weekly for 12 weeks</span>
-          </label>
-        </div>
-        <button class="btn btn-primary" onclick="publishEvent()" id="publishEventBtn" style="margin-top:8px;width:100%;">Publish Event</button>
+        <textarea id="orgDescription" placeholder="Brief description of your organization..."></textarea>
+        <label>Website</label>
+        <input type="text" id="orgWebsite" placeholder="https://...">
+        <label>Address</label>
+        <input type="text" id="orgAddress" placeholder="Full address">
+        <button class="btn btn-primary" onclick="saveOrgProfile()" id="saveOrgBtn" style="margin-top:10px;width:100%;">Save Profile</button>
       </div>
-    </div>
-
-    <div class="section">
-      <div class="section-title"><span class="icon">🏢</span> Organization Profile</div>
-      <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Edit how your organization appears in the Salam Y'all app's Community Directory.</p>
-      <label>Description</label>
-      <textarea id="orgDescription" placeholder="Brief description of your organization..."></textarea>
-      <label>Website</label>
-      <input type="text" id="orgWebsite" placeholder="https://...">
-      <label>Address</label>
-      <input type="text" id="orgAddress" placeholder="Full address">
-      <button class="btn btn-primary" onclick="saveOrgProfile()" id="saveOrgBtn" style="margin-top:10px;width:100%;">Save Profile</button>
-    </div>
-
-    <div class="section">
-      <div class="section-title"><span class="icon">🗓️</span> Your Published Events</div>
-      <div id="eventList"><div class="empty-state">Loading events...</div></div>
     </div>
   </div>
 
@@ -244,8 +317,16 @@
     var flyerBase64 = null;
     var flyerMime = null;
     var cachedEvents = [];
+    var currentProfile = {};
 
     if (adminToken) verifyToken();
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+      document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+      document.getElementById('tabBtn' + tabName.charAt(0).toUpperCase() + tabName.slice(1)).classList.add('active');
+      document.getElementById('tab' + tabName.charAt(0).toUpperCase() + tabName.slice(1)).classList.add('active');
+    }
 
     async function doLogin() {
       var pw = document.getElementById('loginPassword').value;
@@ -326,12 +407,35 @@
         if (res.ok) {
           var data = await res.json();
           if (data) {
+            currentProfile = data;
             document.getElementById('orgDescription').value = data.description || '';
             document.getElementById('orgWebsite').value = data.website || '';
             document.getElementById('orgAddress').value = data.address || '';
+            updateProfilePreview(data);
           }
         }
       } catch(e) {}
+    }
+
+    function updateProfilePreview(data) {
+      var descEl = document.getElementById('previewDescription');
+      var webEl = document.getElementById('previewWebsite');
+      var addrEl = document.getElementById('previewAddress');
+      if (data.description) {
+        descEl.textContent = data.description;
+      } else {
+        descEl.innerHTML = '<span class="preview-empty">Not set</span>';
+      }
+      if (data.website) {
+        webEl.innerHTML = '<a href="' + escapeHtml(data.website) + '" target="_blank">' + escapeHtml(data.website.replace(/^https?:\/\/(www\.)?/, '')) + '</a>';
+      } else {
+        webEl.innerHTML = '<span class="preview-empty">Not set</span>';
+      }
+      if (data.address) {
+        addrEl.textContent = data.address;
+      } else {
+        addrEl.innerHTML = '<span class="preview-empty">Not set</span>';
+      }
     }
 
     async function saveOrgProfile() {
@@ -350,7 +454,11 @@
           body: JSON.stringify(body),
         });
         if (res.status === 401) { handleUnauthorized(); return; }
-        if (res.ok) { showToast('Organization profile updated!'); }
+        if (res.ok) {
+          showToast('Organization profile updated!');
+          currentProfile = Object.assign(currentProfile, body);
+          updateProfilePreview(currentProfile);
+        }
         else { showToast('Failed to save profile', true); }
       } catch(e) { showToast('Connection error', true); }
       finally {
@@ -392,27 +500,24 @@
 
     function handleFlyerDrop(e) {
       e.preventDefault();
-      e.currentTarget.style.borderColor = '#333';
+      document.getElementById('flyerUploadArea').style.borderColor = '#333';
       var file = e.dataTransfer.files[0];
-      if (file && file.type.startsWith('image/')) loadFlyerFile(file);
+      if (file) processFlyer(file);
     }
 
     function handleFlyerSelect(e) {
       var file = e.target.files[0];
-      if (file) loadFlyerFile(file);
+      if (file) processFlyer(file);
     }
 
-    function loadFlyerFile(file) {
-      if (file.size > 10 * 1024 * 1024) {
-        showToast('Image must be under 10MB', true);
-        return;
-      }
-      flyerMime = file.type;
+    function processFlyer(file) {
+      if (!file.type.startsWith('image/')) { showToast('Please upload an image file', true); return; }
       var reader = new FileReader();
       reader.onload = function(e) {
-        var dataUrl = e.target.result;
-        flyerBase64 = dataUrl.split(',')[1];
-        document.getElementById('flyerPreviewImg').src = dataUrl;
+        var base64 = e.target.result.split(',')[1];
+        flyerBase64 = base64;
+        flyerMime = file.type;
+        document.getElementById('flyerPreviewImg').src = e.target.result;
         document.getElementById('flyerPreview').style.display = 'block';
         document.getElementById('flyerUploadArea').style.display = 'none';
         document.getElementById('extractFlyerBtn').disabled = false;
