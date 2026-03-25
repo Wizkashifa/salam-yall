@@ -238,6 +238,8 @@
   <div class="toast" id="toast"></div>
 
   <script>
+    var ORG_NAME = 'The Light House Project';
+    var ORG_PATH = '/api/portal/' + encodeURIComponent(ORG_NAME);
     var adminToken = localStorage.getItem('lighthouse_token') || '';
     var flyerBase64 = null;
     var flyerMime = null;
@@ -249,7 +251,7 @@
       var pw = document.getElementById('loginPassword').value;
       if (!pw) return;
       try {
-        var res = await fetch('/api/lighthouse/login', {
+        var res = await fetch(ORG_PATH + '/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ password: pw }),
@@ -269,7 +271,7 @@
 
     async function verifyToken() {
       try {
-        var res = await fetch('/api/lighthouse/verify', {
+        var res = await fetch(ORG_PATH + '/verify', {
           headers: { 'Authorization': 'Bearer ' + adminToken },
         });
         if (res.ok) { showApp(); }
@@ -308,7 +310,7 @@
 
     async function loadFollowerCount() {
       try {
-        var res = await fetch('/api/lighthouse/followers/count', {
+        var res = await fetch(ORG_PATH + '/followers/count', {
           headers: { 'Authorization': 'Bearer ' + adminToken },
         });
         if (res.ok) {
@@ -320,7 +322,7 @@
 
     async function loadOrgProfile() {
       try {
-        var res = await fetch('/api/org-profiles/' + encodeURIComponent('The Light House Project'));
+        var res = await fetch('/api/org-profiles/' + encodeURIComponent(ORG_NAME));
         if (res.ok) {
           var data = await res.json();
           if (data) {
@@ -342,7 +344,7 @@
           website: document.getElementById('orgWebsite').value.trim(),
           address: document.getElementById('orgAddress').value.trim(),
         };
-        var res = await fetch('/api/lighthouse/organization', {
+        var res = await fetch(ORG_PATH + '/organization', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
           body: JSON.stringify(body),
@@ -366,7 +368,7 @@
       btn.disabled = true;
       btn.textContent = 'Sending...';
       try {
-        var res = await fetch('/api/lighthouse/push', {
+        var res = await fetch(ORG_PATH + '/push', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
           body: JSON.stringify({ title: title, body: body }),
@@ -443,7 +445,7 @@
       status.style.color = '#6EE7B7';
       status.textContent = 'Sending image to AI for analysis...';
       try {
-        var res = await fetch('/api/lighthouse/extract-flyer', {
+        var res = await fetch(ORG_PATH + '/extract-flyer', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
           body: JSON.stringify({ image: flyerBase64, mimeType: flyerMime }),
@@ -504,7 +506,7 @@
           imageMime: flyerMime,
           recurring: isRecurring,
         };
-        var res = await fetch('/api/lighthouse/events/publish', {
+        var res = await fetch(ORG_PATH + '/events/publish', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
           body: JSON.stringify(body),
@@ -536,7 +538,7 @@
       var list = document.getElementById('eventList');
       list.innerHTML = '<div class="empty-state">Loading events...</div>';
       try {
-        var res = await fetch('/api/lighthouse/events', {
+        var res = await fetch(ORG_PATH + '/events', {
           headers: { 'Authorization': 'Bearer ' + adminToken },
         });
         if (res.status === 401) { handleUnauthorized(); return; }
@@ -621,7 +623,7 @@
           endTime: endVal ? new Date(endVal).toISOString() : null,
           registrationUrl: document.getElementById('editRegUrl').value.trim(),
         };
-        var res = await fetch('/api/lighthouse/events/' + id, {
+        var res = await fetch(ORG_PATH + '/events/' + id, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
           body: JSON.stringify(body),
@@ -642,7 +644,7 @@
     async function deleteEvent(id) {
       if (!confirm('Are you sure you want to delete this event?')) return;
       try {
-        var res = await fetch('/api/lighthouse/events/' + id, {
+        var res = await fetch(ORG_PATH + '/events/' + id, {
           method: 'DELETE',
           headers: { 'Authorization': 'Bearer ' + adminToken },
         });
