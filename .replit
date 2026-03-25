@@ -80,6 +80,7 @@ ensurePreviewReachable = "/status"
 GOOGLE_PLACES_API_KEY = "AIzaSyB2yLu46yXAX67_26P4seERWK94z7qzysU"
 APPLE_TEAM_ID = "Z6J4227VXQ"
 ADMIN_KEY = "password"
+IAR_ADMIN_KEY = "nihalabbu"
 
 [userenv.production]
 EXPO_PUBLIC_DOMAIN = "salamyall.net"
