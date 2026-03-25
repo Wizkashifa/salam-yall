@@ -346,7 +346,7 @@ const KNOWN_COORDINATES: Record<string, { lat: number; lng: number }> = {
   "Taleef Collective": { lat: 37.5484, lng: -121.9886 },
   "Roots DFW": { lat: 32.9857, lng: -96.7502 },
   "Roots Community": { lat: 32.9857, lng: -96.7502 },
-  "NC State Fairgrounds": { lat: 35.7847, lng: -78.6533 },
+  "NC State Fairgrounds": { lat: 35.7939, lng: -78.7117 },
 };
 
 function resolveCoordinates(organizer: string, location: string): { latitude: number | null; longitude: number | null } {
