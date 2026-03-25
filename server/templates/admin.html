@@ -338,15 +338,21 @@
       </div>
 
       <div class="section">
-        <div class="section-title"><span class="icon">🗓️</span> Community Events (Published)</div>
-        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Events you've published via the flyer scanner. These appear in the app alongside Google Calendar events.</p>
+        <div class="section-title"><span class="icon">🗓️</span> All Events</div>
+        <p style="font-size:12px;color:#6B7280;margin-bottom:10px;">All events in the app. Search, filter by organizer, or browse by page.</p>
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+          <input type="text" id="eventSearchInput" placeholder="Search events..." style="flex:1;min-width:150px;" oninput="filterAndRenderEvents()">
+          <select id="eventOrgFilter" style="background:#1E1E1E;color:#F5F5F5;border:1px solid #333;border-radius:8px;padding:8px 12px;font-size:13px;min-width:140px;" onchange="filterAndRenderEvents()">
+            <option value="">All Organizers</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
+          <span id="eventCountLabel" style="font-size:12px;color:#6B7280;flex:1;"></span>
+          <button class="btn btn-sm" onclick="eventPage=Math.max(0,eventPage-1);renderEventPage()" id="eventPrevBtn" style="background:#1E1E1E;color:#9CA3AF;padding:4px 10px;">Prev</button>
+          <span id="eventPageLabel" style="font-size:12px;color:#9CA3AF;"></span>
+          <button class="btn btn-sm" onclick="eventPage++;renderEventPage()" id="eventNextBtn" style="background:#1E1E1E;color:#9CA3AF;padding:4px 10px;">Next</button>
+        </div>
         <div id="communityEventList"><div class="loading">Loading...</div></div>
-      </div>
-
-      <div class="section">
-        <div class="section-title"><span class="icon">📅</span> Google Calendar Events</div>
-        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Events synced from Google Calendar. Edit an event to override its details — overrides persist across syncs.</p>
-        <div id="eventList"><div class="loading">Loading...</div></div>
       </div>
     </div>
 
@@ -884,7 +890,6 @@
           loadTickers();
           loadBusinesses('pending');
           loadJumuah();
-          loadEvents();
           loadCommunityEvents();
           loadCommunityGoal();
           loadJzMasjids();
@@ -1588,7 +1593,6 @@
         status.style.color = '#10B981';
         status.textContent = 'Done! Imported ' + data.imported + ' events, skipped ' + data.skipped + ' duplicates.';
         showToast('Imported ' + data.imported + ' events from Google Calendar');
-        loadEvents();
         loadCommunityEvents();
       } catch(e) {
         status.style.color = '#F87171';
@@ -1599,42 +1603,7 @@
       }
     }
 
-    async function loadEvents() {
-      const list = document.getElementById('eventList');
-      list.innerHTML = '<div class="loading">Loading...</div>';
-      try {
-        const res = await fetch('/api/admin/events', {
-          headers: { 'Authorization': 'Bearer ' + adminToken },
-        });
-        if (res.status === 401) { handleUnauthorized(); return; }
-        const events = await res.json();
-        cachedAdminEvents = events;
-        if (!events.length) {
-          list.innerHTML = '<div class="empty-state">No upcoming events</div>';
-          return;
-        }
-        list.innerHTML = '<ul class="message-list">' + events.map(e => {
-          const startDate = new Date(e.start);
-          const dateStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-          const overrideBadge = e.hasOverride ? '<span style="font-size:10px;padding:2px 6px;background:#2A2318;color:#D4A843;border-radius:4px;margin-left:6px;">OVERRIDE</span>' : '';
-          const org = e.organizer ? '<div style="font-size:11px;color:#6B7280;margin-top:2px;">' + escHtml(e.organizer) + '</div>' : '';
-          const loc = e.location ? '<div style="font-size:11px;color:#6B7280;">' + escHtml(e.location) + '</div>' : '';
-          return '<li class="message-item" style="flex-direction:column;gap:8px;">' +
-            '<div style="display:flex;align-items:flex-start;gap:12px;width:100%;">' +
-              '<span class="message-badge badge-event" style="white-space:nowrap;">' + dateStr + '</span>' +
-              '<div style="flex:1;">' +
-                '<div style="font-size:14px;font-weight:600;color:#F5F5F5;">' + escHtml(e.title) + overrideBadge + '</div>' +
-                org + loc +
-              '</div>' +
-            '</div>' +
-            '<div style="display:flex;gap:6px;">' +
-              '<button class="btn btn-gold btn-sm" onclick="openEventEditor(\'' + escHtml(e.id).replace(/'/g, "\\'") + '\')">Edit</button>' +
-              (e.hasOverride ? '<button class="btn btn-danger btn-sm" onclick="removeEventOverride(\'' + escHtml(e.id).replace(/'/g, "\\'") + '\')">Reset to Calendar</button>' : '') +
-            '</div>' +
-          '</li>';
-        }).join('') + '</ul>';
-      } catch { list.innerHTML = '<div class="empty-state">Failed to load events</div>'; }
-    }
+    async function loadEvents() { }
 
     function openEventEditor(eventId) {
       const event = cachedAdminEvents.find(e => e.id === eventId);
@@ -1679,7 +1648,7 @@
         if (res.ok) {
           showToast('Event override saved');
           closeEventEditor();
-          loadEvents();
+          loadCommunityEvents();
         } else {
           const data = await res.json();
           showToast(data.error || 'Failed to save', true);
@@ -1696,7 +1665,7 @@
         });
         if (res.ok) {
           showToast('Override removed');
-          loadEvents();
+          loadCommunityEvents();
         } else {
           showToast('Failed to remove override', true);
         }
@@ -1849,6 +1818,10 @@
 
     var cachedCommunityEvents = [];
 
+    var eventPage = 0;
+    var eventsPerPage = 15;
+    var filteredCommunityEvents = [];
+
     async function loadCommunityEvents() {
       var list = document.getElementById('communityEventList');
       list.innerHTML = '<div class="loading">Loading...</div>';
@@ -1859,31 +1832,69 @@
         if (res.status === 401) { handleUnauthorized(); return; }
         var events = await res.json();
         cachedCommunityEvents = events;
-        if (!events.length) {
-          list.innerHTML = '<div class="empty-state">No community events published yet</div>';
-          return;
-        }
-        list.innerHTML = '<ul class="message-list">' + events.map(function(e) {
-          var startDate = new Date(e.start_time);
-          var dateStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-          var org = e.organizer ? '<div style="font-size:11px;color:#6B7280;margin-top:2px;">' + escHtml(e.organizer) + '</div>' : '';
-          var loc = e.location ? '<div style="font-size:11px;color:#6B7280;">' + escHtml(e.location) + '</div>' : '';
-          var imgBadge = e.has_image ? '<span style="font-size:10px;padding:2px 6px;background:#1A2E22;color:#6EE7B7;border-radius:4px;margin-left:6px;">IMAGE</span>' : '';
-          return '<li class="message-item" style="flex-direction:column;gap:8px;">' +
-            '<div style="display:flex;align-items:flex-start;gap:12px;width:100%;">' +
-              '<span class="message-badge badge-event" style="white-space:nowrap;">' + dateStr + '</span>' +
-              '<div style="flex:1;">' +
-                '<div style="font-size:14px;font-weight:600;color:#F5F5F5;">' + escHtml(e.title) + imgBadge + '</div>' +
-                org + loc +
-              '</div>' +
-            '</div>' +
-            '<div style="display:flex;gap:6px;">' +
-              '<button class="btn btn-gold btn-sm" onclick="openCommunityEventEditor(' + e.id + ')" style="margin-right:6px;">Edit</button>' +
-              '<button class="btn btn-danger btn-sm" onclick="deleteCommunityEvent(' + e.id + ')">Delete</button>' +
-            '</div>' +
-          '</li>';
-        }).join('') + '</ul>';
+        var orgFilter = document.getElementById('eventOrgFilter');
+        var orgs = [...new Set(events.map(function(e) { return e.organizer || 'Unknown'; }).filter(Boolean))].sort();
+        var currentVal = orgFilter.value;
+        orgFilter.innerHTML = '<option value="">All Organizers (' + events.length + ')</option>' + orgs.map(function(o) {
+          var cnt = events.filter(function(e) { return (e.organizer || 'Unknown') === o; }).length;
+          return '<option value="' + escHtml(o) + '">' + escHtml(o) + ' (' + cnt + ')</option>';
+        }).join('');
+        orgFilter.value = currentVal;
+        filterAndRenderEvents();
       } catch { list.innerHTML = '<div class="empty-state">Failed to load community events</div>'; }
+    }
+
+    function filterAndRenderEvents() {
+      var search = (document.getElementById('eventSearchInput').value || '').toLowerCase().trim();
+      var orgVal = document.getElementById('eventOrgFilter').value;
+      filteredCommunityEvents = cachedCommunityEvents.filter(function(e) {
+        if (orgVal && (e.organizer || 'Unknown') !== orgVal) return false;
+        if (search) {
+          var hay = ((e.title || '') + ' ' + (e.organizer || '') + ' ' + (e.location || '')).toLowerCase();
+          if (!hay.includes(search)) return false;
+        }
+        return true;
+      });
+      eventPage = 0;
+      renderEventPage();
+    }
+
+    function renderEventPage() {
+      var list = document.getElementById('communityEventList');
+      var total = filteredCommunityEvents.length;
+      var totalPages = Math.max(1, Math.ceil(total / eventsPerPage));
+      if (eventPage >= totalPages) eventPage = totalPages - 1;
+      if (eventPage < 0) eventPage = 0;
+      document.getElementById('eventCountLabel').textContent = total + ' event' + (total !== 1 ? 's' : '');
+      document.getElementById('eventPageLabel').textContent = (eventPage + 1) + ' / ' + totalPages;
+      document.getElementById('eventPrevBtn').disabled = eventPage === 0;
+      document.getElementById('eventNextBtn').disabled = eventPage >= totalPages - 1;
+      var start = eventPage * eventsPerPage;
+      var pageEvents = filteredCommunityEvents.slice(start, start + eventsPerPage);
+      if (!total) {
+        list.innerHTML = '<div class="empty-state">No events match your filters</div>';
+        return;
+      }
+      list.innerHTML = '<ul class="message-list">' + pageEvents.map(function(e) {
+        var startDate = new Date(e.start_time);
+        var dateStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+        var org = e.organizer ? '<div style="font-size:11px;color:#6B7280;margin-top:2px;">' + escHtml(e.organizer) + '</div>' : '';
+        var loc = e.location ? '<div style="font-size:11px;color:#6B7280;">' + escHtml(e.location) + '</div>' : '';
+        var imgBadge = e.has_image ? '<span style="font-size:10px;padding:2px 6px;background:#1A2E22;color:#6EE7B7;border-radius:4px;margin-left:6px;">IMAGE</span>' : '';
+        return '<li class="message-item" style="flex-direction:column;gap:8px;">' +
+          '<div style="display:flex;align-items:flex-start;gap:12px;width:100%;">' +
+            '<span class="message-badge badge-event" style="white-space:nowrap;">' + dateStr + '</span>' +
+            '<div style="flex:1;">' +
+              '<div style="font-size:14px;font-weight:600;color:#F5F5F5;">' + escHtml(e.title) + imgBadge + '</div>' +
+              org + loc +
+            '</div>' +
+          '</div>' +
+          '<div style="display:flex;gap:6px;">' +
+            '<button class="btn btn-gold btn-sm" onclick="openCommunityEventEditor(' + e.id + ')" style="margin-right:6px;">Edit</button>' +
+            '<button class="btn btn-danger btn-sm" onclick="deleteCommunityEvent(' + e.id + ')">Delete</button>' +
+          '</div>' +
+        '</li>';
+      }).join('') + '</ul>';
     }
 
     async function deleteCommunityEvent(id) {
@@ -2969,7 +2980,6 @@
             loadTickers();
             loadBusinesses('pending');
             loadJumuah();
-            loadEvents();
             loadCommunityEvents();
             loadCommunityGoal();
             loadJzMasjids();
