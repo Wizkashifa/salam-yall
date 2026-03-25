@@ -32,7 +32,6 @@ import { GlassModalContainer } from "@/components/GlassModal";
 import { GlassHeader } from "@/components/GlassHeader";
 import { useSettings } from "@/lib/settings-context";
 import { useAuth } from "@/lib/auth-context";
-import { apiRequest } from "@/lib/query-client";
 import { registerPushToken } from "@/lib/push-utils";
 import {
   getPrayerTimes,
