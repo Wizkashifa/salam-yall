@@ -356,6 +356,27 @@
       </div>
 
       <div class="section">
+        <div class="section-title"><span class="icon">🖼️</span> Logo</div>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Upload your organization's logo. It will appear in the Salam Y'all app directory and event listings.</p>
+        <div id="logoPreviewArea" style="margin-bottom:14px;text-align:center;">
+          <div id="logoCurrentPreview" style="display:none;margin-bottom:10px;">
+            <img id="logoCurrentImg" style="max-width:120px;max-height:120px;border-radius:12px;border:1px solid var(--border);">
+          </div>
+          <div id="logoUploadBox" style="border:2px dashed var(--border);border-radius:12px;padding:20px;cursor:pointer;transition:border-color 0.2s;" onclick="document.getElementById('logoFileInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--gold)';" ondragleave="this.style.borderColor='var(--border)';" ondrop="handleLogoDrop(event)">
+            <div style="font-size:24px;margin-bottom:6px;">🖼️</div>
+            <div style="font-size:13px;color:var(--text-muted);">Drop a logo image here or click to upload</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">PNG, JPG, or WebP — square recommended</div>
+          </div>
+          <input type="file" id="logoFileInput" accept="image/png,image/jpeg,image/webp" style="display:none;" onchange="handleLogoSelect(event)">
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-primary" onclick="uploadLogo()" id="uploadLogoBtn" disabled style="flex:1;">Upload Logo</button>
+          <button class="btn" onclick="removeLogo()" id="removeLogoBtn" style="background:var(--card-bg);color:var(--text-muted);border:1px solid var(--border);">Remove</button>
+        </div>
+        <span id="logoStatus" style="font-size:12px;color:var(--text-muted);margin-top:6px;display:block;"></span>
+      </div>
+
+      <div class="section">
         <div class="section-title"><span class="icon">✏️</span> Edit Profile</div>
         <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Changes here will update how your organization appears in the Salam Y'all app's Community Directory.</p>
         <label>Description</label>
@@ -502,6 +523,73 @@
       }
     };
 
+    var pendingLogoData = null;
+    var pendingLogoMime = null;
+
+    function handleLogoDrop(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      document.getElementById('logoUploadBox').style.borderColor = 'var(--border)';
+      var file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) processLogoFile(file);
+    }
+    function handleLogoSelect(e) {
+      var file = e.target.files[0];
+      if (file) processLogoFile(file);
+    }
+    function processLogoFile(file) {
+      if (file.size > 5 * 1024 * 1024) { showToast('Logo must be under 5MB', true); return; }
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var base64 = e.target.result.split(',')[1];
+        pendingLogoData = base64;
+        pendingLogoMime = file.type;
+        var preview = document.getElementById('logoCurrentPreview');
+        document.getElementById('logoCurrentImg').src = e.target.result;
+        preview.style.display = 'block';
+        document.getElementById('uploadLogoBtn').disabled = false;
+        document.getElementById('logoStatus').textContent = 'Ready to upload: ' + file.name;
+      };
+      reader.readAsDataURL(file);
+    }
+    async function uploadLogo() {
+      if (!pendingLogoData) return;
+      var btn = document.getElementById('uploadLogoBtn');
+      btn.disabled = true; btn.textContent = 'Uploading...';
+      try {
+        var res = await fetch(ORG_PATH + '/logo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify({ image: pendingLogoData, imageMime: pendingLogoMime }),
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        if (res.ok) {
+          showToast('Logo uploaded successfully!');
+          document.getElementById('logoStatus').textContent = '';
+          pendingLogoData = null; pendingLogoMime = null;
+          btn.disabled = true;
+        } else { showToast('Failed to upload logo', true); }
+      } catch(e) { showToast('Connection error', true); }
+      finally { btn.textContent = 'Upload Logo'; }
+    }
+    async function removeLogo() {
+      if (!confirm('Remove the current logo?')) return;
+      try {
+        var res = await fetch(ORG_PATH + '/logo', {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + adminToken },
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        if (res.ok) {
+          showToast('Logo removed');
+          document.getElementById('logoCurrentPreview').style.display = 'none';
+          document.getElementById('logoStatus').textContent = '';
+          pendingLogoData = null; pendingLogoMime = null;
+          document.getElementById('uploadLogoBtn').disabled = true;
+        }
+      } catch(e) { showToast('Connection error', true); }
+    }
+
     async function loadOrgProfile() {
       try {
         var res = await fetch('/api/org-profiles/' + encodeURIComponent(ORG_NAME));
@@ -517,6 +605,10 @@
           document.getElementById('orgWebsite').value = currentProfile.website || defaults.website || '';
           document.getElementById('orgAddress').value = currentProfile.address || defaults.address || '';
           document.getElementById('orgDonationUrl').value = currentProfile.donation_url || '';
+          if (data && data.logo_url) {
+            document.getElementById('logoCurrentImg').src = data.logo_url;
+            document.getElementById('logoCurrentPreview').style.display = 'block';
+          }
           updateProfilePreview(currentProfile, defaults);
         }
       } catch(e) {}
