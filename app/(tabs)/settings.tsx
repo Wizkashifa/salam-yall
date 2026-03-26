@@ -203,18 +203,18 @@ export default function SettingsScreen() {
   const [badgeStates, setBadgeStates] = useState<BadgeState[]>([]);
   const [newBadgeKey, setNewBadgeKey] = useState<string | null>(null);
 
-  const { data: followedOrgs = [], refetch: refetchFollows } = useQuery<string[]>({
+  const { data: followedOrgsRaw, refetch: refetchFollows } = useQuery<{ follows: string[] }>({
     queryKey: ["/api/organizer-follows"],
     enabled: !!user,
     staleTime: 30 * 1000,
     queryFn: async () => {
       const baseUrl = getApiUrl();
       const res = await fetch(new URL("/api/organizer-follows", baseUrl).toString(), { headers: getAuthHeaders() });
-      if (!res.ok) return [];
-      const data = await res.json();
-      return data.follows || [];
+      if (!res.ok) return { follows: [] };
+      return res.json();
     },
   });
+  const followedOrgs: string[] = Array.isArray(followedOrgsRaw?.follows) ? followedOrgsRaw.follows : Array.isArray(followedOrgsRaw) ? followedOrgsRaw : [];
 
   const toggleFollow = async (organizer: string) => {
     if (!user) {
