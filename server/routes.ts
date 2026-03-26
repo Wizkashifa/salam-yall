@@ -6025,12 +6025,18 @@ Return ONLY the JSON object, no markdown, no explanation.`,
 
       const externalEventIds = [...new Set(unsent.filter(r => !r.event_id.startsWith("community_")).map(r => r.event_id))];
       const externalMap: Record<string, { title: string; start: string; location: string }> = {};
-      for (const eid of externalEventIds) {
-        const cached = cachedEvents.find(e => e.id === eid);
-        if (cached && cached.start) {
-          const startMs = new Date(cached.start).getTime();
-          if (startMs > now && startMs <= now + thirtyMin) {
-            externalMap[eid] = { title: cached.title, start: cached.start, location: cached.location || "" };
+      if (externalEventIds.length > 0) {
+        let allEvents = cachedEvents;
+        if (allEvents.length === 0) {
+          try { allEvents = await fetchAndCacheEvents(); } catch (e) {}
+        }
+        for (const eid of externalEventIds) {
+          const cached = allEvents.find(e => e.id === eid);
+          if (cached && cached.start) {
+            const startMs = new Date(cached.start).getTime();
+            if (startMs > now && startMs <= now + thirtyMin) {
+              externalMap[eid] = { title: cached.title, start: cached.start, location: cached.location || "" };
+            }
           }
         }
       }
