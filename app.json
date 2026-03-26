@@ -2,7 +2,7 @@
   "expo": {
     "name": "Salam Y'all",
     "slug": "salam-yall",
-    "version": "1.1.1",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "salamyall",
@@ -20,14 +20,14 @@
         "dark": "./assets/images/icon-dark.png",
         "tinted": "./assets/images/icon-tinted.png"
       },
-      "buildNumber": "4",
+      "buildNumber": "5",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "We need your location to calculate prayer times and find the nearest masjid."
       }
     },
     "android": {
       "package": "com.salamyall",
-      "versionCode": 4
+      "versionCode": 5
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
