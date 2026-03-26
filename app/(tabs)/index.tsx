@@ -1280,6 +1280,7 @@ export default function PrayerScreen() {
               const trackerKey = prayer.name as TrackerPrayerName;
               const status = todayLog[trackerKey] ?? 0;
               const isMadeUp = status === 3;
+              const isExcused = status === 4;
               const isMissedPast = status === 0 && isPast;
               const pillBg = status === 1
                 ? (isDark ? colors.gold + "20" : colors.gold + "15")
@@ -1287,10 +1288,23 @@ export default function PrayerScreen() {
                   ? (isDark ? colors.emerald + "25" : colors.emerald + "12")
                   : isMadeUp
                     ? (isDark ? colors.gold + "12" : colors.gold + "08")
-                    : isMissedPast
-                      ? (isDark ? "rgba(239,68,68,0.15)" : "rgba(239,68,68,0.08)")
-                      : undefined;
-              const specialColor = isMadeUp ? colors.emerald + "80" : isMissedPast ? "#EF4444" : null;
+                    : isExcused
+                      ? (isDark ? colors.surfaceSecondary + "30" : colors.surfaceSecondary + "20")
+                      : isMissedPast
+                        ? (isDark ? "rgba(239,68,68,0.15)" : "rgba(239,68,68,0.08)")
+                        : undefined;
+              const nameColor = status === 1 ? colors.gold
+                : status === 2 ? colors.emerald
+                : isMadeUp ? colors.emerald + "80"
+                : isExcused ? colors.textTertiary
+                : isMissedPast ? "#EF4444"
+                : isPast ? colors.textTertiary : colors.textSecondary;
+              const timeColor = status === 1 ? colors.gold
+                : status === 2 ? colors.emerald
+                : isMadeUp ? colors.emerald + "80"
+                : isExcused ? colors.textTertiary
+                : isMissedPast ? "#EF4444"
+                : isPast ? colors.textTertiary : colors.text;
               return (
                 <Pressable
                   key={prayer.name}
@@ -1303,13 +1317,13 @@ export default function PrayerScreen() {
                 >
                   <Text style={[
                     styles.prayerPillName,
-                    { color: specialColor ?? (isPast ? colors.textTertiary : colors.textSecondary) },
+                    { color: nameColor },
                   ]} allowFontScaling={false}>
                     {prayer.label}
                   </Text>
                   <Text style={[
                     styles.prayerPillTime,
-                    { color: specialColor ?? (isPast ? colors.textTertiary : colors.text) },
+                    { color: timeColor },
                   ]} allowFontScaling={false}>
                     {formatTime(prayer.time)}
                   </Text>
@@ -1337,6 +1351,7 @@ export default function PrayerScreen() {
                 const trackerKey = prayer.name as TrackerPrayerName;
                 const status = todayLog[trackerKey] ?? 0;
                 const isMadeUp = status === 3;
+                const isExcused = status === 4;
                 const isMissedPast = status === 0 && isPast;
                 const pillBg = status === 1
                   ? (isDark ? colors.gold + "20" : colors.gold + "15")
@@ -1344,10 +1359,23 @@ export default function PrayerScreen() {
                     ? (isDark ? colors.emerald + "25" : colors.emerald + "12")
                     : isMadeUp
                       ? (isDark ? colors.gold + "12" : colors.gold + "08")
-                      : isMissedPast
-                        ? (isDark ? "rgba(239,68,68,0.15)" : "rgba(239,68,68,0.08)")
-                        : undefined;
-                const specialColor = isMadeUp ? colors.emerald + "80" : isMissedPast ? "#EF4444" : null;
+                      : isExcused
+                        ? (isDark ? colors.surfaceSecondary + "30" : colors.surfaceSecondary + "20")
+                        : isMissedPast
+                          ? (isDark ? "rgba(239,68,68,0.15)" : "rgba(239,68,68,0.08)")
+                          : undefined;
+                const nameColor = status === 1 ? colors.gold
+                  : status === 2 ? colors.emerald
+                  : isMadeUp ? colors.emerald + "80"
+                  : isExcused ? colors.textTertiary
+                  : isMissedPast ? "#EF4444"
+                  : isPast ? colors.textTertiary : colors.textSecondary;
+                const timeColor = status === 1 ? colors.gold
+                  : status === 2 ? colors.emerald
+                  : isMadeUp ? colors.emerald + "80"
+                  : isExcused ? colors.textTertiary
+                  : isMissedPast ? "#EF4444"
+                  : isPast ? colors.textTertiary : colors.text;
                 const iqamaTime = activeIqama?.iqama?.[prayer.name as keyof typeof activeIqama.iqama];
                 return (
                   <Pressable
@@ -1361,13 +1389,13 @@ export default function PrayerScreen() {
                   >
                     <Text style={[
                       styles.prayerPillName,
-                      { color: specialColor ?? (isPast ? colors.textTertiary : colors.textSecondary) },
+                      { color: nameColor },
                     ]} allowFontScaling={false}>
                       {prayer.label}
                     </Text>
                     <Text style={[
                       styles.prayerPillTime,
-                      { color: specialColor ?? (isPast ? colors.textTertiary : colors.text) },
+                      { color: timeColor },
                     ]} allowFontScaling={false}>
                       {iqamaTime ? iqamaTime.replace(/^0/, "") : formatTime(prayer.time)}
                     </Text>
