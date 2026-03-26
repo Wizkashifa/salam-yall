@@ -5998,87 +5998,132 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     }
   }, 60000);
 
+  let eventReminderRunning = false;
   setInterval(async () => {
+    if (eventReminderRunning) return;
+    eventReminderRunning = true;
     try {
-      const { rows: unsent } = await pool.query(
-        `SELECT se.id AS saved_id, se.event_id, se.user_id, pt.token
-         FROM saved_events se
-         INNER JOIN push_tokens pt ON pt.user_id = se.user_id AND pt.token IS NOT NULL
-         WHERE se.reminder_sent = false`
-      );
-      if (unsent.length === 0) return;
-
-      const now = Date.now();
-      const thirtyMin = 30 * 60 * 1000;
-
-      const communityIds = unsent.filter(r => r.event_id.startsWith("community_")).map(r => parseInt(r.event_id.replace("community_", ""))).filter(n => Number.isInteger(n) && n > 0);
-      let communityMap: Record<number, { title: string; start_time: Date; location: string }> = {};
-      if (communityIds.length > 0) {
-        const { rows: ces } = await pool.query(
-          `SELECT id, title, start_time, location FROM community_events
-           WHERE id = ANY($1) AND status = 'approved'
-             AND start_time > NOW() AND start_time <= NOW() + INTERVAL '30 minutes'`,
-          [communityIds]
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        const { rows: claimed } = await client.query(
+          `UPDATE saved_events SET reminder_sent = true
+           WHERE id IN (
+             SELECT se.id FROM saved_events se
+             WHERE se.reminder_sent = false
+             FOR UPDATE SKIP LOCKED
+           )
+           RETURNING id AS saved_id, event_id, user_id`
         );
-        for (const ce of ces) communityMap[ce.id] = ce;
-      }
+        await client.query("COMMIT");
 
-      const externalEventIds = [...new Set(unsent.filter(r => !r.event_id.startsWith("community_")).map(r => r.event_id))];
-      const externalMap: Record<string, { title: string; start: string; location: string }> = {};
-      if (externalEventIds.length > 0) {
-        const allExternal: CachedEvent[] = [];
-        try {
-          const [roots, mcc, srvic, mca] = await Promise.allSettled([
+        if (claimed.length === 0) return;
+
+        const tokenRows = await pool.query(
+          `SELECT user_id, token FROM push_tokens WHERE user_id = ANY($1) AND token IS NOT NULL`,
+          [[...new Set(claimed.map(r => r.user_id))]]
+        );
+        const tokensByUser: Record<number, string[]> = {};
+        for (const t of tokenRows.rows) {
+          if (!tokensByUser[t.user_id]) tokensByUser[t.user_id] = [];
+          tokensByUser[t.user_id].push(t.token);
+        }
+
+        const now = Date.now();
+        const thirtyMin = 30 * 60 * 1000;
+
+        const communityIds = claimed.filter(r => r.event_id.startsWith("community_")).map(r => parseInt(r.event_id.replace("community_", ""))).filter(n => Number.isInteger(n) && n > 0);
+        let communityMap: Record<number, { title: string; start_time: Date; location: string }> = {};
+        if (communityIds.length > 0) {
+          const { rows: ces } = await pool.query(
+            `SELECT id, title, start_time, location FROM community_events
+             WHERE id = ANY($1) AND status = 'approved'
+               AND start_time > NOW() AND start_time <= NOW() + INTERVAL '30 minutes'`,
+            [communityIds]
+          );
+          for (const ce of ces) communityMap[ce.id] = ce;
+        }
+
+        const externalEventIds = [...new Set(claimed.filter(r => !r.event_id.startsWith("community_")).map(r => r.event_id))];
+        const externalMap: Record<string, { title: string; start: string; location: string }> = {};
+        if (externalEventIds.length > 0) {
+          const allExternal: CachedEvent[] = [];
+          const results = await Promise.allSettled([
             fetchRootsDfwEvents(), fetchMCCEastBayEvents(), fetchSRVICEvents(), fetchMCAEvents()
           ]);
-          for (const r of [roots, mcc, srvic, mca]) {
-            if (r.status === "fulfilled") allExternal.push(...r.value);
+          for (const r of results) {
+            if (r.status === "fulfilled") {
+              allExternal.push(...r.value);
+            } else {
+              console.warn("[Event Reminder] External feed fetch failed:", r.reason?.message || r.reason);
+            }
           }
-        } catch (e) {}
-        for (const eid of externalEventIds) {
-          const found = allExternal.find(e => e.id === eid);
-          if (found && found.start) {
-            const startMs = new Date(found.start).getTime();
-            if (startMs > now && startMs <= now + thirtyMin) {
-              externalMap[eid] = { title: found.title, start: found.start, location: found.location || "" };
+          for (const eid of externalEventIds) {
+            const found = allExternal.find(e => e.id === eid);
+            if (found && found.start) {
+              const startMs = new Date(found.start).getTime();
+              if (startMs > now && startMs <= now + thirtyMin) {
+                externalMap[eid] = { title: found.title, start: found.start, location: found.location || "" };
+              }
             }
           }
         }
-      }
 
-      const grouped: Record<string, { title: string; startTime: Date; location: string; eventId: string; tokens: string[]; savedIds: number[] }> = {};
-      for (const row of unsent) {
-        let eventInfo: { title: string; startTime: Date; location: string } | null = null;
-        if (row.event_id.startsWith("community_")) {
-          const numId = parseInt(row.event_id.replace("community_", ""));
-          const ce = communityMap[numId];
-          if (ce) eventInfo = { title: ce.title, startTime: new Date(ce.start_time), location: ce.location || "" };
-        } else {
-          const ext = externalMap[row.event_id];
-          if (ext) eventInfo = { title: ext.title, startTime: new Date(ext.start), location: ext.location };
+        const grouped: Record<string, { title: string; startTime: Date; location: string; eventId: string; tokens: string[]; savedIds: number[] }> = {};
+        for (const row of claimed) {
+          const userTokens = tokensByUser[row.user_id];
+          if (!userTokens || userTokens.length === 0) continue;
+
+          let eventInfo: { title: string; startTime: Date; location: string } | null = null;
+          if (row.event_id.startsWith("community_")) {
+            const numId = parseInt(row.event_id.replace("community_", ""));
+            const ce = communityMap[numId];
+            if (ce) eventInfo = { title: ce.title, startTime: new Date(ce.start_time), location: ce.location || "" };
+          } else {
+            const ext = externalMap[row.event_id];
+            if (ext) eventInfo = { title: ext.title, startTime: new Date(ext.start), location: ext.location };
+          }
+          if (!eventInfo) continue;
+
+          if (!grouped[row.event_id]) {
+            grouped[row.event_id] = { ...eventInfo, eventId: row.event_id, tokens: [], savedIds: [] };
+          }
+          for (const tok of userTokens) {
+            if (!grouped[row.event_id].tokens.includes(tok)) {
+              grouped[row.event_id].tokens.push(tok);
+            }
+          }
+          grouped[row.event_id].savedIds.push(row.saved_id);
         }
-        if (!eventInfo) continue;
 
-        if (!grouped[row.event_id]) {
-          grouped[row.event_id] = { ...eventInfo, eventId: row.event_id, tokens: [], savedIds: [] };
+        for (const eventId of Object.keys(grouped)) {
+          const g = grouped[eventId];
+          const isDfw = g.eventId.startsWith("roots_dfw_");
+          const isCalifornia = g.eventId.startsWith("mcc_eastbay_") || g.eventId.startsWith("srvic_") || g.eventId.startsWith("mca_");
+          const tz = isCalifornia ? "America/Los_Angeles" : isDfw ? "America/Chicago" : "America/New_York";
+          const timeStr = g.startTime.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: tz });
+          const body = `Starting at ${timeStr}${g.location ? ` — ${g.location}` : ""}`;
+          await sendPushToTokens(g.tokens, `📅 ${g.title}`, body, { type: "event", eventId: g.eventId });
+          console.log(`[Event Reminder] Sent 30-min reminder for "${g.title}" to ${g.tokens.length} user(s)`);
         }
-        grouped[row.event_id].tokens.push(row.token);
-        grouped[row.event_id].savedIds.push(row.saved_id);
-      }
 
-      for (const eventId of Object.keys(grouped)) {
-        const g = grouped[eventId];
-        const isDfw = g.eventId.startsWith("roots_dfw_");
-        const isCalifornia = g.eventId.startsWith("mcc_eastbay_") || g.eventId.startsWith("srvic_") || g.eventId.startsWith("mca_");
-        const tz = isCalifornia ? "America/Los_Angeles" : isDfw ? "America/Chicago" : "America/New_York";
-        const timeStr = g.startTime.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: tz });
-        const body = `Starting at ${timeStr}${g.location ? ` — ${g.location}` : ""}`;
-        await sendPushToTokens(g.tokens, `📅 ${g.title}`, body, { type: "event", eventId: g.eventId });
-        await pool.query("UPDATE saved_events SET reminder_sent = true WHERE id = ANY($1)", [g.savedIds]);
-        console.log(`[Event Reminder] Sent 30-min reminder for "${g.title}" to ${g.tokens.length} user(s)`);
+        const notDueIds = claimed.filter(row => {
+          if (row.event_id.startsWith("community_")) {
+            const numId = parseInt(row.event_id.replace("community_", ""));
+            return !communityMap[numId];
+          }
+          return !externalMap[row.event_id];
+        }).map(r => r.saved_id);
+        if (notDueIds.length > 0) {
+          await pool.query("UPDATE saved_events SET reminder_sent = false WHERE id = ANY($1)", [notDueIds]);
+        }
+      } finally {
+        client.release();
       }
     } catch (err: any) {
       console.error("[Event Reminder] Error:", err.message);
+    } finally {
+      eventReminderRunning = false;
     }
   }, 60000);
 
