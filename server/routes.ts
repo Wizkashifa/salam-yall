@@ -6000,35 +6000,59 @@ Return ONLY the JSON object, no markdown, no explanation.`,
 
   setInterval(async () => {
     try {
-      const { rows: upcoming } = await pool.query(
-        `SELECT se.id AS saved_id, se.event_id, se.user_id, ce.title, ce.start_time, ce.location,
-                pt.token
+      const { rows: unsent } = await pool.query(
+        `SELECT se.id AS saved_id, se.event_id, se.user_id, pt.token
          FROM saved_events se
          INNER JOIN push_tokens pt ON pt.user_id = se.user_id AND pt.token IS NOT NULL
-         INNER JOIN community_events ce ON se.event_id = 'community_' || ce.id::text
-         WHERE se.reminder_sent = false
-           AND ce.status = 'approved'
-           AND ce.start_time > NOW()
-           AND ce.start_time <= NOW() + INTERVAL '30 minutes'`
+         WHERE se.reminder_sent = false`
       );
+      if (unsent.length === 0) return;
 
-      if (upcoming.length === 0) return;
+      const now = Date.now();
+      const thirtyMin = 30 * 60 * 1000;
+
+      const communityIds = unsent.filter(r => r.event_id.startsWith("community_")).map(r => parseInt(r.event_id.replace("community_", "")));
+      let communityMap: Record<number, { title: string; start_time: Date; location: string }> = {};
+      if (communityIds.length > 0) {
+        const { rows: ces } = await pool.query(
+          `SELECT id, title, start_time, location FROM community_events
+           WHERE id = ANY($1) AND status = 'approved'
+             AND start_time > NOW() AND start_time <= NOW() + INTERVAL '30 minutes'`,
+          [communityIds]
+        );
+        for (const ce of ces) communityMap[ce.id] = ce;
+      }
+
+      const externalEventIds = [...new Set(unsent.filter(r => !r.event_id.startsWith("community_")).map(r => r.event_id))];
+      const externalMap: Record<string, { title: string; start: string; location: string }> = {};
+      for (const eid of externalEventIds) {
+        const cached = cachedEvents.find(e => e.id === eid);
+        if (cached && cached.start) {
+          const startMs = new Date(cached.start).getTime();
+          if (startMs > now && startMs <= now + thirtyMin) {
+            externalMap[eid] = { title: cached.title, start: cached.start, location: cached.location || "" };
+          }
+        }
+      }
 
       const grouped: Record<string, { title: string; startTime: Date; location: string; eventId: string; tokens: string[]; savedIds: number[] }> = {};
-      for (const row of upcoming) {
-        const key = row.event_id;
-        if (!grouped[key]) {
-          grouped[key] = {
-            title: row.title,
-            startTime: new Date(row.start_time),
-            location: row.location || "",
-            eventId: row.event_id,
-            tokens: [],
-            savedIds: [],
-          };
+      for (const row of unsent) {
+        let eventInfo: { title: string; startTime: Date; location: string } | null = null;
+        if (row.event_id.startsWith("community_")) {
+          const numId = parseInt(row.event_id.replace("community_", ""));
+          const ce = communityMap[numId];
+          if (ce) eventInfo = { title: ce.title, startTime: new Date(ce.start_time), location: ce.location || "" };
+        } else {
+          const ext = externalMap[row.event_id];
+          if (ext) eventInfo = { title: ext.title, startTime: new Date(ext.start), location: ext.location };
         }
-        grouped[key].tokens.push(row.token);
-        grouped[key].savedIds.push(row.saved_id);
+        if (!eventInfo) continue;
+
+        if (!grouped[row.event_id]) {
+          grouped[row.event_id] = { ...eventInfo, eventId: row.event_id, tokens: [], savedIds: [] };
+        }
+        grouped[row.event_id].tokens.push(row.token);
+        grouped[row.event_id].savedIds.push(row.saved_id);
       }
 
       for (const eventId of Object.keys(grouped)) {
