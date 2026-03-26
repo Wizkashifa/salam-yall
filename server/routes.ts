@@ -6062,68 +6062,65 @@ Return ONLY the JSON object, no markdown, no explanation.`,
       });
       if (dueRows.length === 0) return;
 
-      const dueIds = dueRows.map(r => r.saved_id);
-      const client = await pool.connect();
-      try {
-        await client.query("BEGIN");
-        const { rows: claimed } = await client.query(
-          `UPDATE saved_events SET reminder_sent = true
-           WHERE id = ANY($1) AND reminder_sent = false
-           RETURNING id AS saved_id, event_id, user_id`,
-          [dueIds]
-        );
-        await client.query("COMMIT");
-        if (claimed.length === 0) return;
+      const tokenRows = await pool.query(
+        `SELECT user_id, token FROM push_tokens WHERE user_id = ANY($1) AND token IS NOT NULL`,
+        [[...new Set(dueRows.map(r => r.user_id))]]
+      );
+      const tokensByUser: Record<number, string[]> = {};
+      for (const t of tokenRows.rows) {
+        if (!tokensByUser[t.user_id]) tokensByUser[t.user_id] = [];
+        tokensByUser[t.user_id].push(t.token);
+      }
 
-        const tokenRows = await pool.query(
-          `SELECT user_id, token FROM push_tokens WHERE user_id = ANY($1) AND token IS NOT NULL`,
-          [[...new Set(claimed.map(r => r.user_id))]]
-        );
-        const tokensByUser: Record<number, string[]> = {};
-        for (const t of tokenRows.rows) {
-          if (!tokensByUser[t.user_id]) tokensByUser[t.user_id] = [];
-          tokensByUser[t.user_id].push(t.token);
+      const grouped: Record<string, { title: string; startTime: Date; location: string; eventId: string; tokens: string[]; savedIds: number[] }> = {};
+      for (const row of dueRows) {
+        const userTokens = tokensByUser[row.user_id];
+        if (!userTokens || userTokens.length === 0) continue;
+
+        let eventInfo: { title: string; startTime: Date; location: string } | null = null;
+        if (row.event_id.startsWith("community_")) {
+          const numId = parseInt(row.event_id.replace("community_", ""));
+          const ce = communityMap[numId];
+          if (ce) eventInfo = { title: ce.title, startTime: new Date(ce.start_time), location: ce.location || "" };
+        } else {
+          const ext = externalMap[row.event_id];
+          if (ext) eventInfo = { title: ext.title, startTime: new Date(ext.start), location: ext.location };
         }
+        if (!eventInfo) continue;
 
-        const grouped: Record<string, { title: string; startTime: Date; location: string; eventId: string; tokens: string[]; savedIds: number[] }> = {};
-        for (const row of claimed) {
-          const userTokens = tokensByUser[row.user_id];
-          if (!userTokens || userTokens.length === 0) continue;
-
-          let eventInfo: { title: string; startTime: Date; location: string } | null = null;
-          if (row.event_id.startsWith("community_")) {
-            const numId = parseInt(row.event_id.replace("community_", ""));
-            const ce = communityMap[numId];
-            if (ce) eventInfo = { title: ce.title, startTime: new Date(ce.start_time), location: ce.location || "" };
-          } else {
-            const ext = externalMap[row.event_id];
-            if (ext) eventInfo = { title: ext.title, startTime: new Date(ext.start), location: ext.location };
-          }
-          if (!eventInfo) continue;
-
-          if (!grouped[row.event_id]) {
-            grouped[row.event_id] = { ...eventInfo, eventId: row.event_id, tokens: [], savedIds: [] };
-          }
-          for (const tok of userTokens) {
-            if (!grouped[row.event_id].tokens.includes(tok)) {
-              grouped[row.event_id].tokens.push(tok);
-            }
-          }
-          grouped[row.event_id].savedIds.push(row.saved_id);
+        if (!grouped[row.event_id]) {
+          grouped[row.event_id] = { ...eventInfo, eventId: row.event_id, tokens: [], savedIds: [] };
         }
+        for (const tok of userTokens) {
+          if (!grouped[row.event_id].tokens.includes(tok)) {
+            grouped[row.event_id].tokens.push(tok);
+          }
+        }
+        grouped[row.event_id].savedIds.push(row.saved_id);
+      }
 
-        for (const eventId of Object.keys(grouped)) {
-          const g = grouped[eventId];
-          const isDfw = g.eventId.startsWith("roots_dfw_");
-          const isCalifornia = g.eventId.startsWith("mcc_eastbay_") || g.eventId.startsWith("srvic_") || g.eventId.startsWith("mca_");
-          const tz = isCalifornia ? "America/Los_Angeles" : isDfw ? "America/Chicago" : "America/New_York";
-          const timeStr = g.startTime.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: tz });
-          const body = `Starting at ${timeStr}${g.location ? ` — ${g.location}` : ""}`;
+      const sentIds: number[] = [];
+      for (const eventId of Object.keys(grouped)) {
+        const g = grouped[eventId];
+        const isDfw = g.eventId.startsWith("roots_dfw_");
+        const isCalifornia = g.eventId.startsWith("mcc_eastbay_") || g.eventId.startsWith("srvic_") || g.eventId.startsWith("mca_");
+        const tz = isCalifornia ? "America/Los_Angeles" : isDfw ? "America/Chicago" : "America/New_York";
+        const timeStr = g.startTime.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: tz });
+        const body = `Starting at ${timeStr}${g.location ? ` — ${g.location}` : ""}`;
+        try {
           await sendPushToTokens(g.tokens, `📅 ${g.title}`, body, { type: "event", eventId: g.eventId });
+          sentIds.push(...g.savedIds);
           console.log(`[Event Reminder] Sent 30-min reminder for "${g.title}" to ${g.tokens.length} user(s)`);
+        } catch (sendErr: any) {
+          console.error(`[Event Reminder] Failed to send for "${g.title}":`, sendErr.message);
         }
-      } finally {
-        client.release();
+      }
+
+      if (sentIds.length > 0) {
+        await pool.query(
+          "UPDATE saved_events SET reminder_sent = true WHERE id = ANY($1) AND reminder_sent = false",
+          [sentIds]
+        );
       }
     } catch (err: any) {
       console.error("[Event Reminder] Error:", err.message);
