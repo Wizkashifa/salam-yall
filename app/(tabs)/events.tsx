@@ -20,7 +20,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import * as Notifications from "expo-notifications";
 import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
 import { GlassHeader } from "@/components/GlassHeader";
@@ -345,33 +344,6 @@ const calStyles = StyleSheet.create({
 
 const BOOKMARK_DISCLAIMER_KEY = "event_bookmark_disclaimer_shown";
 
-async function scheduleEventReminder(event: CalendarEvent) {
-  const eventStart = new Date(event.start);
-  const reminderTime = new Date(eventStart.getTime() - 60 * 60 * 1000);
-  if (reminderTime <= new Date()) return;
-  try {
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: event.title,
-        body: `Starting in 1 hour${event.location ? ` at ${event.location}` : ""}`,
-        data: { type: "event", eventId: event.id },
-        sound: true,
-      },
-      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: reminderTime },
-    });
-  } catch {}
-}
-
-async function cancelEventReminder(eventId: string) {
-  try {
-    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-    for (const notif of scheduled) {
-      if (notif.content.data?.eventId === eventId) {
-        await Notifications.cancelScheduledNotificationAsync(notif.identifier);
-      }
-    }
-  } catch {}
-}
 
 function OrganizerFollowButton({ organizer }: { organizer: string }) {
   const { colors } = useTheme();
@@ -623,14 +595,12 @@ export default function EventsScreen() {
 
     if (alreadySaved) {
       await apiRequest("DELETE", `/api/saved-events/${encodeURIComponent(event.id)}`, undefined, headers);
-      cancelEventReminder(event.id);
       queryClient.invalidateQueries({ queryKey: ["/api/saved-events"] });
       trackEvent("event_unsaved", { title: event.title });
     } else {
       const disclaimerShown = await AsyncStorage.getItem(BOOKMARK_DISCLAIMER_KEY);
       const doSave = async () => {
         await apiRequest("POST", "/api/saved-events", { eventId: event.id }, headers);
-        scheduleEventReminder(event);
         queryClient.invalidateQueries({ queryKey: ["/api/saved-events"] });
         trackEvent("event_saved", { title: event.title });
 

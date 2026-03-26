@@ -6019,7 +6019,7 @@ Return ONLY the JSON object, no markdown, no explanation.`,
       if (unsent.length === 0) return;
 
       const now = Date.now();
-      const thirtyMin = 30 * 60 * 1000;
+      const oneHour = 60 * 60 * 1000;
 
       const communityIds = unsent
         .filter(r => r.event_id.startsWith("community_"))
@@ -6030,7 +6030,7 @@ Return ONLY the JSON object, no markdown, no explanation.`,
         const { rows: ces } = await pool.query(
           `SELECT id, title, start_time, location FROM community_events
            WHERE id = ANY($1) AND status = 'approved'
-             AND start_time > NOW() AND start_time <= NOW() + INTERVAL '30 minutes'`,
+             AND start_time > NOW() AND start_time <= NOW() + INTERVAL '1 hour'`,
           [communityIds]
         );
         for (const ce of ces) communityMap[ce.id] = ce;
@@ -6055,7 +6055,7 @@ Return ONLY the JSON object, no markdown, no explanation.`,
           const found = allExternal.find(e => e.id === eid);
           if (found && found.start) {
             const startMs = new Date(found.start).getTime();
-            if (startMs > now && startMs <= now + thirtyMin) {
+            if (startMs > now && startMs <= now + oneHour) {
               externalMap[eid] = { title: found.title, start: found.start, location: found.location || "" };
             } else if (startMs < now - 60 * 60 * 1000) {
               const pastRows = unsent.filter(r => r.event_id === eid);
