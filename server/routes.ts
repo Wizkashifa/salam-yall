@@ -6068,7 +6068,10 @@ Return ONLY the JSON object, no markdown, no explanation.`,
 
       for (const eventId of Object.keys(grouped)) {
         const g = grouped[eventId];
-        const timeStr = g.startTime.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" });
+        const isDfw = g.eventId.startsWith("roots_dfw_");
+        const isCalifornia = g.eventId.startsWith("mcc_eastbay_") || g.eventId.startsWith("srvic_") || g.eventId.startsWith("mca_");
+        const tz = isCalifornia ? "America/Los_Angeles" : isDfw ? "America/Chicago" : "America/New_York";
+        const timeStr = g.startTime.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: tz });
         const body = `Starting at ${timeStr}${g.location ? ` — ${g.location}` : ""}`;
         await sendPushToTokens(g.tokens, `📅 ${g.title}`, body, { type: "event", eventId: g.eventId });
         await pool.query("UPDATE saved_events SET reminder_sent = true WHERE id = ANY($1)", [g.savedIds]);
