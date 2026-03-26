@@ -6108,9 +6108,13 @@ Return ONLY the JSON object, no markdown, no explanation.`,
         const timeStr = g.startTime.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: tz });
         const body = `Starting at ${timeStr}${g.location ? ` — ${g.location}` : ""}`;
         try {
-          await sendPushToTokens(g.tokens, `📅 ${g.title}`, body, { type: "event", eventId: g.eventId });
-          sentIds.push(...g.savedIds);
-          console.log(`[Event Reminder] Sent 30-min reminder for "${g.title}" to ${g.tokens.length} user(s)`);
+          const result = await sendPushToTokens(g.tokens, `📅 ${g.title}`, body, { type: "event", eventId: g.eventId });
+          if (result.sent > 0) {
+            sentIds.push(...g.savedIds);
+            console.log(`[Event Reminder] Sent 30-min reminder for "${g.title}" to ${result.sent}/${result.total} user(s)`);
+          } else {
+            console.warn(`[Event Reminder] Push delivery failed for "${g.title}" (0/${result.total} sent), will retry`);
+          }
         } catch (sendErr: any) {
           console.error(`[Event Reminder] Failed to send for "${g.title}":`, sendErr.message);
         }
