@@ -1422,8 +1422,9 @@ export default function SettingsScreen() {
                           let dotColor = colors.surfaceSecondary;
                           if (status === 1) dotColor = colors.emerald;
                           else if (status === 2) dotColor = colors.gold;
-                          else if (status === 3) dotColor = "#EF4444";
-                          else if (status === 4) dotColor = colors.emerald + "50";
+                          else if (status === 3) dotColor = colors.emerald + "80";
+                          else if (status === 4) dotColor = colors.surfaceSecondary;
+                          else if (status === 0) dotColor = "#EF4444";
                           return (
                             <View
                               key={di}
@@ -1446,9 +1447,9 @@ export default function SettingsScreen() {
                   {[
                     { color: colors.emerald, label: "On time" },
                     { color: colors.gold, label: "Masjid" },
-                    { color: "#EF4444", label: "Made up" },
-                    { color: colors.emerald + "50", label: "Excused" },
-                    { color: colors.surfaceSecondary, label: "Missed" },
+                    { color: colors.emerald + "80", label: "Made up" },
+                    { color: colors.surfaceSecondary, label: "Excused" },
+                    { color: "#EF4444", label: "Missed" },
                   ].map(l => (
                     <View key={l.label} style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
                       <View style={{ width: 6, height: 6, borderRadius: 1.5, backgroundColor: l.color }} />
@@ -1566,9 +1567,9 @@ export default function SettingsScreen() {
                     <View style={styles.calDots}>
                       {log ? PRAYER_NAMES.map(p => {
                         const s = log[p];
-                        if (s === 0) return <View key={p} style={[styles.calDot, { backgroundColor: "transparent" }]} />;
-                        if (s === 4) return <View key={p} style={[styles.calDot, { backgroundColor: colors.emerald + "50" }]} />;
-                        return <View key={p} style={[styles.calDot, { backgroundColor: s === 1 ? colors.emerald : s === 3 ? "#EF4444" : colors.gold }]} />;
+                        if (s === 0) return <View key={p} style={[styles.calDot, { backgroundColor: "#EF4444" }]} />;
+                        if (s === 4) return <View key={p} style={[styles.calDot, { backgroundColor: "transparent" }]} />;
+                        return <View key={p} style={[styles.calDot, { backgroundColor: s === 1 ? colors.emerald : s === 3 ? colors.emerald + "80" : colors.gold }]} />;
                       }) : isMissedFast ? (
                         <View style={[styles.calDot, { backgroundColor: "#EF4444", width: 5, height: 5, borderRadius: 2.5 }]} />
                       ) : <View style={{ height: 5 }} />}
@@ -1587,7 +1588,7 @@ export default function SettingsScreen() {
                 {PRAYER_NAMES.map(p => {
                   const status = selectedLog ? selectedLog[p] : 0;
                   const statusLabel = status === 0 ? "Not tracked" : status === 1 ? "On time" : status === 2 ? "At masjid" : status === 3 ? "Made up" : "Excused";
-                  const statusColor = status === 0 ? colors.textTertiary : status === 1 ? colors.emerald : status === 2 ? colors.gold : status === 3 ? "#EF4444" : colors.emerald + "50";
+                  const statusColor = status === 0 ? "#EF4444" : status === 1 ? colors.emerald : status === 2 ? colors.gold : status === 3 ? colors.emerald + "80" : colors.textTertiary;
                   return (
                     <Pressable
                       key={p}
@@ -1632,8 +1633,8 @@ export default function SettingsScreen() {
               {[
                 { color: colors.emerald, label: "On time" },
                 { color: colors.gold, label: "At masjid" },
-                { color: "#EF4444", label: "Made up" },
-                { color: colors.emerald + "50", label: isRamadan ? "Excused / Missed fast" : "Excused" },
+                { color: colors.emerald + "80", label: "Made up" },
+                { color: colors.textTertiary, label: isRamadan ? "Excused / Missed fast" : "Excused" },
               ].map(l => (
                 <View key={l.label} style={styles.calLegendItem}>
                   <View style={[styles.calLegendDot, { backgroundColor: l.color }]} />
@@ -2298,8 +2299,9 @@ export default function SettingsScreen() {
                             let dotColor = colors.surfaceSecondary;
                             if (status === 1) dotColor = colors.emerald;
                             else if (status === 2) dotColor = colors.gold;
-                            else if (status === 3) dotColor = "#EF4444";
-                            else if (status === 4) dotColor = colors.emerald + "50";
+                            else if (status === 3) dotColor = colors.emerald + "80";
+                            else if (status === 4) dotColor = colors.surfaceSecondary;
+                            else if (status === 0) dotColor = "#EF4444";
                             return <View key={di} style={{ flex: 1, aspectRatio: 1, maxWidth: clampedDot2, maxHeight: clampedDot2, borderRadius: 1.5, backgroundColor: dotColor }} />;
                           })}
                         </View>
@@ -2317,9 +2319,9 @@ export default function SettingsScreen() {
                       {[
                         { color: colors.emerald, label: "On time" },
                         { color: colors.gold, label: "Masjid / Quran" },
-                        { color: "#EF4444", label: "Made up" },
-                        { color: colors.emerald + "50", label: "Excused" },
-                        { color: colors.surfaceSecondary, label: "Missed" },
+                        { color: colors.emerald + "80", label: "Made up" },
+                        { color: colors.surfaceSecondary, label: "Excused" },
+                        { color: "#EF4444", label: "Missed" },
                       ].map(l => (
                         <View key={l.label} style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
                           <View style={{ width: 6, height: 6, borderRadius: 1.5, backgroundColor: l.color }} />

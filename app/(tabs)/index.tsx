@@ -1279,18 +1279,18 @@ export default function PrayerScreen() {
               const isPast = prayer.time < now && !isNext;
               const trackerKey = prayer.name as TrackerPrayerName;
               const status = todayLog[trackerKey] ?? 0;
-              const isExcused = status === 4;
               const isMadeUp = status === 3;
+              const isMissedPast = status === 0 && isPast;
               const pillBg = status === 1
                 ? (isDark ? colors.gold + "20" : colors.gold + "15")
                 : status === 2
                   ? (isDark ? colors.emerald + "25" : colors.emerald + "12")
                   : isMadeUp
-                    ? (isDark ? "rgba(239,68,68,0.15)" : "rgba(239,68,68,0.08)")
-                    : isExcused
-                      ? (isDark ? colors.gold + "12" : colors.gold + "08")
+                    ? (isDark ? colors.gold + "12" : colors.gold + "08")
+                    : isMissedPast
+                      ? (isDark ? "rgba(239,68,68,0.15)" : "rgba(239,68,68,0.08)")
                       : undefined;
-              const specialColor = isMadeUp ? "#EF4444" : isExcused ? colors.emerald + "50" : null;
+              const specialColor = isMadeUp ? colors.emerald + "80" : isMissedPast ? "#EF4444" : null;
               return (
                 <Pressable
                   key={prayer.name}
@@ -1336,18 +1336,18 @@ export default function PrayerScreen() {
                 const isPast = prayer.time < now && !isNext;
                 const trackerKey = prayer.name as TrackerPrayerName;
                 const status = todayLog[trackerKey] ?? 0;
-                const isExcused = status === 4;
                 const isMadeUp = status === 3;
+                const isMissedPast = status === 0 && isPast;
                 const pillBg = status === 1
                   ? (isDark ? colors.gold + "20" : colors.gold + "15")
                   : status === 2
                     ? (isDark ? colors.emerald + "25" : colors.emerald + "12")
                     : isMadeUp
-                      ? (isDark ? "rgba(239,68,68,0.15)" : "rgba(239,68,68,0.08)")
-                      : isExcused
-                        ? (isDark ? colors.gold + "12" : colors.gold + "08")
+                      ? (isDark ? colors.gold + "12" : colors.gold + "08")
+                      : isMissedPast
+                        ? (isDark ? "rgba(239,68,68,0.15)" : "rgba(239,68,68,0.08)")
                         : undefined;
-                const specialColor = isMadeUp ? "#EF4444" : isExcused ? colors.emerald + "50" : null;
+                const specialColor = isMadeUp ? colors.emerald + "80" : isMissedPast ? "#EF4444" : null;
                 const iqamaTime = activeIqama?.iqama?.[prayer.name as keyof typeof activeIqama.iqama];
                 return (
                   <Pressable
