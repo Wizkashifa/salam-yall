@@ -47,7 +47,7 @@ import {
 import { getApiUrl } from "@/lib/query-client";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useDeepLink } from "@/lib/deeplink-context";
-import { getMonthLogs, cyclePrayerStatus, getMonthMissedFasts, toggleMissedFast, toggleExcusedDay, getAllLogs, getPrayerStreak, getMissedPrayerCount, getFirstUseDate, type DayLog, type PrayerName, type PrayerStatus } from "@/lib/prayer-tracker";
+import { getMonthLogs, cyclePrayerStatus, getMonthMissedFasts, toggleMissedFast, toggleExcusedDay, getAllLogs, getPrayerStreak, getMissedPrayerCount, getMissedPrayersByType, makeUpOldestMissedPrayer, getFirstUseDate, type DayLog, type PrayerName, type PrayerStatus, type MissedPrayerCounts } from "@/lib/prayer-tracker";
 import { DHIKR_PRESETS, getDhikrCounts, incrementDhikr, resetDhikr, type DhikrDayData } from "@/lib/dhikr-tracker";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 import { MasjidMap } from "@/components/MasjidMap";
@@ -169,6 +169,7 @@ export default function SettingsScreen() {
       setSection(pending as SettingsSection);
     }
     getMissedPrayerCount().then(setMissedPrayerCount);
+    getMissedPrayersByType().then(setMissedByType);
   }, [consumePendingSettingsSection]));
 
   useEffect(() => {
@@ -237,6 +238,7 @@ export default function SettingsScreen() {
   };
   const [heatmapData, setHeatmapData] = useState<{ date: string; fajr: PrayerStatus; dhuhr: PrayerStatus; asr: PrayerStatus; maghrib: PrayerStatus; isha: PrayerStatus }[]>([]);
   const [missedPrayerCount, setMissedPrayerCount] = useState(0);
+  const [missedByType, setMissedByType] = useState<MissedPrayerCounts>({ fajr: 0, dhuhr: 0, asr: 0, maghrib: 0, isha: 0 });
   const [showTrackerOnboarding, setShowTrackerOnboarding] = useState(false);
   const badgeShareRef = useRef<ViewShot | null>(null);
   const [sharingBadgeKey, setSharingBadgeKey] = useState<string | null>(null);
@@ -274,6 +276,7 @@ export default function SettingsScreen() {
       getMonthLogs(trackerYear, trackerMonth).then(setMonthLogs);
       getMonthMissedFasts(trackerYear, trackerMonth).then(setMissedFasts);
       getMissedPrayerCount().then(setMissedPrayerCount);
+      getMissedPrayersByType().then(setMissedByType);
       (async () => {
         const allLogs = await getAllLogs();
         const firstUse = await getFirstUseDate();
@@ -1419,8 +1422,8 @@ export default function SettingsScreen() {
                           let dotColor = colors.surfaceSecondary;
                           if (status === 1) dotColor = colors.emerald;
                           else if (status === 2) dotColor = colors.gold;
-                          else if (status === 3) dotColor = colors.emerald + "50";
-                          else if (status === 4) dotColor = "#EF4444";
+                          else if (status === 3) dotColor = "#EF4444";
+                          else if (status === 4) dotColor = colors.emerald + "50";
                           return (
                             <View
                               key={di}
@@ -1443,8 +1446,8 @@ export default function SettingsScreen() {
                   {[
                     { color: colors.emerald, label: "On time" },
                     { color: colors.gold, label: "Masjid" },
-                    { color: colors.emerald + "50", label: "Made up" },
-                    { color: "#EF4444", label: "Excused" },
+                    { color: "#EF4444", label: "Made up" },
+                    { color: colors.emerald + "50", label: "Excused" },
                     { color: colors.surfaceSecondary, label: "Missed" },
                   ].map(l => (
                     <View key={l.label} style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
@@ -1455,6 +1458,55 @@ export default function SettingsScreen() {
                 </View>
               </View>
             )}
+
+            {(() => {
+              const hasMissed = Object.values(missedByType).some(c => c > 0);
+              if (!hasMissed) return null;
+              const prayerLabels: Record<PrayerName, string> = { fajr: "Fajr", dhuhr: "Dhuhr", asr: "Asr", maghrib: "Maghrib", isha: "Isha" };
+              return (
+                <View style={[styles.glassCard, { backgroundColor: gcBg, borderColor: gcBorder, padding: 14, marginBottom: 14 }]}>
+                  <Text style={{ fontFamily: "PlayfairDisplay_700Bold", fontSize: 15, color: colors.text, marginBottom: 10 }}>Missed Prayers</Text>
+                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textSecondary, marginBottom: 12 }}>Tap a prayer to make up the oldest missed one</Text>
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                    {(Object.keys(missedByType) as PrayerName[]).filter(p => missedByType[p] > 0).map(p => (
+                      <Pressable
+                        key={p}
+                        onPress={async () => {
+                          const success = await makeUpOldestMissedPrayer(p);
+                          if (success) {
+                            getMissedPrayerCount().then(setMissedPrayerCount);
+                            getMissedPrayersByType().then(setMissedByType);
+                            getMonthLogs(trackerYear, trackerMonth).then(setMonthLogs);
+                            const allLogs = await getAllLogs();
+                            const firstUse = await getFirstUseDate();
+                            const today = new Date();
+                            const hData: typeof heatmapData = [];
+                            for (let i = 29; i >= 0; i--) {
+                              const d = new Date(today);
+                              d.setDate(d.getDate() - i);
+                              const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                              if (firstUse && key < firstUse) continue;
+                              const log = allLogs[key];
+                              hData.push({ date: key, fajr: log?.fajr ?? 0, dhuhr: log?.dhuhr ?? 0, asr: log?.asr ?? 0, maghrib: log?.maghrib ?? 0, isha: log?.isha ?? 0 });
+                            }
+                            setHeatmapData(hData);
+                          }
+                        }}
+                        style={({ pressed }) => [
+                          { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(239,68,68,0.12)", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, gap: 6 },
+                          pressed && { opacity: 0.7 },
+                        ]}
+                      >
+                        <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#EF4444" }}>{prayerLabels[p]}</Text>
+                        <View style={{ backgroundColor: "#EF4444", borderRadius: 10, minWidth: 20, height: 20, alignItems: "center", justifyContent: "center", paddingHorizontal: 5 }}>
+                          <Text style={{ fontFamily: "Inter_700Bold", fontSize: 11, color: "#fff" }}>{missedByType[p]}</Text>
+                        </View>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+              );
+            })()}
 
             <View style={[styles.calMonthRow, { backgroundColor: gcBg, borderColor: gcBorder, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }]}>
               <Pressable onPress={handlePrevMonth} hitSlop={12}>
@@ -1506,6 +1558,7 @@ export default function SettingsScreen() {
                       const updatedLogs = await getMonthLogs(trackerYear, trackerMonth);
                       setMonthLogs(updatedLogs);
                       getMissedPrayerCount().then(setMissedPrayerCount);
+                      getMissedPrayersByType().then(setMissedByType);
                     }}
                     delayLongPress={400}
                   >
@@ -1514,8 +1567,8 @@ export default function SettingsScreen() {
                       {log ? PRAYER_NAMES.map(p => {
                         const s = log[p];
                         if (s === 0) return <View key={p} style={[styles.calDot, { backgroundColor: "transparent" }]} />;
-                        if (s === 4) return <View key={p} style={[styles.calDot, { backgroundColor: "#EF4444" }]} />;
-                        return <View key={p} style={[styles.calDot, { backgroundColor: s === 1 ? colors.emerald : s === 3 ? colors.emerald + "50" : colors.gold }]} />;
+                        if (s === 4) return <View key={p} style={[styles.calDot, { backgroundColor: colors.emerald + "50" }]} />;
+                        return <View key={p} style={[styles.calDot, { backgroundColor: s === 1 ? colors.emerald : s === 3 ? "#EF4444" : colors.gold }]} />;
                       }) : isMissedFast ? (
                         <View style={[styles.calDot, { backgroundColor: "#EF4444", width: 5, height: 5, borderRadius: 2.5 }]} />
                       ) : <View style={{ height: 5 }} />}
@@ -1534,7 +1587,7 @@ export default function SettingsScreen() {
                 {PRAYER_NAMES.map(p => {
                   const status = selectedLog ? selectedLog[p] : 0;
                   const statusLabel = status === 0 ? "Not tracked" : status === 1 ? "On time" : status === 2 ? "At masjid" : status === 3 ? "Made up" : "Excused";
-                  const statusColor = status === 0 ? colors.textTertiary : status === 1 ? colors.emerald : status === 2 ? colors.gold : status === 3 ? colors.emerald + "50" : "#EF4444";
+                  const statusColor = status === 0 ? colors.textTertiary : status === 1 ? colors.emerald : status === 2 ? colors.gold : status === 3 ? "#EF4444" : colors.emerald + "50";
                   return (
                     <Pressable
                       key={p}
@@ -1547,6 +1600,7 @@ export default function SettingsScreen() {
                         const updated = await getMonthLogs(trackerYear, trackerMonth);
                         setMonthLogs(updated);
                         getMissedPrayerCount().then(setMissedPrayerCount);
+                        getMissedPrayersByType().then(setMissedByType);
                         (async () => {
                           const allLogs = await getAllLogs();
                           const firstUse = await getFirstUseDate();
@@ -1578,8 +1632,8 @@ export default function SettingsScreen() {
               {[
                 { color: colors.emerald, label: "On time" },
                 { color: colors.gold, label: "At masjid" },
-                { color: colors.emerald + "50", label: "Made up" },
-                { color: "#EF4444", label: isRamadan ? "Excused / Missed fast" : "Excused" },
+                { color: "#EF4444", label: "Made up" },
+                { color: colors.emerald + "50", label: isRamadan ? "Excused / Missed fast" : "Excused" },
               ].map(l => (
                 <View key={l.label} style={styles.calLegendItem}>
                   <View style={[styles.calLegendDot, { backgroundColor: l.color }]} />
@@ -2244,8 +2298,8 @@ export default function SettingsScreen() {
                             let dotColor = colors.surfaceSecondary;
                             if (status === 1) dotColor = colors.emerald;
                             else if (status === 2) dotColor = colors.gold;
-                            else if (status === 3) dotColor = colors.emerald + "50";
-                            else if (status === 4) dotColor = "#EF4444";
+                            else if (status === 3) dotColor = "#EF4444";
+                            else if (status === 4) dotColor = colors.emerald + "50";
                             return <View key={di} style={{ flex: 1, aspectRatio: 1, maxWidth: clampedDot2, maxHeight: clampedDot2, borderRadius: 1.5, backgroundColor: dotColor }} />;
                           })}
                         </View>
@@ -2263,8 +2317,8 @@ export default function SettingsScreen() {
                       {[
                         { color: colors.emerald, label: "On time" },
                         { color: colors.gold, label: "Masjid / Quran" },
-                        { color: colors.emerald + "50", label: "Made up" },
-                        { color: "#EF4444", label: "Excused" },
+                        { color: "#EF4444", label: "Made up" },
+                        { color: colors.emerald + "50", label: "Excused" },
                         { color: colors.surfaceSecondary, label: "Missed" },
                       ].map(l => (
                         <View key={l.label} style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>

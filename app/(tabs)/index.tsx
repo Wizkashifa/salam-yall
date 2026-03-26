@@ -1280,15 +1280,17 @@ export default function PrayerScreen() {
               const trackerKey = prayer.name as TrackerPrayerName;
               const status = todayLog[trackerKey] ?? 0;
               const isExcused = status === 4;
+              const isMadeUp = status === 3;
               const pillBg = status === 1
                 ? (isDark ? colors.gold + "20" : colors.gold + "15")
                 : status === 2
                   ? (isDark ? colors.emerald + "25" : colors.emerald + "12")
-                  : status === 3
-                    ? (isDark ? colors.gold + "12" : colors.gold + "08")
+                  : isMadeUp
+                    ? (isDark ? "rgba(239,68,68,0.15)" : "rgba(239,68,68,0.08)")
                     : isExcused
-                      ? (isDark ? "rgba(239,68,68,0.15)" : "rgba(239,68,68,0.08)")
+                      ? (isDark ? colors.gold + "12" : colors.gold + "08")
                       : undefined;
+              const specialColor = isMadeUp ? "#EF4444" : isExcused ? colors.emerald + "50" : null;
               return (
                 <Pressable
                   key={prayer.name}
@@ -1301,13 +1303,13 @@ export default function PrayerScreen() {
                 >
                   <Text style={[
                     styles.prayerPillName,
-                    { color: isExcused ? "#EF4444" : isPast ? colors.textTertiary : colors.textSecondary },
+                    { color: specialColor ?? (isPast ? colors.textTertiary : colors.textSecondary) },
                   ]} allowFontScaling={false}>
                     {prayer.label}
                   </Text>
                   <Text style={[
                     styles.prayerPillTime,
-                    { color: isExcused ? "#EF4444" : isPast ? colors.textTertiary : colors.text },
+                    { color: specialColor ?? (isPast ? colors.textTertiary : colors.text) },
                   ]} allowFontScaling={false}>
                     {formatTime(prayer.time)}
                   </Text>
@@ -1335,15 +1337,17 @@ export default function PrayerScreen() {
                 const trackerKey = prayer.name as TrackerPrayerName;
                 const status = todayLog[trackerKey] ?? 0;
                 const isExcused = status === 4;
+                const isMadeUp = status === 3;
                 const pillBg = status === 1
                   ? (isDark ? colors.gold + "20" : colors.gold + "15")
                   : status === 2
                     ? (isDark ? colors.emerald + "25" : colors.emerald + "12")
-                    : status === 3
-                      ? (isDark ? colors.gold + "12" : colors.gold + "08")
+                    : isMadeUp
+                      ? (isDark ? "rgba(239,68,68,0.15)" : "rgba(239,68,68,0.08)")
                       : isExcused
-                        ? (isDark ? "rgba(239,68,68,0.15)" : "rgba(239,68,68,0.08)")
+                        ? (isDark ? colors.gold + "12" : colors.gold + "08")
                         : undefined;
+                const specialColor = isMadeUp ? "#EF4444" : isExcused ? colors.emerald + "50" : null;
                 const iqamaTime = activeIqama?.iqama?.[prayer.name as keyof typeof activeIqama.iqama];
                 return (
                   <Pressable
@@ -1357,13 +1361,13 @@ export default function PrayerScreen() {
                   >
                     <Text style={[
                       styles.prayerPillName,
-                      { color: isExcused ? "#EF4444" : isPast ? colors.textTertiary : colors.textSecondary },
+                      { color: specialColor ?? (isPast ? colors.textTertiary : colors.textSecondary) },
                     ]} allowFontScaling={false}>
                       {prayer.label}
                     </Text>
                     <Text style={[
                       styles.prayerPillTime,
-                      { color: isExcused ? "#EF4444" : isPast ? colors.textTertiary : colors.text },
+                      { color: specialColor ?? (isPast ? colors.textTertiary : colors.text) },
                     ]} allowFontScaling={false}>
                       {iqamaTime ? iqamaTime.replace(/^0/, "") : formatTime(prayer.time)}
                     </Text>

@@ -219,6 +219,70 @@ export async function getMissedPrayerCount(days: number = 7): Promise<number> {
   return count;
 }
 
+export type MissedPrayerCounts = Record<PrayerName, number>;
+
+export async function getMissedPrayersByType(): Promise<MissedPrayerCounts> {
+  const data = await loadAll();
+  const todayPrayerTimes = await getCachedPrayerTimes();
+  const firstUse = await getFirstUseDate();
+  const counts: MissedPrayerCounts = { fajr: 0, dhuhr: 0, asr: 0, maghrib: 0, isha: 0 };
+  const today = new Date();
+
+  if (!firstUse) return counts;
+
+  const startParts = firstUse.split("-");
+  const startDate = new Date(parseInt(startParts[0]), parseInt(startParts[1]) - 1, parseInt(startParts[2]));
+  const d = new Date(startDate);
+
+  while (d <= today) {
+    const key = formatDateKey(d);
+    const log = data[key] ?? { ...DEFAULT_DAY_LOG };
+    const isToday = key === formatDateKey(today);
+    for (const p of PRAYER_ORDER) {
+      if (log[p] !== 0) continue;
+      const timesForDay = isToday ? todayPrayerTimes : undefined;
+      if (isPrayerExpired(p, d, timesForDay)) {
+        counts[p]++;
+      }
+    }
+    d.setDate(d.getDate() + 1);
+  }
+
+  return counts;
+}
+
+export async function makeUpOldestMissedPrayer(prayer: PrayerName): Promise<boolean> {
+  const data = await loadAll();
+  const todayPrayerTimes = await getCachedPrayerTimes();
+  const firstUse = await getFirstUseDate();
+  const today = new Date();
+
+  if (!firstUse) return false;
+
+  const startParts = firstUse.split("-");
+  const startDate = new Date(parseInt(startParts[0]), parseInt(startParts[1]) - 1, parseInt(startParts[2]));
+  const d = new Date(startDate);
+  const todayKey = formatDateKey(today);
+
+  while (d <= today) {
+    const key = formatDateKey(d);
+    const log = data[key] ?? { ...DEFAULT_DAY_LOG };
+    if (log[prayer] === 0) {
+      const isToday = key === todayKey;
+      const timesForDay = isToday ? todayPrayerTimes : undefined;
+      if (isPrayerExpired(prayer, d, timesForDay)) {
+        log[prayer] = 3;
+        data[key] = log;
+        await saveAll(data);
+        return true;
+      }
+    }
+    d.setDate(d.getDate() + 1);
+  }
+
+  return false;
+}
+
 export async function getAllLogs(): Promise<PrayerTrackerData> {
   return loadAll();
 }
