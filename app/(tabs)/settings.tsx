@@ -294,7 +294,7 @@ export default function SettingsScreen() {
         setHeatmapData(hData);
       })();
       (async () => {
-        const APP_VERSION = "1.1.1";
+        const APP_VERSION = "1.2.0";
         const ONBOARDING_KEY = "prayer_tracker_onboarding_shown";
         const shown = await AsyncStorage.getItem(ONBOARDING_KEY);
         if (shown !== APP_VERSION) {
@@ -1681,7 +1681,7 @@ export default function SettingsScreen() {
                 style={{ backgroundColor: colors.emerald, borderRadius: 12, paddingVertical: 14, alignItems: "center" }}
                 onPress={async () => {
                   setShowTrackerOnboarding(false);
-                  await AsyncStorage.setItem("prayer_tracker_onboarding_shown", "1.1.1");
+                  await AsyncStorage.setItem("prayer_tracker_onboarding_shown", "1.2.0");
                 }}
               >
                 <Text style={{ fontFamily: "Inter_700Bold", fontSize: 15, color: "#FFFFFF" }}>Got it!</Text>
