@@ -134,6 +134,22 @@
       }
       .hero-android:hover { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.05); transform: translateY(-2px); }
       .hero-android svg { width: 22px; height: 22px; fill: currentColor; }
+      .hero-webview {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 18px 32px;
+        background: transparent;
+        border: 1.5px solid rgba(255,255,255,0.25);
+        border-radius: 16px;
+        color: #fff;
+        font-size: 16px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s;
+      }
+      .hero-webview:hover { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.05); transform: translateY(-2px); }
+      .hero-webview svg { width: 22px; height: 22px; }
       .hero-badge {
         display: inline-block;
         margin-top: 16px;
@@ -560,6 +576,17 @@
         .stat-item p { color: rgba(255,255,255,0.7); }
         .community-badge { background: #F3F3F0; border-color: #E0E0DD; color: #5A5A5A; }
         .footer { border-top-color: #E5E5E5; }
+        .hero-android {
+          border-color: rgba(0,0,0,0.2); color: #1a1a1a;
+        }
+        .hero-android:hover { border-color: rgba(0,0,0,0.4); background: rgba(0,0,0,0.04); }
+        .hero-webview {
+          border-color: rgba(0,0,0,0.2); color: #1a1a1a;
+        }
+        .hero-webview:hover { border-color: rgba(0,0,0,0.4); background: rgba(0,0,0,0.04); }
+        .cta-btn-android {
+          border-color: rgba(255,255,255,0.3); color: #fff;
+        }
       }
     </style>
   </head>
@@ -578,6 +605,10 @@
         <a href="#android-waitlist" class="hero-android" onclick="event.preventDefault(); document.getElementById('android-waitlist').scrollIntoView({ behavior: 'smooth' });">
           <svg viewBox="0 0 24 24"><path d="M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85-.29-.15-.65-.06-.83.22l-1.88 3.24a11.463 11.463 0 00-8.94 0L5.65 5.67c-.19-.29-.58-.38-.87-.2-.28.18-.37.54-.22.83L6.4 9.48A10.78 10.78 0 002 18h20a10.78 10.78 0 00-4.4-8.52zM7 15.25a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5zm10 0a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5z"/></svg>
           Android Waitlist
+        </a>
+        <a href="/community" class="hero-webview">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          Web View
         </a>
       </div>
       <span class="hero-badge">Available on the App Store</span>
