@@ -6011,7 +6011,7 @@ Return ONLY the JSON object, no markdown, no explanation.`,
       const now = Date.now();
       const thirtyMin = 30 * 60 * 1000;
 
-      const communityIds = unsent.filter(r => r.event_id.startsWith("community_")).map(r => parseInt(r.event_id.replace("community_", "")));
+      const communityIds = unsent.filter(r => r.event_id.startsWith("community_")).map(r => parseInt(r.event_id.replace("community_", ""))).filter(n => Number.isInteger(n) && n > 0);
       let communityMap: Record<number, { title: string; start_time: Date; location: string }> = {};
       if (communityIds.length > 0) {
         const { rows: ces } = await pool.query(
