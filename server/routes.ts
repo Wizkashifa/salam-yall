@@ -6026,16 +6026,21 @@ Return ONLY the JSON object, no markdown, no explanation.`,
       const externalEventIds = [...new Set(unsent.filter(r => !r.event_id.startsWith("community_")).map(r => r.event_id))];
       const externalMap: Record<string, { title: string; start: string; location: string }> = {};
       if (externalEventIds.length > 0) {
-        let allEvents = cachedEvents;
-        if (allEvents.length === 0) {
-          try { allEvents = await fetchAndCacheEvents(); } catch (e) {}
-        }
+        const allExternal: CachedEvent[] = [];
+        try {
+          const [roots, mcc, srvic, mca] = await Promise.allSettled([
+            fetchRootsDfwEvents(), fetchMCCEastBayEvents(), fetchSRVICEvents(), fetchMCAEvents()
+          ]);
+          for (const r of [roots, mcc, srvic, mca]) {
+            if (r.status === "fulfilled") allExternal.push(...r.value);
+          }
+        } catch (e) {}
         for (const eid of externalEventIds) {
-          const cached = allEvents.find(e => e.id === eid);
-          if (cached && cached.start) {
-            const startMs = new Date(cached.start).getTime();
+          const found = allExternal.find(e => e.id === eid);
+          if (found && found.start) {
+            const startMs = new Date(found.start).getTime();
             if (startMs > now && startMs <= now + thirtyMin) {
-              externalMap[eid] = { title: cached.title, start: cached.start, location: cached.location || "" };
+              externalMap[eid] = { title: found.title, start: found.start, location: found.location || "" };
             }
           }
         }
