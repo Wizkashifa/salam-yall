@@ -1951,7 +1951,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/businesses", async (_req, res) => {
     try {
       const result = await pool.query(
-        "SELECT id, name, category, description, address, phone, website, place_id, rating, user_ratings_total, photo_reference, business_hours, lat, lng, specialty, keywords, photo_url, booking_url, search_tags, member_note, hospital_affiliation, instagram_url FROM businesses WHERE status = 'approved' AND category != 'Restaurant' ORDER BY name"
+        "SELECT id, name, category, description, address, phone, website, place_id, rating, user_ratings_total, photo_reference, business_hours, lat, lng, specialty, keywords, photo_url, booking_url, search_tags, member_note, hospital_affiliation, instagram_url FROM businesses WHERE status = 'approved' AND category != 'Restaurant' ORDER BY LOWER(name)"
       );
 
       try {
