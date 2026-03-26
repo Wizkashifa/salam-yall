@@ -1318,7 +1318,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await pool.query("ALTER TABLE community_events ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION").catch(() => {});
   await pool.query("ALTER TABLE event_overrides ADD COLUMN IF NOT EXISTS is_virtual BOOLEAN").catch(() => {});
   await pool.query("ALTER TABLE event_overrides ADD COLUMN IF NOT EXISTS is_featured BOOLEAN").catch(() => {});
-  await pool.query("ALTER TABLE saved_events ADD COLUMN IF NOT EXISTS reminder_sent BOOLEAN DEFAULT false").catch(() => {});
+  await pool.query("ALTER TABLE saved_events ADD COLUMN IF NOT EXISTS reminder_sent BOOLEAN NOT NULL DEFAULT false").catch(() => {});
 
   await pool.query("UPDATE community_events SET organizer = 'Islamic Association of Raleigh' WHERE organizer LIKE 'Islamic Association of Raleigh%' AND organizer != 'Islamic Association of Raleigh'").catch(() => {});
   await pool.query("UPDATE community_events SET organizer = 'Al-Noor Islamic Center' WHERE organizer ILIKE '%alnoor islamic center%' AND organizer != 'Al-Noor Islamic Center'").catch(() => {});
