@@ -6003,6 +6003,14 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     if (eventReminderRunning) return;
     eventReminderRunning = true;
     try {
+      await pool.query(
+        `UPDATE saved_events SET reminder_sent = true
+         WHERE reminder_sent = false
+           AND event_id LIKE 'community_%'
+           AND CAST(REPLACE(event_id, 'community_', '') AS INTEGER) IN (
+             SELECT id FROM community_events WHERE start_time < NOW() - INTERVAL '1 hour'
+           )`
+      ).catch(() => {});
       const { rows: unsent } = await pool.query(
         `SELECT se.id AS saved_id, se.event_id, se.user_id
          FROM saved_events se
