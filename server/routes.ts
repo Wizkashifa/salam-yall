@@ -6003,20 +6003,76 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     if (eventReminderRunning) return;
     eventReminderRunning = true;
     try {
+      const { rows: unsent } = await pool.query(
+        `SELECT se.id AS saved_id, se.event_id, se.user_id
+         FROM saved_events se
+         WHERE se.reminder_sent = false`
+      );
+      if (unsent.length === 0) return;
+
+      const now = Date.now();
+      const thirtyMin = 30 * 60 * 1000;
+
+      const communityIds = unsent
+        .filter(r => r.event_id.startsWith("community_"))
+        .map(r => parseInt(r.event_id.replace("community_", "")))
+        .filter(n => Number.isInteger(n) && n > 0);
+      const communityMap: Record<number, { title: string; start_time: Date; location: string }> = {};
+      if (communityIds.length > 0) {
+        const { rows: ces } = await pool.query(
+          `SELECT id, title, start_time, location FROM community_events
+           WHERE id = ANY($1) AND status = 'approved'
+             AND start_time > NOW() AND start_time <= NOW() + INTERVAL '30 minutes'`,
+          [communityIds]
+        );
+        for (const ce of ces) communityMap[ce.id] = ce;
+      }
+
+      const externalEventIds = [...new Set(unsent.filter(r => !r.event_id.startsWith("community_")).map(r => r.event_id))];
+      const externalMap: Record<string, { title: string; start: string; location: string }> = {};
+      if (externalEventIds.length > 0) {
+        const allExternal: CachedEvent[] = [];
+        const results = await Promise.allSettled([
+          fetchRootsDfwEvents(), fetchMCCEastBayEvents(), fetchSRVICEvents(), fetchMCAEvents()
+        ]);
+        for (const r of results) {
+          if (r.status === "fulfilled") {
+            allExternal.push(...r.value);
+          } else {
+            console.warn("[Event Reminder] External feed fetch failed:", r.reason?.message || r.reason);
+          }
+        }
+        for (const eid of externalEventIds) {
+          const found = allExternal.find(e => e.id === eid);
+          if (found && found.start) {
+            const startMs = new Date(found.start).getTime();
+            if (startMs > now && startMs <= now + thirtyMin) {
+              externalMap[eid] = { title: found.title, start: found.start, location: found.location || "" };
+            }
+          }
+        }
+      }
+
+      const dueRows = unsent.filter(row => {
+        if (row.event_id.startsWith("community_")) {
+          const numId = parseInt(row.event_id.replace("community_", ""));
+          return !!communityMap[numId];
+        }
+        return !!externalMap[row.event_id];
+      });
+      if (dueRows.length === 0) return;
+
+      const dueIds = dueRows.map(r => r.saved_id);
       const client = await pool.connect();
       try {
         await client.query("BEGIN");
         const { rows: claimed } = await client.query(
           `UPDATE saved_events SET reminder_sent = true
-           WHERE id IN (
-             SELECT se.id FROM saved_events se
-             WHERE se.reminder_sent = false
-             FOR UPDATE SKIP LOCKED
-           )
-           RETURNING id AS saved_id, event_id, user_id`
+           WHERE id = ANY($1) AND reminder_sent = false
+           RETURNING id AS saved_id, event_id, user_id`,
+          [dueIds]
         );
         await client.query("COMMIT");
-
         if (claimed.length === 0) return;
 
         const tokenRows = await pool.query(
@@ -6027,46 +6083,6 @@ Return ONLY the JSON object, no markdown, no explanation.`,
         for (const t of tokenRows.rows) {
           if (!tokensByUser[t.user_id]) tokensByUser[t.user_id] = [];
           tokensByUser[t.user_id].push(t.token);
-        }
-
-        const now = Date.now();
-        const thirtyMin = 30 * 60 * 1000;
-
-        const communityIds = claimed.filter(r => r.event_id.startsWith("community_")).map(r => parseInt(r.event_id.replace("community_", ""))).filter(n => Number.isInteger(n) && n > 0);
-        let communityMap: Record<number, { title: string; start_time: Date; location: string }> = {};
-        if (communityIds.length > 0) {
-          const { rows: ces } = await pool.query(
-            `SELECT id, title, start_time, location FROM community_events
-             WHERE id = ANY($1) AND status = 'approved'
-               AND start_time > NOW() AND start_time <= NOW() + INTERVAL '30 minutes'`,
-            [communityIds]
-          );
-          for (const ce of ces) communityMap[ce.id] = ce;
-        }
-
-        const externalEventIds = [...new Set(claimed.filter(r => !r.event_id.startsWith("community_")).map(r => r.event_id))];
-        const externalMap: Record<string, { title: string; start: string; location: string }> = {};
-        if (externalEventIds.length > 0) {
-          const allExternal: CachedEvent[] = [];
-          const results = await Promise.allSettled([
-            fetchRootsDfwEvents(), fetchMCCEastBayEvents(), fetchSRVICEvents(), fetchMCAEvents()
-          ]);
-          for (const r of results) {
-            if (r.status === "fulfilled") {
-              allExternal.push(...r.value);
-            } else {
-              console.warn("[Event Reminder] External feed fetch failed:", r.reason?.message || r.reason);
-            }
-          }
-          for (const eid of externalEventIds) {
-            const found = allExternal.find(e => e.id === eid);
-            if (found && found.start) {
-              const startMs = new Date(found.start).getTime();
-              if (startMs > now && startMs <= now + thirtyMin) {
-                externalMap[eid] = { title: found.title, start: found.start, location: found.location || "" };
-              }
-            }
-          }
         }
 
         const grouped: Record<string, { title: string; startTime: Date; location: string; eventId: string; tokens: string[]; savedIds: number[] }> = {};
@@ -6105,17 +6121,6 @@ Return ONLY the JSON object, no markdown, no explanation.`,
           const body = `Starting at ${timeStr}${g.location ? ` — ${g.location}` : ""}`;
           await sendPushToTokens(g.tokens, `📅 ${g.title}`, body, { type: "event", eventId: g.eventId });
           console.log(`[Event Reminder] Sent 30-min reminder for "${g.title}" to ${g.tokens.length} user(s)`);
-        }
-
-        const notDueIds = claimed.filter(row => {
-          if (row.event_id.startsWith("community_")) {
-            const numId = parseInt(row.event_id.replace("community_", ""));
-            return !communityMap[numId];
-          }
-          return !externalMap[row.event_id];
-        }).map(r => r.saved_id);
-        if (notDueIds.length > 0) {
-          await pool.query("UPDATE saved_events SET reminder_sent = false WHERE id = ANY($1)", [notDueIds]);
         }
       } finally {
         client.release();
