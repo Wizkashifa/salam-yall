@@ -6072,7 +6072,7 @@ Return ONLY the JSON object, no markdown, no explanation.`,
         tokensByUser[t.user_id].push(t.token);
       }
 
-      const grouped: Record<string, { title: string; startTime: Date; location: string; eventId: string; tokens: string[]; savedIds: number[] }> = {};
+      const sentIds: number[] = [];
       for (const row of dueRows) {
         const userTokens = tokensByUser[row.user_id];
         if (!userTokens || userTokens.length === 0) continue;
@@ -6088,35 +6088,20 @@ Return ONLY the JSON object, no markdown, no explanation.`,
         }
         if (!eventInfo) continue;
 
-        if (!grouped[row.event_id]) {
-          grouped[row.event_id] = { ...eventInfo, eventId: row.event_id, tokens: [], savedIds: [] };
-        }
-        for (const tok of userTokens) {
-          if (!grouped[row.event_id].tokens.includes(tok)) {
-            grouped[row.event_id].tokens.push(tok);
-          }
-        }
-        grouped[row.event_id].savedIds.push(row.saved_id);
-      }
-
-      const sentIds: number[] = [];
-      for (const eventId of Object.keys(grouped)) {
-        const g = grouped[eventId];
-        const isDfw = g.eventId.startsWith("roots_dfw_");
-        const isCalifornia = g.eventId.startsWith("mcc_eastbay_") || g.eventId.startsWith("srvic_") || g.eventId.startsWith("mca_");
+        const isDfw = row.event_id.startsWith("roots_dfw_");
+        const isCalifornia = row.event_id.startsWith("mcc_eastbay_") || row.event_id.startsWith("srvic_") || row.event_id.startsWith("mca_");
         const tz = isCalifornia ? "America/Los_Angeles" : isDfw ? "America/Chicago" : "America/New_York";
-        const timeStr = g.startTime.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: tz });
-        const body = `Starting at ${timeStr}${g.location ? ` — ${g.location}` : ""}`;
+        const timeStr = eventInfo.startTime.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: tz });
+        const body = `Starting at ${timeStr}${eventInfo.location ? ` — ${eventInfo.location}` : ""}`;
         try {
-          const result = await sendPushToTokens(g.tokens, `📅 ${g.title}`, body, { type: "event", eventId: g.eventId });
+          const result = await sendPushToTokens(userTokens, `📅 ${eventInfo.title}`, body, { type: "event", eventId: row.event_id });
           if (result.sent > 0) {
-            sentIds.push(...g.savedIds);
-            console.log(`[Event Reminder] Sent 30-min reminder for "${g.title}" to ${result.sent}/${result.total} user(s)`);
+            sentIds.push(row.saved_id);
           } else {
-            console.warn(`[Event Reminder] Push delivery failed for "${g.title}" (0/${result.total} sent), will retry`);
+            console.warn(`[Event Reminder] Push failed for user ${row.user_id} event "${eventInfo.title}", will retry`);
           }
         } catch (sendErr: any) {
-          console.error(`[Event Reminder] Failed to send for "${g.title}":`, sendErr.message);
+          console.error(`[Event Reminder] Send error for user ${row.user_id}:`, sendErr.message);
         }
       }
 
@@ -6125,6 +6110,7 @@ Return ONLY the JSON object, no markdown, no explanation.`,
           "UPDATE saved_events SET reminder_sent = true WHERE id = ANY($1) AND reminder_sent = false",
           [sentIds]
         );
+        console.log(`[Event Reminder] Marked ${sentIds.length} reminder(s) as sent`);
       }
     } catch (err: any) {
       console.error("[Event Reminder] Error:", err.message);
