@@ -491,7 +491,7 @@ export default function PrayerScreen() {
   });
 
   const followedOrgEvents = useMemo(() => {
-    const follows = followedOrgs?.follows || [];
+    const follows = Array.isArray(followedOrgs?.follows) ? followedOrgs.follows : [];
     if (!follows.length || !calendarEvents) return [];
     const now = new Date();
     return calendarEvents
