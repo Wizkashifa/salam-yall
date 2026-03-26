@@ -4425,7 +4425,7 @@ Return ONLY the JSON object, no markdown, no explanation.`,
       if (!deceasedName) return res.status(400).json({ error: "Deceased name is required" });
       if (!masjidName) return res.status(400).json({ error: "Masjid is required" });
 
-      const masjidLookup = MASJID_LOCATIONS[masjidName] || MASJID_LOCATIONS["Islamic Association of Raleigh"];
+      const masjidLookup = KNOWN_COORDINATES[masjidName] || KNOWN_COORDINATES["Islamic Association of Raleigh"];
       const lat = masjidLookup?.lat || 35.7898;
       const lng = masjidLookup?.lng || -78.6912;
 
@@ -5815,7 +5815,7 @@ Return ONLY the JSON object, no markdown, no explanation.`,
       const { deceasedName, countryOfOrigin, relatives, prayerTime, prayerLocation, burialInfo, scheduledAt } = req.body;
       if (!deceasedName) return res.status(400).json({ error: "Deceased name is required" });
 
-      const masjidLookup = MASJID_LOCATIONS[orgName] || MASJID_LOCATIONS["Islamic Association of Raleigh"];
+      const masjidLookup = KNOWN_COORDINATES[orgName] || KNOWN_COORDINATES["Islamic Association of Raleigh"];
       const lat = masjidLookup?.lat || 35.7898;
       const lng = masjidLookup?.lng || -78.6912;
 
