@@ -1318,6 +1318,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await pool.query("ALTER TABLE community_events ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION").catch(() => {});
   await pool.query("ALTER TABLE event_overrides ADD COLUMN IF NOT EXISTS is_virtual BOOLEAN").catch(() => {});
   await pool.query("ALTER TABLE event_overrides ADD COLUMN IF NOT EXISTS is_featured BOOLEAN").catch(() => {});
+  await pool.query("ALTER TABLE saved_events ADD COLUMN IF NOT EXISTS reminder_sent BOOLEAN DEFAULT false").catch(() => {});
 
   await pool.query("UPDATE community_events SET organizer = 'Islamic Association of Raleigh' WHERE organizer LIKE 'Islamic Association of Raleigh%' AND organizer != 'Islamic Association of Raleigh'").catch(() => {});
   await pool.query("UPDATE community_events SET organizer = 'Al-Noor Islamic Center' WHERE organizer ILIKE '%alnoor islamic center%' AND organizer != 'Al-Noor Islamic Center'").catch(() => {});
@@ -5994,6 +5995,52 @@ Return ONLY the JSON object, no markdown, no explanation.`,
       }
     } catch (err: any) {
       console.error("[Janaza Scheduler] Error:", err.message);
+    }
+  }, 60000);
+
+  setInterval(async () => {
+    try {
+      const { rows: upcoming } = await pool.query(
+        `SELECT se.id AS saved_id, se.event_id, se.user_id, ce.title, ce.start_time, ce.location,
+                pt.token
+         FROM saved_events se
+         INNER JOIN push_tokens pt ON pt.user_id = se.user_id AND pt.token IS NOT NULL
+         INNER JOIN community_events ce ON se.event_id = 'community_' || ce.id::text
+         WHERE se.reminder_sent = false
+           AND ce.status = 'approved'
+           AND ce.start_time > NOW()
+           AND ce.start_time <= NOW() + INTERVAL '30 minutes'`
+      );
+
+      if (upcoming.length === 0) return;
+
+      const grouped: Record<string, { title: string; startTime: Date; location: string; eventId: string; tokens: string[]; savedIds: number[] }> = {};
+      for (const row of upcoming) {
+        const key = row.event_id;
+        if (!grouped[key]) {
+          grouped[key] = {
+            title: row.title,
+            startTime: new Date(row.start_time),
+            location: row.location || "",
+            eventId: row.event_id,
+            tokens: [],
+            savedIds: [],
+          };
+        }
+        grouped[key].tokens.push(row.token);
+        grouped[key].savedIds.push(row.saved_id);
+      }
+
+      for (const eventId of Object.keys(grouped)) {
+        const g = grouped[eventId];
+        const timeStr = g.startTime.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" });
+        const body = `Starting at ${timeStr}${g.location ? ` — ${g.location}` : ""}`;
+        await sendPushToTokens(g.tokens, `📅 ${g.title}`, body, { type: "event", eventId: g.eventId });
+        await pool.query("UPDATE saved_events SET reminder_sent = true WHERE id = ANY($1)", [g.savedIds]);
+        console.log(`[Event Reminder] Sent 30-min reminder for "${g.title}" to ${g.tokens.length} user(s)`);
+      }
+    } catch (err: any) {
+      console.error("[Event Reminder] Error:", err.message);
     }
   }, 60000);
 
