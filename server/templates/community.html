@@ -250,6 +250,10 @@
       border-color: var(--card-border-hover); transform: translateY(-3px);
       box-shadow: var(--shadow-card-hover); background: var(--card-bg-hover);
     }
+    .restaurant-card-image {
+      width: 100%; height: 180px; object-fit: cover;
+      background: linear-gradient(135deg, rgba(27,107,74,0.06), rgba(212,168,67,0.03));
+    }
     .restaurant-card-body { padding: 22px; flex: 1; display: flex; flex-direction: column; }
     .restaurant-emoji { font-size: 28px; margin-bottom: 10px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15)); }
     .restaurant-card-body h3 { font-size: 17px; font-weight: 600; margin-bottom: 8px; }
@@ -406,6 +410,89 @@
       .nav-tabs a { padding: 6px 10px; font-size: 11px; }
       .hero-title { font-size: 26px; }
       .card-grid { grid-template-columns: 1fr; gap: 12px; }
+    }
+
+    /* CLICKABLE CARDS */
+    .event-card, .restaurant-card, .business-card { cursor: pointer; }
+
+    /* MODAL */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000;
+      background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center; padding: 24px;
+      opacity: 0; visibility: hidden; transition: all 0.3s ease;
+    }
+    .modal-overlay.open { opacity: 1; visibility: visible; }
+    .modal-content {
+      background: var(--bg-elevated); border: 1px solid var(--card-border);
+      border-radius: var(--radius-xl); max-width: 560px; width: 100%; max-height: 85vh;
+      overflow-y: auto; position: relative; transform: translateY(20px) scale(0.97);
+      transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+      box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+    }
+    .modal-overlay.open .modal-content { transform: translateY(0) scale(1); }
+    .modal-close {
+      position: absolute; top: 16px; right: 16px; z-index: 10;
+      width: 36px; height: 36px; border-radius: 50%;
+      background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1);
+      color: white; font-size: 18px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s ease; backdrop-filter: blur(8px);
+    }
+    .modal-close:hover { background: rgba(0,0,0,0.7); border-color: rgba(255,255,255,0.2); }
+    .modal-image {
+      width: 100%; height: 240px; object-fit: cover;
+      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    }
+    .modal-image-placeholder {
+      width: 100%; height: 120px;
+      background: linear-gradient(135deg, rgba(27,107,74,0.1), rgba(212,168,67,0.05));
+      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+      display: flex; align-items: center; justify-content: center; font-size: 48px;
+    }
+    .modal-body { padding: 28px; }
+    .modal-body h2 {
+      font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 700;
+      color: var(--text); margin-bottom: 12px; line-height: 1.3;
+    }
+    .modal-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .modal-meta-item {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 13px; color: var(--text-secondary); line-height: 1.4;
+    }
+    .modal-meta-item svg { opacity: 0.5; flex-shrink: 0; }
+    .modal-meta-item.gold { color: var(--gold); }
+    .modal-meta-item.emerald { color: var(--emerald-light); }
+    .modal-section { margin-bottom: 16px; }
+    .modal-section-label {
+      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--text-tertiary); margin-bottom: 6px;
+    }
+    .modal-section-content { font-size: 14px; color: var(--text-secondary); line-height: 1.7; }
+    .modal-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+    .modal-tag {
+      font-size: 11px; padding: 4px 12px; border-radius: 100px;
+      background: rgba(255,255,255,0.04); color: var(--text-secondary);
+      border: 1px solid var(--divider); text-transform: capitalize;
+    }
+    .modal-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--divider); }
+    .modal-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 10px 20px; border-radius: var(--radius-md); font-size: 13px; font-weight: 600;
+      text-decoration: none; transition: all 0.25s ease; font-family: inherit; border: none; cursor: pointer;
+    }
+    .modal-btn-primary { background: var(--emerald); color: white; }
+    .modal-btn-primary:hover { background: var(--emerald-light); transform: translateY(-1px); }
+    .modal-btn-secondary { background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-secondary); }
+    .modal-btn-secondary:hover { border-color: var(--emerald); color: var(--text); }
+    .modal-btn-gold { background: var(--gold-subtle); color: var(--gold); border: 1px solid rgba(212,168,67,0.15); }
+    .modal-btn-gold:hover { background: rgba(212,168,67,0.18); }
+    .modal-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+    @media (max-width: 768px) {
+      .modal-content { max-height: 90vh; }
+      .modal-image { height: 180px; }
+      .modal-body { padding: 20px; }
+      .modal-body h2 { font-size: 20px; }
     }
 
     /* CALENDAR */
@@ -583,6 +670,14 @@
       }
       .app-banner-text p { color: rgba(255,255,255,0.7); }
       .event-card-image { background: linear-gradient(135deg, rgba(27,107,74,0.04), rgba(212,168,67,0.02)); }
+      .restaurant-card-image { background: linear-gradient(135deg, rgba(27,107,74,0.03), rgba(212,168,67,0.02)); }
+      .modal-overlay { background: rgba(0,0,0,0.4); }
+      .modal-content { background: #fff; border-color: rgba(0,0,0,0.1); box-shadow: 0 24px 80px rgba(0,0,0,0.15); }
+      .modal-close { background: rgba(0,0,0,0.4); border-color: rgba(0,0,0,0.1); }
+      .modal-close:hover { background: rgba(0,0,0,0.6); }
+      .modal-image-placeholder { background: linear-gradient(135deg, rgba(27,107,74,0.05), rgba(212,168,67,0.03)); }
+      .modal-tag { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.06); color: #5A5A5A; }
+      .modal-btn-secondary { background: rgba(0,0,0,0.02); border-color: rgba(0,0,0,0.08); color: #5A5A5A; }
     }
 
     /* FADE IN */
@@ -641,7 +736,7 @@
         <select class="filter-select" id="events-organizer"><option value="">All Organizers</option></select>
         <select class="filter-select" id="events-distance">
           <option value="">All Distances</option>
-          <option value="50">Within 50 miles</option>
+          <option value="50" selected>Within 50 miles</option>
           <option value="25">Within 25 miles</option>
           <option value="10">Within 10 miles</option>
         </select>
@@ -1131,6 +1226,7 @@
     function createEventCard(e) {
       const card = document.createElement('div');
       card.className = 'event-card';
+      card.addEventListener('click', function(ev) { if (!ev.target.closest('a')) openEventModal(e); });
       const startDate = new Date(e.start);
       const endDate = e.end ? new Date(e.end) : null;
       const dateStr = formatEventDate(startDate, endDate);
@@ -1144,7 +1240,7 @@
         const d = haversine(userLat, userLng, e.latitude, e.longitude);
         distHtml = `<div class="event-distance">${d < 1 ? '< 1' : Math.round(d)} mi away</div>`;
       }
-      let actions = e.registrationUrl ? `<a href="${e.registrationUrl}" target="_blank" rel="noopener" class="btn-register">Register →</a>` : '';
+      let actions = e.registrationUrl ? `<a href="${e.registrationUrl}" target="_blank" rel="noopener" class="btn-register" onclick="event.stopPropagation()">Register →</a>` : '';
       const desc = e.description ? stripHtml(e.description).substring(0, 200) : '';
       card.innerHTML = `
         ${imgHtml}
@@ -1225,6 +1321,7 @@
     function createRestaurantCard(r) {
       const card = document.createElement('div');
       card.className = 'restaurant-card';
+      card.addEventListener('click', function(ev) { if (!ev.target.closest('a')) openRestaurantModal(r); });
       const halalClass = r.is_halal === 'IS_HALAL' ? 'full' : 'partial';
       const halalText = r.is_halal === 'IS_HALAL' ? '✓ Halal' : 'Partially Halal';
       const cuisineTags = (r.cuisine_types || []).map(c => `<span class="cuisine-tag">${formatCuisine(c)}</span>`).join('');
@@ -1233,13 +1330,17 @@
       if (userLat != null && r._distance != null && r._distance < 99999) {
         distHtml = `<span class="distance-badge">${r._distance < 1 ? '< 1' : Math.round(r._distance)} mi</span>`;
       }
+      let imgHtml = r.photo_reference
+        ? `<img class="restaurant-card-image" src="/api/halal-restaurants/${r.id}/photo" alt="${esc(r.name)}" loading="lazy" onerror="this.parentNode.removeChild(this)" />`
+        : '';
       let links = '';
-      if (r.url) links += `<a href="${r.url}" target="_blank" rel="noopener" class="link-maps">Maps</a>`;
-      if (r.website) links += `<a href="${r.website}" target="_blank" rel="noopener" class="link-website">Website</a>`;
-      if (r.formatted_phone) links += `<a href="tel:${r.formatted_phone}" class="link-call">${esc(r.formatted_phone)}</a>`;
+      if (r.url) links += `<a href="${r.url}" target="_blank" rel="noopener" class="link-maps" onclick="event.stopPropagation()">Maps</a>`;
+      if (r.website) links += `<a href="${r.website}" target="_blank" rel="noopener" class="link-website" onclick="event.stopPropagation()">Website</a>`;
+      if (r.formatted_phone) links += `<a href="tel:${r.formatted_phone}" class="link-call" onclick="event.stopPropagation()">${esc(r.formatted_phone)}</a>`;
       card.innerHTML = `
+        ${imgHtml}
         <div class="restaurant-card-body">
-          <div class="restaurant-emoji">${r.emoji || '🍽️'}</div>
+          ${!r.photo_reference ? '<div class="restaurant-emoji">' + (r.emoji || '🍽️') + '</div>' : ''}
           <h3>${esc(r.name)}</h3>
           <div class="restaurant-meta">
             <span class="halal-badge ${halalClass}">${halalText}</span>
@@ -1292,11 +1393,12 @@
     function createBusinessCard(b) {
       const card = document.createElement('div');
       card.className = 'business-card';
+      card.addEventListener('click', function(ev) { if (!ev.target.closest('a')) openBusinessModal(b); });
       let ratingHtml = b.rating ? `<span class="rating-badge">★ ${b.rating}${b.user_ratings_total ? ` (${b.user_ratings_total})` : ''}</span>` : '';
       let links = '';
-      if (b.website) links += `<a href="${b.website}" target="_blank" rel="noopener" class="link-maps">Website</a>`;
-      if (b.phone) links += `<a href="tel:${b.phone}" class="link-call">${esc(b.phone)}</a>`;
-      if (b.booking_url) links += `<a href="${b.booking_url}" target="_blank" rel="noopener" class="link-website">Book</a>`;
+      if (b.website) links += `<a href="${b.website}" target="_blank" rel="noopener" class="link-maps" onclick="event.stopPropagation()">Website</a>`;
+      if (b.phone) links += `<a href="tel:${b.phone}" class="link-call" onclick="event.stopPropagation()">${esc(b.phone)}</a>`;
+      if (b.booking_url) links += `<a href="${b.booking_url}" target="_blank" rel="noopener" class="link-website" onclick="event.stopPropagation()">Book</a>`;
       card.innerHTML = `
         <div class="business-card-body">
           <div class="business-category">${esc(b.category || 'Business')}</div>
@@ -1336,6 +1438,140 @@
       return str;
     }
     function formatCuisine(c) { return (c||'').replace(/_/g,' ').replace(/\b\w/g,l=>l.toUpperCase()).replace('And','&'); }
+
+    const modalOverlay = document.getElementById('modal-overlay');
+    function openModal(html) {
+      document.getElementById('modal-inner').innerHTML = html;
+      modalOverlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeModal() {
+      modalOverlay.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    modalOverlay.addEventListener('click', function(e) {
+      if (e.target === modalOverlay) closeModal();
+    });
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    function openEventModal(e) {
+      const startDate = new Date(e.start);
+      const endDate = e.end ? new Date(e.end) : null;
+      const dateStr = formatEventDate(startDate, endDate);
+      const desc = e.description ? stripHtml(e.description) : '';
+      let imgHtml = e.imageUrl
+        ? `<img class="modal-image" src="${e.imageUrl}" alt="${esc(e.title)}" onerror="this.outerHTML='<div class=\\'modal-image-placeholder\\'>📅</div>'" />`
+        : '<div class="modal-image-placeholder">📅</div>';
+      let badges = '';
+      if (e.isFeatured) badges += '<span class="badge badge-featured">★ Featured</span>';
+      if (e.isVirtual) badges += '<span class="badge badge-virtual">Virtual</span>';
+      let distHtml = '';
+      if (userLat != null && e.latitude && e.longitude) {
+        const d = haversine(userLat, userLng, e.latitude, e.longitude);
+        distHtml = `<div class="modal-meta-item emerald"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="12" x2="16" y2="12"/></svg>${d < 1 ? '< 1' : Math.round(d)} mi away</div>`;
+      }
+      let actions = '';
+      if (e.registrationUrl) actions += `<a href="${e.registrationUrl}" target="_blank" rel="noopener" class="modal-btn modal-btn-primary">Register →</a>`;
+      if (e.location) actions += `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.location)}" target="_blank" rel="noopener" class="modal-btn modal-btn-secondary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Directions</a>`;
+      openModal(`
+        <button class="modal-close" onclick="closeModal()">✕</button>
+        ${imgHtml}
+        <div class="modal-body">
+          ${badges ? '<div class="modal-badges">' + badges + '</div>' : ''}
+          <h2>${esc(e.title)}</h2>
+          <div class="modal-meta">
+            <div class="modal-meta-item gold"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${dateStr}</div>
+            <div class="modal-meta-item gold">${esc(e.organizer)}</div>
+            ${distHtml}
+          </div>
+          ${e.location ? '<div class="modal-section"><div class="modal-section-label">Location</div><div class="modal-section-content">' + esc(e.location) + '</div></div>' : ''}
+          ${desc ? '<div class="modal-section"><div class="modal-section-label">About</div><div class="modal-section-content">' + esc(desc) + '</div></div>' : ''}
+          <div class="modal-actions">${actions}</div>
+        </div>`);
+    }
+
+    function openRestaurantModal(r) {
+      const halalClass = r.is_halal === 'IS_HALAL' ? 'full' : 'partial';
+      const halalText = r.is_halal === 'IS_HALAL' ? '✓ Fully Halal' : 'Partially Halal';
+      const cuisineTags = (r.cuisine_types || []).map(c => `<span class="modal-tag">${formatCuisine(c)}</span>`).join('');
+      let imgHtml = r.photo_reference
+        ? `<img class="modal-image" src="/api/halal-restaurants/${r.id}/photo" alt="${esc(r.name)}" onerror="this.outerHTML='<div class=\\'modal-image-placeholder\\'>${r.emoji || '🍽️'}</div>'" />`
+        : `<div class="modal-image-placeholder">${r.emoji || '🍽️'}</div>`;
+      let ratingHtml = r.rating ? `<div class="modal-meta-item gold"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>★ ${r.rating}${r.user_ratings_total ? ' (' + r.user_ratings_total + ' reviews)' : ''}</div>` : '';
+      let distHtml = '';
+      if (userLat != null && r._distance != null && r._distance < 99999) {
+        distHtml = `<div class="modal-meta-item emerald">${r._distance < 1 ? '< 1' : Math.round(r._distance)} mi away</div>`;
+      }
+      let hoursHtml = '';
+      if (r.opening_hours && r.opening_hours.length > 0) {
+        hoursHtml = '<div class="modal-section"><div class="modal-section-label">Hours</div><div class="modal-section-content">' + r.opening_hours.map(h => esc(h)).join('<br>') + '</div></div>';
+      }
+      let actions = '';
+      if (r.url) actions += `<a href="${r.url}" target="_blank" rel="noopener" class="modal-btn modal-btn-primary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Directions</a>`;
+      if (r.website) actions += `<a href="${r.website}" target="_blank" rel="noopener" class="modal-btn modal-btn-secondary">Website</a>`;
+      if (r.formatted_phone) actions += `<a href="tel:${r.formatted_phone}" class="modal-btn modal-btn-gold">${esc(r.formatted_phone)}</a>`;
+      if (r.instagram_url) actions += `<a href="${r.instagram_url}" target="_blank" rel="noopener" class="modal-btn modal-btn-secondary">Instagram</a>`;
+      openModal(`
+        <button class="modal-close" onclick="closeModal()">✕</button>
+        ${imgHtml}
+        <div class="modal-body">
+          <h2>${esc(r.name)}</h2>
+          <div class="modal-meta">
+            <span class="halal-badge ${halalClass}">${halalText}</span>
+            ${ratingHtml}
+            ${distHtml}
+          </div>
+          ${cuisineTags ? '<div class="modal-tags">' + cuisineTags + '</div>' : ''}
+          ${r.formatted_address ? '<div class="modal-section"><div class="modal-section-label">Address</div><div class="modal-section-content">' + esc(r.formatted_address) + '</div></div>' : ''}
+          ${r.halal_comment ? '<div class="modal-section"><div class="modal-section-label">Halal Notes</div><div class="modal-section-content">' + esc(r.halal_comment) + '</div></div>' : ''}
+          ${r.considerations ? '<div class="modal-section"><div class="modal-section-label">Considerations</div><div class="modal-section-content">' + esc(r.considerations) + '</div></div>' : ''}
+          ${hoursHtml}
+          <div class="modal-actions">${actions}</div>
+        </div>`);
+    }
+
+    function openBusinessModal(b) {
+      let imgHtml = b.photo_reference
+        ? `<img class="modal-image" src="/api/businesses/${b.id}/photo" alt="${esc(b.name)}" onerror="this.outerHTML='<div class=\\'modal-image-placeholder\\'>🏢</div>'" />`
+        : '<div class="modal-image-placeholder">🏢</div>';
+      let ratingHtml = b.rating ? `<div class="modal-meta-item gold"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>★ ${b.rating}${b.user_ratings_total ? ' (' + b.user_ratings_total + ' reviews)' : ''}</div>` : '';
+      let hoursHtml = '';
+      if (b.business_hours) {
+        try {
+          const hrs = typeof b.business_hours === 'string' ? JSON.parse(b.business_hours) : b.business_hours;
+          if (Array.isArray(hrs) && hrs.length > 0) {
+            hoursHtml = '<div class="modal-section"><div class="modal-section-label">Hours</div><div class="modal-section-content">' + hrs.map(h => esc(typeof h === 'string' ? h : h.text || '')).join('<br>') + '</div></div>';
+          }
+        } catch(e) {}
+      }
+      let actions = '';
+      if (b.website) actions += `<a href="${b.website}" target="_blank" rel="noopener" class="modal-btn modal-btn-primary">Website</a>`;
+      if (b.phone) actions += `<a href="tel:${b.phone}" class="modal-btn modal-btn-gold">${esc(b.phone)}</a>`;
+      if (b.booking_url) actions += `<a href="${b.booking_url}" target="_blank" rel="noopener" class="modal-btn modal-btn-secondary">Book Now</a>`;
+      if (b.instagram_url) actions += `<a href="${b.instagram_url}" target="_blank" rel="noopener" class="modal-btn modal-btn-secondary">Instagram</a>`;
+      openModal(`
+        <button class="modal-close" onclick="closeModal()">✕</button>
+        ${imgHtml}
+        <div class="modal-body">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--gold);margin-bottom:8px;opacity:0.85">${esc(b.category || 'Business')}</div>
+          <h2>${esc(b.name)}</h2>
+          <div class="modal-meta">
+            ${ratingHtml}
+          </div>
+          ${b.specialty ? '<div class="modal-section"><div class="modal-section-label">Specialty</div><div class="modal-section-content" style="color:var(--gold)">' + esc(b.specialty) + '</div></div>' : ''}
+          ${b.description ? '<div class="modal-section"><div class="modal-section-label">About</div><div class="modal-section-content">' + esc(b.description) + '</div></div>' : ''}
+          ${b.address ? '<div class="modal-section"><div class="modal-section-label">Address</div><div class="modal-section-content">' + esc(b.address) + '</div></div>' : ''}
+          ${b.member_note ? '<div class="modal-section"><div class="modal-section-label">Community Note</div><div class="modal-section-content">' + esc(b.member_note) + '</div></div>' : ''}
+          ${hoursHtml}
+          <div class="modal-actions">${actions}</div>
+        </div>`);
+    }
   </script>
+
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal-content" id="modal-inner"></div>
+  </div>
 </body>
 </html>
