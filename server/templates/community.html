@@ -1,0 +1,1033 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <title>Salam Y'all — Community</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Browse Triangle NC Muslim community events, halal restaurants, and local businesses." />
+  <meta property="og:title" content="Salam Y'all — Community" />
+  <meta property="og:description" content="Events, halal restaurants, and local businesses for the Triangle NC Muslim community." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://salamyall.net/community" />
+  <meta property="og:site_name" content="Salam Y'all" />
+  <meta property="og:image" content="https://salamyall.net/assets/images/og-share.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" type="image/png" sizes="48x48" href="/assets/images/favicon.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --emerald: #1B6B4A;
+      --emerald-light: #2A8C63;
+      --emerald-dark: #0d2b1a;
+      --gold: #D4A843;
+      --gold-light: #E8C97A;
+      --bg: #0A1A12;
+      --card-bg: rgba(255,255,255,0.06);
+      --card-border: rgba(255,255,255,0.1);
+      --text: #F5F5F5;
+      --text-secondary: rgba(255,255,255,0.65);
+      --text-tertiary: rgba(255,255,255,0.4);
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+
+    /* NAV */
+    .top-nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(10,26,18,0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--card-border);
+      padding: 0 24px;
+    }
+    .nav-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text);
+    }
+    .nav-brand img { width: 36px; height: 36px; border-radius: 8px; }
+    .nav-brand span {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--gold);
+    }
+    .nav-links { display: flex; gap: 4px; }
+    .nav-links a {
+      text-decoration: none;
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 500;
+      padding: 8px 16px;
+      border-radius: 10px;
+      transition: all 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); background: var(--card-bg); }
+    .nav-links a.active {
+      color: var(--text);
+      background: var(--emerald);
+    }
+    .nav-download {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--emerald);
+      color: white;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 10px;
+      transition: all 0.2s;
+    }
+    .nav-download:hover { background: var(--emerald-light); transform: translateY(-1px); }
+
+    /* MAIN */
+    .main-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 24px 80px;
+    }
+
+    /* PAGE HEADER */
+    .page-header {
+      margin-bottom: 32px;
+    }
+    .page-header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--gold);
+      margin-bottom: 8px;
+    }
+    .page-header p {
+      color: var(--text-secondary);
+      font-size: 16px;
+    }
+
+    /* SEARCH & FILTER BAR */
+    .filter-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .search-input {
+      flex: 1;
+      min-width: 220px;
+      padding: 12px 16px 12px 42px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: 14px center;
+    }
+    .search-input::placeholder { color: var(--text-tertiary); }
+    .search-input:focus { border-color: var(--emerald); }
+    .filter-select {
+      padding: 12px 16px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      cursor: pointer;
+      min-width: 160px;
+    }
+    .filter-select option { background: #1a1a1a; }
+    .result-count {
+      color: var(--text-tertiary);
+      font-size: 13px;
+      width: 100%;
+    }
+
+    /* PILLS */
+    .filter-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    .pill {
+      padding: 6px 14px;
+      border-radius: 100px;
+      font-size: 13px;
+      font-weight: 500;
+      border: 1px solid var(--card-border);
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .pill:hover { border-color: var(--emerald); color: var(--text); }
+    .pill.active { background: var(--emerald); border-color: var(--emerald); color: white; }
+
+    /* GRID */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 20px;
+    }
+
+    /* EVENT CARDS */
+    .event-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      overflow: hidden;
+      transition: all 0.25s;
+      display: flex;
+      flex-direction: column;
+    }
+    .event-card:hover { border-color: var(--emerald); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(27,107,74,0.15); }
+    .event-card-image {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      background: rgba(255,255,255,0.03);
+    }
+    .event-card-body { padding: 20px; flex: 1; display: flex; flex-direction: column; }
+    .event-date {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--emerald-light);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .event-card-body h3 {
+      font-size: 17px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      line-height: 1.35;
+    }
+    .event-organizer {
+      font-size: 13px;
+      color: var(--gold);
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    .event-location {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: flex-start;
+      gap: 5px;
+    }
+    .event-desc {
+      font-size: 13px;
+      color: var(--text-tertiary);
+      line-height: 1.5;
+      margin-bottom: 16px;
+      flex: 1;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .event-actions { display: flex; gap: 8px; margin-top: auto; }
+    .btn-register {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: var(--emerald);
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 10px;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-register:hover { background: var(--emerald-light); }
+    .badge-featured {
+      display: inline-block;
+      padding: 3px 10px;
+      background: rgba(212,168,67,0.15);
+      color: var(--gold);
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 100px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .badge-virtual {
+      display: inline-block;
+      padding: 3px 10px;
+      background: rgba(59,130,246,0.15);
+      color: #60A5FA;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 100px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      margin-left: 6px;
+    }
+
+    /* RESTAURANT CARDS */
+    .restaurant-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      overflow: hidden;
+      transition: all 0.25s;
+      display: flex;
+      flex-direction: column;
+    }
+    .restaurant-card:hover { border-color: var(--emerald); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(27,107,74,0.15); }
+    .restaurant-card-body { padding: 20px; flex: 1; display: flex; flex-direction: column; }
+    .restaurant-emoji { font-size: 28px; margin-bottom: 8px; }
+    .restaurant-card-body h3 { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+    .restaurant-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .halal-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .halal-badge.full { background: rgba(27,107,74,0.2); color: #2A8C63; }
+    .halal-badge.partial { background: rgba(212,168,67,0.15); color: var(--gold); }
+    .rating-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      color: var(--gold);
+      font-weight: 500;
+    }
+    .cuisine-tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .cuisine-tag {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 100px;
+      background: rgba(255,255,255,0.06);
+      color: var(--text-secondary);
+      text-transform: capitalize;
+    }
+    .restaurant-address {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+    .restaurant-phone {
+      font-size: 13px;
+      color: var(--text-tertiary);
+      margin-bottom: 12px;
+    }
+    .restaurant-links { display: flex; gap: 8px; margin-top: auto; flex-wrap: wrap; }
+    .restaurant-links a {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 7px 14px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .link-maps { background: var(--emerald); color: white; }
+    .link-maps:hover { background: var(--emerald-light); }
+    .link-website { background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-secondary); }
+    .link-website:hover { border-color: var(--emerald); color: var(--text); }
+    .link-call { background: rgba(212,168,67,0.12); color: var(--gold); }
+    .link-call:hover { background: rgba(212,168,67,0.2); }
+
+    /* BUSINESS CARDS */
+    .business-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      overflow: hidden;
+      transition: all 0.25s;
+      display: flex;
+      flex-direction: column;
+    }
+    .business-card:hover { border-color: var(--gold); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(212,168,67,0.1); }
+    .business-card-body { padding: 20px; flex: 1; display: flex; flex-direction: column; }
+    .business-category {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--gold);
+      margin-bottom: 8px;
+    }
+    .business-card-body h3 { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+    .business-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      margin-bottom: 12px;
+      flex: 1;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .business-address {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+    .business-phone {
+      font-size: 13px;
+      color: var(--text-tertiary);
+      margin-bottom: 12px;
+    }
+    .business-links { display: flex; gap: 8px; margin-top: auto; flex-wrap: wrap; }
+    .business-links a {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 7px 14px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    /* LOADING */
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-tertiary);
+      font-size: 15px;
+    }
+    .loading-spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--card-border);
+      border-top-color: var(--emerald);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* EMPTY STATE */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-tertiary);
+    }
+    .empty-state svg { margin-bottom: 16px; opacity: 0.4; }
+
+    /* SECTION HIDDEN */
+    .section { display: none; }
+    .section.active { display: block; }
+
+    /* FOOTER */
+    .site-footer {
+      border-top: 1px solid var(--card-border);
+      padding: 32px 24px;
+      text-align: center;
+      color: var(--text-tertiary);
+      font-size: 13px;
+    }
+    .site-footer a { color: var(--gold); text-decoration: none; }
+    .site-footer a:hover { text-decoration: underline; }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      .nav-inner { height: 56px; }
+      .nav-brand span { font-size: 17px; }
+      .nav-download { display: none; }
+      .nav-links a { padding: 6px 10px; font-size: 13px; }
+      .page-header h1 { font-size: 28px; }
+      .card-grid { grid-template-columns: 1fr; }
+      .main-content { padding: 20px 16px 60px; }
+      .filter-bar { gap: 8px; }
+      .filter-select { min-width: 120px; }
+    }
+
+    @media (max-width: 480px) {
+      .nav-links { gap: 2px; }
+      .nav-links a { padding: 6px 8px; font-size: 12px; }
+    }
+
+    /* CTA BANNER */
+    .app-banner {
+      background: linear-gradient(135deg, var(--emerald-dark), rgba(27,107,74,0.3));
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 28px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+    .app-banner-text h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      color: var(--gold);
+      margin-bottom: 4px;
+    }
+    .app-banner-text p { color: var(--text-secondary); font-size: 14px; }
+    .app-banner-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--emerald);
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 12px 24px;
+      border-radius: 12px;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .app-banner-cta:hover { background: var(--emerald-light); transform: translateY(-1px); }
+    @media (max-width: 640px) {
+      .app-banner { flex-direction: column; text-align: center; padding: 24px 20px; }
+      .app-banner-text h2 { font-size: 19px; }
+    }
+
+    /* LOAD MORE */
+    .load-more-wrap { text-align: center; margin-top: 32px; }
+    .btn-load-more {
+      padding: 12px 32px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .btn-load-more:hover { border-color: var(--emerald); color: var(--text); }
+
+    /* NO IMAGE PLACEHOLDER */
+    .event-card-placeholder {
+      width: 100%;
+      height: 200px;
+      background: linear-gradient(135deg, rgba(27,107,74,0.15), rgba(212,168,67,0.08));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .event-card-placeholder svg { opacity: 0.2; }
+  </style>
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-inner">
+      <a href="/" class="nav-brand">
+        <img src="/assets/images/icon.png" alt="Salam Y'all" />
+        <span>Salam Y'all</span>
+      </a>
+      <div class="nav-links">
+        <a href="#events" class="active" data-tab="events">Events</a>
+        <a href="#restaurants" data-tab="restaurants">Halal Eats</a>
+        <a href="#directory" data-tab="directory">Directory</a>
+      </div>
+      <a href="/download" class="nav-download">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Get the App
+      </a>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <!-- EVENTS SECTION -->
+    <section id="events-section" class="section active">
+      <div class="page-header">
+        <h1>Community Events</h1>
+        <p>Upcoming events from masjids and organizations across the Triangle</p>
+      </div>
+      <div class="filter-bar">
+        <input type="text" class="search-input" id="events-search" placeholder="Search events..." />
+        <select class="filter-select" id="events-organizer">
+          <option value="">All Organizers</option>
+        </select>
+      </div>
+      <div id="events-count" class="result-count"></div>
+      <div id="events-grid" class="card-grid"></div>
+      <div id="events-loading" class="loading"><div class="loading-spinner"></div>Loading events...</div>
+      <div id="events-empty" class="empty-state" style="display:none;">No events found matching your search.</div>
+      <div id="events-load-more" class="load-more-wrap" style="display:none;">
+        <button class="btn-load-more" onclick="loadMoreEvents()">Load More Events</button>
+      </div>
+    </section>
+
+    <!-- RESTAURANTS SECTION -->
+    <section id="restaurants-section" class="section">
+      <div class="page-header">
+        <h1>Halal Eats</h1>
+        <p>Halal and halal-friendly restaurants across North Carolina</p>
+      </div>
+      <div class="filter-bar">
+        <input type="text" class="search-input" id="restaurants-search" placeholder="Search restaurants..." />
+        <select class="filter-select" id="restaurants-cuisine">
+          <option value="">All Cuisines</option>
+        </select>
+        <select class="filter-select" id="restaurants-halal">
+          <option value="">All</option>
+          <option value="IS_HALAL">Fully Halal</option>
+          <option value="PARTIALLY_HALAL">Partially Halal</option>
+        </select>
+      </div>
+      <div id="restaurants-count" class="result-count"></div>
+      <div id="restaurants-grid" class="card-grid"></div>
+      <div id="restaurants-loading" class="loading"><div class="loading-spinner"></div>Loading restaurants...</div>
+      <div id="restaurants-empty" class="empty-state" style="display:none;">No restaurants found matching your search.</div>
+      <div id="restaurants-load-more" class="load-more-wrap" style="display:none;">
+        <button class="btn-load-more" onclick="loadMoreRestaurants()">Load More Restaurants</button>
+      </div>
+    </section>
+
+    <!-- DIRECTORY SECTION -->
+    <section id="directory-section" class="section">
+      <div class="page-header">
+        <h1>Local Directory</h1>
+        <p>Muslim-owned and community-recommended businesses in the Triangle</p>
+      </div>
+      <div class="filter-bar">
+        <input type="text" class="search-input" id="directory-search" placeholder="Search businesses..." />
+        <select class="filter-select" id="directory-category">
+          <option value="">All Categories</option>
+        </select>
+      </div>
+      <div id="directory-count" class="result-count"></div>
+      <div id="directory-grid" class="card-grid"></div>
+      <div id="directory-loading" class="loading"><div class="loading-spinner"></div>Loading businesses...</div>
+      <div id="directory-empty" class="empty-state" style="display:none;">No businesses found matching your search.</div>
+    </section>
+
+    <div class="app-banner" style="margin-top: 48px;">
+      <div class="app-banner-text">
+        <h2>Get the Full Experience</h2>
+        <p>Prayer times, Quran reader, dhikr counter, and more — all in the Salam Y'all app.</p>
+      </div>
+      <a href="/download" class="app-banner-cta">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download the App
+      </a>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p>&copy; 2025 Salam Y'all &middot; <a href="/">Home</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/support">Support</a></p>
+  </footer>
+
+  <script>
+    let allEvents = [];
+    let allRestaurants = [];
+    let allBusinesses = [];
+    let eventsPage = 1;
+    let restaurantsPage = 1;
+    const PAGE_SIZE = 24;
+    let dataLoaded = { events: false, restaurants: false, directory: false };
+
+    // TAB SWITCHING
+    document.querySelectorAll('.nav-links a').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const tab = link.dataset.tab;
+        document.querySelectorAll('.nav-links a').forEach(l => l.classList.remove('active'));
+        link.classList.add('active');
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.getElementById(tab + '-section').classList.add('active');
+        history.replaceState(null, '', '#' + tab);
+        if (!dataLoaded[tab]) loadSection(tab);
+      });
+    });
+
+    function loadSection(tab) {
+      if (tab === 'events' && !dataLoaded.events) fetchEvents();
+      else if (tab === 'restaurants' && !dataLoaded.restaurants) fetchRestaurants();
+      else if (tab === 'directory' && !dataLoaded.directory) fetchBusinesses();
+    }
+
+    // INIT FROM HASH
+    const hash = window.location.hash.replace('#', '') || 'events';
+    if (['events', 'restaurants', 'directory'].includes(hash)) {
+      document.querySelectorAll('.nav-links a').forEach(l => {
+        l.classList.toggle('active', l.dataset.tab === hash);
+      });
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.getElementById(hash + '-section').classList.add('active');
+    }
+    loadSection(hash || 'events');
+
+    // EVENTS
+    async function fetchEvents() {
+      try {
+        const res = await fetch('/api/events');
+        const data = await res.json();
+        const now = new Date();
+        allEvents = data
+          .filter(e => {
+            if (!e.start) return false;
+            const end = e.end ? new Date(e.end) : new Date(e.start);
+            return end >= now;
+          })
+          .sort((a, b) => {
+            if (a.isFeatured && !b.isFeatured) return -1;
+            if (!a.isFeatured && b.isFeatured) return 1;
+            return new Date(a.start) - new Date(b.start);
+          });
+
+        const orgs = [...new Set(allEvents.map(e => e.organizer).filter(Boolean))].sort();
+        const sel = document.getElementById('events-organizer');
+        orgs.forEach(o => {
+          const opt = document.createElement('option');
+          opt.value = o;
+          opt.textContent = o;
+          sel.appendChild(opt);
+        });
+
+        dataLoaded.events = true;
+        document.getElementById('events-loading').style.display = 'none';
+        eventsPage = 1;
+        renderEvents();
+      } catch (err) {
+        document.getElementById('events-loading').innerHTML = 'Failed to load events.';
+      }
+    }
+
+    function getFilteredEvents() {
+      const q = document.getElementById('events-search').value.toLowerCase().trim();
+      const org = document.getElementById('events-organizer').value;
+      return allEvents.filter(e => {
+        if (org && e.organizer !== org) return false;
+        if (q) {
+          const text = (e.title + ' ' + e.organizer + ' ' + e.location + ' ' + e.description).toLowerCase();
+          return text.includes(q);
+        }
+        return true;
+      });
+    }
+
+    function renderEvents() {
+      const filtered = getFilteredEvents();
+      const showing = filtered.slice(0, eventsPage * PAGE_SIZE);
+      const grid = document.getElementById('events-grid');
+      grid.innerHTML = '';
+      document.getElementById('events-empty').style.display = filtered.length === 0 ? 'block' : 'none';
+      document.getElementById('events-count').textContent = filtered.length + ' event' + (filtered.length !== 1 ? 's' : '');
+      showing.forEach(e => grid.appendChild(createEventCard(e)));
+      const moreBtn = document.getElementById('events-load-more');
+      moreBtn.style.display = showing.length < filtered.length ? 'block' : 'none';
+    }
+
+    function loadMoreEvents() { eventsPage++; renderEvents(); }
+
+    function createEventCard(e) {
+      const card = document.createElement('div');
+      card.className = 'event-card';
+
+      const startDate = new Date(e.start);
+      const endDate = e.end ? new Date(e.end) : null;
+      const dateStr = formatEventDate(startDate, endDate);
+
+      let imgHtml = '';
+      if (e.imageUrl) {
+        imgHtml = `<img class="event-card-image" src="${e.imageUrl}" alt="${esc(e.title)}" loading="lazy" onerror="this.parentNode.removeChild(this)" />`;
+      }
+
+      let badges = '';
+      if (e.isFeatured) badges += '<span class="badge-featured">&#9733; Featured</span>';
+      if (e.isVirtual) badges += '<span class="badge-virtual">Virtual</span>';
+
+      let actions = '';
+      if (e.registrationUrl) {
+        actions = `<a href="${e.registrationUrl}" target="_blank" rel="noopener" class="btn-register">Register &rarr;</a>`;
+      }
+
+      const desc = e.description ? stripHtml(e.description).substring(0, 200) : '';
+
+      card.innerHTML = `
+        ${imgHtml}
+        <div class="event-card-body">
+          ${badges}
+          <div class="event-date">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            ${dateStr}
+          </div>
+          <h3>${esc(e.title)}</h3>
+          <div class="event-organizer">${esc(e.organizer)}</div>
+          ${e.location ? `<div class="event-location">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            ${esc(e.location)}
+          </div>` : ''}
+          ${desc ? `<div class="event-desc">${esc(desc)}</div>` : ''}
+          <div class="event-actions">${actions}</div>
+        </div>
+      `;
+      return card;
+    }
+
+    // RESTAURANTS
+    async function fetchRestaurants() {
+      try {
+        const res = await fetch('/api/halal-restaurants');
+        const data = await res.json();
+        allRestaurants = data.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+
+        const cuisines = new Set();
+        allRestaurants.forEach(r => {
+          (r.cuisine_types || []).forEach(c => cuisines.add(c));
+        });
+        const sel = document.getElementById('restaurants-cuisine');
+        [...cuisines].sort().forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c;
+          opt.textContent = formatCuisine(c);
+          sel.appendChild(opt);
+        });
+
+        dataLoaded.restaurants = true;
+        document.getElementById('restaurants-loading').style.display = 'none';
+        restaurantsPage = 1;
+        renderRestaurants();
+      } catch (err) {
+        document.getElementById('restaurants-loading').innerHTML = 'Failed to load restaurants.';
+      }
+    }
+
+    function getFilteredRestaurants() {
+      const q = document.getElementById('restaurants-search').value.toLowerCase().trim();
+      const cuisine = document.getElementById('restaurants-cuisine').value;
+      const halal = document.getElementById('restaurants-halal').value;
+      return allRestaurants.filter(r => {
+        if (cuisine && !(r.cuisine_types || []).includes(cuisine)) return false;
+        if (halal && r.is_halal !== halal) return false;
+        if (q) {
+          const text = (r.name + ' ' + r.formatted_address + ' ' + (r.cuisine_types || []).join(' ')).toLowerCase();
+          return text.includes(q);
+        }
+        return true;
+      });
+    }
+
+    function renderRestaurants() {
+      const filtered = getFilteredRestaurants();
+      const showing = filtered.slice(0, restaurantsPage * PAGE_SIZE);
+      const grid = document.getElementById('restaurants-grid');
+      grid.innerHTML = '';
+      document.getElementById('restaurants-empty').style.display = filtered.length === 0 ? 'block' : 'none';
+      document.getElementById('restaurants-count').textContent = filtered.length + ' restaurant' + (filtered.length !== 1 ? 's' : '');
+      showing.forEach(r => grid.appendChild(createRestaurantCard(r)));
+      const moreBtn = document.getElementById('restaurants-load-more');
+      moreBtn.style.display = showing.length < filtered.length ? 'block' : 'none';
+    }
+
+    function loadMoreRestaurants() { restaurantsPage++; renderRestaurants(); }
+
+    function createRestaurantCard(r) {
+      const card = document.createElement('div');
+      card.className = 'restaurant-card';
+
+      const halalClass = r.is_halal === 'IS_HALAL' ? 'full' : 'partial';
+      const halalText = r.is_halal === 'IS_HALAL' ? '&#10003; Halal' : 'Partially Halal';
+
+      const cuisineTags = (r.cuisine_types || []).map(c =>
+        `<span class="cuisine-tag">${formatCuisine(c)}</span>`
+      ).join('');
+
+      let ratingHtml = '';
+      if (r.rating) {
+        ratingHtml = `<span class="rating-badge">&#9733; ${r.rating}${r.user_ratings_total ? ` (${r.user_ratings_total})` : ''}</span>`;
+      }
+
+      let links = '';
+      if (r.url) links += `<a href="${r.url}" target="_blank" rel="noopener" class="link-maps">Maps</a>`;
+      if (r.website) links += `<a href="${r.website}" target="_blank" rel="noopener" class="link-website">Website</a>`;
+      if (r.formatted_phone) links += `<a href="tel:${r.formatted_phone}" class="link-call">${esc(r.formatted_phone)}</a>`;
+
+      card.innerHTML = `
+        <div class="restaurant-card-body">
+          <div class="restaurant-emoji">${r.emoji || '🍽️'}</div>
+          <h3>${esc(r.name)}</h3>
+          <div class="restaurant-meta">
+            <span class="halal-badge ${halalClass}">${halalText}</span>
+            ${ratingHtml}
+          </div>
+          ${cuisineTags ? `<div class="cuisine-tags">${cuisineTags}</div>` : ''}
+          ${r.formatted_address ? `<div class="restaurant-address">${esc(r.formatted_address)}</div>` : ''}
+          <div class="restaurant-links">${links}</div>
+        </div>
+      `;
+      return card;
+    }
+
+    // BUSINESSES
+    async function fetchBusinesses() {
+      try {
+        const res = await fetch('/api/businesses');
+        const data = await res.json();
+        allBusinesses = data.filter(b => b.name).sort((a, b) => a.name.localeCompare(b.name));
+
+        const categories = [...new Set(allBusinesses.map(b => b.category).filter(Boolean))].sort();
+        const sel = document.getElementById('directory-category');
+        categories.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c;
+          opt.textContent = c;
+          sel.appendChild(opt);
+        });
+
+        dataLoaded.directory = true;
+        document.getElementById('directory-loading').style.display = 'none';
+        renderBusinesses();
+      } catch (err) {
+        document.getElementById('directory-loading').innerHTML = 'Failed to load businesses.';
+      }
+    }
+
+    function getFilteredBusinesses() {
+      const q = document.getElementById('directory-search').value.toLowerCase().trim();
+      const cat = document.getElementById('directory-category').value;
+      return allBusinesses.filter(b => {
+        if (cat && b.category !== cat) return false;
+        if (q) {
+          const text = (b.name + ' ' + (b.category || '') + ' ' + (b.description || '') + ' ' + (b.specialty || '') + ' ' + (b.address || '')).toLowerCase();
+          return text.includes(q);
+        }
+        return true;
+      });
+    }
+
+    function renderBusinesses() {
+      const filtered = getFilteredBusinesses();
+      const grid = document.getElementById('directory-grid');
+      grid.innerHTML = '';
+      document.getElementById('directory-empty').style.display = filtered.length === 0 ? 'block' : 'none';
+      document.getElementById('directory-count').textContent = filtered.length + ' business' + (filtered.length !== 1 ? 'es' : '');
+      filtered.forEach(b => grid.appendChild(createBusinessCard(b)));
+    }
+
+    function createBusinessCard(b) {
+      const card = document.createElement('div');
+      card.className = 'business-card';
+
+      let ratingHtml = '';
+      if (b.rating) {
+        ratingHtml = `<span class="rating-badge">&#9733; ${b.rating}${b.user_ratings_total ? ` (${b.user_ratings_total})` : ''}</span>`;
+      }
+
+      let links = '';
+      if (b.website) links += `<a href="${b.website}" target="_blank" rel="noopener" class="link-maps">Website</a>`;
+      if (b.phone) links += `<a href="tel:${b.phone}" class="link-call">${esc(b.phone)}</a>`;
+      if (b.booking_url) links += `<a href="${b.booking_url}" target="_blank" rel="noopener" class="link-website">Book</a>`;
+
+      card.innerHTML = `
+        <div class="business-card-body">
+          <div class="business-category">${esc(b.category || 'Business')}</div>
+          <h3>${esc(b.name)}</h3>
+          ${ratingHtml ? `<div class="restaurant-meta" style="margin-bottom:8px">${ratingHtml}</div>` : ''}
+          ${b.specialty ? `<div class="business-desc" style="-webkit-line-clamp:2; color: var(--gold-light); margin-bottom:6px">${esc(b.specialty)}</div>` : ''}
+          ${b.description ? `<div class="business-desc">${esc(b.description)}</div>` : ''}
+          ${b.address ? `<div class="business-address">${esc(b.address)}</div>` : ''}
+          <div class="business-links">${links}</div>
+        </div>
+      `;
+      return card;
+    }
+
+    // SEARCH LISTENERS
+    document.getElementById('events-search').addEventListener('input', () => { eventsPage = 1; renderEvents(); });
+    document.getElementById('events-organizer').addEventListener('change', () => { eventsPage = 1; renderEvents(); });
+    document.getElementById('restaurants-search').addEventListener('input', () => { restaurantsPage = 1; renderRestaurants(); });
+    document.getElementById('restaurants-cuisine').addEventListener('change', () => { restaurantsPage = 1; renderRestaurants(); });
+    document.getElementById('restaurants-halal').addEventListener('change', () => { restaurantsPage = 1; renderRestaurants(); });
+    document.getElementById('directory-search').addEventListener('input', renderBusinesses);
+    document.getElementById('directory-category').addEventListener('change', renderBusinesses);
+
+    // HELPERS
+    function esc(s) {
+      if (!s) return '';
+      const d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    function stripHtml(html) {
+      const d = document.createElement('div');
+      d.innerHTML = html;
+      return d.textContent || d.innerText || '';
+    }
+
+    function formatEventDate(start, end) {
+      const opts = { weekday: 'short', month: 'short', day: 'numeric' };
+      const timeOpts = { hour: 'numeric', minute: '2-digit' };
+      let str = start.toLocaleDateString('en-US', opts);
+      str += ' · ' + start.toLocaleTimeString('en-US', timeOpts);
+      if (end) {
+        const sameDay = start.toDateString() === end.toDateString();
+        if (sameDay) {
+          str += ' – ' + end.toLocaleTimeString('en-US', timeOpts);
+        } else {
+          str += ' – ' + end.toLocaleDateString('en-US', opts) + ' ' + end.toLocaleTimeString('en-US', timeOpts);
+        }
+      }
+      return str;
+    }
+
+    function formatCuisine(c) {
+      return (c || '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()).replace('And', '&');
+    }
+  </script>
+</body>
+</html>

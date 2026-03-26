@@ -3045,6 +3045,23 @@ Return ONLY the description text, nothing else.`,
     path.resolve(process.cwd(), "server", "templates", "support.html"),
     "utf-8"
   );
+  const communityHtml = fs.readFileSync(
+    path.resolve(process.cwd(), "server", "templates", "community.html"),
+    "utf-8"
+  );
+
+  app.get("/community", (_req, res) => {
+    res.type("html").send(communityHtml);
+  });
+  app.get("/events", (_req, res) => {
+    res.redirect("/community#events");
+  });
+  app.get("/restaurants", (_req, res) => {
+    res.redirect("/community#restaurants");
+  });
+  app.get("/directory", (_req, res) => {
+    res.redirect("/community#directory");
+  });
 
   app.get("/api/admin/events", async (req, res) => {
     try {
