@@ -6011,6 +6011,12 @@ Return ONLY the JSON object, no markdown, no explanation.`,
              SELECT id FROM community_events WHERE start_time < NOW() - INTERVAL '1 hour'
            )`
       ).catch(() => {});
+      await pool.query(
+        `UPDATE saved_events SET reminder_sent = true
+         WHERE reminder_sent = false
+           AND event_id NOT LIKE 'community_%'
+           AND saved_at < NOW() - INTERVAL '48 hours'`
+      ).catch(() => {});
       const { rows: unsent } = await pool.query(
         `SELECT se.id AS saved_id, se.event_id, se.user_id
          FROM saved_events se
@@ -6070,9 +6076,10 @@ Return ONLY the JSON object, no markdown, no explanation.`,
       });
       if (dueRows.length === 0) return;
 
+      const userIds = [...new Set(dueRows.map(r => r.user_id))];
       const tokenRows = await pool.query(
         `SELECT user_id, token FROM push_tokens WHERE user_id = ANY($1) AND token IS NOT NULL`,
-        [[...new Set(dueRows.map(r => r.user_id))]]
+        [userIds]
       );
       const tokensByUser: Record<number, string[]> = {};
       for (const t of tokenRows.rows) {
