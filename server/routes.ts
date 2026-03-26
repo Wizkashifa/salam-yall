@@ -6011,12 +6011,6 @@ Return ONLY the JSON object, no markdown, no explanation.`,
              SELECT id FROM community_events WHERE start_time < NOW() - INTERVAL '1 hour'
            )`
       ).catch(() => {});
-      await pool.query(
-        `UPDATE saved_events SET reminder_sent = true
-         WHERE reminder_sent = false
-           AND event_id NOT LIKE 'community_%'
-           AND saved_at < NOW() - INTERVAL '48 hours'`
-      ).catch(() => {});
       const { rows: unsent } = await pool.query(
         `SELECT se.id AS saved_id, se.event_id, se.user_id
          FROM saved_events se
@@ -6056,14 +6050,21 @@ Return ONLY the JSON object, no markdown, no explanation.`,
             console.warn("[Event Reminder] External feed fetch failed:", r.reason?.message || r.reason);
           }
         }
+        const pastExternalIds: number[] = [];
         for (const eid of externalEventIds) {
           const found = allExternal.find(e => e.id === eid);
           if (found && found.start) {
             const startMs = new Date(found.start).getTime();
             if (startMs > now && startMs <= now + thirtyMin) {
               externalMap[eid] = { title: found.title, start: found.start, location: found.location || "" };
+            } else if (startMs < now - 60 * 60 * 1000) {
+              const pastRows = unsent.filter(r => r.event_id === eid);
+              pastExternalIds.push(...pastRows.map(r => r.saved_id));
             }
           }
+        }
+        if (pastExternalIds.length > 0) {
+          await pool.query("UPDATE saved_events SET reminder_sent = true WHERE id = ANY($1)", [pastExternalIds]);
         }
       }
 
