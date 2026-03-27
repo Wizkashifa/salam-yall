@@ -123,12 +123,9 @@ const SUBCATEGORIES: Record<string, string[]> = {
 };
 
 const SERVICE_AREA_OPTIONS = [
-  "Triangle Area (Raleigh, Durham, Chapel Hill)",
-  "Raleigh Metro",
-  "Durham / Chapel Hill",
-  "Cary / Apex / Morrisville",
-  "Wake County",
-  "NC Statewide",
+  "Local Area",
+  "Metro Area",
+  "Statewide",
   "Nationwide / Remote",
 ];
 

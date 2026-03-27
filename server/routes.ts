@@ -2516,7 +2516,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!location_type || !validLocationTypes.includes(location_type)) {
         return res.status(400).json({ error: "Location type is required. Choose: Physical Location, Service Area, Virtual, or Pop-up" });
       }
-      const validServiceAreas = ["", "Triangle Area (Raleigh, Durham, Chapel Hill)", "Raleigh Metro", "Durham / Chapel Hill", "Cary / Apex / Morrisville", "Wake County", "NC Statewide", "Nationwide / Remote"];
+      const validServiceAreas = ["", "Local Area", "Metro Area", "Statewide", "Nationwide / Remote", "Triangle Area (Raleigh, Durham, Chapel Hill)", "Raleigh Metro", "Durham / Chapel Hill", "Cary / Apex / Morrisville", "Wake County", "NC Statewide"];
       const saValue = service_area_description || "";
       if (saValue && !validServiceAreas.includes(saValue)) {
         return res.status(400).json({ error: "Invalid service area. Choose from the predefined options." });
@@ -2896,7 +2896,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         max_tokens: 300,
         messages: [{
           role: "user",
-          content: `You are writing a short business description for a Muslim community directory app called "Salam Y'all" serving the Triangle area of North Carolina (Raleigh, Durham, Cary, Chapel Hill).
+          content: `You are writing a short business description for a Muslim community directory app called "Salam Y'all" serving Muslim communities across the United States.
 
 Based on the following information, write a concise 1-2 sentence description of this business. The tone should be warm, informative, and community-oriented. Focus on what the business offers and why community members would want to visit. Do not mention "Muslim" or "halal" unless it is genuinely central to the business. Do not include the address or phone number. Do not use quotation marks around the description.
 
@@ -3176,7 +3176,7 @@ Return ONLY the description text, nothing else.`,
         values.push(validLT.includes(location_type) ? location_type : "physical");
       }
       if (service_area_description !== undefined) {
-        const validSA = ["", "Triangle Area (Raleigh, Durham, Chapel Hill)", "Raleigh Metro", "Durham / Chapel Hill", "Cary / Apex / Morrisville", "Wake County", "NC Statewide", "Nationwide / Remote"];
+        const validSA = ["", "Local Area", "Metro Area", "Statewide", "Nationwide / Remote", "Triangle Area (Raleigh, Durham, Chapel Hill)", "Raleigh Metro", "Durham / Chapel Hill", "Cary / Apex / Morrisville", "Wake County", "NC Statewide"];
         const saVal = String(service_area_description);
         if (saVal && !validSA.includes(saVal)) {
           return res.status(400).json({ error: "Invalid service area description" });
