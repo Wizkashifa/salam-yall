@@ -1535,8 +1535,25 @@
         distHtml = `<div class="modal-meta-item emerald">${r._distance < 1 ? '< 1' : Math.round(r._distance)} mi away</div>`;
       }
       let hoursHtml = '';
-      if (r.opening_hours && r.opening_hours.length > 0) {
-        hoursHtml = '<div class="modal-section"><div class="modal-section-label">Hours</div><div class="modal-section-content">' + r.opening_hours.map(h => esc(h)).join('<br>') + '</div></div>';
+      let hoursArr = null;
+      if (r.opening_hours) {
+        if (Array.isArray(r.opening_hours) && r.opening_hours.length > 0) {
+          hoursArr = r.opening_hours;
+        } else if (r.opening_hours.weekdayDescriptions && r.opening_hours.weekdayDescriptions.length > 0) {
+          hoursArr = r.opening_hours.weekdayDescriptions;
+        } else if (r.opening_hours.periods && r.opening_hours.periods.length > 0) {
+          const dayOrder = ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY','SUNDAY'];
+          const fmtTime = (t) => { const h=t[0],m=t[1],ap=h>=12?'PM':'AM',h12=h===0?12:h>12?h-12:h; return h12+':'+String(m).padStart(2,'0')+' '+ap; };
+          hoursArr = dayOrder.map(day => {
+            const ps = r.opening_hours.periods.filter(p => p?.open?.day === day);
+            if (!ps.length) return day.charAt(0)+day.slice(1).toLowerCase()+': Closed';
+            const ranges = ps.map(p => !p.close?.time ? fmtTime(p.open.time)+' – Open 24 hrs' : fmtTime(p.open.time)+' – '+fmtTime(p.close.time));
+            return day.charAt(0)+day.slice(1).toLowerCase()+': '+ranges.join(', ');
+          });
+        }
+      }
+      if (hoursArr) {
+        hoursHtml = '<div class="modal-section"><div class="modal-section-label">Hours</div><div class="modal-section-content">' + hoursArr.map(h => esc(h)).join('<br>') + '</div></div>';
       }
       let actions = '';
       if (r.url) actions += `<a href="${r.url}" target="_blank" rel="noopener" class="modal-btn modal-btn-primary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Directions</a>`;

@@ -48,13 +48,13 @@ interface HalalRestaurant {
   evidence: string[] | null;
   considerations: string[] | null;
   opening_hours: {
-    openNow: boolean;
-    periods: Array<{
+    openNow?: boolean;
+    periods?: Array<{
       open: { day: string; time: number[] };
       close: { day: string; time: number[] };
     }>;
     weekdayDescriptions?: string[];
-  } | null;
+  } | string[] | null;
   rating: number | null;
   user_ratings_total: number | null;
   website: string | null;
@@ -113,41 +113,83 @@ function getHalalBadge(status: string): { label: string; color: string; bg: stri
   }
 }
 
-function getRaleighNow(): { dayName: string; dayIndex: number; minutes: number } {
-  const now = new Date();
-  const dayMap: Record<string, number> = {
-    Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
-  };
-  const dayNames = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+function parseTimeString(timeStr: string): number | null {
+  timeStr = timeStr.trim();
+  const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  if (!match) {
+    const hourOnly = timeStr.match(/^(\d{1,2})\s*(AM|PM)$/i);
+    if (hourOnly) {
+      let h = parseInt(hourOnly[1], 10);
+      const ampm = hourOnly[2].toUpperCase();
+      if (ampm === "PM" && h !== 12) h += 12;
+      if (ampm === "AM" && h === 12) h = 0;
+      return h * 60;
+    }
+    return null;
+  }
+  let h = parseInt(match[1], 10);
+  const m = parseInt(match[2], 10);
+  const ampm = match[3]?.toUpperCase();
+  if (ampm === "PM" && h !== 12) h += 12;
+  if (ampm === "AM" && h === 12) h = 0;
+  return h * 60 + m;
+}
 
+function isCurrentlyOpenFromStrings(descriptions: string[]): boolean | null {
   try {
-    const fmt = new Intl.DateTimeFormat("en-US", {
-      timeZone: "America/New_York",
-      weekday: "short",
-      hour: "numeric",
-      minute: "numeric",
-      hour12: false,
-    });
-    const parts = fmt.formatToParts(now);
-    const weekday = parts.find((p) => p.type === "weekday")?.value || "Mon";
-    const hour = parseInt(parts.find((p) => p.type === "hour")?.value || "0", 10);
-    const minute = parseInt(parts.find((p) => p.type === "minute")?.value || "0", 10);
-    const dayIndex = dayMap[weekday] ?? 1;
-    return {
-      dayName: dayNames[dayIndex],
-      dayIndex,
-      minutes: (hour === 24 ? 0 : hour) * 60 + minute,
-    };
+    const now = new Date();
+    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const todayName = dayNames[now.getDay()];
+    const todayEntry = descriptions.find((d) => d.toLowerCase().startsWith(todayName.toLowerCase()));
+    if (!todayEntry) return null;
+
+    const colonIdx = todayEntry.indexOf(":");
+    if (colonIdx === -1) return null;
+    const rest = todayEntry.substring(colonIdx + 1).trim();
+
+    if (rest.toLowerCase() === "closed") return false;
+    if (rest.toLowerCase().includes("open 24 hours")) return true;
+
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const ranges = rest.split(",").map((s) => s.trim());
+    for (const range of ranges) {
+      const dashParts = range.split(/\s*[\u2013\u2014-]\s*/);
+      if (dashParts.length !== 2) continue;
+      const openMin = parseTimeString(dashParts[0]);
+      const closeMin = parseTimeString(dashParts[1]);
+      if (openMin === null || closeMin === null) continue;
+
+      if (closeMin <= openMin) {
+        if (currentMinutes >= openMin || currentMinutes < closeMin) return true;
+      } else {
+        if (currentMinutes >= openMin && currentMinutes < closeMin) return true;
+      }
+    }
+    return false;
   } catch {
-    return { dayName: dayNames[now.getDay()], dayIndex: now.getDay(), minutes: now.getHours() * 60 + now.getMinutes() };
+    return null;
   }
 }
 
 function isCurrentlyOpen(hours: HalalRestaurant["opening_hours"]): boolean | null {
   try {
     if (!hours) return null;
+
+    if (Array.isArray(hours)) {
+      return isCurrentlyOpenFromStrings(hours);
+    }
+
+    if (hours.weekdayDescriptions && hours.weekdayDescriptions.length > 0) {
+      const result = isCurrentlyOpenFromStrings(hours.weekdayDescriptions);
+      if (result !== null) return result;
+    }
+
     if (!hours.periods || !Array.isArray(hours.periods) || hours.periods.length === 0) return null;
-    const { dayName, minutes: currentMinutes } = getRaleighNow();
+
+    const now = new Date();
+    const dayNames = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+    const dayName = dayNames[now.getDay()];
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
     const todayPeriods = hours.periods.filter(
       (p) => p && p.open && typeof p.open.day === "string" && p.open.day === dayName
@@ -202,10 +244,13 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 function formatTimings(openingHours: HalalRestaurant["opening_hours"]): string[] | null {
   if (!openingHours) return null;
-  if (openingHours.weekdayDescriptions && openingHours.weekdayDescriptions.length > 0) {
+  if (Array.isArray(openingHours) && openingHours.length > 0 && typeof openingHours[0] === "string") {
+    return openingHours as string[];
+  }
+  if (!Array.isArray(openingHours) && openingHours.weekdayDescriptions && openingHours.weekdayDescriptions.length > 0) {
     return openingHours.weekdayDescriptions;
   }
-  if (!openingHours.periods || openingHours.periods.length === 0) return null;
+  if (Array.isArray(openingHours) || !openingHours.periods || openingHours.periods.length === 0) return null;
   const dayOrder = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
   const formatTime = (t: number[]) => {
     const h = t[0];
