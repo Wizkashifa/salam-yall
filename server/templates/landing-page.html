@@ -784,13 +784,14 @@
       <p class="section-label" id="lp-section-label">Serving the Community</p>
       <h2 class="section-title" id="lp-section-title">Made with Love for Muslims Everywhere</h2>
       <p class="section-subtitle" id="lp-section-subtitle">Connecting communities across the country with local resources.</p>
-      <div class="community-badges" id="lp-community-badges">
-        <span class="community-badge">Triangle NC</span>
-        <span class="community-badge">Bay Area CA</span>
-        <span class="community-badge">Los Angeles CA</span>
-        <span class="community-badge">DFW TX</span>
-        <span class="community-badge">And More</span>
-      </div>
+      <div class="community-badges" id="lp-community-badges"></div>
+      <script>
+        fetch('/api/geo/metros').then(function(r){return r.json()}).then(function(metros){
+          var el=document.getElementById('lp-community-badges');
+          if(!el||!metros.length)return;
+          el.innerHTML=metros.map(function(m){return '<span class="community-badge">'+m.name+'</span>'}).join('');
+        }).catch(function(){});
+      </script>
     </section>
 
     <!-- CTA -->
