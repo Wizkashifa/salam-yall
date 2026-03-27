@@ -627,9 +627,9 @@ export default function SettingsScreen() {
         <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
       </Pressable>
 
-      <Modal visible={showLocationPicker} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowLocationPicker(false)}>
+      <Modal visible={showLocationPicker} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setShowLocationPicker(false)}>
         <GlassModalContainer>
-          <View style={{ paddingTop: Platform.OS === "web" ? 67 : 60, paddingHorizontal: 20, paddingBottom: 20 }}>
+          <View style={{ flex: 1, paddingTop: Platform.OS === "web" ? 67 : 60, paddingHorizontal: 20, paddingBottom: 20 }}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
               <Text style={{ fontFamily: "Inter_700Bold", fontSize: 20, color: colors.text }}>Location Override</Text>
               <Pressable onPress={() => setShowLocationPicker(false)} hitSlop={8} style={{ width: 32, height: 32, borderRadius: 16, justifyContent: "center", alignItems: "center", backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.06)" }}>
@@ -650,7 +650,7 @@ export default function SettingsScreen() {
 
             <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, color: colors.textSecondary, letterSpacing: 0.5, marginBottom: 10 }}>METRO AREAS</Text>
 
-            <ScrollView style={{ maxHeight: 500 }} showsVerticalScrollIndicator={false}>
+            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
               {METRO_AREAS.map((metro) => {
                 const isActive = overrideMetro?.name === metro.name;
                 return (
