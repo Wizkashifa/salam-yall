@@ -3,14 +3,81 @@ import type { Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import * as fs from "fs";
 import * as path from "path";
+import crypto from "crypto";
 
 const app = express();
 const log = console.log;
+
+const SCRAPE_TOKEN_SECRET = crypto.randomBytes(32).toString("hex");
+
+function generateScrapeToken(): string {
+  const ts = Math.floor(Date.now() / 30000).toString();
+  return crypto.createHmac("sha256", SCRAPE_TOKEN_SECRET).update(ts).digest("hex").slice(0, 16);
+}
+
+function verifyScrapeToken(token: string): boolean {
+  const now = Math.floor(Date.now() / 30000);
+  for (let i = 0; i <= 2; i++) {
+    const ts = (now - i).toString();
+    const valid = crypto.createHmac("sha256", SCRAPE_TOKEN_SECRET).update(ts).digest("hex").slice(0, 16);
+    if (token === valid) return true;
+  }
+  return false;
+}
+
+(global as any).__generateScrapeToken = generateScrapeToken;
+(global as any).__verifyScrapeToken = verifyScrapeToken;
 
 declare module "http" {
   interface IncomingMessage {
     rawBody: unknown;
   }
+}
+
+function setupAntiScrape(app: express.Application) {
+  app.use("/robots.txt", (_req, res) => {
+    res.type("text/plain").sendFile(path.resolve(process.cwd(), "server", "public", "robots.txt"));
+  });
+
+  const rateBuckets = new Map<string, { count: number; resetAt: number }>();
+  const RATE_WINDOW = 60_000;
+  const RATE_LIMIT = 30;
+
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, bucket] of rateBuckets) {
+      if (bucket.resetAt <= now) rateBuckets.delete(key);
+    }
+  }, 120_000);
+
+  const GUARDED_PATHS = ["/api/businesses", "/api/halal-restaurants", "/api/events"];
+
+  app.use((req, res, next) => {
+    if (!GUARDED_PATHS.some(p => req.path === p || req.path.startsWith(p + "/"))) return next();
+
+    const ua = (req.headers["user-agent"] || "").toLowerCase();
+    const botPatterns = ["scrapy", "python-requests", "httpclient", "wget", "curl", "bot", "spider", "crawl", "scraper", "phantom", "headless", "puppeteer", "playwright", "selenium"];
+    if (botPatterns.some(p => ua.includes(p)) && !ua.includes("googlebot") && !ua.includes("bingbot")) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    const ip = req.ip || req.socket.remoteAddress || "unknown";
+    const now = Date.now();
+    let bucket = rateBuckets.get(ip);
+    if (!bucket || bucket.resetAt <= now) {
+      bucket = { count: 0, resetAt: now + RATE_WINDOW };
+      rateBuckets.set(ip, bucket);
+    }
+    bucket.count++;
+    if (bucket.count > RATE_LIMIT) {
+      return res.status(429).json({ error: "Too many requests. Please try again later." });
+    }
+
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "SAMEORIGIN");
+
+    next();
+  });
 }
 
 function setupCors(app: express.Application) {
@@ -230,6 +297,7 @@ function setupErrorHandler(app: express.Application) {
 }
 
 (async () => {
+  setupAntiScrape(app);
   setupCors(app);
   setupBodyParsing(app);
   setupRequestLogging(app);

@@ -12,6 +12,7 @@
   <meta property="og:site_name" content="Salam Y'all" />
   <meta property="og:image" content="https://salamyall.net/assets/images/og-share.png" />
   <meta name="twitter:card" content="summary_large_image" />
+  <meta name="robots" content="noindex, nofollow, noarchive, nositelinkssearchbox, noimageindex" />
   <link rel="icon" type="image/png" sizes="48x48" href="/assets/images/favicon.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/apple-touch-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,8 +20,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>window.__st='__SCRAPE_TOKEN__';</script>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    body { -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
+    input, textarea { -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text; user-select: text; }
     :root {
       --emerald: #1B6B4A;
       --emerald-light: #2A8C63;
@@ -1174,7 +1178,7 @@
 
     async function fetchEvents() {
       try {
-        const res = await fetch('/api/events');
+        const res = await fetch('/api/events', { headers: { 'X-Community-Token': window.__st || '' } });
         const data = await res.json();
         const now = new Date();
         allEvents = data
@@ -1266,7 +1270,7 @@
 
     async function fetchRestaurants() {
       try {
-        const res = await fetch('/api/halal-restaurants');
+        const res = await fetch('/api/halal-restaurants', { headers: { 'X-Community-Token': window.__st || '' } });
         const data = await res.json();
         allRestaurants = data;
         sortRestaurants();
@@ -1360,7 +1364,7 @@
 
     async function fetchBusinesses() {
       try {
-        const res = await fetch('/api/businesses');
+        const res = await fetch('/api/businesses', { headers: { 'X-Community-Token': window.__st || '' } });
         const data = await res.json();
         allBusinesses = data.filter(b => b.name);
         const categories = [...new Set(allBusinesses.map(b => b.category).filter(Boolean))].sort();
@@ -1575,6 +1579,15 @@
           <div class="modal-actions">${actions}</div>
         </div>`);
     }
+  </script>
+  <script>
+    document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+    document.addEventListener('selectstart', function(e) { if (!e.target.closest('input, textarea')) e.preventDefault(); });
+    document.addEventListener('copy', function(e) { if (!e.target.closest('input, textarea')) e.preventDefault(); });
+    document.addEventListener('keydown', function(e) {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'u' || e.key === 'U' || e.key === 's' || e.key === 'S')) e.preventDefault();
+      if (e.key === 'F12') e.preventDefault();
+    });
   </script>
 </body>
 </html>

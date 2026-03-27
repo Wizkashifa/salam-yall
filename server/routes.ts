@@ -3236,7 +3236,9 @@ Return ONLY the description text, nothing else.`,
   );
 
   app.get("/community", (_req, res) => {
-    res.type("html").send(communityHtml);
+    const token = (global as any).__generateScrapeToken?.() || "";
+    const html = communityHtml.replace("__SCRAPE_TOKEN__", token);
+    res.type("html").send(html);
   });
   app.get("/events", (_req, res) => {
     res.redirect("/community#events");
