@@ -93,6 +93,13 @@
     }
     .nav-download:hover { background: rgba(212,168,67,0.18); border-color: rgba(212,168,67,0.35); transform: translateY(-1px); }
 
+    /* SECTION DIVIDERS */
+    .section-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent 0%, rgba(27,107,74,0.2) 30%, rgba(212,168,67,0.15) 70%, transparent 100%);
+      border: none; margin: 0; max-width: 800px; margin: 0 auto;
+    }
+
     /* HERO */
     .hero-section {
       position: relative; overflow: hidden;
@@ -102,13 +109,20 @@
     .hero-section::before {
       content: '';
       position: absolute; top: -60%; left: -30%; width: 160%; height: 220%;
-      background: radial-gradient(ellipse at 50% 40%, rgba(27,107,74,0.12) 0%, transparent 55%),
-                  radial-gradient(ellipse at 75% 60%, rgba(212,168,67,0.05) 0%, transparent 45%);
-      pointer-events: none; animation: heroGlow 8s ease-in-out infinite alternate;
+      background: radial-gradient(ellipse at 50% 40%, rgba(27,107,74,0.15) 0%, transparent 50%),
+                  radial-gradient(ellipse at 75% 60%, rgba(212,168,67,0.06) 0%, transparent 40%),
+                  radial-gradient(ellipse at 25% 70%, rgba(27,107,74,0.05) 0%, transparent 40%);
+      pointer-events: none; animation: heroGlow 10s ease-in-out infinite alternate;
+    }
+    .hero-section::after {
+      content: '';
+      position: absolute; bottom: 0; left: 0; right: 0; height: 80px;
+      background: linear-gradient(to bottom, transparent, var(--bg));
+      pointer-events: none; z-index: 0;
     }
     @keyframes heroGlow {
-      0% { opacity: 0.8; }
-      100% { opacity: 1; }
+      0% { opacity: 0.8; transform: scale(1); }
+      100% { opacity: 1; transform: scale(1.02); }
     }
     .hero-inner { position: relative; z-index: 1; max-width: 640px; margin: 0 auto; }
     .hero-eyebrow {
@@ -179,7 +193,23 @@
     }
 
     /* MAIN CONTENT */
-    .main-content { max-width: 1280px; margin: 0 auto; padding: 0 32px 80px; }
+    .main-content {
+      max-width: 1280px; margin: 0 auto; padding: 0 32px 80px;
+      position: relative;
+    }
+    .main-content::before {
+      content: '';
+      position: absolute; top: 200px; left: -10%; width: 300px; height: 300px;
+      background: radial-gradient(circle, rgba(27,107,74,0.04) 0%, transparent 70%);
+      pointer-events: none; filter: blur(50px); z-index: 0;
+    }
+    .main-content::after {
+      content: '';
+      position: absolute; top: 600px; right: -5%; width: 250px; height: 250px;
+      background: radial-gradient(circle, rgba(212,168,67,0.03) 0%, transparent 70%);
+      pointer-events: none; filter: blur(50px); z-index: 0;
+    }
+    .main-content > * { position: relative; z-index: 1; }
 
     /* SECTION HEADERS */
     .section-header {
@@ -253,8 +283,8 @@
       position: relative;
     }
     .event-card:hover {
-      border-color: var(--card-border-hover); transform: translateY(-3px);
-      box-shadow: var(--shadow-card-hover); background: var(--card-bg-hover);
+      border-color: var(--card-border-hover); transform: translateY(-4px);
+      box-shadow: var(--shadow-card-hover), 0 0 20px rgba(27,107,74,0.06); background: var(--card-bg-hover);
     }
     .event-card-image {
       width: 100%; height: 200px; object-fit: cover;
@@ -302,8 +332,8 @@
       overflow: hidden; transition: all 0.3s cubic-bezier(0.4,0,0.2,1); display: flex; flex-direction: column;
     }
     .restaurant-card:hover {
-      border-color: var(--card-border-hover); transform: translateY(-3px);
-      box-shadow: var(--shadow-card-hover); background: var(--card-bg-hover);
+      border-color: var(--card-border-hover); transform: translateY(-4px);
+      box-shadow: var(--shadow-card-hover), 0 0 20px rgba(27,107,74,0.06); background: var(--card-bg-hover);
     }
     .restaurant-card-image {
       width: 100%; height: 180px; object-fit: cover;
@@ -347,8 +377,8 @@
       overflow: hidden; transition: all 0.3s cubic-bezier(0.4,0,0.2,1); display: flex; flex-direction: column;
     }
     .business-card:hover {
-      border-color: rgba(212,168,67,0.25); transform: translateY(-3px);
-      box-shadow: 0 8px 32px rgba(212,168,67,0.08); background: var(--card-bg-hover);
+      border-color: rgba(212,168,67,0.25); transform: translateY(-4px);
+      box-shadow: 0 8px 32px rgba(212,168,67,0.08), 0 0 20px rgba(212,168,67,0.04); background: var(--card-bg-hover);
     }
     .business-card-body { padding: 22px; flex: 1; display: flex; flex-direction: column; }
     .business-category {
@@ -429,8 +459,15 @@
 
     /* FOOTER */
     .site-footer {
-      border-top: 1px solid var(--divider); padding: 40px 32px; text-align: center;
-      max-width: 1280px; margin: 0 auto;
+      border-top: 1px solid rgba(27,107,74,0.15); padding: 40px 32px; text-align: center;
+      max-width: 1280px; margin: 0 auto; position: relative;
+    }
+    .site-footer::before {
+      content: '';
+      position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      width: 200px; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(212,168,67,0.25), transparent);
+      pointer-events: none;
     }
     .footer-brand {
       font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700;
@@ -694,8 +731,19 @@
       }
       .nav-download { background: rgba(212,168,67,0.08); border-color: rgba(212,168,67,0.15); }
       .hero-section::before {
-        background: radial-gradient(ellipse at 50% 40%, rgba(27,107,74,0.06) 0%, transparent 55%),
-                    radial-gradient(ellipse at 75% 60%, rgba(212,168,67,0.03) 0%, transparent 45%);
+        background: radial-gradient(ellipse at 50% 40%, rgba(27,107,74,0.05) 0%, transparent 55%),
+                    radial-gradient(ellipse at 75% 60%, rgba(212,168,67,0.03) 0%, transparent 45%),
+                    radial-gradient(ellipse at 25% 70%, rgba(27,107,74,0.03) 0%, transparent 40%);
+      }
+      .hero-section::after { background: linear-gradient(to bottom, transparent, var(--bg)); }
+      .main-content::before {
+        background: radial-gradient(circle, rgba(27,107,74,0.02) 0%, transparent 70%);
+      }
+      .main-content::after {
+        background: radial-gradient(circle, rgba(212,168,67,0.02) 0%, transparent 70%);
+      }
+      .section-divider {
+        background: linear-gradient(90deg, transparent 0%, rgba(27,107,74,0.12) 30%, rgba(212,168,67,0.1) 70%, transparent 100%);
       }
       .hero-eyebrow { background: rgba(27,107,74,0.06); border-color: rgba(27,107,74,0.1); }
       .search-input {
@@ -774,6 +822,8 @@
       <p class="hero-subtitle" id="hero-subtitle">Discover local events, halal restaurants, and Muslim-owned businesses near you.</p>
     </div>
   </section>
+
+  <div class="section-divider"></div>
 
   <main class="main-content">
     <section id="events-section" class="section active">
