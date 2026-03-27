@@ -286,38 +286,38 @@
       }
       .features-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 14px;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
       }
       .feature-card {
-        padding: 16px 16px;
+        padding: 14px 14px;
         background: var(--card-bg);
         border: 1px solid var(--card-border);
-        border-radius: 14px;
-        transition: all 0.25s;
+        border-radius: 12px;
+        transition: all 0.3s ease;
       }
-      .feature-card:hover { border-color: rgba(27,107,74,0.3); transform: translateY(-3px); }
+      .feature-card:hover { border-color: rgba(27,107,74,0.3); transform: translateY(-2px); }
       .feature-icon {
-        width: 36px;
-        height: 36px;
+        width: 30px;
+        height: 30px;
         background: rgba(27,107,74,0.12);
-        border-radius: 10px;
+        border-radius: 8px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 17px;
-        margin-bottom: 12px;
+        font-size: 14px;
+        margin-bottom: 8px;
       }
       .feature-card h3 {
-        font-size: 15px;
+        font-size: 13px;
         font-weight: 600;
         color: var(--text);
-        margin-bottom: 4px;
+        margin-bottom: 2px;
       }
       .feature-card p {
-        font-size: 12.5px;
+        font-size: 11px;
         color: var(--text-secondary);
-        line-height: 1.5;
+        line-height: 1.45;
       }
       .feature-tag {
         display: inline-block;
@@ -607,6 +607,90 @@
         40% { transform: translateX(-50%) translateY(-8px); }
         60% { transform: translateX(-50%) translateY(-4px); }
       }
+      @keyframes fadeInScale {
+        from { opacity: 0; transform: scale(0.92) translateY(20px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
+      }
+      @keyframes slideInLeft {
+        from { opacity: 0; transform: translateX(-30px); }
+        to { opacity: 1; transform: translateX(0); }
+      }
+      @keyframes slideInRight {
+        from { opacity: 0; transform: translateX(30px); }
+        to { opacity: 1; transform: translateX(0); }
+      }
+      @keyframes countUp {
+        from { opacity: 0; transform: translateY(16px) scale(0.9); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+      }
+      .reveal {
+        opacity: 0;
+        transform: translateY(28px);
+        transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .reveal.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .reveal-scale {
+        opacity: 0;
+        transform: scale(0.92);
+        transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1), transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .reveal-scale.visible {
+        opacity: 1;
+        transform: scale(1);
+      }
+      .feature-card {
+        opacity: 0;
+        transform: scale(0.92) translateY(20px);
+      }
+      .feature-card.visible {
+        animation: fadeInScale 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+      .stat-item {
+        opacity: 0;
+        transform: translateY(16px);
+      }
+      .stat-item.visible {
+        animation: countUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+      .screenshot-item {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.5s ease, transform 0.5s ease;
+      }
+      .screenshot-item.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .community-badge {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+      }
+      .community-badge:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(27,107,74,0.15);
+      }
+      .ramadan-feature-pill {
+        transition: transform 0.3s ease, background 0.3s ease;
+      }
+      .ramadan-feature-pill:hover {
+        transform: translateY(-2px);
+        background: rgba(107,63,160,0.3);
+      }
+      .hero::after {
+        content: '';
+        position: absolute;
+        bottom: 0; left: 0; right: 0;
+        height: 80px;
+        background: linear-gradient(to bottom, transparent, var(--bg));
+        pointer-events: none;
+        z-index: 0;
+      }
 
       /* RESPONSIVE */
       @media (max-width: 768px) {
@@ -617,7 +701,7 @@
         .section-subtitle { font-size: 15px; }
         .stat-item h3 { font-size: 30px; }
         .cta-title { font-size: 26px; }
-        .features-grid { grid-template-columns: 1fr; }
+        .features-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
         .section { padding: 36px 20px; }
         .stats-section { padding: 32px 20px; }
         .community-section { padding: 36px 20px; }
@@ -659,7 +743,7 @@
 
     <!-- SCREENSHOTS -->
     <section class="screenshots-section">
-      <div class="screenshots-header">
+      <div class="screenshots-header reveal">
         <p>See It in Action</p>
         <h2>App Screenshots</h2>
       </div>
@@ -697,9 +781,9 @@
 
     <!-- FEATURES -->
     <section class="section">
-      <p class="section-label">Everything You Need</p>
-      <h2 class="section-title">Built for Our Community</h2>
-      <p class="section-subtitle">From daily prayers to finding the best halal food — we've got you covered.</p>
+      <p class="section-label reveal">Everything You Need</p>
+      <h2 class="section-title reveal">Built for Our Community</h2>
+      <p class="section-subtitle reveal">From daily prayers to finding the best halal food — we've got you covered.</p>
       <div class="features-grid">
         <div class="feature-card">
           <div class="feature-icon">🕌</div>
@@ -768,8 +852,8 @@
 
     <!-- RAMADAN MODE -->
     <section class="ramadan-banner">
-      <h2>Ramadan Mode</h2>
-      <p>When Ramadan arrives, the app transforms. A rich purple theme, fasting tracker, suhoor and iftar countdowns, and makeup fast logging — all built in.</p>
+      <h2 class="reveal">Ramadan Mode</h2>
+      <p class="reveal">When Ramadan arrives, the app transforms. A rich purple theme, fasting tracker, suhoor and iftar countdowns, and makeup fast logging — all built in.</p>
       <div class="ramadan-features">
         <span class="ramadan-feature-pill">Purple Theme</span>
         <span class="ramadan-feature-pill">Iftar Countdown</span>
@@ -781,9 +865,9 @@
 
     <!-- COMMUNITY -->
     <section class="section community-section">
-      <p class="section-label" id="lp-section-label">Serving the Community</p>
-      <h2 class="section-title" id="lp-section-title">Made with Love for Muslims Everywhere</h2>
-      <p class="section-subtitle" id="lp-section-subtitle">Connecting communities across the country with local resources.</p>
+      <p class="section-label reveal" id="lp-section-label">Serving the Community</p>
+      <h2 class="section-title reveal" id="lp-section-title">Made with Love for Muslims Everywhere</h2>
+      <p class="section-subtitle reveal" id="lp-section-subtitle">Connecting communities across the country with local resources.</p>
       <div class="community-badges" id="lp-community-badges"></div>
       <script>
         fetch('/api/geo/metros').then(function(r){return r.json()}).then(function(metros){
@@ -796,8 +880,8 @@
 
     <!-- CTA -->
     <section class="cta-section">
-      <h2 class="cta-title">Join the Community</h2>
-      <p class="cta-subtitle">Download Salam Y'all and stay connected.</p>
+      <h2 class="cta-title reveal">Join the Community</h2>
+      <p class="cta-subtitle reveal">Download Salam Y'all and stay connected.</p>
       <div class="cta-buttons">
         <div style="display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;">
           <a href="https://apps.apple.com/us/app/salam-yall/id6760231963" class="cta-btn-primary">
@@ -888,6 +972,33 @@
             })
             .catch(function() {});
         }, function() {}, { enableHighAccuracy: false, timeout: 5000 });
+      })();
+    </script>
+    <script>
+      (function() {
+        var observer = new IntersectionObserver(function(entries) {
+          entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+              var el = entry.target;
+              if (el.classList.contains('feature-card')) {
+                var cards = document.querySelectorAll('.feature-card');
+                var idx = Array.prototype.indexOf.call(cards, el);
+                el.style.animationDelay = (idx * 0.07) + 's';
+              }
+              if (el.classList.contains('stat-item')) {
+                var stats = document.querySelectorAll('.stat-item');
+                var si = Array.prototype.indexOf.call(stats, el);
+                el.style.animationDelay = (si * 0.12) + 's';
+              }
+              el.classList.add('visible');
+              observer.unobserve(el);
+            }
+          });
+        }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+        document.querySelectorAll('.reveal, .reveal-scale, .feature-card, .stat-item, .screenshot-item').forEach(function(el) {
+          observer.observe(el);
+        });
       })();
     </script>
   </body>
