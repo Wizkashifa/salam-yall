@@ -2273,6 +2273,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ found: true, metro: metro.name, cities: metro.cities });
   });
 
+  app.get("/api/geo/metros", (_req, res) => {
+    res.json(METRO_AREAS.map(m => ({ name: m.name, lat: m.lat, lng: m.lng, cities: m.cities })));
+  });
+
   app.post("/api/android-waitlist", async (req, res) => {
     try {
       const { email } = req.body;

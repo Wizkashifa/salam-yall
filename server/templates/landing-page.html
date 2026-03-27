@@ -626,40 +626,7 @@
         .ramadan-banner h2 { font-size: 24px; }
       }
 
-      /* LIGHT MODE */
-      @media (prefers-color-scheme: light) {
-        :root {
-          --bg: #FAFAF8;
-          --card-bg: #FFFFFF;
-          --card-border: #E8E8E5;
-          --text: #1a1a1a;
-          --text-secondary: #5A5A5A;
-          --text-tertiary: #9CA3AF;
-        }
-        .hero::before {
-          background: radial-gradient(ellipse at 50% 30%, rgba(27,107,74,0.08) 0%, transparent 60%),
-                      radial-gradient(ellipse at 80% 70%, rgba(212,168,67,0.04) 0%, transparent 50%);
-        }
-        .feature-card:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.06); }
-        .feature-tag { background: rgba(212,168,67,0.12); }
-        .stats-section {
-          background: linear-gradient(135deg, #0d2b1a 0%, #091a10 100%);
-        }
-        .stat-item p { color: rgba(255,255,255,0.7); }
-        .community-badge { background: #F3F3F0; border-color: #E0E0DD; color: #5A5A5A; }
-        .footer { border-top-color: #E5E5E5; }
-        .hero-android {
-          border-color: rgba(0,0,0,0.2); color: #1a1a1a;
-        }
-        .hero-android:hover { border-color: rgba(0,0,0,0.4); background: rgba(0,0,0,0.04); }
-        .hero-webview {
-          border-color: rgba(0,0,0,0.2); color: #1a1a1a;
-        }
-        .hero-webview:hover { border-color: rgba(0,0,0,0.4); background: rgba(0,0,0,0.04); }
-        .cta-btn-android {
-          border-color: rgba(255,255,255,0.3); color: #fff;
-        }
-      }
+      html { color-scheme: dark only; }
     </style>
   </head>
   <body>

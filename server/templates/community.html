@@ -118,6 +118,56 @@
       border: 1px solid rgba(27,107,74,0.15);
     }
     .hero-eyebrow svg { opacity: 0.7; }
+    .hero-eyebrow:hover { background: rgba(27,107,74,0.18); border-color: rgba(27,107,74,0.25); }
+    .metro-selector-overlay {
+      position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.6);
+      display: none; align-items: center; justify-content: center;
+      backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+      animation: fadeIn 0.2s ease;
+    }
+    .metro-selector-overlay.open { display: flex; }
+    .metro-selector {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 16px; width: 90%; max-width: 420px; max-height: 80vh;
+      overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.3);
+      animation: modalSlideUp 0.25s ease;
+    }
+    .metro-selector-header {
+      padding: 16px 20px; border-bottom: 1px solid var(--card-border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .metro-selector-header h3 {
+      font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: var(--text); margin: 0;
+    }
+    .metro-selector-close {
+      width: 28px; height: 28px; border-radius: 50%; border: none;
+      background: rgba(255,255,255,0.1); color: var(--text-secondary);
+      font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .metro-selector-close:hover { background: rgba(255,255,255,0.15); }
+    .metro-selector-list {
+      overflow-y: auto; max-height: calc(80vh - 60px); padding: 8px;
+    }
+    .metro-item {
+      display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+      border-radius: 10px; cursor: pointer; transition: background 0.15s;
+      border: none; background: none; width: 100%; text-align: left; color: var(--text);
+    }
+    .metro-item:hover { background: rgba(27,107,74,0.08); }
+    .metro-item.active { background: rgba(27,107,74,0.12); }
+    .metro-item-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--text-tertiary); flex-shrink: 0;
+    }
+    .metro-item.active .metro-item-dot { background: var(--emerald); }
+    .metro-item-name { font-size: 14px; font-weight: 500; }
+    .metro-item-cities { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
+    .metro-item-detect {
+      display: flex; align-items: center; gap: 8px; padding: 12px 14px;
+      border-radius: 10px; cursor: pointer; border: 1px dashed rgba(27,107,74,0.3);
+      background: rgba(27,107,74,0.04); width: 100%; text-align: left;
+      color: var(--emerald-light); font-size: 13px; font-weight: 500; margin-bottom: 4px;
+    }
+    .metro-item-detect:hover { background: rgba(27,107,74,0.08); }
     .hero-title {
       font-family: 'Playfair Display', serif; font-size: 42px; font-weight: 700;
       color: var(--text); letter-spacing: -0.5px; line-height: 1.15; margin-bottom: 12px;
@@ -676,6 +726,9 @@
       .event-card-image { background: linear-gradient(135deg, rgba(27,107,74,0.04), rgba(212,168,67,0.02)); }
       .restaurant-card-image { background: linear-gradient(135deg, rgba(27,107,74,0.03), rgba(212,168,67,0.02)); }
       .modal-overlay { background: rgba(0,0,0,0.4); }
+      .metro-selector-overlay .metro-selector { background: #fff; border-color: rgba(0,0,0,0.1); }
+      .metro-item:hover { background: rgba(0,0,0,0.04); }
+      .metro-item.active { background: rgba(27,107,74,0.08); }
       .modal-content { background: #fff; border-color: rgba(0,0,0,0.1); box-shadow: 0 24px 80px rgba(0,0,0,0.15); }
       .modal-close { background: rgba(0,0,0,0.4); border-color: rgba(0,0,0,0.1); }
       .modal-close:hover { background: rgba(0,0,0,0.6); }
@@ -713,9 +766,10 @@
 
   <section class="hero-section">
     <div class="hero-inner">
-      <div class="hero-eyebrow" id="hero-eyebrow">
+      <div class="hero-eyebrow" id="hero-eyebrow" onclick="openMetroSelector()" style="cursor:pointer;" title="Change your metro area">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
         <span id="hero-metro-name">Salam Y'all</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="opacity:0.6;margin-left:2px"><polyline points="6 9 12 15 18 9"/></svg>
       </div>
       <h1 class="hero-title">Your <em>Community</em> Hub</h1>
       <p class="hero-subtitle" id="hero-subtitle">Discover local events, halal restaurants, and Muslim-owned businesses near you.</p>
@@ -857,6 +911,16 @@
     <p class="footer-copy">&copy; 2025 Salam Y'all. Made with love for the Muslim community.</p>
   </footer>
 
+  <div class="metro-selector-overlay" id="metro-selector-overlay" onclick="if(event.target===this)closeMetroSelector()">
+    <div class="metro-selector">
+      <div class="metro-selector-header">
+        <h3>Select Metro Area</h3>
+        <button class="metro-selector-close" onclick="closeMetroSelector()">✕</button>
+      </div>
+      <div class="metro-selector-list" id="metro-selector-list"></div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="modal-overlay">
     <div class="modal-content" id="modal-inner"></div>
   </div>
@@ -870,12 +934,102 @@
     let eventsMap = null, restaurantsMap = null;
     let eventsView = 'grid', restaurantsView = 'grid';
     let eventsMarkers = null, restaurantsMarkers = null;
+    let allMetros = [];
+    let currentMetroName = null;
+
+    function openMetroSelector() {
+      if (allMetros.length === 0) {
+        fetch('/api/geo/metros')
+          .then(function(r) { return r.json(); })
+          .then(function(metros) {
+            allMetros = metros;
+            renderMetroList();
+            document.getElementById('metro-selector-overlay').classList.add('open');
+          })
+          .catch(function() { alert('Could not load metro areas.'); });
+      } else {
+        renderMetroList();
+        document.getElementById('metro-selector-overlay').classList.add('open');
+      }
+    }
+
+    function closeMetroSelector() {
+      document.getElementById('metro-selector-overlay').classList.remove('open');
+    }
+
+    function renderMetroList() {
+      var list = document.getElementById('metro-selector-list');
+      var html = '<button class="metro-item-detect" onclick="detectMyLocation()">' +
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>' +
+        'Detect My Location</button>';
+      allMetros.forEach(function(m) {
+        var isActive = currentMetroName === m.name;
+        html += '<button class="metro-item' + (isActive ? ' active' : '') + '" onclick="selectMetro(\'' + m.name.replace(/'/g, "\\'") + '\',' + m.lat + ',' + m.lng + ')">' +
+          '<div class="metro-item-dot"></div>' +
+          '<div><div class="metro-item-name">' + m.name + '</div>' +
+          '<div class="metro-item-cities">' + m.cities.slice(0, 3).join(', ') + '</div></div></button>';
+      });
+      list.innerHTML = html;
+    }
+
+    function detectMyLocation() {
+      closeMetroSelector();
+      if (!navigator.geolocation) { alert('Location not supported'); return; }
+      navigator.geolocation.getCurrentPosition(
+        function(pos) {
+          userLat = pos.coords.latitude;
+          userLng = pos.coords.longitude;
+          locationRequested = true;
+          document.querySelectorAll('.location-banner').forEach(function(b) { b.style.display = 'none'; });
+          updateHeroWithMetro(userLat, userLng);
+          reloadActiveSection();
+        },
+        function() { alert('Could not get your location. Please select a metro area manually.'); }
+      );
+    }
+
+    function selectMetro(name, lat, lng) {
+      closeMetroSelector();
+      userLat = lat;
+      userLng = lng;
+      locationRequested = true;
+      currentMetroName = name;
+      document.querySelectorAll('.location-banner').forEach(function(b) { b.style.display = 'none'; });
+      var el = document.getElementById('hero-metro-name');
+      if (el) el.textContent = name;
+      var metro = allMetros.find(function(m) { return m.name === name; });
+      if (metro) {
+        var sub = document.getElementById('hero-subtitle');
+        if (sub && metro.cities.length >= 3) {
+          sub.textContent = 'Discover local events, halal restaurants, and Muslim-owned businesses across ' +
+            metro.cities[0] + ', ' + metro.cities[1] + ', and ' + metro.cities[2] + '.';
+        }
+      }
+      reloadActiveSection();
+    }
+
+    function reloadActiveSection() {
+      var activeNav = document.querySelector('.nav-tab.active');
+      var section = activeNav ? activeNav.getAttribute('data-section') : 'events';
+      dataLoaded.events = false;
+      dataLoaded.restaurants = false;
+      dataLoaded.directory = false;
+      eventsPage = 1;
+      restaurantsPage = 1;
+      allEvents = [];
+      allRestaurants = [];
+      allBusinesses = [];
+      if (section === 'events') loadEvents();
+      else if (section === 'restaurants') loadRestaurants();
+      else if (section === 'directory') loadDirectory();
+    }
 
     function updateHeroWithMetro(lat, lng) {
       fetch('/api/geo/metro?lat=' + lat + '&lng=' + lng)
         .then(function(r) { return r.json(); })
         .then(function(data) {
           if (data.found) {
+            currentMetroName = data.metro;
             var el = document.getElementById('hero-metro-name');
             if (el) el.textContent = data.metro;
             var sub = document.getElementById('hero-subtitle');
