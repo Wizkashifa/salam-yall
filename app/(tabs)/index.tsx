@@ -1766,7 +1766,7 @@ export default function PrayerScreen() {
               const eventResults = (calendarEvents || []).filter((e: any) => simpleMatch(e.title, q) || simpleMatch(e.description, q) || simpleMatch(e.organizer, q)).slice(0, 5);
               const restaurantResults = (halalRestaurants || []).filter((r: HalalRestaurant) => simpleMatch(r.name, q) || (r.cuisine_types || []).some(c => simpleMatch(c, q)) || simpleMatch(r.formatted_address, q)).slice(0, 5);
               const businessResults = (businessesData || []).filter((b: any) => {
-                const haystack = [b.name, b.category, b.description, b.specialty, ...(b.keywords || []), ...(b.search_tags || [])].filter(Boolean).join(" ").toLowerCase();
+                const haystack = [b.name, b.category, b.description, b.subcategory, ...(b.filter_tags || []), ...(b.search_aliases || [])].filter(Boolean).join(" ").toLowerCase();
                 return synonymTerms.some(term => haystack.includes(term));
               }).slice(0, 5);
               const totalResults = eventResults.length + restaurantResults.length + businessResults.length;

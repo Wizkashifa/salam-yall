@@ -998,124 +998,196 @@ function startHalalAutoSync(pool: pg.Pool) {
 }
 
 async function ensureBusinessesTable(pool: pg.Pool) {
+  await pool.query(`ALTER TABLE halal_restaurants ADD COLUMN IF NOT EXISTS photo_reference TEXT`);
+  await pool.query(`ALTER TABLE halal_restaurants ADD COLUMN IF NOT EXISTS place_id VARCHAR(255)`);
+  await pool.query(`ALTER TABLE halal_restaurants ADD COLUMN IF NOT EXISTS instagram_url TEXT DEFAULT ''`);
+
+  const migrationCheck = await pool.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'businesses' AND column_name = 'subcategory'`);
+  if (migrationCheck.rows.length > 0) {
+    const countCheck = await pool.query(`SELECT COUNT(*) as cnt FROM businesses`);
+    if (parseInt(countCheck.rows[0].cnt) >= 100) {
+      console.log("[DB] Businesses table already migrated to new schema");
+      return;
+    }
+    console.log("[DB] Businesses table has new schema but only " + countCheck.rows[0].cnt + " rows, reimporting...");
+    await pool.query(`DROP TABLE businesses CASCADE`);
+  }
+
+  let googleData: Record<number, any> = {};
+  try {
+    const tableExists = await pool.query(`SELECT 1 FROM information_schema.tables WHERE table_name = 'businesses'`);
+    if (tableExists.rows.length > 0) {
+      const { rows: oldRows } = await pool.query(
+        `SELECT id, place_id, photo_reference, business_hours, google_url, rating, user_ratings_total FROM businesses WHERE place_id IS NOT NULL AND place_id != 'none'`
+      );
+      for (const r of oldRows) {
+        googleData[r.id] = r;
+      }
+      console.log(`[DB] Preserved Google Places data for ${Object.keys(googleData).length} businesses`);
+      await pool.query(`DROP TABLE businesses CASCADE`);
+      console.log("[DB] Dropped old businesses table");
+    }
+  } catch (err: any) {
+    console.log("[DB] No old businesses table to migrate:", err.message);
+  }
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS businesses (
       id SERIAL PRIMARY KEY,
       name VARCHAR(255) NOT NULL,
       category VARCHAR(100) NOT NULL,
+      subcategory VARCHAR(255) DEFAULT '',
       description TEXT DEFAULT '',
-      address VARCHAR(500) NOT NULL,
+      status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+      featured BOOLEAN DEFAULT false,
+      location_type VARCHAR(50) DEFAULT 'physical',
+      address VARCHAR(500) DEFAULT '',
+      service_area_description TEXT DEFAULT '',
       phone VARCHAR(50) DEFAULT '',
       website VARCHAR(500) DEFAULT '',
-      submitted_by_email VARCHAR(255) NOT NULL,
-      status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+      instagram_url TEXT DEFAULT '',
+      booking_url TEXT DEFAULT '',
+      lat DOUBLE PRECISION,
+      lng DOUBLE PRECISION,
+      filter_tags TEXT[] DEFAULT '{}',
+      search_aliases TEXT[] DEFAULT '{}',
+      affiliation TEXT DEFAULT '',
+      photo_url TEXT DEFAULT '',
+      google_url TEXT DEFAULT '',
+      place_id VARCHAR(255),
+      photo_reference TEXT,
+      business_hours JSONB,
+      rating DECIMAL(3,1),
+      user_ratings_total INTEGER,
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_businesses_status ON businesses(status);`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_businesses_category ON businesses(category);`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_businesses_featured ON businesses(featured) WHERE featured = true;`);
+  console.log("[DB] Created new businesses table with updated schema");
 
-  const colCheck = await pool.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'businesses' AND column_name = 'place_id'`);
-  if (colCheck.rows.length === 0) {
-    await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS place_id VARCHAR(255)`);
-    await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS rating DECIMAL(2,1)`);
-    await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS user_ratings_total INTEGER`);
-    await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS photo_reference TEXT`);
-    await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS business_hours JSONB`);
-    await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION`);
-    await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION`);
-    console.log("[DB] Added Google Places columns to businesses table");
-  }
+  try {
+    const csvPath = path.join(process.cwd(), "attached_assets", "businesses_clean_1774627343631.csv");
+    if (fs.existsSync(csvPath)) {
+      const csvContent = fs.readFileSync(csvPath, "utf-8");
 
-  await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS google_url TEXT DEFAULT ''`);
-  await pool.query(`ALTER TABLE businesses ALTER COLUMN address DROP NOT NULL`);
-  await pool.query(`ALTER TABLE businesses ALTER COLUMN address SET DEFAULT ''`);
+      const csvRecords: string[][] = [];
+      let currentField = "";
+      let currentRecord: string[] = [];
+      let inQuotes = false;
+      for (let ci = 0; ci < csvContent.length; ci++) {
+        const ch = csvContent[ci];
+        if (ch === '"') {
+          if (inQuotes && ci + 1 < csvContent.length && csvContent[ci + 1] === '"') {
+            currentField += '"';
+            ci++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (ch === ',' && !inQuotes) {
+          currentRecord.push(currentField);
+          currentField = "";
+        } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
+          if (ch === '\r' && ci + 1 < csvContent.length && csvContent[ci + 1] === '\n') ci++;
+          currentRecord.push(currentField);
+          currentField = "";
+          if (currentRecord.some(f => f.trim())) csvRecords.push(currentRecord);
+          currentRecord = [];
+        } else {
+          currentField += ch;
+        }
+      }
+      if (currentRecord.length > 0 || currentField) {
+        currentRecord.push(currentField);
+        if (currentRecord.some(f => f.trim())) csvRecords.push(currentRecord);
+      }
 
-  await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS specialty VARCHAR(255) DEFAULT ''`);
-  await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS keywords TEXT[] DEFAULT '{}'`);
-  await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS photo_url TEXT DEFAULT ''`);
-  await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS booking_url TEXT DEFAULT ''`);
-  await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS search_tags TEXT[] DEFAULT '{}'`);
-  await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS member_note TEXT DEFAULT ''`);
-  await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS hospital_affiliation TEXT DEFAULT ''`);
-  await pool.query(`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS instagram_url TEXT DEFAULT ''`);
-  await pool.query(`ALTER TABLE halal_restaurants ADD COLUMN IF NOT EXISTS instagram_url TEXT DEFAULT ''`);
+      const headers = csvRecords[0].map(h => h.trim());
+      let importCount = 0;
 
-  await pool.query(`UPDATE businesses SET specialty = 'Optometry' WHERE category = 'Healthcare' AND (specialty IS NULL OR specialty = '') AND (name ILIKE '%OD%' OR name ILIKE '%MyEyeDr%')`);
-  await pool.query(`UPDATE businesses SET specialty = 'Dermatology' WHERE category = 'Healthcare' AND (specialty IS NULL OR specialty = '') AND name ILIKE '%Dermatology%'`);
-  await pool.query(`UPDATE businesses SET specialty = 'Dentistry' WHERE category = 'Healthcare' AND (specialty IS NULL OR specialty = '') AND name ILIKE '%Dentistry%'`);
+      for (let i = 1; i < csvRecords.length; i++) {
+        const fields = csvRecords[i];
+        if (fields.length < 5) continue;
 
-  await pool.query(`UPDATE businesses SET website = 'https://curatestudioevents.com/' WHERE name ILIKE '%Curate Studio%' AND (website IS NULL OR website = '')`);
-  await pool.query(`UPDATE businesses SET category = 'Services' WHERE category = 'Finance'`);
-  await pool.query(`UPDATE businesses SET category = 'Services' WHERE category = 'Technology'`);
-  await pool.query(`UPDATE businesses SET category = 'Events', keywords = ARRAY['Venue'] WHERE name ILIKE '%Curate Studio%' AND category != 'Events'`);
+        try {
+        const row: Record<string, string> = {};
+        headers.forEach((h, idx) => { row[h] = (fields[idx] || "").trim(); });
 
-  const attorneyDupes = [
-    "Mousa Alshanteer, Associate Attorney - Brooks Pierce",
-    "Ayeshinaye Smith, Esq. - Smith Dominguez, PLLC",
-    "The Law Office of Neubia L. Harris, PLLC",
-    "Safwan Ali - Ali Law Firm PLLC",
-    "Omar Baloch - The Law Offices of Omar Baloch, PLLC",
-    "Nigel Edwards - The Law Offices of Omar Baloch, PLLC",
-    "Pooyan Ordoubadi - Law Office of Pooyan Ordoubadi",
-    "Sammy Naji - Triangle Legal",
-    "Nada Mohamed - Law Office of Nada Mohamed, PLLC",
-    "Hay'ralah Alghorazi - Triangle Legal",
-  ];
-  for (const dupeName of attorneyDupes) {
-    await pool.query("DELETE FROM businesses WHERE name = $1", [dupeName]);
-  }
+        if (!row.name || !row.category) continue;
 
-  const attorneySeeds = [
-    { name: "Mousa Alshanteer, Associate Attorney - Brooks Pierce", match: "Mousa Alshanteer", desc: "Healthcare, Business, Corporate, Mergers & Acquisitions, Transactional", addr: "230 North Elm Street, 2000 Renaissance Plaza, Greensboro, NC 27401", phone: "(336) 373-8850", web: "https://www.brookspierce.com/people-mousa-alshanteer" },
-    { name: "The Law Office of Neubia L. Harris, PLLC", match: "Neubia", desc: "Education Law, Civil Rights", addr: "312 W. Millbrook Road, Ste. 141, Raleigh, NC 27609", phone: "(919) 526-0500", web: "https://www.neubiaharrislaw.com" },
-    { name: "Patterson Harkavy LLP", match: "Patterson Harkavy", desc: "Civil Rights, Employment, Workers' Compensation, Labor, Police Misconduct", addr: "100 Europa Drive, Suite 420, Chapel Hill, NC 27517", phone: "(919) 942-5200", web: "https://www.pathlaw.com" },
-    { name: "Ayeshinaye Smith, Esq. - Smith Dominguez, PLLC", match: "Ayeshinaye", desc: "Family Law, Estates (Planning, Administration, and Guardianship)", addr: "4816 Six Forks Road, Suite 202, Raleigh, NC 27609", phone: "(919) 390-3512", web: "https://www.smithdominguez.com" },
-    { name: "The Law Office of Derrick J. Hensley, PLLC", match: "Hensley", desc: "Child Welfare/Adoptions, Immigration, International Family Law", addr: "401 Meadowlands Dr. Ste. 201, Hillsborough, NC 27278", phone: "(919) 480-1999", web: "https://www.LODJH.com" },
-    { name: "Safwan Ali - Ali Law Firm PLLC", match: "Safwan Ali", desc: "Immigration, Traffic", addr: "PO Box 1046, Henderson, NC 27536", phone: "(919) 213-1945", web: "https://www.alilawfirm.net" },
-    { name: "Omar Baloch - The Law Offices of Omar Baloch, PLLC", match: "Omar Baloch", desc: "Immigration", addr: "8801 Fast Park Drive, Suite 313, Raleigh, NC 27617", phone: "(919) 834-3535", web: "https://www.balochlaw.com" },
-    { name: "Nigel Edwards - The Law Offices of Omar Baloch, PLLC", match: "Nigel Edwards", desc: "Immigration (excluding business immigration)", addr: "8801 Fast Park Drive, Suite 313, Raleigh, NC 27617", phone: "(919) 834-3535", web: "https://www.balochlaw.com" },
-    { name: "Pooyan Ordoubadi - Law Office of Pooyan Ordoubadi", match: "Pooyan Ordoubadi", desc: "Immigration (Removal Defense and Federal Appeals), Criminal Defense, Family Law", addr: "33 Hillsboro Street, Pittsboro, NC 27312", phone: "(919) 351-1101", web: "https://pordolaw.com" },
-    { name: "Sammy Naji - Triangle Legal", match: "Sammy Naji", desc: "Personal Injury, Wills, Trusts, Litigation, Business Law", addr: "2500 Regency Parkway, Cary, NC 27518", phone: "(919) 590-3647", web: "https://www.triangle.legal/" },
-    { name: "Nada Mohamed - Law Office of Nada Mohamed, PLLC", match: "Nada Mohamed", desc: "Estate Planning, Real Estate Transactions", addr: "64 Forest View Place, Durham, NC 27713", phone: "(919) 808-0067", web: "https://nrmlawoffice.com" },
-    { name: "Hay'ralah Alghorazi - Triangle Legal", match: "Alghorazi", desc: "Estate Planning", addr: "2500 Regency Parkway, Cary, NC 27518", phone: "(919) 590-3647", web: "https://www.triangle.legal/" },
-  ];
-  for (const a of attorneySeeds) {
-    const exists = await pool.query("SELECT id FROM businesses WHERE name ILIKE $1", ['%' + a.match + '%']);
-    if (exists.rows.length === 0) {
-      await pool.query(
-        "INSERT INTO businesses (name, category, description, address, phone, website, submitted_by_email, status, member_note, search_tags, place_id) VALUES ($1, 'Services', $2, $3, $4, $5, 'admin@salamyall.net', 'approved', 'Member of NC Muslim Bar', '{lawyer,attorney,legal}', 'none')",
-        [a.name, a.desc, a.addr, a.phone, a.web]
-      );
+        let filterTags: string[] = [];
+        let searchAliases: string[] = [];
+        try {
+          if (row.filter_tags) {
+            const cleaned = row.filter_tags.replace(/\u201c|\u201d/g, '"');
+            filterTags = JSON.parse(cleaned);
+          }
+        } catch { try { if (row.filter_tags) filterTags = JSON.parse(row.filter_tags.replace(/'/g, '"')); } catch {} }
+        try {
+          if (row.search_aliases) {
+            const cleaned = row.search_aliases.replace(/\u201c|\u201d/g, '"');
+            searchAliases = JSON.parse(cleaned);
+          }
+        } catch { try { if (row.search_aliases) searchAliases = JSON.parse(row.search_aliases.replace(/'/g, '"')); } catch {} }
+
+        const csvId = parseInt(row.id);
+        const gd = googleData[csvId];
+
+        const businessHoursValue = gd?.business_hours ? (typeof gd.business_hours === 'string' ? gd.business_hours : JSON.stringify(gd.business_hours)) : null;
+
+        await pool.query(
+          `INSERT INTO businesses (id, name, category, subcategory, description, status, featured, location_type, address, service_area_description, phone, website, instagram_url, booking_url, lat, lng, filter_tags, search_aliases, affiliation, photo_url, rating, user_ratings_total, place_id, photo_reference, business_hours, google_url, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25::jsonb, $26, $27)
+           ON CONFLICT (id) DO NOTHING`,
+          [
+            csvId,
+            row.name,
+            row.category,
+            row.subcategory || "",
+            row.description || "",
+            row.status || "approved",
+            row.featured === "True",
+            row.location_type || "physical",
+            row.address || "",
+            row.service_area_description || "",
+            row.phone || "",
+            row.website || "",
+            row.instagram_url || "",
+            row.booking_url || "",
+            row.lat ? parseFloat(row.lat) : null,
+            row.lng ? parseFloat(row.lng) : null,
+            filterTags,
+            searchAliases,
+            row.affiliation || "",
+            row.photo_url || "",
+            gd?.rating ?? (row.rating && !isNaN(parseFloat(row.rating)) ? parseFloat(row.rating) : null),
+            gd?.user_ratings_total ?? (row.user_ratings_total && !isNaN(parseInt(row.user_ratings_total)) ? parseInt(row.user_ratings_total) : null),
+            gd?.place_id ?? null,
+            gd?.photo_reference ?? null,
+            businessHoursValue,
+            gd?.google_url ?? "",
+            row.created_at ? new Date(row.created_at) : new Date(),
+          ]
+        );
+        importCount++;
+        } catch (rowErr: any) {
+          const row2: Record<string, string> = {};
+          headers.forEach((h, idx) => { row2[h] = (fields[idx] || "").trim(); });
+          console.error(`[DB] Error importing CSV row ${i} (${row2.name}): ${rowErr.message}`);
+        }
+      }
+
+      const maxId = await pool.query("SELECT MAX(id) as max_id FROM businesses");
+      const nextId = (maxId.rows[0].max_id || 0) + 1;
+      await pool.query(`SELECT setval('businesses_id_seq', $1, false)`, [nextId]);
+
+      console.log(`[DB] Imported ${importCount} businesses from CSV`);
+    } else {
+      console.log("[DB] CSV file not found, starting with empty businesses table");
     }
-  }
-  const allAttorneyNames = attorneySeeds.map(a => a.match);
-  const matchConditions = allAttorneyNames.map((_, i) => `name ILIKE '%' || $${i+1} || '%'`).join(' OR ');
-  await pool.query(`UPDATE businesses SET member_note = 'Member of NC Muslim Bar', search_tags = '{lawyer,attorney,legal}', place_id = 'none' WHERE ${matchConditions}`, allAttorneyNames);
-
-  await pool.query(`ALTER TABLE halal_restaurants ADD COLUMN IF NOT EXISTS photo_reference TEXT`);
-  await pool.query(`ALTER TABLE halal_restaurants ADD COLUMN IF NOT EXISTS place_id VARCHAR(255)`);
-
-  const { rows } = await pool.query("SELECT COUNT(*) as count FROM businesses");
-  if (parseInt(rows[0].count) === 0) {
-    const seed = [
-      { name: "Neomonde Mediterranean", category: "Restaurant", description: "Authentic Mediterranean bakery and restaurant with fresh pita and shawarma.", address: "9610 Forum Dr, Raleigh, NC 27615", phone: "(919) 861-4860", website: "https://neomonde.com" },
-      { name: "Bosphorus Turkish Cuisine", category: "Restaurant", description: "Family-owned Turkish restaurant offering traditional kebabs and mezes.", address: "907 W Main St, Durham, NC 27701", phone: "(919) 682-0007", website: "" },
-      { name: "Al-Amir Halal Meat & Grocery", category: "Grocery", description: "Full-service halal grocery with fresh meats, spices, and imported goods.", address: "1205 E Chatham St, Cary, NC 27511", phone: "(919) 467-2220", website: "" },
-      { name: "Jasmin & Olivz Mediterranean Bistro", category: "Restaurant", description: "Fast-casual Mediterranean cuisine with bowls, wraps, and platters.", address: "8111 Tryon Woods Dr, Cary, NC 27518", phone: "(919) 439-0099", website: "https://jasminandolivz.com" },
-      { name: "Noor Islamic Finance", category: "Finance", description: "Sharia-compliant financial advisory and home financing services.", address: "3700 National Dr, Raleigh, NC 27612", phone: "(919) 555-0123", website: "" },
-      { name: "Kabob & Curry", category: "Restaurant", description: "Pakistani and Indian cuisine with halal meats and traditional recipes.", address: "4512 Falls of Neuse Rd, Raleigh, NC 27609", phone: "(919) 790-9992", website: "" },
-      { name: "Salam Boutique", category: "Retail", description: "Modest fashion boutique with hijabs, abayas, and Islamic gifts.", address: "2020 Walnut St, Cary, NC 27518", phone: "(919) 555-0456", website: "" },
-      { name: "Tariqa Auto Services", category: "Automotive", description: "Muslim-owned auto repair and maintenance shop, fair pricing guaranteed.", address: "1400 Buck Jones Rd, Raleigh, NC 27606", phone: "(919) 555-0789", website: "" },
-      { name: "Baraka Realty", category: "Real Estate", description: "Muslim-friendly real estate services for homes near masjids and Islamic schools.", address: "5000 Falls of Neuse Rd, Raleigh, NC 27609", phone: "(919) 555-0321", website: "" },
-      { name: "Mediterranean Deli", category: "Restaurant", description: "Bakery and deli with halal options, fresh bread, and imported Mediterranean goods.", address: "410 W Franklin St, Chapel Hill, NC 27516", phone: "(919) 967-2666", website: "https://mediterraneandeli.com" },
-    ];
-    for (const b of seed) {
-      await pool.query(
-        `INSERT INTO businesses (name, category, description, address, phone, website, submitted_by_email, status) VALUES ($1, $2, $3, $4, $5, $6, 'admin@salamyall.net', 'approved')`,
-        [b.name, b.category, b.description, b.address, b.phone, b.website]
-      );
-    }
-    console.log(`[DB] Seeded ${seed.length} businesses`);
+  } catch (err: any) {
+    console.error("[DB] Error importing CSV:", err.message);
   }
 }
 
@@ -1952,7 +2024,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/businesses", async (_req, res) => {
     try {
       const result = await pool.query(
-        "SELECT id, name, category, description, address, phone, website, place_id, rating, user_ratings_total, photo_reference, business_hours, lat, lng, specialty, keywords, photo_url, booking_url, search_tags, member_note, hospital_affiliation, instagram_url FROM businesses WHERE status = 'approved' AND category != 'Restaurant' ORDER BY LOWER(name)"
+        "SELECT id, name, category, subcategory, description, address, phone, website, place_id, rating, user_ratings_total, photo_reference, business_hours, lat, lng, filter_tags, photo_url, booking_url, search_aliases, affiliation, instagram_url, google_url, location_type, service_area_description, featured FROM businesses WHERE status = 'approved' ORDER BY featured DESC, LOWER(name)"
       );
 
       try {
@@ -1967,6 +2039,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } catch (crErr: any) {
         console.error("[Business] Error fetching community ratings:", crErr.message);
+      }
+
+      for (const row of result.rows) {
+        row.specialty = row.subcategory;
+        row.keywords = row.filter_tags;
+        row.search_tags = row.search_aliases;
+        row.hospital_affiliation = row.affiliation;
       }
 
       res.json(result.rows);
@@ -2323,39 +2402,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/businesses/address-autocomplete", async (req, res) => {
+    try {
+      const input = String(req.query.input || "").trim();
+      if (!input || input.length < 3) {
+        return res.json({ predictions: [] });
+      }
+      const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+      if (!apiKey) {
+        return res.json({ predictions: [] });
+      }
+      const resp = await fetch(
+        `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(input)}&types=address&components=country:us&key=${apiKey}`
+      );
+      const data = await resp.json();
+      const predictions = (data.predictions || []).slice(0, 5).map((p: any) => ({
+        description: p.description,
+        place_id: p.place_id,
+      }));
+      res.json({ predictions });
+    } catch (error: any) {
+      console.error("Address autocomplete error:", error.message);
+      res.json({ predictions: [] });
+    }
+  });
+
+  app.post("/api/businesses/upload-photo", async (req, res) => {
+    try {
+      const { image, mimeType } = req.body;
+      if (!image || typeof image !== "string") {
+        return res.status(400).json({ error: "No image provided" });
+      }
+      const allowedMimes = ["image/jpeg", "image/png", "image/webp"];
+      if (mimeType && !allowedMimes.includes(mimeType)) {
+        return res.status(400).json({ error: "Invalid image type. Allowed: JPEG, PNG, WebP" });
+      }
+      const buffer = Buffer.from(image, "base64");
+      const maxSize = 5 * 1024 * 1024;
+      if (buffer.length > maxSize) {
+        return res.status(400).json({ error: "Image too large. Maximum 5MB." });
+      }
+      const jpgSig = buffer[0] === 0xFF && buffer[1] === 0xD8;
+      const pngSig = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47;
+      const webpSig = buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46;
+      if (!jpgSig && !pngSig && !webpSig) {
+        return res.status(400).json({ error: "Invalid image data" });
+      }
+      const ext = pngSig ? "png" : webpSig ? "webp" : "jpg";
+      const fileName = `biz_${Date.now()}_${Math.random().toString(36).substr(2, 6)}.${ext}`;
+      const uploadDir = path.join(__dirname, "..", "uploads");
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      const filePath = path.join(uploadDir, fileName);
+      fs.writeFileSync(filePath, buffer);
+      const url = `/uploads/${fileName}`;
+      res.json({ url: `${req.protocol}://${req.get("host")}${url}` });
+    } catch (error: any) {
+      console.error("Photo upload error:", error.message);
+      res.status(500).json({ error: "Failed to upload photo" });
+    }
+  });
+
   app.post("/api/businesses/submit", async (req, res) => {
     try {
-      const { name, category, description, address, phone, website, google_url, specialty, keywords, photo_url, booking_url, hospital_affiliation, instagram_url } = req.body;
+      const { name, category, subcategory, description, address, phone, website, google_url, filter_tags, photo_url, booking_url, affiliation, instagram_url, location_type, service_area_description } = req.body;
 
       if (!name || !category) {
         return res.status(400).json({ error: "Name and category are required" });
       }
 
-      const validCategories = ["Restaurant", "Grocery", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Events", "Creator"];
+      const validCategories = ["Food & Drink", "Grocery", "Retail", "Automotive", "Real Estate", "Healthcare", "Services", "Events", "Creator"];
       if (!validCategories.includes(category)) {
         return res.status(400).json({ error: "Invalid category" });
       }
 
-      if ((category === "Healthcare" || category === "Events" || category === "Creator") && !specialty) {
-        return res.status(400).json({ error: "Specialty/type is required for " + category });
+      if ((category === "Healthcare" || category === "Automotive" || category === "Services" || category === "Events" || category === "Creator") && !subcategory) {
+        return res.status(400).json({ error: "Subcategory is required for " + category });
       }
 
-      const keywordsArray = Array.isArray(keywords) ? keywords : [];
-
-      let submitterName = "";
-      const userId = await getUserIdFromRequest(req);
-      if (userId) {
-        const userResult = await pool.query("SELECT display_name, email FROM user_accounts WHERE id = $1", [userId]);
-        if (userResult.rows.length > 0) {
-          submitterName = userResult.rows[0].display_name || userResult.rows[0].email || "";
-        }
+      const validLocationTypes = ["physical", "service_area", "virtual", "popup"];
+      if (!location_type || !validLocationTypes.includes(location_type)) {
+        return res.status(400).json({ error: "Location type is required. Choose: Physical Location, Service Area, Virtual, or Pop-up" });
+      }
+      const validServiceAreas = ["", "Triangle Area (Raleigh, Durham, Chapel Hill)", "Raleigh Metro", "Durham / Chapel Hill", "Cary / Apex / Morrisville", "Wake County", "NC Statewide", "Nationwide / Remote"];
+      const saValue = service_area_description || "";
+      if (saValue && !validServiceAreas.includes(saValue)) {
+        return res.status(400).json({ error: "Invalid service area. Choose from the predefined options." });
       }
 
+      const filterTagsArray = Array.isArray(filter_tags) ? filter_tags : [];
+
+      const usedQuickAdd = !!(google_url && google_url.trim());
       const result = await pool.query(
-        `INSERT INTO businesses (name, category, description, address, phone, website, submitted_by_email, google_url, specialty, keywords, photo_url, booking_url, hospital_affiliation, instagram_url, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'pending')
+        `INSERT INTO businesses (name, category, subcategory, description, address, phone, website, google_url, filter_tags, photo_url, booking_url, affiliation, instagram_url, location_type, service_area_description, place_id, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 'pending')
          RETURNING id`,
-        [name, category, description || "", address || "", phone || "", website || "", submitterName, google_url || "", specialty || "", keywordsArray, photo_url || "", booking_url || "", hospital_affiliation || "", instagram_url || ""]
+        [name, category, subcategory || "", description || "", address || "", phone || "", website || "", google_url || "", filterTagsArray, photo_url || "", booking_url || "", affiliation || "", instagram_url || "", location_type, saValue, usedQuickAdd ? null : "none"]
       );
 
       res.status(201).json({
@@ -2415,25 +2558,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/businesses/add", async (req, res) => {
     try {
       if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
-      const { name, category, description, address, phone, website, google_url, specialty, keywords, instagram_url, place_id, rating, user_ratings_total, photo_reference, business_hours, lat, lng } = req.body;
+      const { name, category, subcategory, description, address, phone, website, google_url, filter_tags, instagram_url, place_id, rating, user_ratings_total, photo_reference, business_hours, lat, lng, location_type, service_area_description } = req.body;
       if (!name || !name.trim()) return res.status(400).json({ error: "Name is required" });
       if (!category) return res.status(400).json({ error: "Category is required" });
-      const validCategories = ["Restaurant", "Grocery", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Events", "Creator"];
+      const validCategories = ["Food & Drink", "Grocery", "Retail", "Automotive", "Real Estate", "Healthcare", "Services", "Events", "Creator"];
       if (!validCategories.includes(category)) return res.status(400).json({ error: "Invalid category" });
-      const keywordsArray = Array.isArray(keywords) ? keywords : [];
+      const validLocationTypes = ["physical", "service_area", "virtual", "popup"];
+      const normalizedLocationType = validLocationTypes.includes(location_type) ? location_type : "physical";
+      const validServiceAreas = ["", "Triangle Area (Raleigh, Durham, Chapel Hill)", "Raleigh Metro", "Durham / Chapel Hill", "Cary / Apex / Morrisville", "Wake County", "NC Statewide", "Nationwide / Remote"];
+      const adminSaValue = service_area_description || "";
+      if (adminSaValue && !validServiceAreas.includes(adminSaValue)) {
+        return res.status(400).json({ error: "Invalid service area description" });
+      }
+      const filterTagsArray = Array.isArray(filter_tags) ? filter_tags : [];
       const result = await pool.query(
-        `INSERT INTO businesses (name, category, description, address, phone, website, google_url, specialty, keywords, instagram_url, place_id, rating, user_ratings_total, photo_reference, business_hours, lat, lng, submitted_by_email, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 'admin@salamyall.net', 'approved') RETURNING id, name`,
+        `INSERT INTO businesses (name, category, subcategory, description, address, phone, website, google_url, filter_tags, instagram_url, place_id, rating, user_ratings_total, photo_reference, business_hours, lat, lng, location_type, service_area_description, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, 'approved') RETURNING id, name`,
         [
           name.trim(),
           category,
+          subcategory || "",
           description || "",
           address || "",
           phone || "",
           website || "",
           google_url || "",
-          specialty || "",
-          keywordsArray,
+          filterTagsArray,
           instagram_url || "",
           place_id || null,
           rating || null,
@@ -2442,6 +2592,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           business_hours ? JSON.stringify(business_hours) : null,
           lat || null,
           lng || null,
+          normalizedLocationType,
+          adminSaValue,
         ]
       );
       console.log(`[Admin] Business added: ${result.rows[0].name} (ID ${result.rows[0].id})`);
@@ -2463,7 +2615,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid status filter" });
       }
       const result = await pool.query(
-        "SELECT id, name, category, description, address, phone, website, submitted_by_email, status, created_at, specialty, keywords, photo_url, booking_url, hospital_affiliation, member_note, search_tags, place_id, google_url, instagram_url FROM businesses WHERE status = $1 ORDER BY created_at DESC",
+        "SELECT id, name, category, subcategory, description, address, phone, website, status, created_at, filter_tags, photo_url, booking_url, affiliation, search_aliases, place_id, google_url, instagram_url, location_type, service_area_description, featured FROM businesses WHERE status = $1 ORDER BY created_at DESC",
         [status]
       );
       res.json(result.rows);
@@ -2651,7 +2803,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   async function enrichBusinessDescription(businessId: number): Promise<string | null> {
     try {
-      const biz = await pool.query("SELECT id, name, category, description, website, google_url, address, specialty, keywords, place_id FROM businesses WHERE id = $1", [businessId]);
+      const biz = await pool.query("SELECT id, name, category, subcategory, description, website, google_url, address, filter_tags, place_id FROM businesses WHERE id = $1", [businessId]);
       if (biz.rows.length === 0) return null;
       const business = biz.rows[0];
 
@@ -2696,9 +2848,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const contextParts = [
         `Business name: ${business.name}`,
         `Category: ${business.category}`,
-        business.specialty ? `Specialty: ${business.specialty}` : "",
+        business.subcategory ? `Subcategory: ${business.subcategory}` : "",
         business.address ? `Location: ${business.address}` : "",
-        business.keywords?.length ? `Tags: ${business.keywords.join(", ")}` : "",
+        business.filter_tags?.length ? `Tags: ${business.filter_tags.join(", ")}` : "",
         websiteText ? `\nWebsite content:\n${websiteText}` : "",
         googleInfo ? `\nGoogle Places info:\n${googleInfo}` : "",
       ].filter(Boolean).join("\n");
@@ -2965,8 +3117,8 @@ Return ONLY the description text, nothing else.`,
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid business ID" });
       }
-      const { name, category, description, address, phone, website, google_url, specialty, keywords, photo_url, booking_url, hospital_affiliation, member_note, search_tags, disable_enrichment, instagram_url } = req.body;
-      const validCats = ["Restaurant", "Grocery", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Events", "Creator", "Home Bakery / Catering"];
+      const { name, category, subcategory, description, address, phone, website, google_url, filter_tags, photo_url, booking_url, affiliation, search_aliases, disable_enrichment, instagram_url, location_type, service_area_description } = req.body;
+      const validCats = ["Food & Drink", "Grocery", "Retail", "Automotive", "Real Estate", "Healthcare", "Services", "Events", "Creator"];
       if (category !== undefined && !validCats.includes(category)) {
         return res.status(400).json({ error: "Invalid category" });
       }
@@ -2975,19 +3127,32 @@ Return ONLY the description text, nothing else.`,
       let idx = 1;
       if (name !== undefined) { fields.push(`name = $${idx++}`); values.push(String(name).substring(0, 255)); }
       if (category !== undefined) { fields.push(`category = $${idx++}`); values.push(category); }
+      if (subcategory !== undefined) { fields.push(`subcategory = $${idx++}`); values.push(String(subcategory).substring(0, 255)); }
       if (description !== undefined) { fields.push(`description = $${idx++}`); values.push(String(description).substring(0, 1000)); }
       if (address !== undefined) { fields.push(`address = $${idx++}`); values.push(String(address).substring(0, 500)); }
       if (phone !== undefined) { fields.push(`phone = $${idx++}`); values.push(String(phone).substring(0, 50)); }
       if (website !== undefined) { fields.push(`website = $${idx++}`); values.push(String(website).substring(0, 500)); }
       if (google_url !== undefined) { fields.push(`google_url = $${idx++}`); values.push(String(google_url).substring(0, 500)); }
-      if (specialty !== undefined) { fields.push(`specialty = $${idx++}`); values.push(String(specialty).substring(0, 255)); }
-      if (keywords !== undefined) { fields.push(`keywords = $${idx++}`); values.push(Array.isArray(keywords) ? keywords : []); }
+      if (filter_tags !== undefined) { fields.push(`filter_tags = $${idx++}`); values.push(Array.isArray(filter_tags) ? filter_tags : []); }
       if (photo_url !== undefined) { fields.push(`photo_url = $${idx++}`); values.push(String(photo_url).substring(0, 500)); }
       if (booking_url !== undefined) { fields.push(`booking_url = $${idx++}`); values.push(String(booking_url).substring(0, 500)); }
-      if (hospital_affiliation !== undefined) { fields.push(`hospital_affiliation = $${idx++}`); values.push(String(hospital_affiliation).substring(0, 255)); }
-      if (member_note !== undefined) { fields.push(`member_note = $${idx++}`); values.push(String(member_note).substring(0, 255)); }
-      if (search_tags !== undefined) { fields.push(`search_tags = $${idx++}`); values.push(Array.isArray(search_tags) ? search_tags : []); }
+      if (affiliation !== undefined) { fields.push(`affiliation = $${idx++}`); values.push(String(affiliation).substring(0, 255)); }
+      if (search_aliases !== undefined) { fields.push(`search_aliases = $${idx++}`); values.push(Array.isArray(search_aliases) ? search_aliases : []); }
       if (instagram_url !== undefined) { fields.push(`instagram_url = $${idx++}`); values.push(String(instagram_url).substring(0, 500)); }
+      if (location_type !== undefined) {
+        const validLT = ["physical", "service_area", "virtual", "popup"];
+        fields.push(`location_type = $${idx++}`);
+        values.push(validLT.includes(location_type) ? location_type : "physical");
+      }
+      if (service_area_description !== undefined) {
+        const validSA = ["", "Triangle Area (Raleigh, Durham, Chapel Hill)", "Raleigh Metro", "Durham / Chapel Hill", "Cary / Apex / Morrisville", "Wake County", "NC Statewide", "Nationwide / Remote"];
+        const saVal = String(service_area_description);
+        if (saVal && !validSA.includes(saVal)) {
+          return res.status(400).json({ error: "Invalid service area description" });
+        }
+        fields.push(`service_area_description = $${idx++}`);
+        values.push(saVal);
+      }
       if (disable_enrichment !== undefined) { fields.push(`place_id = $${idx++}`); values.push(disable_enrichment === true ? 'none' : null); }
       if (fields.length === 0) {
         return res.status(400).json({ error: "No fields to update" });
@@ -3004,6 +3169,25 @@ Return ONLY the description text, nothing else.`,
     } catch (error: any) {
       console.error("Error updating business:", error.message);
       res.status(500).json({ error: "Failed to update business" });
+    }
+  });
+
+  app.patch("/api/admin/businesses/:id/featured", async (req, res) => {
+    try {
+      if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "Invalid business ID" });
+      const { featured } = req.body;
+      if (typeof featured !== "boolean") return res.status(400).json({ error: "featured must be a boolean" });
+      const result = await pool.query(
+        "UPDATE businesses SET featured = $1 WHERE id = $2 RETURNING id, name, featured",
+        [featured, id]
+      );
+      if (result.rows.length === 0) return res.status(404).json({ error: "Business not found" });
+      res.json(result.rows[0]);
+    } catch (error: any) {
+      console.error("Error toggling featured:", error.message);
+      res.status(500).json({ error: "Failed to toggle featured" });
     }
   });
 

@@ -448,17 +448,15 @@
               <label>Category *</label>
               <select id="newBizCategory" style="width:100%;padding:10px 14px;background:#1E1E1E;border:1px solid #333;border-radius:10px;color:#F5F5F5;font-size:14px;">
                 <option value="">Select...</option>
-                <option>Restaurant</option>
+                <option>Food &amp; Drink</option>
                 <option>Grocery</option>
                 <option>Retail</option>
                 <option>Automotive</option>
                 <option>Real Estate</option>
                 <option>Healthcare</option>
-                <option>Education</option>
                 <option>Services</option>
                 <option>Events</option>
                 <option>Creator</option>
-                <option>Home Bakery / Catering</option>
               </select>
             </div>
           </div>
@@ -470,12 +468,12 @@
           </div>
           <div class="row">
             <div><label>Instagram</label><input type="text" id="newBizIg" placeholder="https://instagram.com/..."></div>
-            <div><label>Specialty</label><input type="text" id="newBizSpecialty" placeholder="e.g. Dentist, Tailor..."></div>
+            <div><label>Subcategory</label><input type="text" id="newBizSubcategory" placeholder="e.g. Dentist, Tailor..."></div>
           </div>
           <label>Description</label>
           <input type="text" id="newBizDescription" placeholder="Brief description of the business">
-          <label>Keywords (comma-separated)</label>
-          <input type="text" id="newBizKeywords" placeholder="e.g. mechanic, oil change, brakes">
+          <label>Filter Tags (comma-separated)</label>
+          <input type="text" id="newBizFilterTags" placeholder="e.g. mechanic, oil change, brakes">
           <div id="bizLookupExtras" style="display:none;font-size:12px;color:#6B7280;margin-top:8px;padding:8px 12px;background:#1A1A1A;border-radius:8px;"></div>
           <button class="btn btn-gold" onclick="addBusiness()" style="margin-top:12px;width:100%;">Add Business</button>
         </div>
@@ -699,18 +697,18 @@
         <input type="text" id="editName" style="margin-bottom:14px;">
         <label>Category</label>
         <select id="editCategory" style="margin-bottom:14px;">
-          <option>Restaurant</option>
+          <option>Food &amp; Drink</option>
           <option>Grocery</option>
           <option>Retail</option>
           <option>Automotive</option>
           <option>Real Estate</option>
           <option>Healthcare</option>
-          <option>Education</option>
           <option>Services</option>
           <option>Events</option>
           <option>Creator</option>
-          <option>Home Bakery / Catering</option>
         </select>
+        <label>Subcategory (optional)</label>
+        <input type="text" id="editSubcategory" style="margin-bottom:14px;">
         <label>Description</label>
         <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:14px;">
           <textarea id="editDescription" style="flex:1;margin-bottom:0;min-height:80px;"></textarea>
@@ -722,18 +720,32 @@
         <input type="text" id="editPhone" style="margin-bottom:14px;">
         <label>Website</label>
         <input type="text" id="editWebsite" style="margin-bottom:14px;">
-        <label>Specialty (optional)</label>
-        <input type="text" id="editSpecialty" style="margin-bottom:14px;">
         <label>Tags</label>
         <div id="editKeywordsChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;"></div>
         <label>Affiliation (optional)</label>
-        <input type="text" id="editHospital" style="margin-bottom:14px;">
-        <label>Member Note (optional)</label>
-        <input type="text" id="editMemberNote" style="margin-bottom:14px;">
+        <input type="text" id="editAffiliation" style="margin-bottom:14px;">
         <label>Instagram URL (optional)</label>
         <input type="text" id="editInstagramUrl" placeholder="https://instagram.com/yourbiz" style="margin-bottom:14px;">
-        <label>Search Tags (comma-separated, optional)</label>
-        <input type="text" id="editSearchTags" style="margin-bottom:14px;">
+        <label>Search Aliases (comma-separated, optional)</label>
+        <input type="text" id="editSearchAliases" style="margin-bottom:14px;">
+        <label>Location Type</label>
+        <select id="editLocationType" style="margin-bottom:14px;">
+          <option value="physical">Physical Location</option>
+          <option value="service_area">Service Area</option>
+          <option value="virtual">Virtual / Online</option>
+          <option value="popup">Pop-up</option>
+        </select>
+        <label>Service Area Description (optional)</label>
+        <select id="editServiceArea" style="margin-bottom:14px;">
+          <option value="">-- Select --</option>
+          <option value="Triangle Area (Raleigh, Durham, Chapel Hill)">Triangle Area (Raleigh, Durham, Chapel Hill)</option>
+          <option value="Raleigh Metro">Raleigh Metro</option>
+          <option value="Durham / Chapel Hill">Durham / Chapel Hill</option>
+          <option value="Cary / Apex / Morrisville">Cary / Apex / Morrisville</option>
+          <option value="Wake County">Wake County</option>
+          <option value="NC Statewide">NC Statewide</option>
+          <option value="Nationwide / Remote">Nationwide / Remote</option>
+        </select>
         <label>Enrichment</label>
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
           <div id="enrichToggle" onclick="toggleEnrichment()" style="width:50px;height:28px;border-radius:14px;background:#333;cursor:pointer;position:relative;transition:background 0.2s;">
@@ -771,20 +783,15 @@
         "Pediatric", "Halal medications",
         "Mental health", "Women's health", "Sports medicine"
       ].concat(UNIVERSAL_TAGS),
-      Restaurant: [
-        "Halal-certified", "Zabiha", "Dine-in", "Takeout",
-        "Delivery", "Catering", "Late night"
-      ].concat(UNIVERSAL_TAGS),
       Grocery: [
         "Halal meat", "Zabiha", "Imported goods",
         "Middle Eastern", "South Asian", "African", "Bakery"
       ].concat(UNIVERSAL_TAGS),
+      Automotive: [
+        "Mechanic / Repair", "Dealership", "Car rental"
+      ].concat(UNIVERSAL_TAGS),
       Events: UNIVERSAL_TAGS.slice(),
       Creator: UNIVERSAL_TAGS.slice(),
-      "Home Bakery / Catering": [
-        "Halal-certified", "Zabiha", "Custom orders", "Delivery",
-        "Pickup only", "Desserts", "Savory", "Weekly menu"
-      ].concat(UNIVERSAL_TAGS),
       _default: UNIVERSAL_TAGS.concat([
         "Veteran-owned", "By appointment only", "Walk-ins welcome",
         "Islamic finance", "Halal investing", "Financial planning"
@@ -1412,8 +1419,8 @@
       var category = document.getElementById('newBizCategory').value;
       if (!name) { showToast('Business name is required', true); return; }
       if (!category) { showToast('Category is required', true); return; }
-      var kwStr = document.getElementById('newBizKeywords').value.trim();
-      var keywords = kwStr ? kwStr.split(',').map(function(s) { return s.trim(); }).filter(Boolean) : [];
+      var tagStr = document.getElementById('newBizFilterTags').value.trim();
+      var filter_tags = tagStr ? tagStr.split(',').map(function(s) { return s.trim(); }).filter(Boolean) : [];
       var body = {
         name: name,
         category: category,
@@ -1422,8 +1429,8 @@
         phone: document.getElementById('newBizPhone').value.trim() || '',
         website: document.getElementById('newBizWebsite').value.trim() || '',
         instagram_url: document.getElementById('newBizIg').value.trim() || '',
-        specialty: document.getElementById('newBizSpecialty').value.trim() || '',
-        keywords: keywords,
+        subcategory: document.getElementById('newBizSubcategory').value.trim() || '',
+        filter_tags: filter_tags,
       };
       if (pendingBizLookupData) {
         body.place_id = pendingBizLookupData.place_id || null;
@@ -1452,9 +1459,9 @@
         document.getElementById('newBizPhone').value = '';
         document.getElementById('newBizWebsite').value = '';
         document.getElementById('newBizIg').value = '';
-        document.getElementById('newBizSpecialty').value = '';
+        document.getElementById('newBizSubcategory').value = '';
         document.getElementById('newBizDescription').value = '';
-        document.getElementById('newBizKeywords').value = '';
+        document.getElementById('newBizFilterTags').value = '';
         document.getElementById('bizLookupStatus').style.display = 'none';
         document.getElementById('bizLookupExtras').style.display = 'none';
         pendingBizLookupData = null;
@@ -1516,8 +1523,9 @@
           const desc = b.description ? '<div style="font-size:12px;color:#9CA3AF;margin-top:4px;">' + escHtml(b.description) + '</div>' : '';
           const contact = [b.phone, b.website].filter(Boolean).join(' · ');
           const contactLine = contact ? '<div style="font-size:11px;color:#6B7280;margin-top:2px;">' + escHtml(contact) + '</div>' : '';
-          const emailLine = b.submitted_by_email ? '<div style="font-size:11px;color:#6B7280;margin-top:2px;">Submitted by: ' + escHtml(b.submitted_by_email) + '</div>' : '';
-          let actions = '<button class="btn btn-gold btn-sm" onclick="openBusinessEditor(' + b.id + ')" style="margin-right:6px;">Edit</button>';
+          const featuredBadge = b.featured ? '<span style="background:#D4A843;color:#000;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;margin-left:6px;">★ FEATURED</span>' : '';
+          let actions = '<button class="btn btn-sm" onclick="toggleFeatured(' + b.id + ',' + !b.featured + ')" style="margin-right:6px;background:' + (b.featured ? '#2A2318' : '#1E1E1E') + ';color:' + (b.featured ? '#D4A843' : '#9CA3AF') + ';">' + (b.featured ? '★ Unfeature' : '☆ Feature') + '</button>';
+          actions += '<button class="btn btn-gold btn-sm" onclick="openBusinessEditor(' + b.id + ')" style="margin-right:6px;">Edit</button>';
           if (currentBizFilter === 'pending') {
             actions += '<button class="btn btn-primary btn-sm" onclick="updateBusiness(' + b.id + ',\'approved\')" style="margin-right:6px;">Approve</button>' +
                       '<button class="btn btn-danger btn-sm" onclick="updateBusiness(' + b.id + ',\'rejected\')">Reject</button>';
@@ -1531,9 +1539,9 @@
             '<div style="display:flex;align-items:flex-start;gap:12px;width:100%;">' +
               '<span class="message-badge badge-event">' + escHtml(b.category) + '</span>' +
               '<div style="flex:1;">' +
-                '<div style="font-size:14px;font-weight:600;color:#F5F5F5;">' + escHtml(b.name) + '</div>' +
+                '<div style="font-size:14px;font-weight:600;color:#F5F5F5;">' + escHtml(b.name) + featuredBadge + '</div>' +
                 '<div style="font-size:12px;color:#9CA3AF;margin-top:2px;">' + escHtml(b.address) + '</div>' +
-                desc + contactLine + emailLine +
+                desc + contactLine +
                 '<div class="message-meta">' + date + '</div>' +
               '</div>' +
             '</div>' +
@@ -2021,13 +2029,14 @@
         document.getElementById('editAddress').value = business.address || '';
         document.getElementById('editPhone').value = business.phone || '';
         document.getElementById('editWebsite').value = business.website || '';
-        document.getElementById('editSpecialty').value = business.specialty || '';
-        editSelectedKeywords = Array.isArray(business.keywords) ? business.keywords.slice() : [];
+        document.getElementById('editSubcategory').value = business.subcategory || '';
+        editSelectedKeywords = Array.isArray(business.filter_tags) ? business.filter_tags.slice() : [];
         renderKeywordChips(business.category || '_default', editSelectedKeywords);
-        document.getElementById('editHospital').value = business.hospital_affiliation || '';
-        document.getElementById('editMemberNote').value = business.member_note || '';
-        document.getElementById('editSearchTags').value = (Array.isArray(business.search_tags) ? business.search_tags.join(', ') : '') || '';
+        document.getElementById('editAffiliation').value = business.affiliation || '';
+        document.getElementById('editSearchAliases').value = (Array.isArray(business.search_aliases) ? business.search_aliases.join(', ') : '') || '';
         document.getElementById('editInstagramUrl').value = business.instagram_url || '';
+        document.getElementById('editLocationType').value = business.location_type || 'physical';
+        document.getElementById('editServiceArea').value = business.service_area_description || '';
         setEnrichToggle(business.place_id !== 'none');
         document.getElementById('editBusinessModal').style.display = 'block';
         document.getElementById('editCategory').onchange = function() {
@@ -2078,21 +2087,20 @@
       const address = document.getElementById('editAddress').value.trim();
       const phone = document.getElementById('editPhone').value.trim();
       const website = document.getElementById('editWebsite').value.trim();
-      const specialty = document.getElementById('editSpecialty').value.trim();
-      const keywords = editSelectedKeywords.slice();
-      const hospital_affiliation = document.getElementById('editHospital').value.trim();
-      const member_note = document.getElementById('editMemberNote').value.trim();
-      const tagsStr = document.getElementById('editSearchTags').value.trim();
-      const search_tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(t => t) : [];
+      const subcategory = document.getElementById('editSubcategory').value.trim();
+      const filter_tags = editSelectedKeywords.slice();
+      const affiliation = document.getElementById('editAffiliation').value.trim();
+      const aliasStr = document.getElementById('editSearchAliases').value.trim();
+      const search_aliases = aliasStr ? aliasStr.split(',').map(t => t.trim()).filter(t => t) : [];
       const instagram_url = document.getElementById('editInstagramUrl').value.trim();
+      const location_type = document.getElementById('editLocationType').value;
+      const service_area_description = document.getElementById('editServiceArea').value.trim();
       const disable_enrichment = document.getElementById('editDisableEnrichment').value === 'true';
       if (!name || !category) { showToast('Name and category are required', true); return; }
-      const body = { name, category, description, address, phone, website, instagram_url, disable_enrichment };
-      if (specialty) body.specialty = specialty;
-      if (keywords.length > 0) body.keywords = keywords;
-      if (hospital_affiliation) body.hospital_affiliation = hospital_affiliation;
-      if (member_note) body.member_note = member_note;
-      if (search_tags.length > 0) body.search_tags = search_tags;
+      const body = { name, category, subcategory, description, address, phone, website, instagram_url, disable_enrichment, location_type, service_area_description };
+      if (filter_tags.length > 0) body.filter_tags = filter_tags;
+      if (affiliation) body.affiliation = affiliation;
+      if (search_aliases.length > 0) body.search_aliases = search_aliases;
       try {
         const res = await fetch('/api/admin/businesses/' + id, {
           method: 'PUT',
@@ -2106,6 +2114,24 @@
         } else {
           const data = await res.json();
           showToast(data.error || 'Failed to update', true);
+        }
+      } catch { showToast('Connection error', true); }
+    }
+
+    async function toggleFeatured(id, featured) {
+      try {
+        const res = await fetch('/api/admin/businesses/' + id + '/featured', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify({ featured: featured }),
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        if (res.ok) {
+          showToast(featured ? 'Business featured!' : 'Business unfeatured');
+          loadBusinesses(currentBizFilter);
+        } else {
+          const data = await res.json();
+          showToast(data.error || 'Failed to toggle featured', true);
         }
       } catch { showToast('Connection error', true); }
     }

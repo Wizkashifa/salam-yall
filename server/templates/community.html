@@ -1378,7 +1378,7 @@
       return allBusinesses.filter(b => {
         if (cat && b.category !== cat) return false;
         if (q) {
-          const text = (b.name + ' ' + (b.category||'') + ' ' + (b.description||'') + ' ' + (b.specialty||'') + ' ' + (b.address||'')).toLowerCase();
+          const text = (b.name + ' ' + (b.category||'') + ' ' + (b.description||'') + ' ' + (b.subcategory||'') + ' ' + (b.address||'')).toLowerCase();
           return text.includes(q);
         }
         return true;
@@ -1407,8 +1407,11 @@
         <div class="business-card-body">
           <div class="business-category">${esc(b.category || 'Business')}</div>
           <h3>${esc(b.name)}</h3>
+          <div class="restaurant-meta" style="margin-bottom:6px;font-size:13px;gap:6px">
+            <span style="color:var(--gold);font-weight:600">${esc(b.category)}</span>
+            ${b.subcategory ? `<span style="color:rgba(255,255,255,0.4)">·</span><span style="color:rgba(255,255,255,0.5)">${esc(b.subcategory)}</span>` : ''}
+          </div>
           ${ratingHtml ? `<div class="restaurant-meta" style="margin-bottom:8px">${ratingHtml}</div>` : ''}
-          ${b.specialty ? `<div class="business-desc" style="-webkit-line-clamp:2;color:var(--gold);opacity:0.8;margin-bottom:6px">${esc(b.specialty)}</div>` : ''}
           ${b.description ? `<div class="business-desc">${esc(b.description)}</div>` : ''}
           ${b.address ? `<div class="business-address">${esc(b.address)}</div>` : ''}
           <div class="business-links">${links}</div>
@@ -1564,10 +1567,10 @@
           <div class="modal-meta">
             ${ratingHtml}
           </div>
-          ${b.specialty ? '<div class="modal-section"><div class="modal-section-label">Specialty</div><div class="modal-section-content" style="color:var(--gold)">' + esc(b.specialty) + '</div></div>' : ''}
+          <div class="modal-section"><div class="modal-section-label">Category</div><div class="modal-section-content" style="color:var(--gold)">${esc(b.category)}${b.subcategory ? ' · ' + esc(b.subcategory) : ''}</div></div>
           ${b.description ? '<div class="modal-section"><div class="modal-section-label">About</div><div class="modal-section-content">' + esc(b.description) + '</div></div>' : ''}
           ${b.address ? '<div class="modal-section"><div class="modal-section-label">Address</div><div class="modal-section-content">' + esc(b.address) + '</div></div>' : ''}
-          ${b.member_note ? '<div class="modal-section"><div class="modal-section-label">Community Note</div><div class="modal-section-content">' + esc(b.member_note) + '</div></div>' : ''}
+          ${b.affiliation ? '<div class="modal-section"><div class="modal-section-label">Affiliation</div><div class="modal-section-content">' + esc(b.affiliation) + '</div></div>' : ''}
           ${hoursHtml}
           <div class="modal-actions">${actions}</div>
         </div>`);

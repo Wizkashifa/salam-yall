@@ -22,6 +22,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
+import * as Location from "expo-location";
 import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
 import { GlassHeader } from "@/components/GlassHeader";
@@ -36,6 +38,7 @@ interface Business {
   id: string;
   name: string;
   category: string;
+  subcategory?: string;
   description: string;
   address: string;
   phone: string;
@@ -47,14 +50,16 @@ interface Business {
   business_hours?: string[];
   lat?: number;
   lng?: number;
-  specialty?: string;
-  keywords?: string[];
+  filter_tags?: string[];
   photo_url?: string;
   booking_url?: string;
-  search_tags?: string[];
-  member_note?: string;
-  hospital_affiliation?: string;
+  search_aliases?: string[];
+  affiliation?: string;
   instagram_url?: string;
+  google_url?: string;
+  location_type?: string;
+  service_area_description?: string;
+  featured?: boolean;
   community_rating?: number | null;
   community_rating_count?: number;
 }
@@ -70,33 +75,41 @@ interface PlacesDetails {
 }
 
 const CATEGORY_ICONS: Record<string, { icon: string; color: string }> = {
-  Restaurant: { icon: "restaurant-outline", color: "#DC2626" },
+  "Food & Drink": { icon: "restaurant-outline", color: "#DC2626" },
   Grocery: { icon: "cart-outline", color: "#0891B2" },
   Retail: { icon: "bag-handle-outline", color: "#7C3AED" },
   Automotive: { icon: "car-outline", color: "#EA580C" },
   "Real Estate": { icon: "home-outline", color: "#2563EB" },
   Healthcare: { icon: "medkit-outline", color: "#DB2777" },
-  Education: { icon: "school-outline", color: "#0D9488" },
   Services: { icon: "construct-outline", color: "#6366F1" },
   Events: { icon: "calendar-outline", color: "#D946EF" },
   Creator: { icon: "videocam-outline", color: "#F59E0B" },
-  "Home Bakery / Catering": { icon: "restaurant-outline", color: "#D97706" },
 };
 
 function getCategoryInfo(category: string) {
   return CATEGORY_ICONS[category] || { icon: "business-outline", color: "#6B7280" };
 }
 
-const CATEGORIES = ["All", "Grocery", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Events", "Creator", "Home Bakery / Catering"];
-const SUBMIT_CATEGORIES = ["Grocery", "Retail", "Automotive", "Real Estate", "Healthcare", "Education", "Services", "Events", "Creator", "Home Bakery / Catering"];
+const CATEGORIES = ["All", "Food & Drink", "Grocery", "Retail", "Automotive", "Real Estate", "Healthcare", "Services", "Events", "Creator"];
+const SUBMIT_CATEGORIES = ["Food & Drink", "Grocery", "Retail", "Automotive", "Real Estate", "Healthcare", "Services", "Events", "Creator"];
 
-const SPECIALTIES: Record<string, string[]> = {
+const SUBCATEGORIES: Record<string, string[]> = {
+  "Food & Drink": [
+    "Bakery", "Catering", "Coffee / Tea", "Food Truck", "Other",
+  ],
   Healthcare: [
     "Primary Care", "Dentistry", "Optometry", "Ophthalmology", "Dermatology",
     "Pediatrics", "OB/GYN", "Cardiology", "Orthopedics", "Psychiatry",
     "Psychology", "Therapy / Counseling", "Chiropractic", "Physical Therapy",
     "Pharmacy", "Urgent Care", "Internal Medicine", "ENT",
     "Allergy / Immunology", "Nutrition / Dietetics", "Other",
+  ],
+  Automotive: [
+    "Mechanic / Repair", "Dealership", "Car Rental", "Auto Body", "Tires", "Detailing", "Other",
+  ],
+  Services: [
+    "Legal", "Financial", "Insurance", "Tax", "Moving", "Cleaning",
+    "IT / Tech", "Marketing", "Tutoring", "Translation", "Other",
   ],
   Events: [
     "Venue", "Caterer", "Photography", "Videography",
@@ -107,10 +120,17 @@ const SPECIALTIES: Record<string, string[]> = {
     "Artist", "Content Creator", "Photographer", "Videographer",
     "Graphic Designer", "Social Media", "Podcast", "YouTube", "Blogger",
   ],
-  "Home Bakery / Catering": [
-    "Bakery", "Catering",
-  ],
 };
+
+const SERVICE_AREA_OPTIONS = [
+  "Triangle Area (Raleigh, Durham, Chapel Hill)",
+  "Raleigh Metro",
+  "Durham / Chapel Hill",
+  "Cary / Apex / Morrisville",
+  "Wake County",
+  "NC Statewide",
+  "Nationwide / Remote",
+];
 
 const UNIVERSAL_TAGS = [
   "Women-owned", "Arabic-speaking", "Urdu-speaking", "Spanish-speaking",
@@ -125,14 +145,13 @@ const BUSINESS_KEYWORDS: Record<string, string[]> = {
     "Mental health", "Women's health", "Sports medicine",
     ...UNIVERSAL_TAGS,
   ],
-  Restaurant: [
-    "Halal-certified", "Zabiha", "Dine-in", "Takeout",
-    "Delivery", "Catering", "Late night",
-    ...UNIVERSAL_TAGS,
-  ],
   Grocery: [
     "Halal meat", "Zabiha", "Imported goods",
     "Middle Eastern", "South Asian", "African", "Bakery",
+    ...UNIVERSAL_TAGS,
+  ],
+  Automotive: [
+    "Mechanic / Repair", "Dealership", "Car rental",
     ...UNIVERSAL_TAGS,
   ],
   Events: [
@@ -141,17 +160,45 @@ const BUSINESS_KEYWORDS: Record<string, string[]> = {
   Creator: [
     ...UNIVERSAL_TAGS,
   ],
-  "Home Bakery / Catering": [
-    "Halal-certified", "Zabiha", "Custom orders", "Delivery",
-    "Pickup only", "Desserts", "Savory", "Weekly menu",
-    ...UNIVERSAL_TAGS,
-  ],
   _default: [
     ...UNIVERSAL_TAGS,
     "Veteran-owned", "By appointment only", "Walk-ins welcome",
     "Islamic finance", "Halal investing", "Financial planning",
   ],
 };
+
+const DISTANCE_OPTIONS = [
+  { label: "Any Distance", value: 0 },
+  { label: "5 miles", value: 5 },
+  { label: "10 miles", value: 10 },
+  { label: "25 miles", value: 25 },
+  { label: "50 miles", value: 50 },
+];
+
+function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 3959;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+const SUBCATEGORY_ABBREV: Record<string, string> = {
+  "Licensed Clinical Mental Health Counselor": "LCMHC",
+  "Licensed Clinical Mental Health Counselor Supervisor": "LCMHCS",
+  "Licensed Clinical Mental Health Counselor Associate": "LCMHCA",
+  "Licensed Clinical Social Worker": "LCSW",
+  "Licensed Clinical Social Worker Associate": "LCSWA",
+  "Licensed Professional Counselor": "LPC",
+  "Counseling Intern": "Counseling Intern",
+  "Therapy / Counseling": "Therapy",
+};
+
+function abbreviateSubcategory(sub: string): string {
+  return SUBCATEGORY_ABBREV[sub] || sub;
+}
 
 function renderStars(rating: number): string {
   const full = Math.floor(rating);
@@ -314,7 +361,7 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
           <View style={styles.detailContent}>
             <View style={[styles.categoryPill, { backgroundColor: colors.categoryBadgeBg(catInfo.color) }]}>
               <Ionicons name={catInfo.icon as any} size={12} color={catInfo.color} />
-              <Text style={[styles.categoryPillText, { color: catInfo.color }]}>{business.category}</Text>
+              <Text style={[styles.categoryPillText, { color: catInfo.color }]}>{business.category}{business.subcategory ? ` · ${abbreviateSubcategory(business.subcategory)}` : ""}</Text>
             </View>
 
             <Text style={[styles.detailName, { color: colors.text }]}>{business.name}</Text>
@@ -351,10 +398,10 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
               </View>
             </View>
 
-            {business.member_note ? (
-              <View style={[styles.specialtyRow, { backgroundColor: colors.prayerIconBg }]}>
-                <Ionicons name="ribbon-outline" size={14} color={colors.emerald} />
-                <Text style={[styles.specialtyText, { color: colors.text }]}>{business.member_note}</Text>
+            {business.featured ? (
+              <View style={[styles.specialtyRow, { backgroundColor: "rgba(212,168,67,0.15)" }]}>
+                <Ionicons name="star" size={14} color="#D4A843" />
+                <Text style={[styles.specialtyText, { color: "#D4A843" }]}>Featured Business</Text>
               </View>
             ) : null}
 
@@ -362,23 +409,23 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
               <Text style={[styles.detailDesc, { color: colors.textSecondary }]}>{business.description}</Text>
             ) : null}
 
-            {business.specialty ? (
-              <View style={[styles.specialtyRow, { backgroundColor: colors.prayerIconBg }]}>
-                <Ionicons name="pricetag-outline" size={14} color={colors.emerald} />
-                <Text style={[styles.specialtyText, { color: colors.text }]}>{business.specialty}</Text>
-              </View>
-            ) : null}
-
-            {business.hospital_affiliation ? (
+            {business.affiliation ? (
               <View style={[styles.specialtyRow, { backgroundColor: colors.prayerIconBg }]}>
                 <Ionicons name="business-outline" size={14} color={colors.emerald} />
-                <Text style={[styles.specialtyText, { color: colors.text }]}>{business.hospital_affiliation}</Text>
+                <Text style={[styles.specialtyText, { color: colors.text }]}>{business.affiliation}</Text>
               </View>
             ) : null}
 
-            {business.keywords && business.keywords.length > 0 ? (
+            {business.service_area_description && business.location_type !== "physical" ? (
+              <View style={[styles.specialtyRow, { backgroundColor: colors.prayerIconBg }]}>
+                <Ionicons name="map-outline" size={14} color={colors.emerald} />
+                <Text style={[styles.specialtyText, { color: colors.text }]}>{business.service_area_description}</Text>
+              </View>
+            ) : null}
+
+            {business.filter_tags && business.filter_tags.length > 0 ? (
               <View style={styles.keywordDisplayGrid}>
-                {business.keywords.map((kw: string) => (
+                {business.filter_tags.map((kw: string) => (
                   <View key={kw} style={[styles.keywordDisplayChip, { backgroundColor: colors.prayerIconBg }]}>
                     <Text style={[styles.keywordDisplayText, { color: colors.text }]}>{kw}</Text>
                   </View>
@@ -389,7 +436,7 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
             {(() => {
               const actions: Array<{ icon: string; label: string; color: string; onPress: () => void }> = [];
               if (business.phone) actions.push({ icon: "call", label: "Call", color: colors.emerald, onPress: () => Linking.openURL(`tel:${business.phone}`) });
-              if (business.address && /\d/.test(business.address)) actions.push({ icon: "navigate", label: "Directions", color: colors.gold, onPress: openMaps });
+              if (business.location_type === "physical" && business.address && /\d/.test(business.address)) actions.push({ icon: "navigate", label: "Directions", color: colors.gold, onPress: openMaps });
               if (business.website) actions.push({ icon: "globe", label: "Website", color: isDark ? "#4B5563" : "#374151", onPress: () => Linking.openURL(business.website) });
               if (business.booking_url) actions.push({ icon: "calendar", label: "Book", color: "#2563EB", onPress: () => Linking.openURL(business.booking_url!) });
               if (business.instagram_url) actions.push({ icon: "logo-instagram", label: "Instagram", color: "#E1306C", onPress: () => Linking.openURL(business.instagram_url!) });
@@ -423,13 +470,28 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
 
                 {detailsExpanded ? (
                   <View style={{ marginTop: 8 }}>
-                    {business.address ? (
+                    {business.location_type === "virtual" ? (
+                      <View style={styles.detailInfoRow}>
+                        <Ionicons name="globe-outline" size={18} color={colors.emerald} />
+                        <Text style={[styles.detailInfoText, { color: colors.text }]}>Virtual / Online</Text>
+                      </View>
+                    ) : business.location_type === "service_area" ? (
+                      <View style={styles.detailInfoRow}>
+                        <Ionicons name="map-outline" size={18} color={colors.emerald} />
+                        <Text style={[styles.detailInfoText, { color: colors.text }]}>{business.service_area_description || "Service Area"}</Text>
+                      </View>
+                    ) : business.address ? (
                       <Pressable style={styles.detailInfoRow} onPress={openMaps}>
                         <Ionicons name="location-outline" size={18} color={colors.emerald} />
                         <Text style={[styles.detailInfoText, { color: colors.text }]}>{business.address}</Text>
                         <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
                       </Pressable>
-                    ) : business.lat ? (
+                    ) : business.location_type === "popup" ? (
+                      <View style={styles.detailInfoRow}>
+                        <Ionicons name="location-outline" size={18} color={colors.emerald} />
+                        <Text style={[styles.detailInfoText, { color: colors.text }]}>Pop-up{business.service_area_description ? ` — ${business.service_area_description}` : ""}</Text>
+                      </View>
+                    ) : business.lat && business.location_type === "physical" ? (
                       <Pressable style={styles.detailInfoRow} onPress={openMaps}>
                         <Ionicons name="location-outline" size={18} color={colors.emerald} />
                         <Text style={[styles.detailInfoText, { color: colors.textSecondary, fontStyle: "italic" as const }]}>View on map</Text>
@@ -506,12 +568,15 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
   const [googleUrl, setGoogleUrl] = useState("");
   const [phone, setPhone] = useState("");
   const [website, setWebsite] = useState("");
-  const [specialty, setSpecialty] = useState("");
+  const [subcategory, setSubcategory] = useState("");
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [photoUrl, setPhotoUrl] = useState("");
   const [bookingUrl, setBookingUrl] = useState("");
   const [instagramUrl, setInstagramUrl] = useState("");
-  const [hospitalAffiliation, setHospitalAffiliation] = useState("");
+  const [affiliation, setAffiliation] = useState("");
+  const [locationType, setLocationType] = useState("");
+  const [serviceAreaDescription, setServiceAreaDescription] = useState("");
+  const [addressSuggestions, setAddressSuggestions] = useState<{ description: string; place_id: string }[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [autoUrl, setAutoUrl] = useState("");
   const [autoLoaded, setAutoLoaded] = useState(false);
@@ -546,8 +611,8 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
   const submitMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/businesses/submit", {
-        name, category, description, address, phone, website, google_url: googleUrl,
-        specialty, keywords: selectedKeywords, photo_url: photoUrl, booking_url: bookingUrl, instagram_url: instagramUrl, hospital_affiliation: hospitalAffiliation,
+        name, category, subcategory, description, address, phone, website, google_url: googleUrl,
+        filter_tags: selectedKeywords, photo_url: photoUrl, booking_url: bookingUrl, instagram_url: instagramUrl, affiliation, location_type: locationType, service_area_description: serviceAreaDescription,
       });
       return res.json();
     },
@@ -569,11 +634,15 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
     setGoogleUrl("");
     setPhone("");
     setWebsite("");
-    setSpecialty("");
+    setSubcategory("");
     setSelectedKeywords([]);
     setPhotoUrl("");
     setBookingUrl("");
     setInstagramUrl("");
+    setAffiliation("");
+    setLocationType("");
+    setServiceAreaDescription("");
+    setAddressSuggestions([]);
     setSubmitted(false);
     setAutoUrl("");
     setAutoLoaded(false);
@@ -587,10 +656,11 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
   const handleSubmit = useCallback(() => {
     if (!name.trim()) { Alert.alert("Required", "Please enter the business name"); return; }
     if (!category) { Alert.alert("Required", "Please select a category"); return; }
-    if (SPECIALTIES[category] && !specialty) { Alert.alert("Required", "Please select a specialty"); return; }
+    if (SUBCATEGORIES[category] && !subcategory) { Alert.alert("Required", "Please select a subcategory"); return; }
+    if (!locationType) { Alert.alert("Required", "Please select a location type"); return; }
     
     submitMutation.mutate();
-  }, [name, category, address, googleUrl, submitMutation]);
+  }, [name, category, subcategory, locationType, submitMutation]);
 
   if (submitted) {
     return (
@@ -724,7 +794,7 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
                       if (cat !== category) {
                         setCategory(cat);
                         setSelectedKeywords([]);
-                        setSpecialty("");
+                        setSubcategory("");
                       }
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     }}
@@ -738,6 +808,35 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
               })}
             </View>
 
+            {SUBCATEGORIES[category] ? (
+              <>
+                <Text style={[styles.fieldLabel, { color: colors.text }]}>{category === "Healthcare" ? "Specialty" : "Subcategory"} *</Text>
+                <View style={styles.categoryGrid}>
+                  {SUBCATEGORIES[category].map((spec) => {
+                    const isSelected = subcategory === spec;
+                    return (
+                      <Pressable
+                        key={spec}
+                        style={[
+                          styles.categoryOption,
+                          { backgroundColor: colors.surface, borderColor: isSelected ? colors.emerald : colors.border },
+                          isSelected && { borderWidth: 2 },
+                        ]}
+                        onPress={() => {
+                          setSubcategory(spec);
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        }}
+                      >
+                        <Text style={[styles.categoryOptionText, { color: isSelected ? colors.emerald : colors.text }]}>
+                          {spec}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </>
+            ) : null}
+
             <Text style={[styles.fieldLabel, { color: colors.text }]}>Description</Text>
             <TextInput
               style={[styles.textInput, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
@@ -750,28 +849,111 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
               textAlignVertical="top"
             />
 
-            <Text style={[styles.fieldLabel, { color: colors.text }]}>Address</Text>
-            <TextInput
-              style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              value={address}
-              onChangeText={setAddress}
-              placeholder="Full business address"
-              placeholderTextColor={colors.textSecondary}
-            />
+            {category ? (
+              <>
+                <Text style={[styles.fieldLabel, { color: colors.text }]}>Location Type *</Text>
+                <View style={styles.categoryGrid}>
+                  {(["physical", "service_area", "virtual", "popup"] as const).map((lt) => {
+                    const labels: Record<string, string> = { physical: "Physical Location", service_area: "Service Area", virtual: "Virtual / Online", popup: "Pop-up" };
+                    const isSelected = locationType === lt;
+                    return (
+                      <Pressable
+                        key={lt}
+                        style={[
+                          styles.categoryOption,
+                          { backgroundColor: colors.surface, borderColor: isSelected ? colors.emerald : colors.border },
+                          isSelected && { borderWidth: 2 },
+                        ]}
+                        onPress={() => {
+                          setLocationType(lt);
+                          if (lt !== "physical") { setAddress(""); setAddressSuggestions([]); }
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        }}
+                      >
+                        <Ionicons name={lt === "physical" ? "storefront-outline" : lt === "service_area" ? "map-outline" : lt === "popup" ? "location-outline" : "globe-outline"} size={14} color={isSelected ? colors.emerald : colors.textSecondary} />
+                        <Text style={[styles.categoryOptionText, { color: isSelected ? colors.emerald : colors.text }]}>
+                          {labels[lt]}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </>
+            ) : null}
 
-            <Text style={[styles.fieldLabel, { color: colors.text }]}>Google Maps URL</Text>
-            <TextInput
-              style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              value={googleUrl}
-              onChangeText={setGoogleUrl}
-              placeholder="Share link from Google Maps"
-              placeholderTextColor={colors.textSecondary}
-              autoCapitalize="none"
-              keyboardType="url"
-            />
-            <Text style={[styles.fieldHint, { color: colors.textTertiary }]}>
-              Optionally provide an address or Google Maps URL. Ensure the business Google listing is up to date.
-            </Text>
+            {(locationType === "service_area" || locationType === "popup") ? (
+              <>
+                <Text style={[styles.fieldLabel, { color: colors.text }]}>Service Area</Text>
+                <View style={styles.categoryGrid}>
+                  {SERVICE_AREA_OPTIONS.map((sa) => {
+                    const isSelected = serviceAreaDescription === sa;
+                    return (
+                      <Pressable
+                        key={sa}
+                        style={[
+                          styles.categoryOption,
+                          { backgroundColor: colors.surface, borderColor: isSelected ? colors.emerald : colors.border },
+                          isSelected && { borderWidth: 2 },
+                        ]}
+                        onPress={() => {
+                          setServiceAreaDescription(isSelected ? "" : sa);
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        }}
+                      >
+                        <Text style={[styles.categoryOptionText, { color: isSelected ? colors.emerald : colors.text }]}>
+                          {sa}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </>
+            ) : null}
+
+            {locationType === "physical" ? (
+              <>
+                <Text style={[styles.fieldLabel, { color: colors.text }]}>Address</Text>
+                <TextInput
+                  style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  value={address}
+                  onChangeText={(text) => {
+                    setAddress(text);
+                    if (text.length >= 3) {
+                      const url = new URL("/api/businesses/address-autocomplete", getApiUrl());
+                      url.searchParams.set("input", text);
+                      fetch(url.toString())
+                        .then(r => r.json())
+                        .then(data => setAddressSuggestions(data.predictions || []))
+                        .catch(() => setAddressSuggestions([]));
+                    } else {
+                      setAddressSuggestions([]);
+                    }
+                  }}
+                  placeholder="Start typing an address..."
+                  placeholderTextColor={colors.textSecondary}
+                />
+                {addressSuggestions.length > 0 ? (
+                  <View style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 10, marginTop: -4, marginBottom: 8, overflow: "hidden" }}>
+                    {addressSuggestions.map((s, i) => (
+                      <Pressable
+                        key={s.place_id}
+                        style={{ paddingHorizontal: 12, paddingVertical: 10, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: colors.divider }}
+                        onPress={() => {
+                          setAddress(s.description);
+                          setAddressSuggestions([]);
+                        }}
+                      >
+                        <Text style={{ color: colors.text, fontSize: 14, fontFamily: "Inter_400Regular" }} numberOfLines={1}>{s.description}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                ) : null}
+
+                <Text style={[styles.fieldHint, { color: colors.textTertiary }]}>
+                  Start typing and select from suggestions, or enter the full address manually.
+                </Text>
+              </>
+            ) : null}
 
             <Text style={[styles.fieldLabel, { color: colors.text }]}>Phone Number</Text>
             <TextInput
@@ -805,18 +987,79 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
               autoCapitalize="none"
             />
 
-            <Text style={[styles.fieldLabel, { color: colors.text }]}>Photo URL</Text>
-            <TextInput
-              style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              value={photoUrl}
-              onChangeText={setPhotoUrl}
-              placeholder="Link to a photo of your business or headshot"
-              placeholderTextColor={colors.textSecondary}
-              keyboardType="url"
-              autoCapitalize="none"
-            />
+            <Text style={[styles.fieldLabel, { color: colors.text }]}>Business Photo</Text>
+            {photoUrl ? (
+              <View style={{ marginBottom: 8 }}>
+                <Image source={{ uri: photoUrl }} style={{ width: "100%" as any, height: 160, borderRadius: 10 }} resizeMode="cover" />
+                <Pressable
+                  style={{ position: "absolute", top: 8, right: 8, backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 14, width: 28, height: 28, justifyContent: "center", alignItems: "center" }}
+                  onPress={() => setPhotoUrl("")}
+                >
+                  <Ionicons name="close" size={16} color="#fff" />
+                </Pressable>
+              </View>
+            ) : null}
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <Pressable
+                style={[styles.categoryOption, { backgroundColor: colors.surface, borderColor: colors.border, flex: 1, justifyContent: "center" }]}
+                onPress={async () => {
+                  if (Platform.OS === "web") {
+                    Alert.alert("Not supported", "Photo upload from camera roll is only available on mobile devices. You can paste a URL instead.");
+                    return;
+                  }
+                  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                  if (status !== "granted") {
+                    Alert.alert("Permission needed", "Please allow photo library access to upload a business photo.");
+                    return;
+                  }
+                  const result = await ImagePicker.launchImageLibraryAsync({
+                    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                    allowsEditing: true,
+                    aspect: [16, 9],
+                    quality: 0.7,
+                    base64: true,
+                  });
+                  if (!result.canceled && result.assets[0]) {
+                    const asset = result.assets[0];
+                    if (asset.base64) {
+                      try {
+                        const ext = asset.uri.split(".").pop()?.toLowerCase() || "jpg";
+                        const mime = ext === "png" ? "image/png" : "image/jpeg";
+                        const res = await apiRequest("POST", "/api/businesses/upload-photo", {
+                          image: asset.base64,
+                          mimeType: mime,
+                        });
+                        const data = await res.json();
+                        if (data.url) {
+                          setPhotoUrl(data.url);
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        }
+                      } catch {
+                        Alert.alert("Upload failed", "Could not upload photo. Please try again.");
+                      }
+                    }
+                  }
+                }}
+              >
+                <Ionicons name="image-outline" size={18} color={colors.textSecondary} />
+                <Text style={[styles.categoryOptionText, { color: colors.text }]}>Choose Photo</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.categoryOption, { backgroundColor: colors.surface, borderColor: colors.border, flex: 1, justifyContent: "center" }]}
+                onPress={() => {
+                  Alert.prompt ? Alert.prompt("Photo URL", "Paste a link to a business photo", (text: string) => { if (text?.trim()) setPhotoUrl(text.trim()); }) :
+                    Alert.alert("Paste URL", "Use the Choose Photo button on mobile, or enter a URL manually.", [
+                      { text: "Cancel" },
+                      { text: "OK" },
+                    ]);
+                }}
+              >
+                <Ionicons name="link-outline" size={18} color={colors.textSecondary} />
+                <Text style={[styles.categoryOptionText, { color: colors.text }]}>Paste URL</Text>
+              </Pressable>
+            </View>
             <Text style={[styles.fieldHint, { color: colors.textTertiary }]}>
-              Paste a link to a profile photo, logo, or storefront image
+              Upload a photo from your camera roll or paste a link
             </Text>
 
             <Text style={[styles.fieldLabel, { color: colors.text }]}>Instagram URL</Text>
@@ -830,41 +1073,12 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
               autoCapitalize="none"
             />
 
-            {SPECIALTIES[category] ? (
-              <>
-                <Text style={[styles.fieldLabel, { color: colors.text }]}>{category === "Healthcare" ? "Specialty" : "Type"} *</Text>
-                <View style={styles.categoryGrid}>
-                  {SPECIALTIES[category].map((spec) => {
-                    const isSelected = specialty === spec;
-                    return (
-                      <Pressable
-                        key={spec}
-                        style={[
-                          styles.categoryOption,
-                          { backgroundColor: colors.surface, borderColor: isSelected ? colors.emerald : colors.border },
-                          isSelected && { borderWidth: 2 },
-                        ]}
-                        onPress={() => {
-                          setSpecialty(spec);
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        }}
-                      >
-                        <Text style={[styles.categoryOptionText, { color: isSelected ? colors.emerald : colors.text }]}>
-                          {spec}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </>
-            ) : null}
-
             {category === "Healthcare" ? (
               <>
                 <Text style={[styles.fieldLabel, { color: colors.text }]}>Affiliation</Text>
                 <View style={styles.categoryGrid}>
                   {["UNC-Rex", "Duke", "WakeMed", "MyEyeDr"].map((hosp) => {
-                    const isSelected = hospitalAffiliation === hosp;
+                    const isSelected = affiliation === hosp;
                     return (
                       <Pressable
                         key={hosp}
@@ -874,7 +1088,7 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
                           isSelected && { borderWidth: 2 },
                         ]}
                         onPress={() => {
-                          setHospitalAffiliation(isSelected ? "" : hosp);
+                          setAffiliation(isSelected ? "" : hosp);
                           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         }}
                       >
@@ -952,6 +1166,9 @@ export default function BusinessesScreen() {
   const queryClient = useQueryClient();
   const { user, signInWithApple } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedSubcategory, setSelectedSubcategory] = useState("");
+  const [distanceFilter, setDistanceFilter] = useState(0);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -960,6 +1177,32 @@ export default function BusinessesScreen() {
   const { pendingTarget, consumeTarget } = useDeepLink();
 
   useEffect(() => { trackScreenView("Directory"); }, []);
+
+  useEffect(() => {
+    if (distanceFilter > 0 && !userLocation) {
+      (async () => {
+        try {
+          if (Platform.OS === "web") {
+            navigator.geolocation?.getCurrentPosition(
+              (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+              () => { Alert.alert("Location unavailable", "Enable location to filter by distance."); setDistanceFilter(0); }
+            );
+          } else {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== "granted") {
+              Alert.alert("Permission needed", "Enable location access to filter businesses by distance.");
+              setDistanceFilter(0);
+              return;
+            }
+            const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+            setUserLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+          }
+        } catch {
+          setDistanceFilter(0);
+        }
+      })();
+    }
+  }, [distanceFilter, userLocation]);
 
   const { data: businesses, isLoading } = useQuery<Business[]>({
     queryKey: ["/api/businesses"],
@@ -983,19 +1226,33 @@ export default function BusinessesScreen() {
       }, {})
     : {};
 
+  const availableSubcategories = SUBCATEGORIES[selectedCategory] || [];
+
   const searchTrimmed = searchQuery.trim().toLowerCase();
   const expandedTerms = expandSearchTerms(searchTrimmed);
 
   const filtered = businesses
     ? businesses.filter((b) => {
         const matchesCategory = selectedCategory === "All" || b.category === selectedCategory;
-        if (!searchTrimmed) return matchesCategory;
+        if (!matchesCategory) return false;
+        if (selectedSubcategory && b.subcategory !== selectedSubcategory) return false;
+        if (distanceFilter > 0 && userLocation) {
+          if (b.location_type === "virtual" || b.location_type === "service_area" || b.location_type === "popup") {
+            // pass through
+          } else if (b.lat && b.lng) {
+            const dist = haversineDistance(userLocation.lat, userLocation.lng, b.lat, b.lng);
+            if (dist > distanceFilter) return false;
+          } else {
+            return false;
+          }
+        }
+        if (!searchTrimmed) return true;
         const haystack = [
-          b.name, b.description, b.address, b.specialty,
-          ...(b.keywords || []), ...(b.search_tags || []),
+          b.name, b.description, b.address, b.subcategory, b.affiliation,
+          ...(b.filter_tags || []), ...(b.search_aliases || []),
         ].filter(Boolean).join(" ").toLowerCase();
         const matchesSearch = expandedTerms.some(term => haystack.includes(term));
-        return matchesCategory && matchesSearch;
+        return matchesSearch;
       })
     : [];
 
@@ -1010,10 +1267,11 @@ export default function BusinessesScreen() {
     ({ item }: { item: Business }) => {
       const catInfo = getCategoryInfo(item.category);
       const rating = item.rating ? Number(item.rating) : null;
+      const dist = userLocation && item.lat && item.lng ? haversineDistance(userLocation.lat, userLocation.lng, item.lat, item.lng) : null;
 
       return (
         <Pressable
-          style={({ pressed }) => [styles.businessCard, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.95 : 1 }]}
+          style={({ pressed }) => [styles.businessCard, { backgroundColor: colors.surface, borderColor: item.featured ? "#D4A843" : colors.border, borderWidth: item.featured ? 1.5 : 1, opacity: pressed ? 0.95 : 1 }]}
           onPress={() => {
             setSelectedBusiness(item);
             trackEvent("business_viewed", { name: item.name, id: item.id });
@@ -1022,13 +1280,21 @@ export default function BusinessesScreen() {
           testID={`business-${item.id}`}
         >
           <View style={styles.cardHeader}>
-            <View style={[styles.categoryBadge, { backgroundColor: colors.categoryBadgeBg(catInfo.color) }]}>
-              <Ionicons name={catInfo.icon as any} size={16} color={catInfo.color} />
+            <View style={[styles.categoryBadge, { backgroundColor: item.featured ? "rgba(212,168,67,0.15)" : colors.categoryBadgeBg(catInfo.color) }]}>
+              <Ionicons name={item.featured ? "star" as any : catInfo.icon as any} size={16} color={item.featured ? "#D4A843" : catInfo.color} />
             </View>
             <View style={styles.cardHeaderText}>
               <Text style={[styles.businessName, { color: colors.text }]}>{item.name}</Text>
               <View style={styles.cardSubRow}>
                 <Text style={[styles.categoryLabel, { color: catInfo.color }]}>{item.category}</Text>
+                {item.subcategory ? (
+                  <>
+                    <Text style={{ fontSize: 10, color: isDark ? "rgba(255,255,255,0.3)" : "#D1D5DB" }}>·</Text>
+                    <Text style={[styles.subcategoryLabel, { color: isDark ? "rgba(255,255,255,0.5)" : "#6B7280" }]}>
+                      {abbreviateSubcategory(item.subcategory)}
+                    </Text>
+                  </>
+                ) : null}
                 {item.community_rating != null && item.community_rating > 0 && (item.community_rating_count || 0) >= 3 ? (
                   <View style={styles.cardRatingRow}>
                     <Ionicons name="star" size={11} color={colors.gold} />
@@ -1052,25 +1318,38 @@ export default function BusinessesScreen() {
             </Text>
           ) : null}
 
-          {item.address ? (
-            <View style={styles.addressRow}>
-              <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
-              <Text style={[styles.addressText, { color: colors.textSecondary }]} numberOfLines={1}>
-                {item.address}
-              </Text>
-            </View>
-          ) : item.lat ? (
-            <View style={styles.addressRow}>
-              <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
-              <Text style={[styles.addressText, { color: colors.textTertiary }]} numberOfLines={1}>
-                Service area business
-              </Text>
-            </View>
-          ) : null}
+          <View style={styles.addressRow}>
+            {item.location_type === "virtual" ? (
+              <>
+                <Ionicons name="globe-outline" size={14} color={colors.textSecondary} />
+                <Text style={[styles.addressText, { color: colors.textSecondary }]} numberOfLines={1}>Virtual / Online</Text>
+              </>
+            ) : item.location_type === "service_area" ? (
+              <>
+                <Ionicons name="map-outline" size={14} color={colors.textSecondary} />
+                <Text style={[styles.addressText, { color: colors.textSecondary }]} numberOfLines={1}>
+                  {item.service_area_description || "Service Area"}
+                </Text>
+              </>
+            ) : item.address ? (
+              <>
+                <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
+                <Text style={[styles.addressText, { color: colors.textSecondary }]} numberOfLines={1}>{item.address}</Text>
+              </>
+            ) : item.location_type === "popup" ? (
+              <>
+                <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
+                <Text style={[styles.addressText, { color: colors.textSecondary }]} numberOfLines={1}>Pop-up</Text>
+              </>
+            ) : null}
+            {dist != null && dist < 999 ? (
+              <Text style={[styles.distanceText, { color: colors.textTertiary }]}>{dist < 1 ? `${(dist * 5280).toFixed(0)} ft` : `${dist.toFixed(1)} mi`}</Text>
+            ) : null}
+          </View>
         </Pressable>
       );
     },
-    [colors]
+    [colors, isDark, userLocation]
   );
 
   const dropdownCategories = CATEGORIES.filter(c => c !== "All");
@@ -1147,6 +1426,45 @@ export default function BusinessesScreen() {
             </Pressable>
           </View>
         </View>
+        {availableSubcategories.length > 0 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingHorizontal: 16, paddingBottom: 8 }} contentContainerStyle={{ gap: 6 }}>
+            <Pressable
+              style={[styles.filterChip, { backgroundColor: !selectedSubcategory ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.08)", borderColor: !selectedSubcategory ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.15)" }]}
+              onPress={() => { setSelectedSubcategory(""); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+            >
+              <Text style={[styles.filterChipText, { color: !selectedSubcategory ? "#fff" : "rgba(255,255,255,0.6)" }]}>All</Text>
+            </Pressable>
+            {availableSubcategories.map((sub) => {
+              const isActive = selectedSubcategory === sub;
+              return (
+                <Pressable
+                  key={sub}
+                  style={[styles.filterChip, { backgroundColor: isActive ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.08)", borderColor: isActive ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.15)" }]}
+                  onPress={() => { setSelectedSubcategory(isActive ? "" : sub); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                >
+                  <Text style={[styles.filterChipText, { color: isActive ? "#fff" : "rgba(255,255,255,0.6)" }]}>{sub}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        ) : null}
+        <View style={{ paddingHorizontal: 16, paddingBottom: 8 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+            {DISTANCE_OPTIONS.map((opt) => {
+              const isActive = distanceFilter === opt.value;
+              return (
+                <Pressable
+                  key={opt.value}
+                  style={[styles.filterChip, { backgroundColor: isActive ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.08)", borderColor: isActive ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.15)" }]}
+                  onPress={() => { setDistanceFilter(opt.value); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                >
+                  <Ionicons name={opt.value === 0 ? "infinite-outline" : "navigate-outline"} size={12} color={isActive ? "#fff" : "rgba(255,255,255,0.6)"} />
+                  <Text style={[styles.filterChipText, { color: isActive ? "#fff" : "rgba(255,255,255,0.6)" }]}>{opt.label}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
         <TickerBanner />
       </GlassHeader>
 
@@ -1156,7 +1474,7 @@ export default function BusinessesScreen() {
           <View style={[styles.dropdownMenu, { top: headerHeight + 4, backgroundColor: colors.surface, borderColor: colors.border, ...(Platform.OS === "web" ? { boxShadow: "0 8px 24px rgba(0,0,0,0.15)" } as any : {}) }]}>
             <Pressable
               style={[styles.dropdownItem, selectedCategory === "All" && { backgroundColor: colors.prayerIconBg }]}
-              onPress={() => { setSelectedCategory("All"); setShowDropdown(false); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+              onPress={() => { setSelectedCategory("All"); setSelectedSubcategory(""); setShowDropdown(false); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
             >
               <Ionicons name="grid-outline" size={18} color={selectedCategory === "All" ? colors.emerald : colors.textSecondary} />
               <Text style={[styles.dropdownItemText, { color: selectedCategory === "All" ? colors.emerald : colors.text }]}>All Categories</Text>
@@ -1170,7 +1488,7 @@ export default function BusinessesScreen() {
                 <Pressable
                   key={cat}
                   style={[styles.dropdownItem, isActive && { backgroundColor: colors.prayerIconBg }]}
-                  onPress={() => { setSelectedCategory(cat); setShowDropdown(false); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                  onPress={() => { setSelectedCategory(cat); setSelectedSubcategory(""); setShowDropdown(false); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
                 >
                   <Ionicons name={info.icon as any} size={18} color={isActive ? colors.emerald : info.color} />
                   <Text style={[styles.dropdownItemText, { color: isActive ? colors.emerald : colors.text }]}>{cat}</Text>
@@ -1350,7 +1668,7 @@ const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 10,
   },
   categoryBadge: {
     width: 36,
@@ -1377,6 +1695,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inter_600SemiBold",
   },
+  subcategoryLabel: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+  },
   cardRatingRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1398,7 +1720,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_400Regular",
     lineHeight: 18,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   addressRow: {
     flexDirection: "row",
@@ -1409,6 +1731,24 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inter_400Regular",
     flex: 1,
+  },
+  distanceText: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    marginLeft: 4,
+  },
+  filterChip: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  filterChipText: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
   },
   emptyText: {
     fontSize: 16,
