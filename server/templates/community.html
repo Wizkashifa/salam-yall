@@ -713,12 +713,12 @@
 
   <section class="hero-section">
     <div class="hero-inner">
-      <div class="hero-eyebrow">
+      <div class="hero-eyebrow" id="hero-eyebrow">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-        Salam Y'all
+        <span id="hero-metro-name">Salam Y'all</span>
       </div>
       <h1 class="hero-title">Your <em>Community</em> Hub</h1>
-      <p class="hero-subtitle">Discover local events, halal restaurants, and Muslim-owned businesses near you.</p>
+      <p class="hero-subtitle" id="hero-subtitle">Discover local events, halal restaurants, and Muslim-owned businesses near you.</p>
     </div>
   </section>
 
@@ -871,6 +871,23 @@
     let eventsView = 'grid', restaurantsView = 'grid';
     let eventsMarkers = null, restaurantsMarkers = null;
 
+    function updateHeroWithMetro(lat, lng) {
+      fetch('/api/geo/metro?lat=' + lat + '&lng=' + lng)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.found) {
+            var el = document.getElementById('hero-metro-name');
+            if (el) el.textContent = data.metro;
+            var sub = document.getElementById('hero-subtitle');
+            if (sub && data.cities && data.cities.length >= 3) {
+              sub.textContent = 'Discover local events, halal restaurants, and Muslim-owned businesses across ' +
+                data.cities[0] + ', ' + data.cities[1] + ', and ' + data.cities[2] + '.';
+            }
+          }
+        })
+        .catch(function() {});
+    }
+
     function requestLocation() {
       if (!navigator.geolocation) { alert('Location not supported by your browser'); return; }
       navigator.geolocation.getCurrentPosition(
@@ -879,6 +896,7 @@
           userLng = pos.coords.longitude;
           locationRequested = true;
           document.querySelectorAll('.location-banner').forEach(b => b.style.display = 'none');
+          updateHeroWithMetro(userLat, userLng);
           if (dataLoaded.events) { eventsPage = 1; renderEvents(); }
           if (dataLoaded.restaurants) { restaurantsPage = 1; renderRestaurants(); }
         },
@@ -903,6 +921,7 @@
             userLng = pos.coords.longitude;
             locationRequested = true;
             document.querySelectorAll('.location-banner').forEach(b => b.style.display = 'none');
+            updateHeroWithMetro(userLat, userLng);
             if (dataLoaded.restaurants) { restaurantsPage = 1; renderRestaurants(); }
             if (dataLoaded.events) { eventsPage = 1; renderEvents(); }
           },

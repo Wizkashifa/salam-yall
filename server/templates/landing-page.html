@@ -705,10 +705,10 @@
 
     <!-- COMMUNITY -->
     <section class="section community-section">
-      <p class="section-label">Serving the Community</p>
-      <h2 class="section-title">Made with Love for Muslims Everywhere</h2>
-      <p class="section-subtitle">Connecting communities across the country with local resources.</p>
-      <div class="community-badges">
+      <p class="section-label" id="lp-section-label">Serving the Community</p>
+      <h2 class="section-title" id="lp-section-title">Made with Love for Muslims Everywhere</h2>
+      <p class="section-subtitle" id="lp-section-subtitle">Connecting communities across the country with local resources.</p>
+      <div class="community-badges" id="lp-community-badges">
         <span class="community-badge">Triangle NC</span>
         <span class="community-badge">Bay Area CA</span>
         <span class="community-badge">Los Angeles CA</span>
@@ -787,6 +787,31 @@
           btn.disabled = false;
         }
       }
+    </script>
+    <script>
+      (function() {
+        if (!navigator.geolocation) return;
+        navigator.geolocation.getCurrentPosition(function(pos) {
+          fetch('/api/geo/metro?lat=' + pos.coords.latitude + '&lng=' + pos.coords.longitude)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+              if (!data.found) return;
+              var label = document.getElementById('lp-section-label');
+              if (label) label.textContent = 'Serving ' + data.metro;
+              var subtitle = document.getElementById('lp-section-subtitle');
+              if (subtitle && data.cities && data.cities.length >= 3) {
+                subtitle.textContent = 'Connecting ' + data.cities[0] + ', ' + data.cities[1] + ', ' + data.cities[2] + ', and communities near you.';
+              }
+              var badges = document.getElementById('lp-community-badges');
+              if (badges && data.cities) {
+                badges.innerHTML = data.cities.map(function(c) {
+                  return '<span class="community-badge">' + c + '</span>';
+                }).join('');
+              }
+            })
+            .catch(function() {});
+        }, function() {}, { enableHighAccuracy: false, timeout: 5000 });
+      })();
     </script>
   </body>
 </html>

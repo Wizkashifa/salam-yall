@@ -2212,6 +2212,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const METRO_AREAS: { name: string; lat: number; lng: number; cities: string[] }[] = [
+    { name: "Triangle NC", lat: 35.7796, lng: -78.6382, cities: ["Raleigh", "Durham", "Chapel Hill", "Cary", "Apex"] },
+    { name: "Bay Area CA", lat: 37.5485, lng: -121.9886, cities: ["Fremont", "San Jose", "Sunnyvale", "Santa Clara", "Milpitas"] },
+    { name: "Los Angeles CA", lat: 34.0522, lng: -118.2437, cities: ["Los Angeles", "Anaheim", "Irvine", "Pasadena", "Glendale"] },
+    { name: "DFW TX", lat: 32.7767, lng: -96.7970, cities: ["Dallas", "Fort Worth", "Plano", "Irving", "Arlington"] },
+    { name: "Houston TX", lat: 29.7604, lng: -95.3698, cities: ["Houston", "Sugar Land", "Katy", "Pearland", "Missouri City"] },
+    { name: "Chicago IL", lat: 41.8781, lng: -87.6298, cities: ["Chicago", "Naperville", "Schaumburg", "Skokie", "Evanston"] },
+    { name: "NYC Metro", lat: 40.7128, lng: -74.0060, cities: ["New York", "Jersey City", "Paterson", "Edison", "Clifton"] },
+    { name: "DMV", lat: 38.9072, lng: -77.0369, cities: ["Washington DC", "Falls Church", "Silver Spring", "Fairfax", "Herndon"] },
+    { name: "Detroit MI", lat: 42.3314, lng: -83.0458, cities: ["Detroit", "Dearborn", "Canton", "Hamtramck", "Troy"] },
+    { name: "Atlanta GA", lat: 33.7490, lng: -84.3880, cities: ["Atlanta", "Alpharetta", "Marietta", "Duluth", "Decatur"] },
+    { name: "Philadelphia PA", lat: 39.9526, lng: -75.1652, cities: ["Philadelphia", "Cherry Hill", "Norristown", "Camden", "Wilmington"] },
+    { name: "Minneapolis MN", lat: 44.9778, lng: -93.2650, cities: ["Minneapolis", "St. Paul", "Bloomington", "Brooklyn Park", "Eden Prairie"] },
+    { name: "San Diego CA", lat: 32.7157, lng: -117.1611, cities: ["San Diego", "El Cajon", "Chula Vista", "Escondido", "Oceanside"] },
+    { name: "Orlando FL", lat: 28.5383, lng: -81.3792, cities: ["Orlando", "Kissimmee", "Altamonte Springs", "Sanford", "Winter Park"] },
+    { name: "Tampa FL", lat: 27.9506, lng: -82.4572, cities: ["Tampa", "St. Petersburg", "Brandon", "Clearwater", "Riverview"] },
+    { name: "Miami FL", lat: 25.7617, lng: -80.1918, cities: ["Miami", "Hialeah", "Pembroke Pines", "Davie", "Plantation"] },
+    { name: "Phoenix AZ", lat: 33.4484, lng: -112.0740, cities: ["Phoenix", "Tempe", "Chandler", "Mesa", "Scottsdale"] },
+    { name: "Seattle WA", lat: 47.6062, lng: -122.3321, cities: ["Seattle", "Redmond", "Bellevue", "Kent", "Renton"] },
+    { name: "Denver CO", lat: 39.7392, lng: -104.9903, cities: ["Denver", "Aurora", "Thornton", "Westminster", "Lakewood"] },
+    { name: "Charlotte NC", lat: 35.2271, lng: -80.8431, cities: ["Charlotte", "Concord", "Gastonia", "Huntersville", "Matthews"] },
+    { name: "Columbus OH", lat: 39.9612, lng: -82.9988, cities: ["Columbus", "Dublin", "Westerville", "Hilliard", "Grove City"] },
+    { name: "Nashville TN", lat: 36.1627, lng: -86.7816, cities: ["Nashville", "Murfreesboro", "Franklin", "Antioch", "Hendersonville"] },
+    { name: "San Antonio TX", lat: 29.4241, lng: -98.4936, cities: ["San Antonio", "New Braunfels", "Schertz", "Converse", "Live Oak"] },
+    { name: "Austin TX", lat: 30.2672, lng: -97.7431, cities: ["Austin", "Round Rock", "Cedar Park", "Pflugerville", "Georgetown"] },
+    { name: "St. Louis MO", lat: 38.6270, lng: -90.1994, cities: ["St. Louis", "Florissant", "O'Fallon", "Chesterfield", "Maryland Heights"] },
+    { name: "Sacramento CA", lat: 38.5816, lng: -121.4944, cities: ["Sacramento", "Elk Grove", "Roseville", "Folsom", "Rancho Cordova"] },
+    { name: "Boston MA", lat: 42.3601, lng: -71.0589, cities: ["Boston", "Cambridge", "Worcester", "Lowell", "Quincy"] },
+    { name: "Baltimore MD", lat: 39.2904, lng: -76.6122, cities: ["Baltimore", "Towson", "Ellicott City", "Columbia", "Catonsville"] },
+  ];
+
+  function findNearestMetro(lat: number, lng: number): { name: string; cities: string[] } | null {
+    let closest: typeof METRO_AREAS[0] | null = null;
+    let minDist = Infinity;
+    for (const metro of METRO_AREAS) {
+      const dLat = metro.lat - lat;
+      const dLng = metro.lng - lng;
+      const dist = dLat * dLat + dLng * dLng;
+      if (dist < minDist) {
+        minDist = dist;
+        closest = metro;
+      }
+    }
+    const MAX_DIST = 4;
+    if (minDist > MAX_DIST || !closest) return null;
+    return { name: closest.name, cities: closest.cities };
+  }
+
+  app.get("/api/geo/metro", (req, res) => {
+    const lat = parseFloat(req.query.lat as string);
+    const lng = parseFloat(req.query.lng as string);
+    if (isNaN(lat) || isNaN(lng)) {
+      return res.status(400).json({ error: "lat and lng required" });
+    }
+    const metro = findNearestMetro(lat, lng);
+    if (!metro) {
+      return res.json({ found: false });
+    }
+    res.json({ found: true, metro: metro.name, cities: metro.cities });
+  });
+
   app.post("/api/android-waitlist", async (req, res) => {
     try {
       const { email } = req.body;
