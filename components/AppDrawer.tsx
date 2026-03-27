@@ -182,7 +182,7 @@ export function AppDrawer() {
         </Pressable>
       </View>
 
-      <Text style={[styles.versionText, { color: colors.textTertiary }]}>Salam Y'all v1.1.2</Text>
+      <Text style={[styles.versionText, { color: colors.textTertiary }]}>Salam Y'all v1.1.3</Text>
     </>
   );
 
