@@ -10,7 +10,38 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const CALENDAR_ID = "5c6138b3c670e90f28b9ec65a6650268569a070eff5ae0ae919129f763d216af@group.calendar.google.com";
 
-const photoCache = new Map<string, { buffer: Buffer; contentType: string }>();
+const PHOTO_CACHE_DIR = path.resolve(process.cwd(), "server", "photo-cache");
+try { fs.mkdirSync(PHOTO_CACHE_DIR, { recursive: true }); } catch {}
+const photoMemCache = new Map<string, { buffer: Buffer; contentType: string }>();
+
+function getPhotoCachePath(key: string): string {
+  return path.join(PHOTO_CACHE_DIR, key.replace(/[^a-zA-Z0-9_-]/g, "_"));
+}
+
+function getPhotoFromCache(key: string): { buffer: Buffer; contentType: string } | null {
+  const mem = photoMemCache.get(key);
+  if (mem) return mem;
+  try {
+    const cachePath = getPhotoCachePath(key);
+    const metaPath = cachePath + ".meta";
+    if (fs.existsSync(cachePath) && fs.existsSync(metaPath)) {
+      const buffer = fs.readFileSync(cachePath);
+      const contentType = fs.readFileSync(metaPath, "utf8").trim();
+      photoMemCache.set(key, { buffer, contentType });
+      return { buffer, contentType };
+    }
+  } catch {}
+  return null;
+}
+
+function setPhotoCache(key: string, buffer: Buffer, contentType: string) {
+  photoMemCache.set(key, { buffer, contentType });
+  try {
+    const cachePath = getPhotoCachePath(key);
+    fs.writeFileSync(cachePath, buffer);
+    fs.writeFileSync(cachePath + ".meta", contentType);
+  } catch {}
+}
 
 const NAME_MATCHES: [string, string][] = [
   ["islamic association of raleigh", "Islamic Association of Raleigh"],
@@ -2123,7 +2154,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "No photo available" });
       }
       const cacheKey = `biz_${id}`;
-      const cached = photoCache.get(cacheKey);
+      const cached = getPhotoFromCache(cacheKey);
       if (cached) {
         res.set("Content-Type", cached.contentType);
         res.set("Cache-Control", "public, max-age=604800");
@@ -2138,7 +2169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const contentType = photoResp.headers.get("content-type") || "image/jpeg";
       const buffer = Buffer.from(await photoResp.arrayBuffer());
-      photoCache.set(cacheKey, { buffer, contentType });
+      setPhotoCache(cacheKey, buffer, contentType);
       res.set("Content-Type", contentType);
       res.set("Cache-Control", "public, max-age=604800");
       res.send(buffer);
@@ -2156,7 +2187,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "No photo available" });
       }
       const cacheKey = `halal_${id}`;
-      const cached = photoCache.get(cacheKey);
+      const cached = getPhotoFromCache(cacheKey);
       if (cached) {
         res.set("Content-Type", cached.contentType);
         res.set("Cache-Control", "public, max-age=604800");
@@ -2171,7 +2202,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const contentType = photoResp.headers.get("content-type") || "image/jpeg";
       const buffer = Buffer.from(await photoResp.arrayBuffer());
-      photoCache.set(cacheKey, { buffer, contentType });
+      setPhotoCache(cacheKey, buffer, contentType);
       res.set("Content-Type", contentType);
       res.set("Cache-Control", "public, max-age=604800");
       res.send(buffer);

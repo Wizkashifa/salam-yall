@@ -3,6 +3,9 @@
 # dependencies
 node_modules/
 
+# photo cache
+server/photo-cache/
+
 # Expo
 .expo/
 dist/
