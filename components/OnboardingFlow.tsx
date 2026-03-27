@@ -327,8 +327,12 @@ function TrackerScreen({ isActive }: { isActive: boolean }) {
               <Text style={trackerStyles.stateLabel}>Made up</Text>
             </View>
             <View style={trackerStyles.stateRow}>
-              <View style={[trackerStyles.dot, { backgroundColor: "#EF4444" }]} />
+              <View style={[trackerStyles.dot, { backgroundColor: "rgba(255,255,255,0.35)" }]} />
               <Text style={trackerStyles.stateLabel}>Excused</Text>
+            </View>
+            <View style={trackerStyles.stateRow}>
+              <View style={[trackerStyles.dot, { backgroundColor: "#EF4444" }]} />
+              <Text style={trackerStyles.stateLabel}>Missed</Text>
             </View>
           </View>
 

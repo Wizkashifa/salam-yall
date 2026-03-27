@@ -1283,24 +1283,24 @@ export default function PrayerScreen() {
               const isExcused = status === 4;
               const isMissedPast = status === 0 && isPast;
               const pillBg = status === 1
-                ? (isDark ? colors.gold + "20" : colors.gold + "15")
+                ? (isDark ? colors.emerald + "25" : colors.emerald + "12")
                 : status === 2
-                  ? (isDark ? colors.emerald + "25" : colors.emerald + "12")
+                  ? (isDark ? colors.gold + "20" : colors.gold + "15")
                   : isMadeUp
-                    ? (isDark ? colors.gold + "12" : colors.gold + "08")
+                    ? (isDark ? colors.emerald + "12" : colors.emerald + "08")
                     : isExcused
                       ? (isDark ? colors.surfaceSecondary + "30" : colors.surfaceSecondary + "20")
                       : isMissedPast
                         ? (isDark ? "rgba(239,68,68,0.15)" : "rgba(239,68,68,0.08)")
                         : undefined;
-              const nameColor = status === 1 ? colors.gold
-                : status === 2 ? colors.emerald
+              const nameColor = status === 1 ? colors.emerald
+                : status === 2 ? colors.gold
                 : isMadeUp ? colors.emerald + "80"
                 : isExcused ? colors.textTertiary
                 : isMissedPast ? "#EF4444"
                 : isPast ? colors.textTertiary : colors.textSecondary;
-              const timeColor = status === 1 ? colors.gold
-                : status === 2 ? colors.emerald
+              const timeColor = status === 1 ? colors.emerald
+                : status === 2 ? colors.gold
                 : isMadeUp ? colors.emerald + "80"
                 : isExcused ? colors.textTertiary
                 : isMissedPast ? "#EF4444"
@@ -1354,24 +1354,24 @@ export default function PrayerScreen() {
                 const isExcused = status === 4;
                 const isMissedPast = status === 0 && isPast;
                 const pillBg = status === 1
-                  ? (isDark ? colors.gold + "20" : colors.gold + "15")
+                  ? (isDark ? colors.emerald + "25" : colors.emerald + "12")
                   : status === 2
-                    ? (isDark ? colors.emerald + "25" : colors.emerald + "12")
+                    ? (isDark ? colors.gold + "20" : colors.gold + "15")
                     : isMadeUp
-                      ? (isDark ? colors.gold + "12" : colors.gold + "08")
+                      ? (isDark ? colors.emerald + "12" : colors.emerald + "08")
                       : isExcused
                         ? (isDark ? colors.surfaceSecondary + "30" : colors.surfaceSecondary + "20")
                         : isMissedPast
                           ? (isDark ? "rgba(239,68,68,0.15)" : "rgba(239,68,68,0.08)")
                           : undefined;
-                const nameColor = status === 1 ? colors.gold
-                  : status === 2 ? colors.emerald
+                const nameColor = status === 1 ? colors.emerald
+                  : status === 2 ? colors.gold
                   : isMadeUp ? colors.emerald + "80"
                   : isExcused ? colors.textTertiary
                   : isMissedPast ? "#EF4444"
                   : isPast ? colors.textTertiary : colors.textSecondary;
-                const timeColor = status === 1 ? colors.gold
-                  : status === 2 ? colors.emerald
+                const timeColor = status === 1 ? colors.emerald
+                  : status === 2 ? colors.gold
                   : isMadeUp ? colors.emerald + "80"
                   : isExcused ? colors.textTertiary
                   : isMissedPast ? "#EF4444"

@@ -29,9 +29,9 @@ const EXAMPLE_PILLS = [
 function getPillBg(status: number, variant: "onboarding" | "modal", themeColors?: PrayerPillMockupProps["colors"]) {
   if (variant === "onboarding") {
     switch (status) {
-      case 1: return richGold + "30";
-      case 2: return emerald + "35";
-      case 3: return richGold + "18";
+      case 1: return emerald + "35";
+      case 2: return richGold + "30";
+      case 3: return emerald + "18";
       case 0: return "rgba(239,68,68,0.2)";
       default: return "rgba(255,255,255,0.08)";
     }
@@ -39,15 +39,17 @@ function getPillBg(status: number, variant: "onboarding" | "modal", themeColors?
   const g = themeColors?.gold ?? richGold;
   const e = themeColors?.emerald ?? emerald;
   switch (status) {
-    case 1: return g + "20";
-    case 2: return e + "25";
-    case 3: return g + "12";
+    case 1: return e + "25";
+    case 2: return g + "20";
+    case 3: return e + "12";
     case 0: return "rgba(239,68,68,0.15)";
     default: return undefined;
   }
 }
 
 function getNameColor(status: number, variant: "onboarding" | "modal", themeColors?: PrayerPillMockupProps["colors"]) {
+  if (status === 1) return themeColors?.emerald ?? emerald;
+  if (status === 2) return themeColors?.gold ?? richGold;
   if (status === 3) return (themeColors?.emerald ?? emerald) + "80";
   if (status === 0) return excusedRed;
   if (variant === "onboarding") {
@@ -59,6 +61,8 @@ function getNameColor(status: number, variant: "onboarding" | "modal", themeColo
 }
 
 function getTimeColor(status: number, variant: "onboarding" | "modal", themeColors?: PrayerPillMockupProps["colors"]) {
+  if (status === 1) return themeColors?.emerald ?? emerald;
+  if (status === 2) return themeColors?.gold ?? richGold;
   if (status === 3) return (themeColors?.emerald ?? emerald) + "80";
   if (status === 0) return excusedRed;
   if (variant === "onboarding") {
