@@ -4171,14 +4171,17 @@ Return ONLY the description text, nothing else.`,
       const userId = await getUserIdFromRequest(req);
       if (!userId) return res.status(401).json({ error: "Sign in required" });
 
-      const { restaurantId, comment } = req.body;
+      const { restaurantId, comment, halalStatus } = req.body;
       if (!restaurantId) {
         return res.status(400).json({ error: "restaurantId is required" });
       }
 
+      const validStatuses = ["IS_HALAL", "PARTIALLY_HALAL", "NOT_HALAL"];
+      const status = validStatuses.includes(halalStatus) ? halalStatus : null;
+
       await pool.query(
-        "INSERT INTO halal_checkins (user_id, restaurant_id, comment) VALUES ($1, $2, $3)",
-        [userId, parseInt(restaurantId), comment || null]
+        "INSERT INTO halal_checkins (user_id, restaurant_id, comment, halal_status) VALUES ($1, $2, $3, $4)",
+        [userId, parseInt(restaurantId), comment || null, status]
       );
 
       const latestResult = await pool.query(
@@ -4205,11 +4208,16 @@ Return ONLY the description text, nothing else.`,
     try {
       const restaurantId = parseInt(req.params.restaurantId);
       const latestResult = await pool.query(
-        "SELECT hc.created_at, hc.comment, ua.display_name FROM halal_checkins hc JOIN user_accounts ua ON hc.user_id = ua.id WHERE hc.restaurant_id = $1 ORDER BY hc.created_at DESC LIMIT 5",
+        "SELECT hc.created_at, hc.comment, hc.halal_status, ua.display_name FROM halal_checkins hc JOIN user_accounts ua ON hc.user_id = ua.id WHERE hc.restaurant_id = $1 ORDER BY hc.created_at DESC LIMIT 5",
         [restaurantId]
       );
       const countResult = await pool.query(
         "SELECT COUNT(*) as count FROM halal_checkins WHERE restaurant_id = $1",
+        [restaurantId]
+      );
+
+      const statusCounts = await pool.query(
+        "SELECT halal_status, COUNT(*) as count FROM halal_checkins WHERE restaurant_id = $1 AND halal_status IS NOT NULL GROUP BY halal_status ORDER BY count DESC",
         [restaurantId]
       );
 
@@ -4218,9 +4226,11 @@ Return ONLY the description text, nothing else.`,
           date: r.created_at,
           comment: r.comment,
           displayName: r.display_name,
+          halalStatus: r.halal_status,
         })),
         totalCheckins: parseInt(countResult.rows[0].count),
         lastCheckin: latestResult.rows[0]?.created_at || null,
+        statusCounts: statusCounts.rows.map((r: any) => ({ status: r.halal_status, count: parseInt(r.count) })),
       });
     } catch (error: any) {
       console.error("[Checkins] Fetch error:", error.message);

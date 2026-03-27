@@ -291,9 +291,10 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
   const { user, signInWithApple, getAuthHeaders } = useAuth();
   const [userRating, setUserRating] = useState(0);
   const [communityRating, setCommunityRating] = useState<{ avg: number | null; count: number }>({ avg: null, count: 0 });
-  const [checkinData, setCheckinData] = useState<{ lastCheckin: string | null; totalCheckins: number; recentComments: Array<{ comment: string; displayName: string; date: string }> }>({ lastCheckin: null, totalCheckins: 0, recentComments: [] });
+  const [checkinData, setCheckinData] = useState<{ lastCheckin: string | null; totalCheckins: number; recentComments: Array<{ comment: string; displayName: string; date: string; halalStatus?: string }>; statusCounts: Array<{ status: string; count: number }> }>({ lastCheckin: null, totalCheckins: 0, recentComments: [], statusCounts: [] });
   const [showCheckinForm, setShowCheckinForm] = useState(false);
   const [checkinComment, setCheckinComment] = useState("");
+  const [checkinStatus, setCheckinStatus] = useState<string>("IS_HALAL");
   const [submittingRating, setSubmittingRating] = useState(false);
   const [submittingCheckin, setSubmittingCheckin] = useState(false);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
@@ -318,11 +319,12 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data) {
+          const statusCounts = data.statusCounts || [];
           const recentComments = (data.checkins || [])
             .filter((c: any) => c.comment)
             .slice(0, 3)
-            .map((c: any) => ({ comment: c.comment, displayName: c.displayName || "Community member", date: c.date }));
-          setCheckinData({ lastCheckin: data.lastCheckin, totalCheckins: data.totalCheckins, recentComments });
+            .map((c: any) => ({ comment: c.comment, displayName: c.displayName || "Community member", date: c.date, halalStatus: c.halalStatus }));
+          setCheckinData({ lastCheckin: data.lastCheckin, totalCheckins: data.totalCheckins, recentComments, statusCounts });
         }
       })
       .catch(() => {});
@@ -332,9 +334,10 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
     if (!visible) {
       setUserRating(0);
       setCommunityRating({ avg: null, count: 0 });
-      setCheckinData({ lastCheckin: null, totalCheckins: 0, recentComments: [] });
+      setCheckinData({ lastCheckin: null, totalCheckins: 0, recentComments: [], statusCounts: [] });
       setShowCheckinForm(false);
       setCheckinComment("");
+      setCheckinStatus("IS_HALAL");
     }
   }, [visible]);
 
@@ -384,15 +387,21 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
       const response = await apiRequest("POST", "/api/checkins", {
         restaurantId: restaurant?.id,
         comment: checkinComment.trim() || null,
+        halalStatus: checkinStatus,
       }, authHeaders);
       const data = await response.json();
       const newComment = checkinComment.trim();
       const updatedComments = newComment && user
-        ? [{ comment: newComment, displayName: user.displayName || "Community member", date: new Date().toISOString() }, ...checkinData.recentComments].slice(0, 3)
+        ? [{ comment: newComment, displayName: user.displayName || "Community member", date: new Date().toISOString(), halalStatus: checkinStatus }, ...checkinData.recentComments].slice(0, 3)
         : checkinData.recentComments;
-      setCheckinData({ lastCheckin: data.lastCheckin, totalCheckins: data.totalCheckins, recentComments: updatedComments });
+      const updatedCounts = [...checkinData.statusCounts];
+      const existingIdx = updatedCounts.findIndex(s => s.status === checkinStatus);
+      if (existingIdx >= 0) updatedCounts[existingIdx].count++;
+      else updatedCounts.push({ status: checkinStatus, count: 1 });
+      setCheckinData({ lastCheckin: data.lastCheckin, totalCheckins: data.totalCheckins, recentComments: updatedComments, statusCounts: updatedCounts });
       setShowCheckinForm(false);
       setCheckinComment("");
+      setCheckinStatus("IS_HALAL");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       trackEvent("halal_checkin", { restaurant_id: restaurant?.id, restaurant_name: restaurant?.name });
     } catch {
@@ -533,8 +542,7 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
               </View>
             ) : null}
 
-            {(restaurant.is_halal === "IS_HALAL" || restaurant.is_halal === "PARTIALLY_HALAL") ? (
-              <View style={[styles.communitySection, { borderTopColor: colors.divider }]}>
+            <View style={[styles.communitySection, { borderTopColor: colors.divider }]}>
                 <View style={styles.checkinHeader}>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.communitySectionTitle, { color: colors.text }]}>Halal Verification</Text>
@@ -544,13 +552,31 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
                           Last verified {new Date(checkinData.lastCheckin).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                           {checkinData.totalCheckins > 1 ? ` (${checkinData.totalCheckins} check-ins)` : ""}
                         </Text>
+                        {checkinData.statusCounts.length > 0 ? (
+                          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+                            {checkinData.statusCounts.map((sc, i) => {
+                              const chipColor = sc.status === "IS_HALAL" ? "#2E7D32" : sc.status === "PARTIALLY_HALAL" ? "#F57C00" : "#C62828";
+                              const chipLabel = sc.status === "IS_HALAL" ? "Halal" : sc.status === "PARTIALLY_HALAL" ? "Partially Halal" : "Not Halal";
+                              const chipIcon = sc.status === "IS_HALAL" ? "checkmark-circle" : sc.status === "PARTIALLY_HALAL" ? "alert-circle" : "close-circle";
+                              return (
+                                <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: chipColor + "18", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }}>
+                                  <Ionicons name={chipIcon as any} size={13} color={chipColor} />
+                                  <Text style={{ fontFamily: "Inter_500Medium", fontSize: 12, color: chipColor }}>{sc.count} {chipLabel}</Text>
+                                </View>
+                              );
+                            })}
+                          </View>
+                        ) : null}
                         {checkinData.recentComments.length > 0 ? (
                           <View style={{ marginTop: 6, gap: 4 }}>
-                            {checkinData.recentComments.map((c, i) => (
-                              <Text key={i} style={[styles.checkinCommentText, { color: colors.textSecondary }]}>
-                                "{c.comment}" — {c.displayName}
-                              </Text>
-                            ))}
+                            {checkinData.recentComments.map((c, i) => {
+                              const statusLabel = c.halalStatus === "PARTIALLY_HALAL" ? " [Partial]" : c.halalStatus === "NOT_HALAL" ? " [Not Halal]" : "";
+                              return (
+                                <Text key={i} style={[styles.checkinCommentText, { color: colors.textSecondary }]}>
+                                  "{c.comment}"{statusLabel} — {c.displayName}
+                                </Text>
+                              );
+                            })}
                           </View>
                         ) : null}
                       </>
@@ -570,16 +596,47 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       }}
                     >
-                      <Ionicons name="checkmark-circle-outline" size={16} color="#fff" />
-                      <Text style={styles.checkinBtnText}>Reverify</Text>
+                      <Ionicons name="shield-checkmark-outline" size={16} color="#fff" />
+                      <Text style={styles.checkinBtnText}>Verify</Text>
                     </Pressable>
                   ) : null}
                 </View>
                 {showCheckinForm ? (
                   <View style={styles.checkinForm}>
+                    <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: colors.text, marginBottom: 8 }}>What's the halal status?</Text>
+                    <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
+                      {([
+                        { key: "IS_HALAL", label: "Halal", color: "#2E7D32", icon: "checkmark-circle" },
+                        { key: "PARTIALLY_HALAL", label: "Partial", color: "#F57C00", icon: "alert-circle" },
+                        { key: "NOT_HALAL", label: "Not Halal", color: "#C62828", icon: "close-circle" },
+                      ] as const).map((chip) => {
+                        const selected = checkinStatus === chip.key;
+                        return (
+                          <Pressable
+                            key={chip.key}
+                            onPress={() => { setCheckinStatus(chip.key); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                            style={{
+                              flex: 1,
+                              flexDirection: "row",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: 4,
+                              paddingVertical: 8,
+                              borderRadius: 10,
+                              borderWidth: 1.5,
+                              borderColor: selected ? chip.color : colors.border,
+                              backgroundColor: selected ? chip.color + "18" : colors.surfaceSecondary,
+                            }}
+                          >
+                            <Ionicons name={chip.icon as any} size={16} color={selected ? chip.color : colors.textTertiary} />
+                            <Text style={{ fontFamily: selected ? "Inter_600SemiBold" : "Inter_400Regular", fontSize: 13, color: selected ? chip.color : colors.textSecondary }}>{chip.label}</Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
                     <TextInput
                       style={[styles.checkinInput, { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.border }]}
-                      placeholder="Optional: How's the halal status?"
+                      placeholder="Optional: Add details about halal status..."
                       placeholderTextColor={colors.textTertiary}
                       value={checkinComment}
                       onChangeText={setCheckinComment}
@@ -589,7 +646,7 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
                     <View style={styles.checkinFormActions}>
                       <Pressable
                         style={[styles.checkinFormBtn, { backgroundColor: colors.surfaceSecondary }]}
-                        onPress={() => { setShowCheckinForm(false); setCheckinComment(""); }}
+                        onPress={() => { setShowCheckinForm(false); setCheckinComment(""); setCheckinStatus("IS_HALAL"); }}
                       >
                         <Text style={[styles.checkinFormBtnText, { color: colors.textSecondary }]}>Cancel</Text>
                       </Pressable>
@@ -599,14 +656,13 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
                         disabled={submittingCheckin}
                       >
                         <Text style={[styles.checkinFormBtnText, { color: "#fff" }]}>
-                          {submittingCheckin ? "Submitting..." : "Confirm"}
+                          {submittingCheckin ? "Submitting..." : "Submit"}
                         </Text>
                       </Pressable>
                     </View>
                   </View>
                 ) : null}
               </View>
-            ) : null}
 
             {(restaurant.formatted_address || restaurant.formatted_phone || restaurant.website) ? (
               <View style={[styles.detailSection, { borderTopColor: colors.divider }]}>
