@@ -41,7 +41,7 @@ function setupAntiScrape(app: express.Application) {
 
   const rateBuckets = new Map<string, { count: number; resetAt: number }>();
   const RATE_WINDOW = 60_000;
-  const RATE_LIMIT = 30;
+  const RATE_LIMIT = 200;
 
   setInterval(() => {
     const now = Date.now();
@@ -50,10 +50,11 @@ function setupAntiScrape(app: express.Application) {
     }
   }, 120_000);
 
-  const GUARDED_PATHS = ["/api/businesses", "/api/halal-restaurants", "/api/events"];
+  const GUARDED_EXACT = ["/api/businesses", "/api/halal-restaurants", "/api/events"];
 
   app.use((req, res, next) => {
-    if (!GUARDED_PATHS.some(p => req.path === p || req.path.startsWith(p + "/"))) return next();
+    const isGuarded = GUARDED_EXACT.includes(req.path);
+    if (!isGuarded) return next();
 
     const ua = (req.headers["user-agent"] || "").toLowerCase();
     const botPatterns = ["scrapy", "python-requests", "httpclient", "wget", "curl", "bot", "spider", "crawl", "scraper", "phantom", "headless", "puppeteer", "playwright", "selenium"];
