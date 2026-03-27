@@ -55,6 +55,7 @@ import { cyclePrayerStatus, getPrayerLog, getMissedFastCount, logMakeupFast, get
 import { getDailyVerse, isFriday, type DailyVerse } from "@/lib/daily-content";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 import { expandSearchTerms } from "@/lib/search-synonyms";
+import { useLocationOverride } from "@/lib/location-override-context";
 
 interface CalendarEvent {
   id: string;
@@ -715,8 +716,21 @@ export default function PrayerScreen() {
     }
   }, [calcMethod, masjidList, asrCalc, hijriOffset]);
 
+  const { getEffectiveLocation, isOverrideActive } = useLocationOverride();
+
   const loadPrayerData = useCallback(async () => {
     try {
+      if (isOverrideActive) {
+        const { lat, lng } = getEffectiveLocation(35.7796, -78.6382);
+        setHasRealLocation(true);
+        setLocationPermission(true);
+        loadDefaultPrayers(lat, lng);
+        const nearest = findNearestMasjid(lat, lng, masjidList);
+        setNearestMasjid({ name: nearest.masjid.name, distanceMiles: nearest.distanceMiles, masjid: nearest.masjid });
+        setLoading(false);
+        return;
+      }
+
       if (Platform.OS === "web") {
         let lat = 35.7796;
         let lon = -78.6382;
@@ -792,7 +806,7 @@ export default function PrayerScreen() {
     } finally {
       setLoading(false);
     }
-  }, [loadDefaultPrayers, masjidList]);
+  }, [loadDefaultPrayers, masjidList, isOverrideActive, getEffectiveLocation]);
 
   useEffect(() => {
     loadPrayerData();

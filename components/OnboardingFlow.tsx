@@ -22,6 +22,7 @@ import { useSettings, type AsrCalc } from "@/lib/settings-context";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import PrayerPillMockup from "@/components/PrayerPillMockup";
+import { useLocationOverride } from "@/lib/location-override-context";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -617,6 +618,7 @@ function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
 function MasjidScreen({ isActive, onSelect }: { isActive: boolean; onSelect: (name: string | null) => void }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [userLoc, setUserLoc] = useState<{ latitude: number; longitude: number } | null>(null);
+  const { getEffectiveLocation, isOverrideActive } = useLocationOverride();
   const { data: fetchedMasjids } = useQuery<Masjid[]>({
     queryKey: ["/api/masjids"],
     staleTime: 60 * 60 * 1000,
@@ -624,6 +626,16 @@ function MasjidScreen({ isActive, onSelect }: { isActive: boolean; onSelect: (na
   const baseMasjidList = fetchedMasjids && fetchedMasjids.length > 0 ? fetchedMasjids : NEARBY_MASJIDS;
 
   useEffect(() => {
+    if (isOverrideActive) {
+      const { lat, lng } = getEffectiveLocation(0, 0);
+      setUserLoc({ latitude: lat, longitude: lng });
+      return;
+    }
+    setUserLoc(null);
+  }, [isOverrideActive, getEffectiveLocation]);
+
+  useEffect(() => {
+    if (isOverrideActive || userLoc) return;
     (async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
@@ -633,7 +645,7 @@ function MasjidScreen({ isActive, onSelect }: { isActive: boolean; onSelect: (na
         }
       } catch {}
     })();
-  }, []);
+  }, [isOverrideActive, userLoc]);
 
   const masjidList = userLoc
     ? [...baseMasjidList].sort((a, b) =>

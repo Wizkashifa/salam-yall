@@ -57,6 +57,7 @@ import { useRef } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { QuranReader, type QuranReaderHandle } from "@/components/QuranReader";
 import { getReadingStreak, getReadingDates, getKhatamProgress, getQuranStats } from "@/lib/quran-tracker";
+import { useLocationOverride, METRO_AREAS } from "@/lib/location-override-context";
 
 interface CalendarEvent {
   id: string;
@@ -83,6 +84,8 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
 
 export default function SettingsScreen() {
   const { colors, isDark, themeMode, setThemeMode, ramadanMode, setRamadanMode } = useTheme();
+  const { overrideMetro, setOverrideMetro, isOverrideActive, getEffectiveLocation } = useLocationOverride();
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
   const router = useRouter();
   const { calcMethod, setCalcMethod, notificationsEnabled, setNotificationsEnabled, iqamaAlertsEnabled, setIqamaAlertsEnabled, preferredMasjid, setPreferredMasjid, consumePendingSettingsSection, hijriOffset, setHijriOffset, asrCalc, setAsrCalc } = useSettings();
   const { user, signInWithApple, devSignIn, signOut, isLoading: authLoading, getAuthHeaders } = useAuth();
@@ -244,6 +247,17 @@ export default function SettingsScreen() {
   const [sharingBadgeKey, setSharingBadgeKey] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isOverrideActive) {
+      const { lat, lng } = getEffectiveLocation(0, 0);
+      setUserLocation({ latitude: lat, longitude: lng });
+      return;
+    }
+    setUserLocation(null);
+    setLocationRequested(false);
+  }, [isOverrideActive, getEffectiveLocation]);
+
+  useEffect(() => {
+    if (isOverrideActive) return;
     if ((section === "masjids" || section === "communityOrgs") && !locationRequested) {
       setLocationRequested(true);
       (async () => {
@@ -256,7 +270,7 @@ export default function SettingsScreen() {
         } catch {}
       })();
     }
-  }, [section, locationRequested]);
+  }, [section, locationRequested, isOverrideActive]);
 
   const { data: fetchedMasjids } = useQuery<Masjid[]>({
     queryKey: ["/api/masjids"],
@@ -594,6 +608,66 @@ export default function SettingsScreen() {
           <Text style={[styles.menuSublabel, { color: colors.gold }]}>Coming Soon</Text>
         </View>
       </View>
+
+      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>LOCATION</Text>
+
+      <Pressable
+        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
+        onPress={() => { setShowLocationPicker(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+      >
+        <View style={[styles.menuIcon, { backgroundColor: isOverrideActive ? colors.gold + "20" : colors.prayerIconBg }]}>
+          <Ionicons name="location" size={20} color={isOverrideActive ? colors.gold : colors.emerald} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.menuLabel, { color: colors.text }]}>Location Override</Text>
+          <Text style={[styles.menuSublabel, { color: isOverrideActive ? colors.gold : colors.textSecondary }]}>
+            {isOverrideActive ? overrideMetro!.name : "Using real location"}
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+      </Pressable>
+
+      <Modal visible={showLocationPicker} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowLocationPicker(false)}>
+        <GlassModalContainer>
+          <View style={{ paddingTop: Platform.OS === "web" ? 67 : 60, paddingHorizontal: 20, paddingBottom: 20 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+              <Text style={{ fontFamily: "Inter_700Bold", fontSize: 20, color: colors.text }}>Location Override</Text>
+              <Pressable onPress={() => setShowLocationPicker(false)} hitSlop={8} style={{ width: 32, height: 32, borderRadius: 16, justifyContent: "center", alignItems: "center", backgroundColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.06)" }}>
+                <Ionicons name="close" size={20} color={colors.text} />
+              </Pressable>
+            </View>
+
+            <Pressable
+              style={[styles.calcRow, { backgroundColor: !isOverrideActive ? (isDark ? colors.actionButtonBg : colors.prayerIconBg) : colors.surface, borderColor: colors.border, marginBottom: 16 }]}
+              onPress={() => { setOverrideMetro(null); setShowLocationPicker(false); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <Ionicons name="navigate" size={18} color={!isOverrideActive ? colors.emerald : colors.textSecondary} />
+                <Text style={[styles.calcText, { color: !isOverrideActive ? colors.emerald : colors.text }]}>Use Real Location</Text>
+              </View>
+              {!isOverrideActive && <Ionicons name="checkmark" size={20} color={colors.emerald} />}
+            </Pressable>
+
+            <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 11, color: colors.textSecondary, letterSpacing: 0.5, marginBottom: 10 }}>METRO AREAS</Text>
+
+            <ScrollView style={{ maxHeight: 500 }} showsVerticalScrollIndicator={false}>
+              {METRO_AREAS.map((metro) => {
+                const isActive = overrideMetro?.name === metro.name;
+                return (
+                  <Pressable
+                    key={metro.name}
+                    style={[styles.calcRow, { backgroundColor: isActive ? (isDark ? colors.actionButtonBg : colors.prayerIconBg) : colors.surface, borderColor: colors.border }]}
+                    onPress={() => { setOverrideMetro(metro); setShowLocationPicker(false); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); }}
+                  >
+                    <Text style={[styles.calcText, { color: isActive ? colors.emerald : colors.text }]}>{metro.name}</Text>
+                    {isActive && <Ionicons name="checkmark" size={20} color={colors.emerald} />}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </GlassModalContainer>
+      </Modal>
 
       <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>COMMUNITY</Text>
 

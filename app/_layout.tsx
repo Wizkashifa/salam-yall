@@ -31,6 +31,7 @@ import { registerPushToken } from "@/lib/push-utils";
 import { trackEvent } from "@/lib/analytics";
 import { DeepLinkProvider, parseDeepLinkUrl, useDeepLink } from "@/lib/deeplink-context";
 import { AuthProvider } from "@/lib/auth-context";
+import { LocationOverrideProvider } from "@/lib/location-override-context";
 
 const ONBOARDING_VERSION_KEY = "onboarding_version";
 const APP_VERSION = Constants.expoConfig?.version ?? "1.0.0";
@@ -171,6 +172,7 @@ export default function RootLayout() {
           <SettingsProvider>
             <AuthProvider>
               <DeepLinkProvider>
+                <LocationOverrideProvider>
                 <GestureHandlerRootView>
                   <KeyboardProvider>
                     <RootLayoutNav />
@@ -182,6 +184,7 @@ export default function RootLayout() {
                     )}
                   </KeyboardProvider>
                 </GestureHandlerRootView>
+                </LocationOverrideProvider>
               </DeepLinkProvider>
             </AuthProvider>
           </SettingsProvider>

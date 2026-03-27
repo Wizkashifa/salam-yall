@@ -34,6 +34,7 @@ import { apiRequest, getApiUrl } from "@/lib/query-client";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 import { useAuth } from "@/lib/auth-context";
 import { expandSearchTerms } from "@/lib/search-synonyms";
+import { useLocationOverride } from "@/lib/location-override-context";
 
 interface Business {
   id: string;
@@ -1176,7 +1177,19 @@ export default function BusinessesScreen() {
 
   useEffect(() => { trackScreenView("Directory"); }, []);
 
+  const { getEffectiveLocation, isOverrideActive } = useLocationOverride();
+
   useEffect(() => {
+    if (isOverrideActive) {
+      const { lat, lng } = getEffectiveLocation(0, 0);
+      setUserLocation({ lat, lng });
+      return;
+    }
+    setUserLocation(null);
+  }, [isOverrideActive, getEffectiveLocation]);
+
+  useEffect(() => {
+    if (isOverrideActive) return;
     if (distanceFilter > 0 && !userLocation) {
       (async () => {
         try {
@@ -1200,7 +1213,7 @@ export default function BusinessesScreen() {
         }
       })();
     }
-  }, [distanceFilter, userLocation]);
+  }, [distanceFilter, userLocation, isOverrideActive]);
 
   const { data: businesses, isLoading } = useQuery<Business[]>({
     queryKey: ["/api/businesses"],

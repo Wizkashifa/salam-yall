@@ -32,6 +32,7 @@ import { useDeepLink } from "@/lib/deeplink-context";
 import { useAuth } from "@/lib/auth-context";
 import { getApiUrl, apiRequest } from "@/lib/query-client";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
+import { useLocationOverride } from "@/lib/location-override-context";
 
 interface HalalRestaurant {
   id: number;
@@ -1128,7 +1129,19 @@ export default function HalalScreen() {
     return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
   }, [searchText]);
 
+  const { getEffectiveLocation, isOverrideActive } = useLocationOverride();
+
   useEffect(() => {
+    if (isOverrideActive) {
+      const { lat, lng } = getEffectiveLocation(0, 0);
+      setUserLocation({ lat, lng });
+      return;
+    }
+    setUserLocation(null);
+  }, [isOverrideActive, getEffectiveLocation]);
+
+  useEffect(() => {
+    if (isOverrideActive || userLocation) return;
     (async () => {
       try {
         if (Platform.OS === "web") {
@@ -1147,7 +1160,7 @@ export default function HalalScreen() {
         }
       } catch {}
     })();
-  }, []);
+  }, [isOverrideActive, userLocation]);
 
   const { data: restaurants = [], isLoading } = useQuery<HalalRestaurant[]>({
     queryKey: ["/api/halal-restaurants"],

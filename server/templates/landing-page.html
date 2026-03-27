@@ -48,13 +48,13 @@
 
       /* HERO */
       .hero {
-        min-height: 90vh;
+        min-height: auto;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         text-align: center;
-        padding: 40px 24px 60px;
+        padding: 32px 24px 36px;
         position: relative;
         overflow: hidden;
       }
@@ -70,29 +70,29 @@
         pointer-events: none;
       }
       .hero-logo {
-        width: 120px;
-        height: 120px;
-        margin-bottom: 24px;
+        width: 72px;
+        height: 72px;
+        margin-bottom: 16px;
         position: relative;
         z-index: 1;
         animation: fadeInUp 0.8s ease-out;
       }
       .hero h1 {
         font-family: 'Playfair Display', serif;
-        font-size: 56px;
+        font-size: 36px;
         font-weight: 700;
         color: var(--gold);
         letter-spacing: -1px;
-        margin-bottom: 16px;
+        margin-bottom: 8px;
         position: relative;
         z-index: 1;
         animation: fadeInUp 0.8s ease-out 0.1s both;
       }
       .hero-tagline {
-        font-size: 18px;
+        font-size: 15px;
         color: var(--text-secondary);
-        max-width: 520px;
-        margin-bottom: 36px;
+        max-width: 420px;
+        margin-bottom: 24px;
         position: relative;
         z-index: 1;
         animation: fadeInUp 0.8s ease-out 0.2s both;
@@ -100,14 +100,14 @@
       .hero-cta {
         display: inline-flex;
         align-items: center;
-        gap: 12px;
-        padding: 18px 36px;
+        gap: 10px;
+        padding: 14px 28px;
         background: var(--emerald);
         color: #fff;
-        font-size: 18px;
+        font-size: 16px;
         font-weight: 600;
         border: none;
-        border-radius: 16px;
+        border-radius: 14px;
         text-decoration: none;
         transition: all 0.2s;
         position: relative;
@@ -115,45 +115,45 @@
         animation: fadeInUp 0.8s ease-out 0.3s both;
       }
       .hero-cta:hover { background: #14523A; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(27,107,74,0.3); }
-      .hero-cta svg { width: 24px; height: 24px; fill: currentColor; }
-      .hero-buttons { display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap; }
+      .hero-cta svg { width: 20px; height: 20px; fill: currentColor; }
+      .hero-buttons { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; }
       .hero-android {
         display: inline-flex;
         align-items: center;
-        gap: 10px;
-        padding: 18px 32px;
+        gap: 8px;
+        padding: 14px 24px;
         background: transparent;
         border: 1.5px solid rgba(255,255,255,0.25);
-        border-radius: 16px;
+        border-radius: 14px;
         color: #fff;
-        font-size: 16px;
+        font-size: 14px;
         font-weight: 600;
         text-decoration: none;
         transition: all 0.2s;
         cursor: pointer;
       }
       .hero-android:hover { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.05); transform: translateY(-2px); }
-      .hero-android svg { width: 22px; height: 22px; fill: currentColor; }
+      .hero-android svg { width: 20px; height: 20px; fill: currentColor; }
       .hero-webview {
         display: inline-flex;
         align-items: center;
-        gap: 10px;
-        padding: 18px 32px;
+        gap: 8px;
+        padding: 14px 24px;
         background: transparent;
         border: 1.5px solid rgba(255,255,255,0.25);
-        border-radius: 16px;
+        border-radius: 14px;
         color: #fff;
-        font-size: 16px;
+        font-size: 14px;
         font-weight: 600;
         text-decoration: none;
         transition: all 0.2s;
       }
       .hero-webview:hover { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.05); transform: translateY(-2px); }
-      .hero-webview svg { width: 22px; height: 22px; }
+      .hero-webview svg { width: 20px; height: 20px; }
       .hero-badge {
         display: inline-block;
-        margin-top: 16px;
-        font-size: 13px;
+        margin-top: 12px;
+        font-size: 12px;
         color: var(--text-tertiary);
         position: relative;
         z-index: 1;
@@ -161,8 +161,8 @@
       }
       .beta-link {
         display: inline-block;
-        margin-top: 8px;
-        font-size: 14px;
+        margin-top: 6px;
+        font-size: 13px;
         color: var(--text-tertiary);
         text-decoration: underline;
         text-underline-offset: 3px;
@@ -173,13 +173,85 @@
       }
       .beta-link:hover { color: var(--text-secondary); }
       .scroll-hint {
+        display: none;
+      }
+
+      /* SCREENSHOTS */
+      .screenshots-section {
+        padding: 40px 0 48px;
+        overflow: hidden;
+        position: relative;
+      }
+      .screenshots-section::before {
+        content: '';
         position: absolute;
-        bottom: 32px;
-        left: 50%;
-        transform: translateX(-50%);
-        animation: bounce 2s infinite;
-        color: var(--text-tertiary);
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: radial-gradient(ellipse at 50% 80%, rgba(27,107,74,0.08) 0%, transparent 60%);
+        pointer-events: none;
+      }
+      .screenshots-header {
+        text-align: center;
+        margin-bottom: 28px;
+        position: relative;
         z-index: 1;
+      }
+      .screenshots-header p {
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 3px;
+        color: var(--emerald);
+        margin-bottom: 8px;
+      }
+      .screenshots-header h2 {
+        font-family: 'Playfair Display', serif;
+        font-size: 32px;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .screenshots-track {
+        display: flex;
+        gap: 24px;
+        padding: 0 32px 16px;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        justify-content: center;
+        flex-wrap: nowrap;
+        position: relative;
+        z-index: 1;
+      }
+      .screenshots-track::-webkit-scrollbar { display: none; }
+      .screenshot-item {
+        flex: 0 0 auto;
+        scroll-snap-align: center;
+        text-align: center;
+      }
+      .screenshot-item img {
+        width: 220px;
+        height: auto;
+        border-radius: 20px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        transition: transform 0.3s;
+      }
+      .screenshot-item img:hover {
+        transform: scale(1.03);
+      }
+      .screenshot-item .screenshot-label {
+        margin-top: 12px;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-secondary);
+      }
+      @media (max-width: 768px) {
+        .screenshots-track {
+          justify-content: flex-start;
+          padding: 0 20px 16px;
+        }
+        .screenshot-item img {
+          width: 180px;
+        }
       }
 
       /* FEATURES */
@@ -615,6 +687,44 @@
       <a href="https://testflight.apple.com/join/4ApBN4mJ" class="beta-link">Try the beta on TestFlight</a>
       <div class="scroll-hint">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 13l5 5 5-5M7 6l5 5 5-5"/></svg>
+      </div>
+    </section>
+
+    <!-- SCREENSHOTS -->
+    <section class="screenshots-section">
+      <div class="screenshots-header">
+        <p>See It in Action</p>
+        <h2>App Screenshots</h2>
+      </div>
+      <div class="screenshots-track">
+        <div class="screenshot-item">
+          <img src="/assets/images/screenshots/home-light.png" alt="Home Screen" loading="lazy" />
+          <div class="screenshot-label">Home</div>
+        </div>
+        <div class="screenshot-item">
+          <img src="/assets/images/screenshots/home-dark.png" alt="Dark Mode" loading="lazy" />
+          <div class="screenshot-label">Dark Mode</div>
+        </div>
+        <div class="screenshot-item">
+          <img src="/assets/images/screenshots/halal.png" alt="Halal Restaurants" loading="lazy" />
+          <div class="screenshot-label">Halal Eats</div>
+        </div>
+        <div class="screenshot-item">
+          <img src="/assets/images/screenshots/events.png" alt="Community Events" loading="lazy" />
+          <div class="screenshot-label">Events</div>
+        </div>
+        <div class="screenshot-item">
+          <img src="/assets/images/screenshots/quran.png" alt="Quran Reader" loading="lazy" />
+          <div class="screenshot-label">Quran</div>
+        </div>
+        <div class="screenshot-item">
+          <img src="/assets/images/screenshots/worship.png" alt="Worship Tools" loading="lazy" />
+          <div class="screenshot-label">Worship</div>
+        </div>
+        <div class="screenshot-item">
+          <img src="/assets/images/screenshots/directory.png" alt="Business Directory" loading="lazy" />
+          <div class="screenshot-label">Directory</div>
+        </div>
       </div>
     </section>
 

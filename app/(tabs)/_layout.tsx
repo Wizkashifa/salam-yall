@@ -9,9 +9,12 @@ import React, { useState, useEffect } from "react";
 import { useTheme } from "@/lib/theme-context";
 import { getMissedPrayerCount } from "@/lib/prayer-tracker";
 import { useSettings } from "@/lib/settings-context";
+import { useLocationOverride } from "@/lib/location-override-context";
 
 function NativeTabLayout() {
   return (
+    <>
+    <LocationOverrideBanner />
     <NativeTabs>
       <NativeTabs.Trigger name="halal">
         <Icon sf={{ default: "fork.knife", selected: "fork.knife" }} />
@@ -34,6 +37,37 @@ function NativeTabLayout() {
         <Label>Worship</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
+    </>
+  );
+}
+
+function LocationOverrideBanner() {
+  const { overrideMetro, isOverrideActive } = useLocationOverride();
+  const { colors } = useTheme();
+  const isWeb = Platform.OS === "web";
+
+  if (!isOverrideActive || !overrideMetro) return null;
+
+  return (
+    <View style={{
+      position: "absolute",
+      top: isWeb ? 67 : 50,
+      left: 0,
+      right: 0,
+      zIndex: 999,
+      backgroundColor: "#D4A843",
+      paddingVertical: 4,
+      paddingHorizontal: 16,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+    }}>
+      <Ionicons name="location" size={12} color="#1A1A1A" />
+      <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: "#1A1A1A", letterSpacing: 0.3 }}>
+        Location Override: {overrideMetro.name}
+      </Text>
+    </View>
   );
 }
 
@@ -56,6 +90,8 @@ function ClassicTabLayout() {
   const worshipBadge = missedCount > 0 ? missedCount : (!notificationsEnabled ? "!" : undefined);
 
   return (
+    <>
+    <LocationOverrideBanner />
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -146,6 +182,7 @@ function ClassicTabLayout() {
         }}
       />
     </Tabs>
+    </>
   );
 }
 

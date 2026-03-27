@@ -25,6 +25,7 @@ import { TickerBanner } from "@/components/TickerBanner";
 import { GlassHeader } from "@/components/GlassHeader";
 import { useDeepLink } from "@/lib/deeplink-context";
 import * as Location from "expo-location";
+import { useLocationOverride } from "@/lib/location-override-context";
 import { useAuth } from "@/lib/auth-context";
 import { getApiUrl, apiRequest } from "@/lib/query-client";
 import { EventsMap } from "@/components/EventsMap";
@@ -553,7 +554,19 @@ export default function EventsScreen() {
 
   useEffect(() => { trackScreenView("Events"); }, []);
 
+  const { getEffectiveLocation, isOverrideActive } = useLocationOverride();
+
   useEffect(() => {
+    if (isOverrideActive) {
+      const { lat, lng } = getEffectiveLocation(0, 0);
+      setUserLocation({ latitude: lat, longitude: lng });
+      return;
+    }
+    setUserLocation(null);
+  }, [isOverrideActive, getEffectiveLocation]);
+
+  useEffect(() => {
+    if (isOverrideActive || userLocation) return;
     (async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
@@ -563,7 +576,7 @@ export default function EventsScreen() {
         }
       } catch {}
     })();
-  }, []);
+  }, [isOverrideActive, userLocation]);
 
   const { data: events, isLoading, error } = useQuery<CalendarEvent[]>({
     queryKey: ["/api/events"],
