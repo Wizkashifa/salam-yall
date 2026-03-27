@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { BlurView } from "expo-blur";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { useTheme } from "@/lib/theme-context";
@@ -1468,7 +1469,14 @@ export default function BusinessesScreen() {
       {showDropdown ? (
         <>
           <Pressable style={styles.dropdownOverlay} onPress={() => setShowDropdown(false)} />
-          <View style={[styles.dropdownMenu, { top: headerHeight + 4, backgroundColor: colors.surface, borderColor: colors.border, ...(Platform.OS === "web" ? { boxShadow: "0 8px 24px rgba(0,0,0,0.15)" } as any : {}) }]}>
+          <View style={[styles.dropdownMenu, { top: headerHeight + 4, borderColor: colors.border, ...(Platform.OS === "web" ? { boxShadow: "0 8px 24px rgba(0,0,0,0.15)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", backgroundColor: isDark ? "rgba(22,22,22,0.75)" : "rgba(255,255,255,0.7)" } as any : { backgroundColor: isDark ? "rgba(22,22,22,0.75)" : "rgba(255,255,255,0.7)" }) }]}>
+            {Platform.OS === "ios" && (
+              <BlurView
+                intensity={isDark ? 120 : 80}
+                tint={isDark ? "systemChromeMaterialDark" : "light"}
+                style={StyleSheet.absoluteFill}
+              />
+            )}
             <Pressable
               style={[styles.dropdownItem, selectedCategory === "All" && { backgroundColor: colors.prayerIconBg }]}
               onPress={() => { setSelectedCategory("All"); setSelectedSubcategory(""); setShowDropdown(false); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
@@ -1628,6 +1636,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingVertical: 6,
     elevation: 8,
+    overflow: "hidden" as const,
   },
   dropdownItem: {
     flexDirection: "row" as const,

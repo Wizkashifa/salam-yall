@@ -22,6 +22,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
+import { BlurView } from "expo-blur";
 import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
 import { GlassHeader } from "@/components/GlassHeader";
@@ -1372,7 +1373,14 @@ export default function HalalScreen() {
       {showFilterDropdown ? (
         <>
           <Pressable style={styles.filterOverlay} onPress={() => setShowFilterDropdown(false)} />
-          <View style={[styles.filterDropdownMenu, { top: headerHeight + 4, backgroundColor: colors.surface, borderColor: colors.border, ...(Platform.OS === "web" ? { boxShadow: "0 8px 24px rgba(0,0,0,0.15)" } as any : {}) }]}>
+          <View style={[styles.filterDropdownMenu, { top: headerHeight + 4, borderColor: colors.border, ...(Platform.OS === "web" ? { boxShadow: "0 8px 24px rgba(0,0,0,0.15)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", backgroundColor: isDark ? "rgba(22,22,22,0.75)" : "rgba(255,255,255,0.7)" } as any : { backgroundColor: isDark ? "rgba(22,22,22,0.75)" : "rgba(255,255,255,0.7)" }) }]}>
+            {Platform.OS === "ios" && (
+              <BlurView
+                intensity={isDark ? 120 : 80}
+                tint={isDark ? "systemChromeMaterialDark" : "light"}
+                style={StyleSheet.absoluteFill}
+              />
+            )}
             <ScrollView nestedScrollEnabled bounces={false}>
               <Text style={[styles.filterSectionTitle, { color: colors.textTertiary }]}>Halal Status</Text>
               {HALAL_FILTERS.map((f) => (
