@@ -18,17 +18,19 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "@/lib/theme-context";
 import { useSettings } from "@/lib/settings-context";
+import { useLocationOverride, METRO_AREAS } from "@/lib/location-override-context";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const DRAWER_WIDTH = Math.min(SCREEN_WIDTH * 0.85, 340);
 const USE_NATIVE_DRIVER = Platform.OS !== "web";
 
-type DrawerSection = "main" | "feedback";
+type DrawerSection = "main" | "feedback" | "location";
 
 export function AppDrawer() {
   const insets = useSafeAreaInsets();
   const { colors, isDark, themeMode, setThemeMode, ramadanMode, setRamadanMode } = useTheme();
   const { menuOpen, closeMenu, consumePendingDrawerSection } = useSettings();
+  const { overrideMetro, setOverrideMetro, isOverrideActive } = useLocationOverride();
   const [section, setSection] = useState<DrawerSection>("main");
   const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
@@ -110,6 +112,24 @@ export function AppDrawer() {
         </View>
       </Pressable>
 
+      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>LOCATION</Text>
+
+      <Pressable
+        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : "transparent" }]}
+        onPress={() => { setSection("location"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+      >
+        <View style={[styles.menuIcon, { backgroundColor: isOverrideActive ? colors.gold + "20" : colors.prayerIconBg }]}>
+          <Ionicons name="location" size={20} color={isOverrideActive ? colors.gold : colors.emerald} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.menuLabel, { color: colors.text }]}>Location Override</Text>
+          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: isOverrideActive ? colors.gold : colors.textSecondary, marginTop: 1 }}>
+            {isOverrideActive ? overrideMetro!.name : "Using real location"}
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+      </Pressable>
+
       <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>LEGAL</Text>
 
       <Pressable
@@ -183,6 +203,45 @@ export function AppDrawer() {
       </View>
 
       <Text style={[styles.versionText, { color: colors.textTertiary }]}>Salam Y'all v1.1.3</Text>
+    </>
+  );
+
+  const renderLocation = () => (
+    <>
+      <Pressable
+        style={styles.backRow}
+        onPress={() => { setSection("main"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+      >
+        <Ionicons name="arrow-back" size={20} color={colors.text} />
+        <Text style={[styles.backLabel, { color: colors.text }]}>Location Override</Text>
+      </Pressable>
+
+      <Pressable
+        style={[styles.locationRow, { backgroundColor: !isOverrideActive ? (isDark ? colors.actionButtonBg : colors.prayerIconBg) : colors.surface, borderColor: colors.border }]}
+        onPress={() => { setOverrideMetro(null); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); }}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+          <Ionicons name="navigate" size={18} color={!isOverrideActive ? colors.emerald : colors.textSecondary} />
+          <Text style={{ fontFamily: "Inter_500Medium", fontSize: 14, color: !isOverrideActive ? colors.emerald : colors.text }}>Use Real Location</Text>
+        </View>
+        {!isOverrideActive && <Ionicons name="checkmark" size={20} color={colors.emerald} />}
+      </Pressable>
+
+      <Text style={[styles.sectionLabel, { color: colors.textSecondary, marginTop: 16 }]}>METRO AREAS</Text>
+
+      {METRO_AREAS.map((metro) => {
+        const isActive = overrideMetro?.name === metro.name;
+        return (
+          <Pressable
+            key={metro.name}
+            style={[styles.locationRow, { backgroundColor: isActive ? (isDark ? colors.actionButtonBg : colors.prayerIconBg) : "transparent", borderColor: isActive ? colors.border : "transparent" }]}
+            onPress={() => { setOverrideMetro(metro); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); }}
+          >
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: isActive ? colors.emerald : colors.text, flex: 1 }}>{metro.name}</Text>
+            {isActive && <Ionicons name="checkmark" size={20} color={colors.emerald} />}
+          </Pressable>
+        );
+      })}
     </>
   );
 
@@ -276,6 +335,7 @@ export function AppDrawer() {
             keyboardShouldPersistTaps="handled"
           >
             {section === "main" && renderMainMenu()}
+            {section === "location" && renderLocation()}
             {section === "feedback" && renderFeedback()}
           </ScrollView>
         </Animated.View>
@@ -458,5 +518,13 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     marginTop: 30,
     marginBottom: 10,
+  },
+  locationRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 6,
   },
 });
