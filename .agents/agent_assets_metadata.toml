@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "5B9cAHsNbUU3-03rVIKLH"
+uri = "file://businesses_export.csv"
+type = "table"
+title = "Production Businesses Database Export"
