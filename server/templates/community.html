@@ -1058,8 +1058,8 @@
     }
 
     function reloadActiveSection() {
-      var activeNav = document.querySelector('.nav-tab.active');
-      var section = activeNav ? activeNav.getAttribute('data-section') : 'events';
+      var activeNav = document.querySelector('.nav-tabs a.active');
+      var section = activeNav ? activeNav.getAttribute('data-tab') : 'events';
       dataLoaded.events = false;
       dataLoaded.restaurants = false;
       dataLoaded.directory = false;
@@ -1068,9 +1068,9 @@
       allEvents = [];
       allRestaurants = [];
       allBusinesses = [];
-      if (section === 'events') loadEvents();
-      else if (section === 'restaurants') loadRestaurants();
-      else if (section === 'directory') loadDirectory();
+      if (section === 'events') fetchEvents();
+      else if (section === 'restaurants') fetchRestaurants();
+      else if (section === 'directory') fetchBusinesses();
     }
 
     function updateHeroWithMetro(lat, lng) {
@@ -1412,6 +1412,7 @@
           });
         const orgs = [...new Set(allEvents.map(e => e.organizer).filter(Boolean))].sort();
         const sel = document.getElementById('events-organizer');
+        sel.innerHTML = '<option value="">All Organizers</option>';
         orgs.forEach(o => { const opt = document.createElement('option'); opt.value = o; opt.textContent = o; sel.appendChild(opt); });
         dataLoaded.events = true;
         document.getElementById('events-loading').style.display = 'none';
@@ -1499,6 +1500,7 @@
         const cuisines = new Set();
         allRestaurants.forEach(r => (r.cuisine_types || []).forEach(c => cuisines.add(c)));
         const sel = document.getElementById('restaurants-cuisine');
+        sel.innerHTML = '<option value="">All Cuisines</option>';
         [...cuisines].sort().forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = formatCuisine(c); sel.appendChild(opt); });
         dataLoaded.restaurants = true;
         document.getElementById('restaurants-loading').style.display = 'none';

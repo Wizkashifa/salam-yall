@@ -277,6 +277,8 @@ interface HalalRestaurant {
   user_ratings_total: number | null;
   _distance?: number;
   formatted_address: string | null;
+  lat: number | null;
+  lng: number | null;
 }
 
 const USE_NATIVE_DRIVER = Platform.OS !== "web";
@@ -694,10 +696,14 @@ export default function PrayerScreen() {
   const nearbyHalalPreview = useMemo(() => {
     if (!halalRestaurants) return [];
     return halalRestaurants
-      .filter((r) => r._distance !== undefined)
+      .map((r) => ({
+        ...r,
+        _distance: r.lat && r.lng ? kmToMiles(getDistanceKm(userCoords.lat, userCoords.lon, r.lat, r.lng)) : undefined,
+      }))
+      .filter((r) => r._distance !== undefined && r._distance! < 50)
       .sort((a, b) => (a._distance ?? 999) - (b._distance ?? 999))
       .slice(0, 6);
-  }, [halalRestaurants]);
+  }, [halalRestaurants, userCoords]);
 
   const loadDefaultPrayers = useCallback((lat = 35.7796, lon = -78.6382) => {
     const now = new Date();
