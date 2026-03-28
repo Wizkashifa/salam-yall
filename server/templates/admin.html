@@ -791,7 +791,7 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    let adminToken = '';
+    let adminToken = sessionStorage.getItem('adminToken') || '';
     let editSelectedKeywords = [];
     var cachedBusinesses = [];
     
