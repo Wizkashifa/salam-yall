@@ -94,7 +94,7 @@ export function AnimatedSplash({ onFinish }: AnimatedSplashProps) {
             },
           ]}
         >
-          Triangle NC Muslim Community
+          Your Muslim Community App
         </Animated.Text>
       </View>
     </Animated.View>
