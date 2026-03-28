@@ -57,6 +57,15 @@ The application follows a client-server architecture:
 - Masjid directory map centers on user's current location (with animated recentering on native). Masjids with `hasIqama=true` show gold mosque icons in both map markers and list rows, with a legend key under the map.
 - Admin CRUD available at `/api/admin/iqama` (GET/POST), `/api/admin/iqama/bulk` (POST), `/api/admin/iqama/:id` (DELETE).
 
+**iOS Widget Extension:**
+- Custom Expo config plugin (`plugins/withPrayerWidget.js`) injects an iOS Widget Extension at prebuild time.
+- SwiftUI widget views in `plugins/widget-files/` — supports Home Screen (small/medium/large) and Lock Screen (circular/rectangular/inline) widgets.
+- Native bridge module (`modules/prayer-widget-bridge/`) writes prayer + iqama data to shared App Group (`group.com.salamyall`) via UserDefaults.
+- Data flows from Home tab → bridge module → shared UserDefaults → widget reads via `SharedPrayerDataStore`.
+- Widget refreshes on each prayer time transition and every 30 minutes. Data is pushed whenever prayers/iqama are recalculated.
+- Requires EAS Build (custom dev build) — does not work in Expo Go.
+- Widget bundle ID: `com.salamyall.PrayerWidget`. Deployment target: iOS 16.0.
+
 **Key Features:**
 - **Home Screen:** Displays prayer times, Qibla direction, weather, daily Quran verse (Arabic + Dr. Mustafa Khattab translation, tappable for Ibn Kathir tafsir modal with share), Jumu'ah card on Fridays, and "Tonight in the Community" events. Includes an interactive prayer tracker and a search bar. Time-sensitive logic (iqama date, event filtering) refreshes every 60 seconds via clockTick.
 - **Halal Eats:** A directory of halal restaurants with search, filters, and distance sorting. Action buttons: Call → Website → Directions.

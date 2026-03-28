@@ -25,6 +25,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { getApiUrl } from "@/lib/query-client";
 import { useDeepLink } from "@/lib/deeplink-context";
+import { updateWidgetData } from "@/modules/prayer-widget-bridge";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useTheme } from "@/lib/theme-context";
 import { TickerBanner } from "@/components/TickerBanner";
@@ -636,6 +637,49 @@ export default function PrayerScreen() {
       || iqamaData.find(s => s.masjid === "IAR")
       || iqamaData[0];
   }, [iqamaData, preferredMasjid, todayDateStr]);
+
+  useEffect(() => {
+    if (prayers.length === 0) return;
+    const parseIqamaTime = (timeStr: string | undefined, prayerDate: Date): number | undefined => {
+      if (!timeStr) return undefined;
+      const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+      if (!match) return undefined;
+      let hours = parseInt(match[1]);
+      const minutes = parseInt(match[2]);
+      const period = match[3].toUpperCase();
+      if (period === "PM" && hours !== 12) hours += 12;
+      if (period === "AM" && hours === 12) hours = 0;
+      const d = new Date(prayerDate);
+      d.setHours(hours, minutes, 0, 0);
+      return d.getTime();
+    };
+
+    const iqama = activeIqama?.iqama;
+    const widgetPrayers = prayers.map(p => ({
+      name: p.name,
+      label: p.label,
+      time: p.time.getTime(),
+      iqamaTime: iqama ? parseIqamaTime(
+        p.name === "fajr" ? iqama.fajr :
+        p.name === "dhuhr" ? iqama.dhuhr :
+        p.name === "asr" ? iqama.asr :
+        p.name === "maghrib" ? iqama.maghrib :
+        p.name === "isha" ? iqama.isha : undefined,
+        p.time
+      ) : undefined,
+    }));
+
+    const now = new Date();
+    let nextIdx = widgetPrayers.findIndex(p => new Date(p.time) > now);
+    if (nextIdx === -1) nextIdx = 0;
+
+    updateWidgetData({
+      prayers: widgetPrayers,
+      nextPrayerIndex: nextIdx,
+      masjidName: preferredMasjid || activeIqama?.masjid || undefined,
+      locationName: nearMosque?.name,
+    }).catch(() => {});
+  }, [prayers, activeIqama, nextPrayer, preferredMasjid, nearMosque]);
 
   const isDaytimeMode = useMemo(() => {
     const h = new Date().getHours();
