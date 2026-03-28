@@ -110,7 +110,8 @@ function withWidgetTarget(config) {
           config_obj.buildSettings.PRODUCT_NAME = `"$(TARGET_NAME)"`;
           config_obj.buildSettings.SKIP_INSTALL = "YES";
           config_obj.buildSettings.DEVELOPMENT_TEAM = `"${APPLE_TEAM_ID}"`;
-          config_obj.buildSettings.CODE_SIGN_STYLE = '"Automatic"';
+          config_obj.buildSettings.CODE_SIGN_STYLE = '"Manual"';
+          config_obj.buildSettings.CODE_SIGN_IDENTITY = '"Apple Distribution"';
         }
       }
     }

@@ -22,6 +22,9 @@
         "tinted": "./assets/images/icon-tinted.png"
       },
       "buildNumber": "6",
+      "entitlements": {
+        "com.apple.security.application-groups": ["group.app.ummahconnect"]
+      },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "We need your location to calculate prayer times and find the nearest masjid.",
         "ITSAppUsesNonExemptEncryption": false
@@ -43,7 +46,8 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "./plugins/withPrayerWidget"
     ],
     "experiments": {
       "typedRoutes": true,
