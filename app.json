@@ -43,7 +43,8 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "./plugins/withPrayerWidget"
     ],
     "experiments": {
       "typedRoutes": true,
