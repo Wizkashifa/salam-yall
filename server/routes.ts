@@ -382,6 +382,7 @@ const KNOWN_COORDINATES: Record<string, { lat: number; lng: number }> = {
   "Islamic Center of Fremont (ICF-Irvington)": { lat: 37.5241, lng: -121.9660 },
   "Masjid Zakariya": { lat: 37.5094, lng: -121.9628 },
   "Pillars Mosque": { lat: 35.3086, lng: -80.7200 },
+  "Islamic Society of Greater Charlotte": { lat: 35.2025, lng: -80.7937 },
 };
 
 function resolveCoordinates(organizer: string, location: string): { latitude: number | null; longitude: number | null } {
@@ -822,6 +823,7 @@ async function ensureMasjidsTable(pool: pg.Pool) {
       { name: 'South Bay Islamic Association', lat: 37.3007, lng: -121.8574, addr: '325 N 3rd St, San Jose, CA 95112', website: 'https://sbia.info', terms: ['sbia', 'south bay islamic', 'south bay islamic association', 'n 3rd st', 'san jose'], iqama: true, sort: 18 },
       { name: 'Islamic Center of Fremont', lat: 37.5241, lng: -121.9660, addr: '4039 Irvington Ave, Fremont, CA 94538', website: 'https://icfbayarea.com', terms: ['icf', 'islamic center of fremont', 'irvington ave', 'icfbayarea', 'fremont masjid'], iqama: true, sort: 19 },
       { name: 'Pillars Mosque', lat: 35.3086, lng: -80.7200, addr: '3116 Johnston Oehler Rd, Charlotte, NC 28269', website: 'https://pillarsmosque.org', terms: ['pillars', 'pillars mosque', 'johnston oehler', 'mcc charlotte', 'muslim community center charlotte'], iqama: true, sort: 20 },
+      { name: 'Islamic Society of Greater Charlotte', lat: 35.2025, lng: -80.7937, addr: '1700 Progress Ln, Charlotte, NC 28205', website: 'https://isgcharlotte.org', terms: ['isgc', 'islamic society of greater charlotte', 'progress ln', 'isg charlotte'], iqama: true, sort: 21 },
     ];
     for (const m of masjidUpserts) {
       await pool.query(

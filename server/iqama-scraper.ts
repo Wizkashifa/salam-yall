@@ -24,6 +24,7 @@ interface IqamaSource {
   url: string;
   timezone: string;
   filter?: "today" | "month";
+  maghribOffset?: number;
 }
 
 const IQAMA_SOURCES: IqamaSource[] = [
@@ -82,6 +83,14 @@ const IQAMA_SOURCES: IqamaSource[] = [
     type: "athanplus",
     url: "https://timing.athanplus.com/masjid/widgets/monthly?theme=1&masjid_id=xdyqvadX",
     timezone: "America/New_York",
+    maghribOffset: 3,
+  },
+  {
+    name: "ISGC",
+    type: "athanplus",
+    url: "https://timing.athanplus.com/masjid/widgets/monthly?theme=1&masjid_id=MA582zLr",
+    timezone: "America/New_York",
+    maghribOffset: 5,
   },
 ];
 
@@ -524,7 +533,7 @@ async function fetchAthanPlus(pool: pg.Pool, source: IqamaSource): Promise<void>
           const tm = adhan.maghrib.match(/^(\d{1,2}):(\d{2})/);
           if (tm) {
             let h = parseInt(tm[1]);
-            let min = parseInt(tm[2]) + 3;
+            let min = parseInt(tm[2]) + (source.maghribOffset || 5);
             if (min >= 60) { min -= 60; h++; }
             maghrib = `${h}:${String(min).padStart(2, "0")} PM`;
           }
