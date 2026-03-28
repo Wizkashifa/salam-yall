@@ -1452,6 +1452,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await pool.query("UPDATE community_events SET organizer = 'Islamic Association of Raleigh' WHERE organizer LIKE 'Islamic Association of Raleigh%' AND organizer != 'Islamic Association of Raleigh'").catch(() => {});
   await pool.query("UPDATE community_events SET organizer = 'Al-Noor Islamic Center' WHERE organizer ILIKE '%alnoor islamic center%' AND organizer != 'Al-Noor Islamic Center'").catch(() => {});
 
+  const fishersBusinessUpserts = [
+    { name: 'Affordable Tax', category: 'Services', subcategory: 'Tax Preparation', description: 'Affordable individual and business tax preparation services. Thorough study of your personal situation to maximize your refund.', phone: '317-987-6902', website: 'https://www.affordable-tax.org/', filter_tags: ['tax-preparation', 'accounting', 'tax-filing', 'business-taxes', 'individual-taxes'], search_aliases: ['affordable tax', 'tax prep indianapolis', 'sawsan tax'] },
+    { name: 'Amiri Construction', category: 'Services', subcategory: 'Construction & Remodeling', description: 'Full-service construction company specializing in residential and commercial building, renovation, and remodeling projects.', phone: '', website: 'https://amiriconstruction.com/', filter_tags: ['construction', 'remodeling', 'renovation', 'contractor', 'home-improvement', 'commercial-construction'], search_aliases: ['amiri construction', 'amiri builder', 'construction fishers'] },
+    { name: 'AMR Tax & Accounting', category: 'Services', subcategory: 'Tax & Accounting', description: 'Professional tax preparation, bookkeeping, payroll, and business consulting services in Fishers, IN. Expert financial solutions for individuals and businesses.', phone: '', website: 'https://www.amrtax.net/', filter_tags: ['tax-preparation', 'accounting', 'bookkeeping', 'payroll', 'business-consulting', 'cpa'], search_aliases: ['amr tax', 'amr accounting', 'tax fishers', 'bookkeeping fishers', 'payroll services'] },
+    { name: 'Fort Harrison Dental - Malek Fansa DDS', category: 'Healthcare', subcategory: 'Dentist', description: 'Complete family and cosmetic dentistry including dental implants, crowns, bridges, veneers, teeth whitening, and preventive care.', phone: '317-545-6545', website: 'https://ftharrisondental.com/', filter_tags: ['dentist', 'dental', 'cosmetic-dentistry', 'dental-implants', 'family-dentist', 'teeth-whitening', 'dental-crowns'], search_aliases: ['fort harrison dental', 'ft harrison dental', 'malek fansa', 'fansa dds', 'dentist indianapolis', 'dentist lawrence'] },
+    { name: 'Geist Learning Adventures', category: 'Services', subcategory: 'Childcare & Education', description: 'Early childhood education and learning center in Fishers. Programs designed to help children discover, learn, and grow.', phone: '', website: 'https://geistla.com/', filter_tags: ['childcare', 'education', 'preschool', 'daycare', 'early-learning', 'kids-programs'], search_aliases: ['geist learning', 'geistla', 'geist learning adventures', 'preschool fishers', 'daycare fishers', 'childcare fishers'] },
+  ];
+  for (const b of fishersBusinessUpserts) {
+    const exists = await pool.query("SELECT id FROM businesses WHERE LOWER(name) = LOWER($1)", [b.name]).catch(() => ({ rows: [] }));
+    if (exists.rows.length === 0) {
+      await pool.query(
+        `INSERT INTO businesses (name, category, subcategory, description, phone, website, filter_tags, search_aliases, location_type, service_area_description, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'service_area', 'Fishers, IN Metro Area', 'approved')`,
+        [b.name, b.category, b.subcategory, b.description, b.phone, b.website, b.filter_tags, b.search_aliases]
+      ).catch((err: any) => console.error(`[DB] Error upserting business ${b.name}:`, err.message));
+    }
+  }
+  console.log("[DB] Upserted Fishers-area businesses");
+
+  const fishersRestaurantUpserts = [
+    { name: 'Kanoon Smoked Meat & Steakhouse', address: '8594 East 116th Street #30, Fishers, IN 46038', lat: 39.9557, lng: -86.0055, cuisine: ['Middle Eastern', 'Persian', 'Steakhouse', 'BBQ', 'Mediterranean'], emoji: '🥩', website: 'https://kanoon-indiana.com/', comment: '100% Zabiha halal. Smoked meats, steaks, kebabs, and Mediterranean dishes.' },
+    { name: 'MOTW Coffee & Pastries - Indianapolis', address: '4873 W 38th St, Indianapolis, IN 46254', lat: 39.8241, lng: -86.2069, cuisine: ['Coffee', 'Cafe', 'Pastries', 'Middle Eastern'], emoji: '☕', website: 'https://motw.coffee/', comment: 'Muslim-owned coffee and pastry shop. Middle Eastern pastries and specialty coffee.' },
+    { name: 'MOTW Coffee & Pastries - Carmel', address: '12761 Old Meridian St, Carmel, IN 46032', lat: 39.9740, lng: -86.1284, cuisine: ['Coffee', 'Cafe', 'Pastries', 'Middle Eastern'], emoji: '☕', website: 'https://motw.coffee/', comment: 'Muslim-owned coffee and pastry shop. Middle Eastern pastries and specialty coffee.' },
+    { name: 'MOTW Coffee & Pastries - Fishers', address: '8235 E 116th St STE 215, Fishers, IN 46038', lat: 39.9557, lng: -86.0128, cuisine: ['Coffee', 'Cafe', 'Pastries', 'Middle Eastern'], emoji: '☕', website: 'https://motw.coffee/', comment: 'Muslim-owned coffee and pastry shop. Middle Eastern pastries and specialty coffee.' },
+    { name: 'MOTW Coffee & Pastries - Avon', address: '9263 E US Hwy 36, Avon, IN 46123', lat: 39.7624, lng: -86.3506, cuisine: ['Coffee', 'Cafe', 'Pastries', 'Middle Eastern'], emoji: '☕', website: 'https://motw.coffee/', comment: 'Muslim-owned coffee and pastry shop. Middle Eastern pastries and specialty coffee.' },
+  ];
+  for (const r of fishersRestaurantUpserts) {
+    const existing = await pool.query("SELECT id FROM halal_restaurants WHERE LOWER(name) = LOWER($1)", [r.name]).catch(() => ({ rows: [] }));
+    if (existing.rows.length === 0) {
+      await pool.query(
+        `INSERT INTO halal_restaurants (name, formatted_address, lat, lng, is_halal, halal_comment, cuisine_types, emoji, website, url)
+         VALUES ($1, $2, $3, $4, 'IS_HALAL', $5, $6, $7, $8, $9)`,
+        [r.name, r.address, r.lat, r.lng, r.comment, r.cuisine, r.emoji, r.website, r.website]
+      ).catch((err: any) => console.error(`[DB] Error upserting restaurant ${r.name}:`, err.message));
+    }
+  }
+  console.log("[DB] Upserted Fishers-area restaurants");
+
   startHalalAutoSync(pool);
   startIqamaSync(pool);
 
