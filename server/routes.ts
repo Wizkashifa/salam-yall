@@ -5725,6 +5725,8 @@ ${emailHtml.slice(0, 50000)}`,
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {
       const { handle } = req.body;
+      console.log(`[IG Ingest] Starting Instagram ingest for handle: ${handle}`);
+      
       if (!handle || typeof handle !== "string" || handle.trim().length === 0) {
         return res.status(400).json({ error: "Instagram handle is required" });
       }
@@ -5734,6 +5736,7 @@ ${emailHtml.slice(0, 50000)}`,
         return res.status(400).json({ error: "Invalid Instagram handle. Use only letters, numbers, dots, and underscores (max 30 characters)." });
       }
       const profileUrl = `https://www.instagram.com/${cleanHandle}/`;
+      console.log(`[IG Ingest] Fetching profile: ${profileUrl}`);
 
       let profileHtml: string;
       try {
@@ -5746,10 +5749,13 @@ ${emailHtml.slice(0, 50000)}`,
           redirect: "follow",
         });
         if (!response.ok) {
+          console.error(`[IG Ingest] HTTP error: ${response.status}`);
           return res.status(400).json({ error: `Could not fetch Instagram profile for @${cleanHandle}. The profile may be private or not exist. (HTTP ${response.status})` });
         }
         profileHtml = await response.text();
+        console.log(`[IG Ingest] Fetched HTML: ${profileHtml.length} bytes`);
       } catch (fetchError: any) {
+        console.error(`[IG Ingest] Fetch error: ${fetchError.message}`);
         return res.status(400).json({ error: `Failed to fetch Instagram profile: ${fetchError.message}` });
       }
 
@@ -5858,7 +5864,11 @@ ${emailHtml.slice(0, 50000)}`,
         altTexts.length > 0 ? `Image alt texts:\n${altTexts.map((a, i) => `Image ${i + 1}: ${a}`).join("\n")}` : "",
       ].filter(Boolean).join("\n\n");
 
+      console.log(`[IG Ingest] Parsed posts: ${posts.length}, altTexts: ${altTexts.length}`);
+      console.log(`[IG Ingest] Profile info length: ${profileInfo.trim().length}`);
+      
       if (profileInfo.trim().length < 20) {
+        console.error(`[IG Ingest] Not enough profile content (${profileInfo.trim().length} bytes)`);
         return res.status(400).json({
           error: `Could not extract meaningful content from @${cleanHandle}'s Instagram profile. The profile may be private, empty, or Instagram may be blocking access. Try pasting their post captions manually via the email ingest instead.`,
         });
@@ -5868,7 +5878,9 @@ ${emailHtml.slice(0, 50000)}`,
       const profileTitle = titleMatch ? titleMatch[1].replace(/\(.*\)/, "").replace(/@\w+/g, "").replace(/•.*/, "").trim() : "";
       const resolvedOrgFromTitle = profileTitle ? resolveOrgName(profileTitle) : "";
       const defaultOrganizer = resolvedOrgFromHandle || resolvedOrgFromTitle || cleanHandle;
+      console.log(`[IG Ingest] Resolved organizer: ${defaultOrganizer}`);
 
+      console.log(`[IG Ingest] Sending to Claude...`);
       const message = await anthropic.messages.create({
         model: "claude-sonnet-4-6",
         max_tokens: 4000,
