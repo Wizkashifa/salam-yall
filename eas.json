@@ -17,5 +17,14 @@
     "production": {
       "autoIncrement": true
     }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "kashif.412.osman@gmail.com",
+        "ascAppId": "6760231963",
+        "appleTeamId": "AS6WZP258V"
+      }
+    }
   }
 }
