@@ -48,6 +48,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "da3384a8-5d60-4efe-8e88-6c98202f6aeb"
+      }
+    },
+    "owner": "wizkashifa"
   }
 }
