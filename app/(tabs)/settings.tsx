@@ -153,6 +153,7 @@ export default function SettingsScreen() {
 
   const [growthTab, setGrowthTab] = useState<"statistics" | "badges">("statistics");
   const [selectedMasjid, setSelectedMasjid] = useState<Masjid | null>(null);
+  const [masjidSearch, setMasjidSearch] = useState("");
   const [selectedCommunityOrg, setSelectedCommunityOrg] = useState<CommunityOrg | null>(null);
   const [selectedOrgEvent, setSelectedOrgEvent] = useState<any>(null);
   const [feedbackType, setFeedbackType] = useState<"bug" | "feature">("feature");
@@ -283,6 +284,18 @@ export default function SettingsScreen() {
     }
     return masjidList.map((m) => ({ masjid: m, distanceMiles: 0, driveMinutes: 0 }));
   }, [userLocation, masjidList]);
+
+  const filteredMasjids = useMemo(() => {
+    if (!masjidSearch.trim()) return sortedMasjids;
+    const q = masjidSearch.toLowerCase().trim();
+    return sortedMasjids.filter(entry => {
+      const m = entry.masjid;
+      if (m.name.toLowerCase().includes(q)) return true;
+      if (m.address.toLowerCase().includes(q)) return true;
+      if (m.matchTerms?.some(t => t.toLowerCase().includes(q))) return true;
+      return false;
+    });
+  }, [sortedMasjids, masjidSearch]);
 
   useEffect(() => {
     if (section === "prayerTracker") {
@@ -856,38 +869,68 @@ export default function SettingsScreen() {
     <>
       <Pressable
         style={styles.backRow}
-        onPress={() => { setSection("main"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+        onPress={() => { setSection("main"); setMasjidSearch(""); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
       >
         <Ionicons name="arrow-back" size={20} color={colors.text} />
         <Text style={[styles.backLabel, { color: colors.text }]}>Masjid Directory</Text>
       </Pressable>
 
-      <MasjidMap
-        masjids={sortedMasjids}
-        preferredMasjid={preferredMasjid}
-        region={mapRegion}
-        hasUserLocation={!!userLocation}
-        onSelectMasjid={handleMapSelectMasjid}
-        borderColor={colors.border}
-        emeraldColor={colors.emerald}
-      />
-
-      <View style={styles.mapLegend}>
-        <View style={styles.legendItem}>
-          <MaterialCommunityIcons name="mosque" size={14} color={colors.gold} />
-          <Text style={[styles.legendText, { color: colors.textSecondary }]}>Iqama times available</Text>
-        </View>
-        <View style={[styles.legendItem, { alignItems: "flex-start" }]}>
-          <Ionicons name="star" size={11} color={colors.gold} style={{ marginTop: 2 }} />
-          <Text style={[styles.legendText, { color: colors.textSecondary, flex: 1 }]}>Preferred — shows iqama times on your Home screen</Text>
-        </View>
-        <View style={[styles.legendItem, { alignItems: "flex-start" }]}>
-          <Ionicons name="notifications" size={11} color={colors.emerald} style={{ marginTop: 2 }} />
-          <Text style={[styles.legendText, { color: colors.textSecondary, flex: 1 }]}>Follow — get notified about events and updates</Text>
-        </View>
+      <View style={[styles.masjidSearchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Ionicons name="search" size={16} color={colors.textSecondary} style={{ marginRight: 8 }} />
+        <TextInput
+          style={[styles.masjidSearchInput, { color: colors.text }]}
+          placeholder="Search masjids..."
+          placeholderTextColor={colors.textSecondary}
+          value={masjidSearch}
+          onChangeText={setMasjidSearch}
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
+        />
+        {masjidSearch.length > 0 && (
+          <Pressable onPress={() => setMasjidSearch("")} hitSlop={8}>
+            <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+          </Pressable>
+        )}
       </View>
 
-      {sortedMasjids.map((entry, i) => {
+      {!masjidSearch.trim() && (
+        <>
+          <MasjidMap
+            masjids={sortedMasjids}
+            preferredMasjid={preferredMasjid}
+            region={mapRegion}
+            hasUserLocation={!!userLocation}
+            onSelectMasjid={handleMapSelectMasjid}
+            borderColor={colors.border}
+            emeraldColor={colors.emerald}
+          />
+
+          <View style={styles.mapLegend}>
+            <View style={styles.legendItem}>
+              <MaterialCommunityIcons name="mosque" size={14} color={colors.gold} />
+              <Text style={[styles.legendText, { color: colors.textSecondary }]}>Iqama times available</Text>
+            </View>
+            <View style={[styles.legendItem, { alignItems: "flex-start" }]}>
+              <Ionicons name="star" size={11} color={colors.gold} style={{ marginTop: 2 }} />
+              <Text style={[styles.legendText, { color: colors.textSecondary, flex: 1 }]}>Preferred — shows iqama times on your Home screen</Text>
+            </View>
+            <View style={[styles.legendItem, { alignItems: "flex-start" }]}>
+              <Ionicons name="notifications" size={11} color={colors.emerald} style={{ marginTop: 2 }} />
+              <Text style={[styles.legendText, { color: colors.textSecondary, flex: 1 }]}>Follow — get notified about events and updates</Text>
+            </View>
+          </View>
+        </>
+      )}
+
+      {filteredMasjids.length === 0 && masjidSearch.trim() ? (
+        <View style={{ padding: 24, alignItems: "center" }}>
+          <Ionicons name="search-outline" size={32} color={colors.textSecondary} />
+          <Text style={{ color: colors.textSecondary, fontSize: 14, marginTop: 8, fontFamily: "Inter_500Medium" }}>No masjids found for "{masjidSearch.trim()}"</Text>
+        </View>
+      ) : null}
+
+      {filteredMasjids.map((entry, i) => {
         const masjid = entry.masjid;
         const isPreferred = preferredMasjid === masjid.name;
         const distanceLabel = userLocation && entry.distanceMiles > 0
@@ -2589,6 +2632,21 @@ const styles = StyleSheet.create({
   calcText: {
     fontSize: 14,
     fontFamily: "Inter_500Medium",
+  },
+  masjidSearchContainer: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  masjidSearchInput: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: "Inter_400Regular",
+    padding: 0,
   },
   masjidRow: {
     flexDirection: "row",
