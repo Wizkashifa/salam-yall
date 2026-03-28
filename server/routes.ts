@@ -5788,11 +5788,11 @@ ${emailHtml.slice(0, 50000)}`,
       const captionMatches: string[] = [];
       const imageUrls: string[] = [];
       let capMatch;
-      while ((capMatch = captionRegex.exec(profileHtml)) !== null && captionMatches.length < 12) {
+      while ((capMatch = captionRegex.exec(profileHtml)) !== null && captionMatches.length < 30) {
         captionMatches.push(capMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"'));
       }
       let dispMatch;
-      while ((dispMatch = displayUrlRegex.exec(profileHtml)) !== null && imageUrls.length < 12) {
+      while ((dispMatch = displayUrlRegex.exec(profileHtml)) !== null && imageUrls.length < 30) {
         imageUrls.push(dispMatch[1].replace(/\\u0026/g, "&"));
       }
 
@@ -5813,7 +5813,7 @@ ${emailHtml.slice(0, 50000)}`,
         try {
           const sharedData = JSON.parse(sharedDataMatch[1]);
           const edges = sharedData?.entry_data?.ProfilePage?.[0]?.graphql?.user?.edge_owner_to_timeline_media?.edges || [];
-          posts = edges.slice(0, 12).map((e: any) => ({
+          posts = edges.slice(0, 30).map((e: any) => ({
             caption: e.node?.edge_media_to_caption?.edges?.[0]?.node?.text || "",
             imageUrl: e.node?.display_url || e.node?.thumbnail_src || "",
             timestamp: e.node?.taken_at_timestamp ? new Date(e.node.taken_at_timestamp * 1000).toISOString() : "",
@@ -5826,7 +5826,7 @@ ${emailHtml.slice(0, 50000)}`,
         try {
           const edgesStr = "[" + additionalScripts[1] + "]";
           const edges = JSON.parse(edgesStr);
-          posts = edges.slice(0, 12).map((e: any) => ({
+          posts = edges.slice(0, 30).map((e: any) => ({
             caption: e.node?.edge_media_to_caption?.edges?.[0]?.node?.text || "",
             imageUrl: e.node?.display_url || e.node?.thumbnail_src || "",
             timestamp: e.node?.taken_at_timestamp ? new Date(e.node.taken_at_timestamp * 1000).toISOString() : "",
@@ -5837,7 +5837,7 @@ ${emailHtml.slice(0, 50000)}`,
       const altTexts: string[] = [];
       const altRegex = /alt="([^"]{20,})"/gi;
       let altMatch;
-      while ((altMatch = altRegex.exec(profileHtml)) !== null && altTexts.length < 12) {
+      while ((altMatch = altRegex.exec(profileHtml)) !== null && altTexts.length < 30) {
         const text = altMatch[1];
         if (!text.includes("profile picture") && !text.includes("may contain")) {
           altTexts.push(text);
