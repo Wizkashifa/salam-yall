@@ -1606,7 +1606,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const startDate = new Date(start);
       if (startDate < now || startDate > threeMonthsLater) continue;
 
-      const resolvedLocation = (opts.useEventLocation && location) ? location : opts.defaultLocation;
+      let resolvedLocation = opts.defaultLocation;
+      if (opts.useEventLocation && location) {
+        const locLower = location.toLowerCase();
+        if (locLower.includes("zakariya")) {
+          resolvedLocation = "Masjid Zakariya, 42412 Albrae St, Fremont, CA 94538";
+        } else if (locLower.includes("icf") || locLower.includes("irvington") || locLower.includes("islamic center of fremont")) {
+          resolvedLocation = opts.defaultLocation;
+        } else {
+          resolvedLocation = location;
+        }
+      }
       const coords = resolveCoordinates(organizer, resolvedLocation);
       const registrationUrl = url || "";
 
