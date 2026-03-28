@@ -16,7 +16,7 @@ export interface MasjidIqamaSchedule {
   iqama: DayIqama;
 }
 
-type IqamaSourceType = "dpt" | "iar" | "mca-html" | "alnoor-html" | "sbia-html";
+type IqamaSourceType = "dpt" | "iar" | "mca-html" | "alnoor-html" | "sbia-html" | "icf-html";
 
 interface IqamaSource {
   name: string;
@@ -69,6 +69,12 @@ const IQAMA_SOURCES: IqamaSource[] = [
     name: "SBIA",
     type: "sbia-html",
     url: "https://sbia.info/",
+    timezone: "America/Los_Angeles",
+  },
+  {
+    name: "ICF",
+    type: "icf-html",
+    url: "https://icfbayarea.com/",
     timezone: "America/Los_Angeles",
   },
 ];
@@ -410,6 +416,52 @@ async function fetchAlNoorHtml(pool: pg.Pool, source: IqamaSource): Promise<void
   }
 }
 
+async function fetchICFHtml(pool: pg.Pool, source: IqamaSource): Promise<void> {
+  try {
+    const resp = await fetch(source.url, { headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    }});
+    if (!resp.ok) {
+      console.error(`[Iqama] ${source.name} page returned ${resp.status}`);
+      return;
+    }
+    const html = await resp.text();
+
+    const prayerMap: Record<string, string> = {};
+    const rowRegex = /mptsi-row[^"]*">([\s\S]*?)<\/div>\s*<\/div>/gi;
+    let match;
+    while ((match = rowRegex.exec(html)) !== null) {
+      const content = match[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      const timeMatch = content.match(/(Fajr|Dhuhr|Asr|Maghrib|Isha)\s+(\d{1,2}:\d{2}\s*[AP]M)\s+(\d{1,2}:\d{2}\s*[AP]M)/i);
+      if (timeMatch) {
+        const prayer = timeMatch[1].toLowerCase();
+        const icfTime = timeMatch[3].trim();
+        prayerMap[prayer] = icfTime;
+      }
+    }
+
+    if (!prayerMap.fajr || !prayerMap.isha) {
+      console.error(`[Iqama] ${source.name}: could not parse prayer times (found: ${Object.keys(prayerMap).join(", ")})`);
+      return;
+    }
+
+    const { dateKey } = getDateInTz(source.timezone);
+    const count = await bulkUpsert(pool, [{
+      masjid: source.name,
+      date: dateKey,
+      fajr: prayerMap.fajr,
+      dhuhr: prayerMap.dhuhr || "",
+      asr: prayerMap.asr || "",
+      maghrib: prayerMap.maghrib || "",
+      isha: prayerMap.isha,
+    }]);
+    if (count > 0) console.log(`[Iqama] Synced ${source.name} for ${dateKey}`);
+  } catch (err: any) {
+    console.error(`[Iqama] Error syncing ${source.name}:`, err.message);
+  }
+}
+
 async function fetchSBIAHtml(pool: pg.Pool, source: IqamaSource): Promise<void> {
   try {
     const resp = await fetch(source.url, { headers: { "User-Agent": "Mozilla/5.0" } });
@@ -475,6 +527,9 @@ async function syncSource(pool: pg.Pool, source: IqamaSource, year: number, mont
       break;
     case "sbia-html":
       await fetchSBIAHtml(pool, source);
+      break;
+    case "icf-html":
+      await fetchICFHtml(pool, source);
       break;
   }
 }
