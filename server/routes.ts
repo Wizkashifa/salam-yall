@@ -815,6 +815,7 @@ async function ensureMasjidsTable(pool: pg.Pool) {
       { name: 'Muslim Community Association', lat: 37.3769, lng: -121.9595, addr: '3003 Scott Blvd, Santa Clara, CA 95054', website: 'https://www.mcabayarea.org', terms: ['mca', 'muslim community association', 'scott blvd', 'mcabayarea'], iqama: true, sort: 15 },
       { name: 'MCA Al-Noor', lat: 37.3530, lng: -121.9535, addr: '1755 Catherine St, Santa Clara, CA 95050', website: 'https://www.mcabayarea.org', terms: ['mca al-noor', 'mca alnoor', 'mca noor', 'catherine st'], iqama: true, sort: 16 },
       { name: 'Muslim Community Center of the East Bay', lat: 37.6925, lng: -121.9040, addr: '5724 W Las Positas Blvd, Pleasanton, CA 94588', website: 'https://mcceastbay.org', terms: ['mcc', 'mcc east bay', 'muslim community center', 'las positas', 'pleasanton'], iqama: true, sort: 17 },
+      { name: 'South Bay Islamic Association', lat: 37.3007, lng: -121.8574, addr: '325 N 3rd St, San Jose, CA 95112', website: 'https://sbia.info', terms: ['sbia', 'south bay islamic', 'south bay islamic association', 'n 3rd st', 'san jose'], iqama: true, sort: 18 },
     ];
     for (const m of masjidUpserts) {
       await pool.query(
