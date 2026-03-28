@@ -1553,7 +1553,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return `${y}-${mo}-${d}`;
   }
 
-  function parseICalFeed(icalText: string, opts: { idPrefix: string; defaultOrganizer: string; defaultLocation: string }): CachedEvent[] {
+  function parseICalFeed(icalText: string, opts: { idPrefix: string; defaultOrganizer: string; defaultLocation: string; useEventLocation?: boolean }): CachedEvent[] {
     const events: CachedEvent[] = [];
     const blocks = icalText.split("BEGIN:VEVENT");
     const now = new Date();
@@ -1606,7 +1606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const startDate = new Date(start);
       if (startDate < now || startDate > threeMonthsLater) continue;
 
-      const resolvedLocation = location || opts.defaultLocation;
+      const resolvedLocation = (opts.useEventLocation && location) ? location : opts.defaultLocation;
       const coords = resolveCoordinates(organizer, resolvedLocation);
       const registrationUrl = url || "";
 
@@ -1703,6 +1703,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         idPrefix: "icf",
         defaultOrganizer: "Islamic Center of Fremont",
         defaultLocation: "4039 Irvington Ave, Fremont, CA 94538",
+        useEventLocation: true,
       });
       cachedICFEvents = events;
       icfLastFetch = Date.now();
