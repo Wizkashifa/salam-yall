@@ -113,15 +113,17 @@ export interface Masjid {
   website?: string;
   matchTerms?: string[];
   hasIqama?: boolean;
+  campusGroup?: string;
+  iqamaSource?: string;
 }
 
 export const NEARBY_MASJIDS: Masjid[] = [
   { name: "Al-Noor Islamic Center", latitude: 35.7636, longitude: -78.7443, address: "1501 Buck Jones Rd, Raleigh, NC 27606", matchTerms: ["al-noor", "alnoor"], hasIqama: true },
-  { name: "Islamic Association of Raleigh (Atwater)", latitude: 35.7898, longitude: -78.6912, address: "808 Atwater St, Raleigh, NC 27607", website: "https://www.raleighmasjid.org", matchTerms: ["iar", "islamic association of raleigh", "atwater"], hasIqama: true },
-  { name: "Islamic Association of Raleigh (Page Rd)", latitude: 35.9067, longitude: -78.8169, address: "3104 Page Rd, Morrisville, NC 27560", website: "https://www.raleighmasjid.org", matchTerms: ["iar", "islamic association of raleigh", "page rd", "page road"], hasIqama: true },
+  { name: "Islamic Association of Raleigh (Atwater)", latitude: 35.7898, longitude: -78.6912, address: "808 Atwater St, Raleigh, NC 27607", website: "https://www.raleighmasjid.org", matchTerms: ["iar", "islamic association of raleigh", "atwater"], hasIqama: true, campusGroup: "iar" },
+  { name: "Islamic Association of Raleigh (Page Rd)", latitude: 35.9067, longitude: -78.8169, address: "3104 Page Rd, Morrisville, NC 27560", website: "https://www.raleighmasjid.org", matchTerms: ["iar", "islamic association of raleigh", "page rd", "page road"], hasIqama: true, campusGroup: "iar" },
   { name: "Islamic Center of Morrisville", latitude: 35.8099, longitude: -78.8228, address: "107 Quail Fields Ct, Morrisville, NC 27560", website: "https://www.icmorrisville.org", matchTerms: ["icm", "islamic center of morrisville", "quail fields"], hasIqama: true },
-  { name: "Jamaat Ibad Ar-Rahman (Fayetteville)", latitude: 35.9856, longitude: -78.8977, address: "3034 Fayetteville St, Durham, NC 27707", website: "https://www.jiar.org", matchTerms: ["jamaat ibad", "jiar", "fayetteville st"], hasIqama: true },
-  { name: "Jamaat Ibad Ar-Rahman (Parkwood)", latitude: 35.8938, longitude: -78.9109, address: "5122 Revere Rd, Durham, NC 27713", website: "https://www.jiar.org", matchTerms: ["parkwood", "revere rd"], hasIqama: true },
+  { name: "Jamaat Ibad Ar-Rahman (Fayetteville)", latitude: 35.9856, longitude: -78.8977, address: "3034 Fayetteville St, Durham, NC 27707", website: "https://www.jiar.org", matchTerms: ["jamaat ibad", "jiar", "fayetteville st"], hasIqama: true, campusGroup: "jiar" },
+  { name: "Jamaat Ibad Ar-Rahman (Parkwood)", latitude: 35.8938, longitude: -78.9109, address: "5122 Revere Rd, Durham, NC 27713", website: "https://www.jiar.org", matchTerms: ["parkwood", "revere rd"], hasIqama: true, campusGroup: "jiar" },
   { name: "Apex Masjid", latitude: 35.7294, longitude: -78.8415, address: "733 Center St, Apex, NC 27502", matchTerms: ["apex masjid", "center st, apex"] },
   { name: "Ar-Razzaq Islamic Center", latitude: 35.9966, longitude: -78.9155, address: "1920 Chapel Hill Rd, Durham, NC 27707", matchTerms: ["ar-razzaq", "arrazzaq", "chapel hill rd, durham"] },
   { name: "As-Salaam Islamic Center", latitude: 35.7781, longitude: -78.6075, address: "110 Lord Anson Dr, Raleigh, NC 27610", website: "https://www.assalaam.org", matchTerms: ["as-salaam", "assalaam", "lord anson"] },
@@ -130,9 +132,16 @@ export const NEARBY_MASJIDS: Masjid[] = [
   { name: "Masjid King Khalid", latitude: 35.7693, longitude: -78.6383, address: "130 Martin Luther King Jr Blvd, Raleigh, NC 27601", matchTerms: ["king khalid", "martin luther king"] },
   { name: "North Raleigh Masjid", latitude: 35.8520, longitude: -78.5571, address: "7424 Deah Way, Raleigh, NC 27616", matchTerms: ["north raleigh masjid", "deah way", "mycc", "muslim youth community center"] },
   { name: "San Ramon Valley Islamic Center", latitude: 37.7770, longitude: -121.9691, address: "2230 Camino Ramon, San Ramon, CA 94583", website: "https://srvic.org", matchTerms: ["srvic", "san ramon valley islamic", "camino ramon"], hasIqama: true },
-  { name: "Muslim Community Association", latitude: 37.3769, longitude: -121.9595, address: "3003 Scott Blvd, Santa Clara, CA 95054", website: "https://www.mcabayarea.org", matchTerms: ["mca", "muslim community association", "scott blvd", "mcabayarea"], hasIqama: true },
-  { name: "MCA Al-Noor", latitude: 37.3530, longitude: -121.9535, address: "1755 Catherine St, Santa Clara, CA 95050", website: "https://www.mcabayarea.org", matchTerms: ["mca al-noor", "mca alnoor", "mca noor", "catherine st"], hasIqama: true },
+  { name: "Muslim Community Association", latitude: 37.3769, longitude: -121.9595, address: "3003 Scott Blvd, Santa Clara, CA 95054", website: "https://www.mcabayarea.org", matchTerms: ["mca", "muslim community association", "scott blvd", "mcabayarea"], hasIqama: true, campusGroup: "mca" },
+  { name: "MCA Al-Noor", latitude: 37.3530, longitude: -121.9535, address: "1755 Catherine St, Santa Clara, CA 95050", website: "https://www.mcabayarea.org", matchTerms: ["mca al-noor", "mca alnoor", "mca noor", "catherine st"], hasIqama: true, campusGroup: "mca" },
   { name: "Muslim Community Center of the East Bay", latitude: 37.6925, longitude: -121.9040, address: "5724 W Las Positas Blvd, Pleasanton, CA 94588", website: "https://mcceastbay.org", matchTerms: ["mcc", "mcc east bay", "muslim community center of the east bay", "las positas", "pleasanton", "mcceastbay"], hasIqama: true },
+  { name: "South Bay Islamic Association", latitude: 37.3007, longitude: -121.8574, address: "325 N 3rd St, San Jose, CA 95112", website: "https://sbia.info", matchTerms: ["sbia", "south bay islamic", "n 3rd st", "san jose"], hasIqama: true },
+  { name: "Islamic Center of Fremont (ICF)", latitude: 37.5241, longitude: -121.9660, address: "4039 Irvington Ave, Fremont, CA 94538", website: "https://icfbayarea.com", matchTerms: ["icf", "islamic center of fremont", "irvington ave", "icfbayarea"], hasIqama: true, campusGroup: "icf" },
+  { name: "Masjid Zakariya", latitude: 37.5094, longitude: -121.9628, address: "42412 Albrae St, Fremont, CA 94538", website: "https://icfbayarea.com", matchTerms: ["zakariya", "masjid zakariya", "albrae st"], hasIqama: true, campusGroup: "icf" },
+  { name: "Pillars Mosque", latitude: 35.3086, longitude: -80.7200, address: "3116 Johnston Oehler Rd, Charlotte, NC 28269", website: "https://pillarsmosque.org", matchTerms: ["pillars", "pillars mosque", "johnston oehler"], hasIqama: true },
+  { name: "Islamic Society of Greater Charlotte", latitude: 35.2025, longitude: -80.7937, address: "1700 Progress Ln, Charlotte, NC 28205", website: "https://isgcharlotte.org", matchTerms: ["isgc", "islamic society of greater charlotte", "progress ln"], hasIqama: true },
+  { name: "Los Gatos Islamic Center (LGIC)", latitude: 37.2358, longitude: -121.9175, address: "16769 Farley Rd, Los Gatos, CA 95032", website: "https://wvmuslim.org", matchTerms: ["lgic", "los gatos islamic", "los gatos masjid", "wvmuslim", "farley rd"], hasIqama: true, campusGroup: "lgic" },
+  { name: "Saratoga Musalla", latitude: 37.3137, longitude: -122.0310, address: "12370 Saratoga-Sunnyvale Rd, Saratoga, CA 95070", website: "https://wvmuslim.org", matchTerms: ["saratoga musalla", "saratoga-sunnyvale rd"], hasIqama: true, campusGroup: "lgic" },
 ];
 
 export interface OrgCampus {
@@ -212,9 +221,19 @@ export function matchEventsToCommunityOrg(org: CommunityOrg, events: { title: st
   return indices;
 }
 
-export function matchEventsToMasjid(masjid: Masjid, events: { title: string; location: string; organizer: string }[]): number[] {
-  const terms = masjid.matchTerms || [];
-  const addrParts = masjid.address.toLowerCase().split(",")[0];
+export function matchEventsToMasjid(masjid: Masjid, events: { title: string; location: string; organizer: string }[], allMasjids?: Masjid[]): number[] {
+  let allTerms = [...(masjid.matchTerms || [])];
+  let allAddrParts = [masjid.address.toLowerCase().split(",")[0]];
+
+  if (masjid.campusGroup && allMasjids) {
+    for (const sibling of allMasjids) {
+      if (sibling.campusGroup === masjid.campusGroup && sibling.name !== masjid.name) {
+        allTerms = allTerms.concat(sibling.matchTerms || []);
+        allAddrParts.push(sibling.address.toLowerCase().split(",")[0]);
+      }
+    }
+  }
+
   const indices: number[] = [];
 
   for (let i = 0; i < events.length; i++) {
@@ -224,16 +243,20 @@ export function matchEventsToMasjid(masjid: Masjid, events: { title: string; loc
     const title = (ev.title || "").toLowerCase();
     const searchable = `${loc} ${org} ${title}`;
 
-    if (loc.includes(addrParts)) {
-      indices.push(i);
-      continue;
-    }
-
     let matched = false;
-    for (const term of terms) {
-      if (searchable.includes(term)) {
+    for (const addr of allAddrParts) {
+      if (loc.includes(addr)) {
         matched = true;
         break;
+      }
+    }
+
+    if (!matched) {
+      for (const term of allTerms) {
+        if (searchable.includes(term)) {
+          matched = true;
+          break;
+        }
       }
     }
     if (matched) indices.push(i);

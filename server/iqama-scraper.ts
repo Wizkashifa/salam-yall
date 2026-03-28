@@ -79,6 +79,13 @@ const IQAMA_SOURCES: IqamaSource[] = [
     timezone: "America/Los_Angeles",
   },
   {
+    name: "LGIC",
+    type: "dpt",
+    url: "https://wvmuslim.org/wp-json/dpt/v1/prayertime",
+    timezone: "America/Los_Angeles",
+    filter: "today",
+  },
+  {
     name: "Pillars Mosque",
     type: "athanplus",
     url: "https://timing.athanplus.com/masjid/widgets/monthly?theme=1&masjid_id=xdyqvadX",

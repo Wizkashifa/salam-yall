@@ -607,6 +607,20 @@ export default function PrayerScreen() {
         targetMasjid = "MCA";
       } else if (pref.includes("muslim community center") || pref.includes("mcc east bay") || pref.includes("las positas") || pref.includes("pleasanton") || pref === "mcc") {
         targetMasjid = "MCC";
+      } else if (pref.includes("sbia") || pref.includes("south bay islamic")) {
+        targetMasjid = "SBIA";
+      } else if (pref.includes("zakariya")) {
+        targetMasjid = "ICF";
+      } else if (pref.includes("icf") || pref.includes("islamic center of fremont") || pref.includes("irvington")) {
+        targetMasjid = "ICF";
+      } else if (pref.includes("saratoga musalla")) {
+        targetMasjid = "LGIC";
+      } else if (pref.includes("lgic") || pref.includes("los gatos islamic") || pref.includes("farley")) {
+        targetMasjid = "LGIC";
+      } else if (pref.includes("pillars")) {
+        targetMasjid = "Pillars Mosque";
+      } else if (pref.includes("isgc") || pref.includes("islamic society of greater charlotte")) {
+        targetMasjid = "ISGC";
       }
     }
 
@@ -659,7 +673,7 @@ export default function PrayerScreen() {
       .map((ev: any) => {
         let venue = "";
         for (const item of allNearby) {
-          const matched = matchEventsToMasjid(item.masjid, [ev]);
+          const matched = matchEventsToMasjid(item.masjid, [ev], masjidList);
           if (matched.length > 0) {
             venue = item.masjid.name.replace(/\s*\(.*\)/, "");
             break;

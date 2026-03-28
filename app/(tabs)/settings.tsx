@@ -424,9 +424,9 @@ export default function SettingsScreen() {
 
   const masjidEvents = useMemo(() => {
     if (!selectedMasjid || !events) return [];
-    const indices = matchEventsToMasjid(selectedMasjid, events);
+    const indices = matchEventsToMasjid(selectedMasjid, events, masjidList);
     return indices.map(i => events[i]);
-  }, [selectedMasjid, events]);
+  }, [selectedMasjid, events, masjidList]);
 
   const communityOrgEvents = useMemo(() => {
     if (!selectedCommunityOrg || !events) return [];

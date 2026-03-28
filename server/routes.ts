@@ -379,10 +379,14 @@ const KNOWN_COORDINATES: Record<string, { lat: number; lng: number }> = {
   "Roots Community": { lat: 32.9857, lng: -96.7502 },
   "NC State Fairgrounds": { lat: 35.7939, lng: -78.7117 },
   "Islamic Center of Fremont": { lat: 37.5241, lng: -121.9660 },
+  "Islamic Center of Fremont (ICF)": { lat: 37.5241, lng: -121.9660 },
   "Islamic Center of Fremont (ICF-Irvington)": { lat: 37.5241, lng: -121.9660 },
   "Masjid Zakariya": { lat: 37.5094, lng: -121.9628 },
   "Pillars Mosque": { lat: 35.3086, lng: -80.7200 },
   "Islamic Society of Greater Charlotte": { lat: 35.2025, lng: -80.7937 },
+  "Los Gatos Islamic Center": { lat: 37.2358, lng: -121.9175 },
+  "Los Gatos Islamic Center (LGIC)": { lat: 37.2358, lng: -121.9175 },
+  "Saratoga Musalla": { lat: 37.3137, lng: -122.0310 },
 };
 
 function resolveCoordinates(organizer: string, location: string): { latitude: number | null; longitude: number | null } {
@@ -769,10 +773,17 @@ async function ensureMasjidsTable(pool: pg.Pool) {
       has_iqama BOOLEAN DEFAULT false,
       active BOOLEAN DEFAULT true,
       sort_order INT DEFAULT 0,
+      campus_group VARCHAR(100),
+      iqama_source VARCHAR(255),
       created_at TIMESTAMP DEFAULT NOW(),
       updated_at TIMESTAMP DEFAULT NOW()
     );
     CREATE UNIQUE INDEX IF NOT EXISTS masjids_name_unique ON masjids (name);
+    DO $$ BEGIN
+      ALTER TABLE masjids ADD COLUMN IF NOT EXISTS campus_group VARCHAR(100);
+      ALTER TABLE masjids ADD COLUMN IF NOT EXISTS iqama_source VARCHAR(255);
+    EXCEPTION WHEN others THEN NULL;
+    END $$;
   `);
   const { rows } = await pool.query("SELECT COUNT(*) as count FROM masjids");
   if (parseInt(rows[0].count) === 0) {
@@ -802,13 +813,15 @@ async function ensureMasjidsTable(pool: pg.Pool) {
     await pool.query(`DELETE FROM masjids WHERE name = 'Muslim Youth and Community Center'`);
     await pool.query(`DELETE FROM masjids WHERE name = 'MCA Noor'`);
     await pool.query(`UPDATE iqama_schedules SET masjid = 'MCA Al-Noor' WHERE masjid = 'MCA Noor'`);
-    const masjidUpserts = [
+    await pool.query(`UPDATE masjids SET name = 'Islamic Center of Fremont (ICF)' WHERE name = 'Islamic Center of Fremont'`);
+    await pool.query(`UPDATE masjids SET name = 'Los Gatos Islamic Center (LGIC)' WHERE name = 'Los Gatos Islamic Center'`);
+    const masjidUpserts: { name: string; lat: number; lng: number; addr: string; website: string; terms: string[]; iqama: boolean; sort: number; campusGroup?: string; iqamaSource?: string }[] = [
       { name: 'Al-Noor Islamic Center', lat: 35.5843, lng: -78.7706, addr: '6317 Sunset Lake Rd, Fuquay-Varina, NC 27526', website: 'https://alnooric.org', terms: ['al-noor', 'alnoor', 'sunset lake', 'fuquay'], iqama: true, sort: 1 },
-      { name: 'Islamic Association of Raleigh (Atwater)', lat: 35.7898, lng: -78.6912, addr: '808 Atwater St, Raleigh, NC 27607', website: 'https://raleighmasjid.org', terms: ['iar', 'islamic association of raleigh', 'atwater'], iqama: true, sort: 2 },
-      { name: 'Islamic Association of Raleigh (Page Rd)', lat: 35.9067, lng: -78.8169, addr: '3104 Page Rd, Morrisville, NC 27560', website: 'https://raleighmasjid.org', terms: ['iar', 'islamic association of raleigh', 'page rd', 'page road'], iqama: true, sort: 3 },
+      { name: 'Islamic Association of Raleigh (Atwater)', lat: 35.7898, lng: -78.6912, addr: '808 Atwater St, Raleigh, NC 27607', website: 'https://raleighmasjid.org', terms: ['iar', 'islamic association of raleigh', 'atwater'], iqama: true, sort: 2, campusGroup: 'iar' },
+      { name: 'Islamic Association of Raleigh (Page Rd)', lat: 35.9067, lng: -78.8169, addr: '3104 Page Rd, Morrisville, NC 27560', website: 'https://raleighmasjid.org', terms: ['iar', 'islamic association of raleigh', 'page rd', 'page road'], iqama: true, sort: 3, campusGroup: 'iar', iqamaSource: 'IAR' },
       { name: 'Islamic Center of Morrisville', lat: 35.8099, lng: -78.8228, addr: '107 Quail Fields Ct, Morrisville, NC 27560', website: 'https://www.icmnc.org', terms: ['icm', 'islamic center of morrisville', 'quail fields', 'icmnc'], iqama: true, sort: 4 },
-      { name: 'Jamaat Ibad Ar-Rahman (Fayetteville)', lat: 35.9856, lng: -78.8977, addr: '3034 Fayetteville St, Durham, NC 27707', website: 'https://ibadarrahman.org', terms: ['jamaat ibad', 'jiar', 'fayetteville st', 'ibad ar-rahman'], iqama: true, sort: 5 },
-      { name: 'Jamaat Ibad Ar-Rahman (Parkwood)', lat: 35.8938, lng: -78.9109, addr: '5122 Revere Rd, Durham, NC 27713', website: 'https://ibadarrahman.org', terms: ['parkwood', 'revere rd', 'ibad ar-rahman'], iqama: true, sort: 6 },
+      { name: 'Jamaat Ibad Ar-Rahman (Fayetteville)', lat: 35.9856, lng: -78.8977, addr: '3034 Fayetteville St, Durham, NC 27707', website: 'https://ibadarrahman.org', terms: ['jamaat ibad', 'jiar', 'fayetteville st', 'ibad ar-rahman'], iqama: true, sort: 5, campusGroup: 'jiar' },
+      { name: 'Jamaat Ibad Ar-Rahman (Parkwood)', lat: 35.8938, lng: -78.9109, addr: '5122 Revere Rd, Durham, NC 27713', website: 'https://ibadarrahman.org', terms: ['parkwood', 'revere rd', 'ibad ar-rahman'], iqama: true, sort: 6, campusGroup: 'jiar' },
       { name: 'Apex Masjid', lat: 35.7294, lng: -78.8415, addr: '733 Center St, Apex, NC 27502', website: 'https://apexmosque.org', terms: ['apex masjid', 'apex mosque', 'center st, apex'], iqama: false, sort: 7 },
       { name: 'Ar-Razzaq Islamic Center', lat: 35.9977, lng: -78.9069, addr: '1009 W Chapel Hill St, Durham, NC 27701', website: 'https://arrazzaqislamiccenter.org', terms: ['ar-razzaq', 'arrazzaq', 'chapel hill st, durham'], iqama: false, sort: 8 },
       { name: 'As-Salaam Islamic Center', lat: 35.7781, lng: -78.6075, addr: '110 Lord Anson Dr, Raleigh, NC 27610', website: 'https://assalaamic.org', terms: ['as-salaam', 'assalaam', 'lord anson'], iqama: false, sort: 9 },
@@ -817,20 +830,23 @@ async function ensureMasjidsTable(pool: pg.Pool) {
       { name: 'Masjid King Khalid', lat: 35.7693, lng: -78.6383, addr: '130 Martin Luther King Jr Blvd, Raleigh, NC 27601', website: 'https://www.masjidkingkhalid.org', terms: ['king khalid', 'martin luther king'], iqama: false, sort: 12 },
       { name: 'North Raleigh Masjid', lat: 35.8741, lng: -78.5640, addr: '5017 Deah Way, Raleigh, NC 27616', website: 'https://mycc-rdu.org', terms: ['north raleigh masjid', 'deah way', 'mycc', 'muslim youth community center'], iqama: false, sort: 13 },
       { name: 'San Ramon Valley Islamic Center', lat: 37.7770, lng: -121.9691, addr: '2230 Camino Ramon, San Ramon, CA 94583', website: 'https://srvic.org', terms: ['srvic', 'san ramon valley islamic', 'camino ramon'], iqama: true, sort: 14 },
-      { name: 'Muslim Community Association', lat: 37.3769, lng: -121.9595, addr: '3003 Scott Blvd, Santa Clara, CA 95054', website: 'https://www.mcabayarea.org', terms: ['mca', 'muslim community association', 'scott blvd', 'mcabayarea'], iqama: true, sort: 15 },
-      { name: 'MCA Al-Noor', lat: 37.3530, lng: -121.9535, addr: '1755 Catherine St, Santa Clara, CA 95050', website: 'https://www.mcabayarea.org', terms: ['mca al-noor', 'mca alnoor', 'mca noor', 'catherine st'], iqama: true, sort: 16 },
+      { name: 'Muslim Community Association', lat: 37.3769, lng: -121.9595, addr: '3003 Scott Blvd, Santa Clara, CA 95054', website: 'https://www.mcabayarea.org', terms: ['mca', 'muslim community association', 'scott blvd', 'mcabayarea'], iqama: true, sort: 15, campusGroup: 'mca' },
+      { name: 'MCA Al-Noor', lat: 37.3530, lng: -121.9535, addr: '1755 Catherine St, Santa Clara, CA 95050', website: 'https://www.mcabayarea.org', terms: ['mca al-noor', 'mca alnoor', 'mca noor', 'catherine st'], iqama: true, sort: 16, campusGroup: 'mca' },
       { name: 'Muslim Community Center of the East Bay', lat: 37.6925, lng: -121.9040, addr: '5724 W Las Positas Blvd, Pleasanton, CA 94588', website: 'https://mcceastbay.org', terms: ['mcc', 'mcc east bay', 'muslim community center', 'las positas', 'pleasanton'], iqama: true, sort: 17 },
       { name: 'South Bay Islamic Association', lat: 37.3007, lng: -121.8574, addr: '325 N 3rd St, San Jose, CA 95112', website: 'https://sbia.info', terms: ['sbia', 'south bay islamic', 'south bay islamic association', 'n 3rd st', 'san jose'], iqama: true, sort: 18 },
-      { name: 'Islamic Center of Fremont', lat: 37.5241, lng: -121.9660, addr: '4039 Irvington Ave, Fremont, CA 94538', website: 'https://icfbayarea.com', terms: ['icf', 'islamic center of fremont', 'irvington ave', 'icfbayarea', 'fremont masjid'], iqama: true, sort: 19 },
+      { name: 'Islamic Center of Fremont (ICF)', lat: 37.5241, lng: -121.9660, addr: '4039 Irvington Ave, Fremont, CA 94538', website: 'https://icfbayarea.com', terms: ['icf', 'islamic center of fremont', 'irvington ave', 'icfbayarea', 'fremont masjid'], iqama: true, sort: 19, campusGroup: 'icf' },
+      { name: 'Masjid Zakariya', lat: 37.5094, lng: -121.9628, addr: '42412 Albrae St, Fremont, CA 94538', website: 'https://icfbayarea.com', terms: ['zakariya', 'masjid zakariya', 'albrae st'], iqama: true, sort: 19, campusGroup: 'icf', iqamaSource: 'ICF' },
       { name: 'Pillars Mosque', lat: 35.3086, lng: -80.7200, addr: '3116 Johnston Oehler Rd, Charlotte, NC 28269', website: 'https://pillarsmosque.org', terms: ['pillars', 'pillars mosque', 'johnston oehler', 'mcc charlotte', 'muslim community center charlotte'], iqama: true, sort: 20 },
       { name: 'Islamic Society of Greater Charlotte', lat: 35.2025, lng: -80.7937, addr: '1700 Progress Ln, Charlotte, NC 28205', website: 'https://isgcharlotte.org', terms: ['isgc', 'islamic society of greater charlotte', 'progress ln', 'isg charlotte'], iqama: true, sort: 21 },
+      { name: 'Los Gatos Islamic Center (LGIC)', lat: 37.2358, lng: -121.9175, addr: '16769 Farley Rd, Los Gatos, CA 95032', website: 'https://wvmuslim.org', terms: ['lgic', 'los gatos islamic', 'los gatos masjid', 'wvmuslim', 'farley rd', 'west valley muslim'], iqama: true, sort: 22, campusGroup: 'lgic' },
+      { name: 'Saratoga Musalla', lat: 37.3137, lng: -122.0310, addr: '12370 Saratoga-Sunnyvale Rd, Saratoga, CA 95070', website: 'https://wvmuslim.org', terms: ['saratoga musalla', 'saratoga-sunnyvale rd', 'saratoga masjid'], iqama: true, sort: 22, campusGroup: 'lgic', iqamaSource: 'LGIC' },
     ];
     for (const m of masjidUpserts) {
       await pool.query(
-        `INSERT INTO masjids (name, latitude, longitude, address, website, match_terms, has_iqama, sort_order)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         ON CONFLICT (name) DO UPDATE SET latitude=EXCLUDED.latitude, longitude=EXCLUDED.longitude, address=EXCLUDED.address, website=EXCLUDED.website, match_terms=EXCLUDED.match_terms, has_iqama=EXCLUDED.has_iqama, sort_order=EXCLUDED.sort_order, updated_at=NOW()`,
-        [m.name, m.lat, m.lng, m.addr, m.website, m.terms, m.iqama, m.sort]
+        `INSERT INTO masjids (name, latitude, longitude, address, website, match_terms, has_iqama, sort_order, campus_group, iqama_source)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         ON CONFLICT (name) DO UPDATE SET latitude=EXCLUDED.latitude, longitude=EXCLUDED.longitude, address=EXCLUDED.address, website=EXCLUDED.website, match_terms=EXCLUDED.match_terms, has_iqama=EXCLUDED.has_iqama, sort_order=EXCLUDED.sort_order, campus_group=EXCLUDED.campus_group, iqama_source=EXCLUDED.iqama_source, updated_at=NOW()`,
+        [m.name, m.lat, m.lng, m.addr, m.website, m.terms, m.iqama, m.sort, m.campusGroup || null, m.iqamaSource || null]
       );
     }
     console.log("[DB] Upserted masjid data");
@@ -1699,6 +1715,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  const LGIC_ICAL_URL = "https://wvmuslim.org/?ical=1&eventDisplay=list";
+  let cachedLGICEvents: CachedEvent[] = [];
+  let lgicLastFetch = 0;
+  const LGIC_CACHE_TTL = 15 * 60 * 1000;
+
+  async function fetchLGICEvents(): Promise<CachedEvent[]> {
+    const now = Date.now();
+    if (cachedLGICEvents.length > 0 && (now - lgicLastFetch) < LGIC_CACHE_TTL) {
+      return cachedLGICEvents.filter(e => new Date(e.end || e.start) >= new Date());
+    }
+    try {
+      const response = await fetch(LGIC_ICAL_URL);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const icalText = await response.text();
+      const events = parseICalFeed(icalText, {
+        idPrefix: "lgic",
+        defaultOrganizer: "Los Gatos Islamic Center",
+        defaultLocation: "16769 Farley Rd, Los Gatos, CA 95032",
+        useEventLocation: true,
+      });
+      cachedLGICEvents = events;
+      lgicLastFetch = Date.now();
+      console.log(`[LGIC] Fetched ${events.length} events from iCal feed`);
+      return events;
+    } catch (err: any) {
+      console.error("[LGIC] iCal fetch error:", err.message);
+      return cachedLGICEvents.filter(e => new Date(e.end || e.start) >= new Date());
+    }
+  }
+
   const ICF_ICAL_URL = "https://icfbayarea.com/?post_type=tribe_events&ical=1&eventDisplay=list";
   let cachedICFEvents: CachedEvent[] = [];
   let icfLastFetch = 0;
@@ -1876,7 +1922,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const srvicEvents = await fetchSRVICEvents();
       const mcaEvents = await fetchMCAEvents();
       const icfEvents = await fetchICFEvents();
-      const merged = [...communityEvents, ...rootsDfwEvents, ...mccEastBayEvents, ...srvicEvents, ...mcaEvents, ...icfEvents]
+      const lgicEvents = await fetchLGICEvents();
+      const merged = [...communityEvents, ...rootsDfwEvents, ...mccEastBayEvents, ...srvicEvents, ...mcaEvents, ...icfEvents, ...lgicEvents]
         .filter(ev => !ev.title.toLowerCase().includes("private event"));
       const seen = new Set<string>();
       const allEvents = merged.filter(ev => {
@@ -4912,7 +4959,7 @@ Return ONLY the JSON object, no markdown, no explanation.`,
   app.get("/api/masjids", async (_req, res) => {
     try {
       const { rows } = await pool.query(
-        "SELECT id, name, latitude, longitude, address, website, match_terms, has_iqama FROM masjids WHERE active = true ORDER BY sort_order, name"
+        "SELECT id, name, latitude, longitude, address, website, match_terms, has_iqama, campus_group, iqama_source FROM masjids WHERE active = true ORDER BY sort_order, name"
       );
       const masjids = rows.map((r: any) => ({
         id: r.id,
@@ -4923,6 +4970,8 @@ Return ONLY the JSON object, no markdown, no explanation.`,
         website: r.website || undefined,
         matchTerms: r.match_terms || [],
         hasIqama: r.has_iqama || false,
+        campusGroup: r.campus_group || undefined,
+        iqamaSource: r.iqama_source || undefined,
       }));
       res.json(masjids);
     } catch (error: any) {
@@ -5591,6 +5640,195 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     } catch (error: any) {
       console.error("[Flyer Extract] Error:", error.message);
       res.status(500).json({ error: "Failed to extract event details: " + error.message });
+    }
+  });
+
+  app.post("/api/admin/events/ingest-email", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { emailHtml, organizer } = req.body;
+      if (!emailHtml) return res.status(400).json({ error: "Email HTML content is required" });
+
+      const message = await anthropic.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 4000,
+        messages: [{
+          role: "user",
+          content: `You are an event extraction agent for a Muslim community app. Extract ALL events from this newsletter/email HTML. Today's date is ${new Date().toISOString().split("T")[0]}.
+
+RULES:
+- If the email does not specify a year, assume the next upcoming occurrence (use ${new Date().getFullYear()} or ${new Date().getFullYear() + 1}).
+- Only extract events that are in the future.
+- Each event must have at minimum a title and date.
+- If you find registration/RSVP links, include them.
+- If the organizer is obvious from the email, include it. Otherwise use "${organizer || "Unknown"}".
+- For recurring events (e.g. "every Friday"), create ONE entry with the next occurrence.
+
+Return ONLY a JSON array of event objects. Each object:
+{
+  "title": "event title",
+  "date": "YYYY-MM-DD",
+  "startTime": "HH:MM" (24-hour, null if not shown),
+  "endTime": "HH:MM" (24-hour, null if not shown),
+  "location": "venue or address",
+  "description": "brief description (2-3 sentences max)",
+  "organizer": "hosting organization",
+  "registrationUrl": "registration/RSVP URL if found"
+}
+
+If no events are found, return an empty array [].
+Return ONLY the JSON array, no markdown, no explanation.
+
+EMAIL CONTENT:
+${emailHtml.slice(0, 50000)}`,
+        }],
+      });
+
+      const textContent = message.content.find((c: any) => c.type === "text");
+      if (!textContent || textContent.type !== "text") {
+        return res.status(500).json({ error: "No text response from AI" });
+      }
+
+      let events;
+      try {
+        let jsonStr = textContent.text.trim();
+        const jsonMatch = jsonStr.match(/\[[\s\S]*\]/);
+        if (jsonMatch) jsonStr = jsonMatch[0];
+        events = JSON.parse(jsonStr);
+      } catch {
+        return res.status(500).json({ error: "Failed to parse AI response", raw: textContent.text });
+      }
+
+      console.log(`[Email Ingest] Extracted ${events.length} events from newsletter`);
+      res.json({ events, source: "email" });
+    } catch (error: any) {
+      console.error("[Email Ingest] Error:", error.message);
+      res.status(500).json({ error: "Failed to extract events: " + error.message });
+    }
+  });
+
+  app.post("/api/admin/events/ingest-instagram", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { handle } = req.body;
+      if (!handle) return res.status(400).json({ error: "Instagram handle is required" });
+
+      const cleanHandle = handle.replace(/^@/, "").trim();
+      const igUrl = `https://www.instagram.com/${cleanHandle}/`;
+
+      const igResp = await fetch(igUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.5",
+        },
+        redirect: "follow",
+      });
+
+      if (!igResp.ok) {
+        return res.status(400).json({ error: `Could not access Instagram profile @${cleanHandle} (HTTP ${igResp.status})` });
+      }
+
+      const html = await igResp.text();
+
+      const metaDescMatch = html.match(/<meta[^>]*property="og:description"[^>]*content="([^"]*)"[^>]*>/i)
+        || html.match(/<meta[^>]*name="description"[^>]*content="([^"]*)"[^>]*>/i);
+      const profileDesc = metaDescMatch ? metaDescMatch[1] : "";
+
+      const captionMatches: string[] = [];
+      const captionRegex = /"edge_media_to_caption":\{"edges":\[\{"node":\{"text":"([^"]*?)"\}\}\]/g;
+      let capMatch;
+      while ((capMatch = captionRegex.exec(html)) !== null && captionMatches.length < 12) {
+        captionMatches.push(capMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"'));
+      }
+
+      const sharedDataMatch = html.match(/<script type="text\/javascript">window\._sharedData\s*=\s*(\{[\s\S]*?\});<\/script>/);
+      if (sharedDataMatch && captionMatches.length === 0) {
+        try {
+          const shared = JSON.parse(sharedDataMatch[1]);
+          const edges = shared?.entry_data?.ProfilePage?.[0]?.graphql?.user?.edge_owner_to_timeline_media?.edges || [];
+          for (const edge of edges.slice(0, 12)) {
+            const cap = edge?.node?.edge_media_to_caption?.edges?.[0]?.node?.text;
+            if (cap) captionMatches.push(cap);
+          }
+        } catch {}
+      }
+
+      const altTexts: string[] = [];
+      const altRegex = /alt="([^"]{20,})"/gi;
+      let altMatch;
+      while ((altMatch = altRegex.exec(html)) !== null && altTexts.length < 12) {
+        const text = altMatch[1];
+        if (!text.includes("profile picture") && !text.includes("may contain")) {
+          altTexts.push(text);
+        }
+      }
+
+      const allContent = [
+        `Profile: @${cleanHandle}`,
+        profileDesc ? `Bio: ${profileDesc}` : "",
+        ...captionMatches.map((c, i) => `Post ${i + 1}: ${c}`),
+        ...altTexts.map((a, i) => `Image ${i + 1} alt: ${a}`),
+      ].filter(Boolean).join("\n\n");
+
+      if (allContent.length < 50) {
+        return res.status(400).json({ error: `Could not extract enough content from @${cleanHandle}. The profile may be private or have limited public content.` });
+      }
+
+      const message = await anthropic.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 4000,
+        messages: [{
+          role: "user",
+          content: `You are an event extraction agent for a Muslim community app. Analyze these Instagram posts from @${cleanHandle} and extract any UPCOMING events. Today's date is ${new Date().toISOString().split("T")[0]}.
+
+RULES:
+- Only extract posts that announce specific events with dates/times.
+- Ignore general announcements, quotes, or non-event content.
+- If dates are relative ("this Friday", "next Saturday"), calculate the actual date.
+- If a year is not specified, assume ${new Date().getFullYear()} (or ${new Date().getFullYear() + 1} if the date has already passed).
+- Only include future events.
+
+Return ONLY a JSON array of event objects:
+{
+  "title": "event title",
+  "date": "YYYY-MM-DD",
+  "startTime": "HH:MM" (24-hour, null if unclear),
+  "endTime": "HH:MM" (24-hour, null if unclear),
+  "location": "venue or address if mentioned",
+  "description": "brief description (2-3 sentences max)",
+  "organizer": "@${cleanHandle}",
+  "registrationUrl": "any link mentioned in the post"
+}
+
+If no events are found, return an empty array [].
+Return ONLY the JSON array, no markdown, no explanation.
+
+INSTAGRAM CONTENT:
+${allContent.slice(0, 30000)}`,
+        }],
+      });
+
+      const textContent = message.content.find((c: any) => c.type === "text");
+      if (!textContent || textContent.type !== "text") {
+        return res.status(500).json({ error: "No text response from AI" });
+      }
+
+      let events;
+      try {
+        let jsonStr = textContent.text.trim();
+        const jsonMatch = jsonStr.match(/\[[\s\S]*\]/);
+        if (jsonMatch) jsonStr = jsonMatch[0];
+        events = JSON.parse(jsonStr);
+      } catch {
+        return res.status(500).json({ error: "Failed to parse AI response", raw: textContent.text });
+      }
+
+      console.log(`[Instagram Ingest] Extracted ${events.length} events from @${cleanHandle}`);
+      res.json({ events, source: "instagram", handle: cleanHandle, postsScanned: captionMatches.length + altTexts.length });
+    } catch (error: any) {
+      console.error("[Instagram Ingest] Error:", error.message);
+      res.status(500).json({ error: "Failed to extract events: " + error.message });
     }
   });
 
@@ -6383,7 +6621,7 @@ Return ONLY the JSON object, no markdown, no explanation.`,
       if (externalEventIds.length > 0) {
         const allExternal: CachedEvent[] = [];
         const results = await Promise.allSettled([
-          fetchRootsDfwEvents(), fetchMCCEastBayEvents(), fetchSRVICEvents(), fetchMCAEvents(), fetchICFEvents()
+          fetchRootsDfwEvents(), fetchMCCEastBayEvents(), fetchSRVICEvents(), fetchMCAEvents(), fetchICFEvents(), fetchLGICEvents()
         ]);
         for (const r of results) {
           if (r.status === "fulfilled") {
