@@ -4,7 +4,7 @@ const path = require("path");
 
 const WIDGET_TARGET_NAME = "SalamPrayerWidget";
 const WIDGET_BUNDLE_ID_SUFFIX = ".PrayerWidget";
-const APP_GROUP_ID = "group.com.salamyall";
+const APP_GROUP_ID = "group.app.ummahconnect";
 const WIDGET_DIR = "SalamPrayerWidget";
 const APPLE_TEAM_ID = "AS6WZP258V";
 

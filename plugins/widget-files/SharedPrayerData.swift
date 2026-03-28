@@ -27,7 +27,7 @@ struct PrayerWidgetData: Codable {
 }
 
 class SharedPrayerDataStore {
-    static let appGroupID = "group.com.salamyall"
+    static let appGroupID = "group.app.ummahconnect"
     static let dataKey = "prayer_widget_data"
 
     static func loadData() -> PrayerWidgetData? {
