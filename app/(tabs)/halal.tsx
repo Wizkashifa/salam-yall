@@ -1102,6 +1102,7 @@ export default function HalalScreen() {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedRestaurant, setSelectedRestaurant] = useState<HalalRestaurant | null>(null);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const { pendingTarget, consumeTarget } = useDeepLink();
   const [headerHeight, setHeaderHeight] = useState(0);
 
@@ -1135,6 +1136,7 @@ export default function HalalScreen() {
     if (isOverrideActive) {
       const { lat, lng } = getEffectiveLocation(0, 0);
       setUserLocation({ lat, lng });
+      setShowLocationPrompt(false);
       return;
     }
     setUserLocation(null);
@@ -1148,17 +1150,31 @@ export default function HalalScreen() {
           if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
               (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-              () => {}
+              () => setShowLocationPrompt(true)
             );
+          } else {
+            setShowLocationPrompt(true);
           }
         } else {
-          const { status } = await Location.requestForegroundPermissionsAsync();
+          const { status } = await Location.getForegroundPermissionsAsync();
           if (status === "granted") {
             const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
             setUserLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+          } else if (status === "denied") {
+            setShowLocationPrompt(true);
+          } else {
+            const { status: newStatus } = await Location.requestForegroundPermissionsAsync();
+            if (newStatus === "granted") {
+              const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+              setUserLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+            } else {
+              setShowLocationPrompt(true);
+            }
           }
         }
-      } catch {}
+      } catch {
+        setShowLocationPrompt(true);
+      }
     })();
   }, [isOverrideActive, userLocation]);
 
@@ -1514,6 +1530,56 @@ export default function HalalScreen() {
         colors={colors}
         pendingCount={pendingCount}
       />
+
+      <Modal
+        visible={showLocationPrompt}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLocationPrompt(false)}
+      >
+        <View style={styles.locationPromptOverlay}>
+          <View style={[styles.locationPromptCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.locationPromptIconWrap, { backgroundColor: isDark ? "rgba(27,107,74,0.15)" : "rgba(27,107,74,0.1)" }]}>
+              <Ionicons name="location" size={32} color={colors.emerald} />
+            </View>
+            <Text style={[styles.locationPromptTitle, { color: colors.text }]}>Enable Location</Text>
+            <Text style={[styles.locationPromptDesc, { color: colors.textSecondary }]}>
+              Turn on location services to see restaurants near you, sorted by distance.
+            </Text>
+            <Pressable
+              style={({ pressed }) => [styles.locationPromptBtn, { backgroundColor: colors.emerald, opacity: pressed ? 0.9 : 1 }]}
+              onPress={async () => {
+                setShowLocationPrompt(false);
+                if (Platform.OS === "web") {
+                  if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                      (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                      () => {}
+                    );
+                  }
+                } else {
+                  const { status } = await Location.requestForegroundPermissionsAsync();
+                  if (status === "granted") {
+                    const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+                    setUserLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+                  } else {
+                    Linking.openSettings();
+                  }
+                }
+              }}
+            >
+              <Ionicons name="navigate" size={18} color="#fff" />
+              <Text style={styles.locationPromptBtnText}>Turn On Location</Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.locationPromptSkip, { opacity: pressed ? 0.7 : 1 }]}
+              onPress={() => setShowLocationPrompt(false)}
+            >
+              <Text style={[styles.locationPromptSkipText, { color: colors.textTertiary }]}>Maybe Later</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1994,5 +2060,64 @@ const styles = StyleSheet.create({
   checkinFormBtnText: {
     fontSize: 14,
     fontFamily: "Inter_600SemiBold",
+  },
+  locationPromptOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+    padding: 32,
+  },
+  locationPromptCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 28,
+    width: "100%" as const,
+    maxWidth: 340,
+    alignItems: "center" as const,
+  },
+  locationPromptIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+    marginBottom: 16,
+  },
+  locationPromptTitle: {
+    fontSize: 20,
+    fontFamily: "Inter_700Bold",
+    marginBottom: 8,
+    textAlign: "center" as const,
+  },
+  locationPromptDesc: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center" as const,
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  locationPromptBtn: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    gap: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 14,
+    width: "100%" as const,
+    marginBottom: 12,
+  },
+  locationPromptBtnText: {
+    color: "#fff",
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
+  },
+  locationPromptSkip: {
+    paddingVertical: 8,
+  },
+  locationPromptSkipText: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
   },
 });
