@@ -113,7 +113,7 @@ function withWidgetTarget(config) {
           config_obj.buildSettings.LD_RUNPATH_SEARCH_PATHS = `"$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"`;
           config_obj.buildSettings.PRODUCT_NAME = `"$(TARGET_NAME)"`;
           config_obj.buildSettings.SKIP_INSTALL = "YES";
-          config_obj.buildSettings.DEVELOPMENT_TEAM = `""`;
+          config_obj.buildSettings.CODE_SIGN_STYLE = '"Automatic"';
         }
       }
     }
