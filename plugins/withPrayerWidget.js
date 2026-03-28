@@ -6,6 +6,7 @@ const WIDGET_TARGET_NAME = "SalamPrayerWidget";
 const WIDGET_BUNDLE_ID_SUFFIX = ".PrayerWidget";
 const APP_GROUP_ID = "group.com.salamyall";
 const WIDGET_DIR = "SalamPrayerWidget";
+const APPLE_TEAM_ID = "AS6WZP258V";
 
 function withPrayerWidget(config) {
   config = withAppGroupEntitlement(config);
@@ -24,7 +25,7 @@ function withWidgetTarget(config) {
   return withXcodeProject(config, async (mod) => {
     const xcodeProject = mod.modResults;
     const projectRoot = mod.modRequest.projectRoot;
-    const bundleIdentifier = config.ios?.bundleIdentifier || "com.salamyall";
+    const bundleIdentifier = config.ios?.bundleIdentifier || "app.ummahconnect";
     const widgetBundleId = bundleIdentifier + WIDGET_BUNDLE_ID_SUFFIX;
     const iosPath = path.join(projectRoot, "ios");
     const widgetPath = path.join(iosPath, WIDGET_DIR);
@@ -68,11 +69,6 @@ function withWidgetTarget(config) {
     const entitlementsContent = buildPlistXml(entitlements);
     fs.writeFileSync(path.join(widgetPath, `${WIDGET_TARGET_NAME}.entitlements`), entitlementsContent);
 
-    const nativeTargetSec = xcodeProject.pbxNativeTargetSection();
-    const appName = xcodeProject.getFirstProject().firstProject.targets
-      .map((t) => nativeTargetSec[t.value]?.name)
-      .find((name) => name && !name.includes("Tests"));
-
     const existingTargets = xcodeProject.pbxNativeTargetSection();
     const alreadyExists = Object.values(existingTargets).some(
       (t) => typeof t === "object" && t.name === `"${WIDGET_TARGET_NAME}"`
@@ -113,6 +109,7 @@ function withWidgetTarget(config) {
           config_obj.buildSettings.LD_RUNPATH_SEARCH_PATHS = `"$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"`;
           config_obj.buildSettings.PRODUCT_NAME = `"$(TARGET_NAME)"`;
           config_obj.buildSettings.SKIP_INSTALL = "YES";
+          config_obj.buildSettings.DEVELOPMENT_TEAM = `"${APPLE_TEAM_ID}"`;
           config_obj.buildSettings.CODE_SIGN_STYLE = '"Automatic"';
         }
       }
@@ -140,39 +137,6 @@ function withWidgetTarget(config) {
         { target: targetUuid },
         widgetGroupKey
       );
-    }
-
-    const mainTargetKey = xcodeProject.getFirstTarget().uuid;
-
-    const productFile = widgetTarget.pbxNativeTarget?.productReference;
-    if (productFile) {
-      const copyPhaseUuid = xcodeProject.generateUuid();
-      const buildFileUuid = xcodeProject.generateUuid();
-
-      xcodeProject.hash.project.objects["PBXBuildFile"] = xcodeProject.hash.project.objects["PBXBuildFile"] || {};
-      xcodeProject.hash.project.objects["PBXBuildFile"][buildFileUuid] = {
-        isa: "PBXBuildFile",
-        fileRef: productFile,
-        settings: { ATTRIBUTES: ["RemoveHeadersOnCopy"] },
-      };
-      xcodeProject.hash.project.objects["PBXBuildFile"][buildFileUuid + "_comment"] = `${WIDGET_TARGET_NAME}.appex in Embed App Extensions`;
-
-      xcodeProject.hash.project.objects["PBXCopyFilesBuildPhase"] = xcodeProject.hash.project.objects["PBXCopyFilesBuildPhase"] || {};
-      xcodeProject.hash.project.objects["PBXCopyFilesBuildPhase"][copyPhaseUuid] = {
-        isa: "PBXCopyFilesBuildPhase",
-        buildActionMask: 2147483647,
-        dstPath: '""',
-        dstSubfolderSpec: 13,
-        files: [{ value: buildFileUuid, comment: `${WIDGET_TARGET_NAME}.appex in Embed App Extensions` }],
-        name: '"Embed App Extensions"',
-        runOnlyForDeploymentPostprocessing: 0,
-      };
-      xcodeProject.hash.project.objects["PBXCopyFilesBuildPhase"][copyPhaseUuid + "_comment"] = "Embed App Extensions";
-
-      const mainNativeTarget = xcodeProject.pbxNativeTargetSection()[mainTargetKey];
-      if (mainNativeTarget && mainNativeTarget.buildPhases) {
-        mainNativeTarget.buildPhases.push({ value: copyPhaseUuid, comment: "Embed App Extensions" });
-      }
     }
 
     return mod;
