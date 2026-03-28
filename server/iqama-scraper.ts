@@ -16,7 +16,7 @@ export interface MasjidIqamaSchedule {
   iqama: DayIqama;
 }
 
-type IqamaSourceType = "dpt" | "iar" | "mca-html" | "alnoor-html" | "sbia-html" | "icf-html";
+type IqamaSourceType = "dpt" | "iar" | "mca-html" | "alnoor-html" | "sbia-html" | "icf-html" | "athanplus";
 
 interface IqamaSource {
   name: string;
@@ -76,6 +76,12 @@ const IQAMA_SOURCES: IqamaSource[] = [
     type: "icf-html",
     url: "https://icfbayarea.com/",
     timezone: "America/Los_Angeles",
+  },
+  {
+    name: "Pillars Mosque",
+    type: "athanplus",
+    url: "https://timing.athanplus.com/masjid/widgets/monthly?theme=1&masjid_id=xdyqvadX",
+    timezone: "America/New_York",
   },
 ];
 
@@ -416,6 +422,126 @@ async function fetchAlNoorHtml(pool: pg.Pool, source: IqamaSource): Promise<void
   }
 }
 
+async function fetchAthanPlus(pool: pg.Pool, source: IqamaSource): Promise<void> {
+  try {
+    const { year, month } = getDateInTz(source.timezone);
+    const resp = await fetch(source.url, { headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    }});
+    if (!resp.ok) {
+      console.error(`[Iqama] ${source.name} AthanPlus returned ${resp.status}`);
+      return;
+    }
+    const html = await resp.text();
+
+    const prayerSection = html.slice(0, html.indexOf('iqamah-table') > -1 ? html.indexOf('iqamah-table') : html.length);
+    const spanRegex = /<span>([^<]*)<\/span>/gi;
+    const spans: string[] = [];
+    let m;
+    while ((m = spanRegex.exec(prayerSection)) !== null) {
+      spans.push(m[1].trim());
+    }
+
+    const adhanByDay: Record<number, { maghrib: string }> = {};
+    for (let i = 0; i < spans.length; i++) {
+      const dayNum = parseInt(spans[i]);
+      if (dayNum >= 1 && dayNum <= 31 && spans[i] === String(dayNum)) {
+        const maghribVal = spans[i + 7];
+        if (maghribVal && /^\d{1,2}:\d{2}/.test(maghribVal)) {
+          adhanByDay[dayNum] = { maghrib: maghribVal.trim() };
+        }
+      }
+    }
+
+    const iqStart = html.indexOf('iqamah-table');
+    if (iqStart === -1) {
+      console.error(`[Iqama] ${source.name}: no iqamah table found`);
+      return;
+    }
+    const iqEnd = html.indexOf('</table>', iqStart);
+    const iqTable = html.slice(iqStart, iqEnd);
+
+    const tdRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
+    const allCells: string[] = [];
+    while ((m = tdRegex.exec(iqTable)) !== null) {
+      allCells.push(m[1].replace(/<[^>]+>/g, "").trim());
+    }
+    const headerIdx = allCells.findIndex(c => /^[A-Z]{3},/.test(c));
+    if (headerIdx === -1) {
+      console.error(`[Iqama] ${source.name}: no iqamah data rows found`);
+      return;
+    }
+    const dataCells = allCells.slice(headerIdx);
+    const changeEntries: { day: number; fajr: string; dhuhr: string; asr: string; maghrib: string; isha: string }[] = [];
+    for (let i = 0; i + 5 < dataCells.length; i += 6) {
+      const dateStr = dataCells[i];
+      const dayMatch = dateStr.match(/(\d+)/);
+      if (!dayMatch) continue;
+      const day = parseInt(dayMatch[1]);
+
+      const normalize = (t: string): string => {
+        const clean = t.trim();
+        if (/^\d{1,2}:\d{2}\s*[AP]M$/i.test(clean)) return clean;
+        const tm = clean.match(/^(\d{1,2}):(\d{2})\s*$/);
+        if (!tm) return clean;
+        let h = parseInt(tm[1]);
+        const min = tm[2];
+        if (h >= 1 && h <= 6) return `${h}:${min} AM`;
+        if (h >= 7 && h <= 11) return `${h}:${min} PM`;
+        if (h === 12) return `12:${min} PM`;
+        return `${h - 12}:${min} PM`;
+      };
+
+      changeEntries.push({
+        day,
+        fajr: normalize(dataCells[i + 1]),
+        dhuhr: normalize(dataCells[i + 2]),
+        asr: normalize(dataCells[i + 3]),
+        maghrib: dataCells[i + 4],
+        isha: normalize(dataCells[i + 5]),
+      });
+    }
+
+    if (changeEntries.length === 0) {
+      console.error(`[Iqama] ${source.name}: no iqamah change entries parsed`);
+      return;
+    }
+    changeEntries.sort((a, b) => a.day - b.day);
+
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const rows: { masjid: string; date: string; fajr: string; dhuhr: string; asr: string; maghrib: string; isha: string }[] = [];
+    for (let d = 1; d <= daysInMonth; d++) {
+      let active = changeEntries[0];
+      for (const entry of changeEntries) {
+        if (entry.day <= d) active = entry;
+        else break;
+      }
+
+      let maghrib = active.maghrib;
+      if (/sunset/i.test(maghrib)) {
+        const adhan = adhanByDay[d];
+        if (adhan) {
+          const tm = adhan.maghrib.match(/^(\d{1,2}):(\d{2})/);
+          if (tm) {
+            let h = parseInt(tm[1]);
+            let min = parseInt(tm[2]) + 3;
+            if (min >= 60) { min -= 60; h++; }
+            maghrib = `${h}:${String(min).padStart(2, "0")} PM`;
+          }
+        }
+      }
+
+      const dateKey = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      rows.push({ masjid: source.name, date: dateKey, fajr: active.fajr, dhuhr: active.dhuhr, asr: active.asr, maghrib, isha: active.isha });
+    }
+
+    const count = await bulkUpsert(pool, rows);
+    if (count > 0) console.log(`[Iqama] Synced ${count} ${source.name} days for month ${String(month).padStart(2, "0")}`);
+  } catch (err: any) {
+    console.error(`[Iqama] Error syncing ${source.name}:`, err.message);
+  }
+}
+
 async function fetchICFHtml(pool: pg.Pool, source: IqamaSource): Promise<void> {
   try {
     const resp = await fetch(source.url, { headers: {
@@ -530,6 +656,9 @@ async function syncSource(pool: pg.Pool, source: IqamaSource, year: number, mont
       break;
     case "icf-html":
       await fetchICFHtml(pool, source);
+      break;
+    case "athanplus":
+      await fetchAthanPlus(pool, source);
       break;
   }
 }
