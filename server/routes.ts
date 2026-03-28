@@ -5646,8 +5646,14 @@ Return ONLY the JSON object, no markdown, no explanation.`,
   app.post("/api/admin/events/ingest-email", async (req, res) => {
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {
-      const { emailHtml, organizer } = req.body;
-      if (!emailHtml) return res.status(400).json({ error: "Email HTML content is required" });
+      const emailHtml = req.body.html || req.body.emailHtml || req.body.htmlContent;
+      const defaultOrganizer = req.body.organizer || req.body.defaultOrganizer || "";
+      if (!emailHtml || typeof emailHtml !== "string" || emailHtml.trim().length === 0) {
+        return res.status(400).json({ error: "HTML email body is required" });
+      }
+      if (emailHtml.length > 100000) {
+        return res.status(400).json({ error: "Email HTML is too large. Maximum 100KB allowed." });
+      }
 
       const message = await anthropic.messages.create({
         model: "claude-sonnet-4-6",
@@ -5661,18 +5667,18 @@ RULES:
 - Only extract events that are in the future.
 - Each event must have at minimum a title and date.
 - If you find registration/RSVP links, include them.
-- If the organizer is obvious from the email, include it. Otherwise use "${organizer || "Unknown"}".
+- If the organizer is obvious from the email, include it. Otherwise use "${defaultOrganizer || "Unknown"}".
 - For recurring events (e.g. "every Friday"), create ONE entry with the next occurrence.
 
-Return ONLY a JSON array of event objects. Each object:
+Return ONLY a JSON array of event objects. Each object should have these fields (use null for any field you cannot determine):
 {
   "title": "event title",
   "date": "YYYY-MM-DD",
-  "startTime": "HH:MM" (24-hour, null if not shown),
-  "endTime": "HH:MM" (24-hour, null if not shown),
-  "location": "venue or address",
-  "description": "brief description (2-3 sentences max)",
-  "organizer": "hosting organization",
+  "startTime": "HH:MM" (24-hour format),
+  "endTime": "HH:MM" (24-hour format, null if not shown),
+  "location": "full address or venue name",
+  "description": "brief description of the event (2-3 sentences max)",
+  "organizer": "organization or group hosting the event",
   "registrationUrl": "registration/RSVP URL if found"
 }
 
@@ -5695,15 +5701,23 @@ ${emailHtml.slice(0, 50000)}`,
         const jsonMatch = jsonStr.match(/\[[\s\S]*\]/);
         if (jsonMatch) jsonStr = jsonMatch[0];
         events = JSON.parse(jsonStr);
+        if (!Array.isArray(events)) events = [events];
       } catch {
         return res.status(500).json({ error: "Failed to parse AI response", raw: textContent.text });
+      }
+
+      for (const ev of events) {
+        if (ev.organizer) {
+          const resolved = resolveOrgName(ev.organizer);
+          if (resolved) ev.organizer = resolved;
+        }
       }
 
       console.log(`[Email Ingest] Extracted ${events.length} events from newsletter`);
       res.json({ events, source: "email" });
     } catch (error: any) {
       console.error("[Email Ingest] Error:", error.message);
-      res.status(500).json({ error: "Failed to extract events: " + error.message });
+      res.status(500).json({ error: "Failed to extract events from email: " + error.message });
     }
   });
 
@@ -5711,101 +5725,183 @@ ${emailHtml.slice(0, 50000)}`,
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {
       const { handle } = req.body;
-      if (!handle) return res.status(400).json({ error: "Instagram handle is required" });
-
-      const cleanHandle = handle.replace(/^@/, "").trim();
-      const igUrl = `https://www.instagram.com/${cleanHandle}/`;
-
-      const igResp = await fetch(igUrl, {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          "Accept-Language": "en-US,en;q=0.5",
-        },
-        redirect: "follow",
-      });
-
-      if (!igResp.ok) {
-        return res.status(400).json({ error: `Could not access Instagram profile @${cleanHandle} (HTTP ${igResp.status})` });
+      if (!handle || typeof handle !== "string" || handle.trim().length === 0) {
+        return res.status(400).json({ error: "Instagram handle is required" });
       }
 
-      const html = await igResp.text();
+      const cleanHandle = handle.replace(/^@/, "").trim().toLowerCase();
+      if (!/^[a-z0-9._]{1,30}$/.test(cleanHandle)) {
+        return res.status(400).json({ error: "Invalid Instagram handle. Use only letters, numbers, dots, and underscores (max 30 characters)." });
+      }
+      const profileUrl = `https://www.instagram.com/${cleanHandle}/`;
 
-      const metaDescMatch = html.match(/<meta[^>]*property="og:description"[^>]*content="([^"]*)"[^>]*>/i)
-        || html.match(/<meta[^>]*name="description"[^>]*content="([^"]*)"[^>]*>/i);
-      const profileDesc = metaDescMatch ? metaDescMatch[1] : "";
+      let profileHtml: string;
+      try {
+        const response = await fetch(profileUrl, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+          },
+          redirect: "follow",
+        });
+        if (!response.ok) {
+          return res.status(400).json({ error: `Could not fetch Instagram profile for @${cleanHandle}. The profile may be private or not exist. (HTTP ${response.status})` });
+        }
+        profileHtml = await response.text();
+      } catch (fetchError: any) {
+        return res.status(400).json({ error: `Failed to fetch Instagram profile: ${fetchError.message}` });
+      }
 
-      const captionMatches: string[] = [];
+      const metaDescMatch = profileHtml.match(/<meta[^>]*name="description"[^>]*content="([^"]*)"[^>]*>/i)
+        || profileHtml.match(/<meta[^>]*content="([^"]*)"[^>]*name="description"[^>]*>/i);
+      const ogDescMatch = profileHtml.match(/<meta[^>]*property="og:description"[^>]*content="([^"]*)"[^>]*>/i)
+        || profileHtml.match(/<meta[^>]*content="([^"]*)"[^>]*property="og:description"[^>]*>/i);
+      const ogImageMatch = profileHtml.match(/<meta[^>]*property="og:image"[^>]*content="([^"]*)"[^>]*>/i)
+        || profileHtml.match(/<meta[^>]*content="([^"]*)"[^>]*property="og:image"[^>]*>/i);
+      const titleMatch = profileHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
+
+      const scriptDataMatches = profileHtml.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/gi);
+      let ldJsonData = "";
+      if (scriptDataMatches) {
+        ldJsonData = scriptDataMatches.map(m => {
+          const inner = m.replace(/<\/?script[^>]*>/gi, "");
+          return inner;
+        }).join("\n");
+      }
+
+      interface PostData {
+        caption: string;
+        imageUrl: string;
+        timestamp: string;
+      }
+      let posts: PostData[] = [];
+
       const captionRegex = /"edge_media_to_caption":\{"edges":\[\{"node":\{"text":"([^"]*?)"\}\}\]/g;
+      const displayUrlRegex = /"display_url":"([^"]+)"/g;
+      const captionMatches: string[] = [];
+      const imageUrls: string[] = [];
       let capMatch;
-      while ((capMatch = captionRegex.exec(html)) !== null && captionMatches.length < 12) {
+      while ((capMatch = captionRegex.exec(profileHtml)) !== null && captionMatches.length < 12) {
         captionMatches.push(capMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"'));
       }
+      let dispMatch;
+      while ((dispMatch = displayUrlRegex.exec(profileHtml)) !== null && imageUrls.length < 12) {
+        imageUrls.push(dispMatch[1].replace(/\\u0026/g, "&"));
+      }
 
-      const sharedDataMatch = html.match(/<script type="text\/javascript">window\._sharedData\s*=\s*(\{[\s\S]*?\});<\/script>/);
-      if (sharedDataMatch && captionMatches.length === 0) {
+      if (captionMatches.length > 0 || imageUrls.length > 0) {
+        const maxLen = Math.max(captionMatches.length, imageUrls.length);
+        for (let i = 0; i < maxLen; i++) {
+          posts.push({
+            caption: captionMatches[i] || "",
+            imageUrl: imageUrls[i] || "",
+            timestamp: "",
+          });
+        }
+      }
+
+      const sharedDataMatch = profileHtml.match(/window\._sharedData\s*=\s*(\{[\s\S]*?\});\s*<\/script>/)
+        || profileHtml.match(/<script type="text\/javascript">window\._sharedData\s*=\s*(\{[\s\S]*?\});<\/script>/);
+      if (posts.length === 0 && sharedDataMatch) {
         try {
-          const shared = JSON.parse(sharedDataMatch[1]);
-          const edges = shared?.entry_data?.ProfilePage?.[0]?.graphql?.user?.edge_owner_to_timeline_media?.edges || [];
-          for (const edge of edges.slice(0, 12)) {
-            const cap = edge?.node?.edge_media_to_caption?.edges?.[0]?.node?.text;
-            if (cap) captionMatches.push(cap);
-          }
+          const sharedData = JSON.parse(sharedDataMatch[1]);
+          const edges = sharedData?.entry_data?.ProfilePage?.[0]?.graphql?.user?.edge_owner_to_timeline_media?.edges || [];
+          posts = edges.slice(0, 12).map((e: any) => ({
+            caption: e.node?.edge_media_to_caption?.edges?.[0]?.node?.text || "",
+            imageUrl: e.node?.display_url || e.node?.thumbnail_src || "",
+            timestamp: e.node?.taken_at_timestamp ? new Date(e.node.taken_at_timestamp * 1000).toISOString() : "",
+          })).filter((p: PostData) => p.caption.length > 10 || p.imageUrl);
+        } catch {}
+      }
+
+      const additionalScripts = profileHtml.match(/\"edge_owner_to_timeline_media\"[\s\S]*?\"edges\":\s*\[([\s\S]*?)\]\s*\}/);
+      if (posts.length === 0 && additionalScripts) {
+        try {
+          const edgesStr = "[" + additionalScripts[1] + "]";
+          const edges = JSON.parse(edgesStr);
+          posts = edges.slice(0, 12).map((e: any) => ({
+            caption: e.node?.edge_media_to_caption?.edges?.[0]?.node?.text || "",
+            imageUrl: e.node?.display_url || e.node?.thumbnail_src || "",
+            timestamp: e.node?.taken_at_timestamp ? new Date(e.node.taken_at_timestamp * 1000).toISOString() : "",
+          })).filter((p: PostData) => p.caption.length > 10 || p.imageUrl);
         } catch {}
       }
 
       const altTexts: string[] = [];
       const altRegex = /alt="([^"]{20,})"/gi;
       let altMatch;
-      while ((altMatch = altRegex.exec(html)) !== null && altTexts.length < 12) {
+      while ((altMatch = altRegex.exec(profileHtml)) !== null && altTexts.length < 12) {
         const text = altMatch[1];
         if (!text.includes("profile picture") && !text.includes("may contain")) {
           altTexts.push(text);
         }
       }
 
-      const allContent = [
-        `Profile: @${cleanHandle}`,
-        profileDesc ? `Bio: ${profileDesc}` : "",
-        ...captionMatches.map((c, i) => `Post ${i + 1}: ${c}`),
-        ...altTexts.map((a, i) => `Image ${i + 1} alt: ${a}`),
+      const postsSummary = posts.length > 0
+        ? posts.map((p, i) => {
+            let entry = `[Post ${i + 1}]`;
+            if (p.timestamp) entry += ` (${p.timestamp})`;
+            if (p.imageUrl) entry += `\nImage: ${p.imageUrl}`;
+            if (p.caption) entry += `\nCaption: ${p.caption}`;
+            return entry;
+          }).join("\n\n")
+        : "";
+
+      const profileInfo = [
+        metaDescMatch ? `Meta description: ${metaDescMatch[1]}` : "",
+        ogDescMatch ? `OG description: ${ogDescMatch[1]}` : "",
+        ogImageMatch ? `Profile/OG image: ${ogImageMatch[1]}` : "",
+        titleMatch ? `Page title: ${titleMatch[1]}` : "",
+        ldJsonData ? `Structured data: ${ldJsonData.slice(0, 2000)}` : "",
+        postsSummary ? `Recent posts with images:\n${postsSummary}` : "",
+        altTexts.length > 0 ? `Image alt texts:\n${altTexts.map((a, i) => `Image ${i + 1}: ${a}`).join("\n")}` : "",
       ].filter(Boolean).join("\n\n");
 
-      if (allContent.length < 50) {
-        return res.status(400).json({ error: `Could not extract enough content from @${cleanHandle}. The profile may be private or have limited public content.` });
+      if (profileInfo.trim().length < 20) {
+        return res.status(400).json({
+          error: `Could not extract meaningful content from @${cleanHandle}'s Instagram profile. The profile may be private, empty, or Instagram may be blocking access. Try pasting their post captions manually via the email ingest instead.`,
+        });
       }
+
+      const resolvedOrgFromHandle = resolveOrgName(cleanHandle) || resolveOrgName(cleanHandle.replace(/[._]/g, " "));
+      const profileTitle = titleMatch ? titleMatch[1].replace(/\(.*\)/, "").replace(/@\w+/g, "").replace(/•.*/, "").trim() : "";
+      const resolvedOrgFromTitle = profileTitle ? resolveOrgName(profileTitle) : "";
+      const defaultOrganizer = resolvedOrgFromHandle || resolvedOrgFromTitle || cleanHandle;
 
       const message = await anthropic.messages.create({
         model: "claude-sonnet-4-6",
         max_tokens: 4000,
         messages: [{
           role: "user",
-          content: `You are an event extraction agent for a Muslim community app. Analyze these Instagram posts from @${cleanHandle} and extract any UPCOMING events. Today's date is ${new Date().toISOString().split("T")[0]}.
+          content: `You are an event extraction agent for a Muslim community app. Analyze this Instagram profile data for @${cleanHandle} and extract any UPCOMING event announcements from their posts, captions, and images. Today's date is ${new Date().toISOString().split("T")[0]}.
 
 RULES:
-- Only extract posts that announce specific events with dates/times.
-- Ignore general announcements, quotes, or non-event content.
+- Only extract posts that announce specific upcoming events with dates, times, or locations.
+- Ignore general announcements, quotes, motivational content, or past event recaps.
 - If dates are relative ("this Friday", "next Saturday"), calculate the actual date.
 - If a year is not specified, assume ${new Date().getFullYear()} (or ${new Date().getFullYear() + 1} if the date has already passed).
 - Only include future events.
+- Look at both captions AND image URLs (event flyers often contain dates/times).
 
-Return ONLY a JSON array of event objects:
+Return ONLY a JSON array of event objects. Each object should have these fields (use null for any field you cannot determine):
 {
   "title": "event title",
   "date": "YYYY-MM-DD",
-  "startTime": "HH:MM" (24-hour, null if unclear),
-  "endTime": "HH:MM" (24-hour, null if unclear),
-  "location": "venue or address if mentioned",
-  "description": "brief description (2-3 sentences max)",
-  "organizer": "@${cleanHandle}",
-  "registrationUrl": "any link mentioned in the post"
+  "startTime": "HH:MM" (24-hour format),
+  "endTime": "HH:MM" (24-hour format, null if not shown),
+  "location": "full address or venue name",
+  "description": "brief description of the event (2-3 sentences max)",
+  "organizer": "the full official name of the organization (e.g. 'Islamic Association of Raleigh', NOT just the Instagram handle). Use the profile name/bio to determine the full org name. Default to: ${defaultOrganizer}",
+  "registrationUrl": "registration or RSVP URL if found",
+  "imageUrl": "URL of the post image/flyer if available"
 }
 
 If no events are found, return an empty array [].
 Return ONLY the JSON array, no markdown, no explanation.
 
-INSTAGRAM CONTENT:
-${allContent.slice(0, 30000)}`,
+INSTAGRAM PROFILE DATA:
+${profileInfo.slice(0, 30000)}`,
         }],
       });
 
@@ -5820,15 +5916,23 @@ ${allContent.slice(0, 30000)}`,
         const jsonMatch = jsonStr.match(/\[[\s\S]*\]/);
         if (jsonMatch) jsonStr = jsonMatch[0];
         events = JSON.parse(jsonStr);
+        if (!Array.isArray(events)) events = [events];
       } catch {
         return res.status(500).json({ error: "Failed to parse AI response", raw: textContent.text });
       }
 
+      for (const ev of events) {
+        if (ev.organizer) {
+          const resolved = resolveOrgName(ev.organizer);
+          if (resolved) ev.organizer = resolved;
+        }
+      }
+
       console.log(`[Instagram Ingest] Extracted ${events.length} events from @${cleanHandle}`);
-      res.json({ events, source: "instagram", handle: cleanHandle, postsScanned: captionMatches.length + altTexts.length });
+      res.json({ events, source: "instagram", handle: cleanHandle, postsScanned: posts.length });
     } catch (error: any) {
       console.error("[Instagram Ingest] Error:", error.message);
-      res.status(500).json({ error: "Failed to extract events: " + error.message });
+      res.status(500).json({ error: "Failed to extract events from Instagram: " + error.message });
     }
   });
 

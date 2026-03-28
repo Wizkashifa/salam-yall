@@ -337,28 +337,30 @@
         </div>
       </div>
 
-      <div class="section">
-        <div class="section-title"><span class="icon">📨</span> Ingest Events</div>
-        <p style="font-size:12px;color:#6B7280;margin-bottom:10px;">Extract events from newsletters or Instagram using AI.</p>
-        <div style="display:flex;gap:8px;margin-bottom:12px;">
-          <button class="btn btn-sm" id="ingestEmailTab" onclick="showIngestTab('email')" style="background:#10B981;color:#fff;flex:1;">📧 Newsletter</button>
-          <button class="btn btn-sm" id="ingestIgTab" onclick="showIngestTab('instagram')" style="background:#1E1E1E;color:#9CA3AF;flex:1;">📷 Instagram</button>
-        </div>
-        <div id="ingestEmailPanel">
-          <label>Default Organizer (optional)</label>
-          <input type="text" id="ingestEmailOrganizer" placeholder="e.g. Islamic Center of Raleigh">
-          <label>Paste newsletter HTML or plain text</label>
-          <textarea id="ingestEmailContent" rows="6" placeholder="Paste the full email content here..."></textarea>
-          <button class="btn btn-gold" onclick="ingestEmail()" id="ingestEmailBtn" style="margin-top:8px;width:100%;">Extract Events with AI</button>
-        </div>
-        <div id="ingestIgPanel" style="display:none;">
-          <label>Instagram Handle</label>
-          <input type="text" id="ingestIgHandle" placeholder="@masjidname">
-          <button class="btn btn-gold" onclick="ingestInstagram()" id="ingestIgBtn" style="margin-top:8px;width:100%;">Scan Posts for Events</button>
-        </div>
-        <div id="ingestStatus" style="display:none;font-size:12px;padding:8px 12px;border-radius:8px;margin:12px 0;"></div>
-        <div id="ingestResults"></div>
+      <div class="section" style="border-left:3px solid #6366F1;">
+        <div class="section-title"><span class="icon">📧</span> Ingest from Email Newsletter</div>
+        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Paste the HTML source of a forwarded newsletter email. AI will extract all events mentioned in it for review before publishing.</p>
+        <label>Newsletter HTML</label>
+        <textarea id="ingestEmailHtml" placeholder="Paste newsletter email HTML here..." style="min-height:120px;font-family:monospace;font-size:12px;"></textarea>
+        <button class="btn btn-gold" onclick="ingestEmail()" id="ingestEmailBtn">Extract Events from Email</button>
+        <div id="ingestEmailStatus" style="display:none;font-size:12px;padding:8px 12px;border-radius:8px;margin-top:10px;"></div>
       </div>
+
+      <div class="section" style="border-left:3px solid #EC4899;">
+        <div class="section-title"><span class="icon">📷</span> Ingest from Instagram</div>
+        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Enter a public Instagram handle to fetch recent posts and extract event announcements.</p>
+        <label>Instagram Handle</label>
+        <input type="text" id="ingestIgHandle" placeholder="@masjid_handle">
+        <button class="btn btn-gold" onclick="ingestInstagram()" id="ingestIgBtn">Fetch & Extract Events</button>
+        <div id="ingestIgStatus" style="display:none;font-size:12px;padding:8px 12px;border-radius:8px;margin-top:10px;"></div>
+      </div>
+
+      <div class="section" id="ingestedEventsSection" style="display:none;border-left:3px solid #10B981;">
+        <div class="section-title"><span class="icon">✅</span> Ingested Events — Review & Publish</div>
+        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Review extracted events below. Edit any fields, then publish or dismiss each one.</p>
+        <div id="ingestedEventsList"></div>
+      </div>
+
 
       <div class="section">
         <div class="section-title"><span class="icon">🗓️</span> All Events</div>
@@ -1797,140 +1799,6 @@
       }
     }
 
-    function showIngestTab(tab) {
-      var emailPanel = document.getElementById('ingestEmailPanel');
-      var igPanel = document.getElementById('ingestIgPanel');
-      var emailTab = document.getElementById('ingestEmailTab');
-      var igTab = document.getElementById('ingestIgTab');
-      if (tab === 'email') {
-        emailPanel.style.display = 'block';
-        igPanel.style.display = 'none';
-        emailTab.style.background = '#10B981';
-        emailTab.style.color = '#fff';
-        igTab.style.background = '#1E1E1E';
-        igTab.style.color = '#9CA3AF';
-      } else {
-        emailPanel.style.display = 'none';
-        igPanel.style.display = 'block';
-        igTab.style.background = '#10B981';
-        igTab.style.color = '#fff';
-        emailTab.style.background = '#1E1E1E';
-        emailTab.style.color = '#9CA3AF';
-      }
-    }
-
-    function showIngestStatus(msg, isError) {
-      var el = document.getElementById('ingestStatus');
-      el.style.display = 'block';
-      el.textContent = msg;
-      el.style.background = isError ? '#7F1D1D' : '#064E3B';
-      el.style.color = isError ? '#FCA5A5' : '#6EE7B7';
-    }
-
-    async function ingestEmail() {
-      var content = document.getElementById('ingestEmailContent').value.trim();
-      var organizer = document.getElementById('ingestEmailOrganizer').value.trim();
-      if (!content) { showToast('Paste newsletter content first', true); return; }
-      var btn = document.getElementById('ingestEmailBtn');
-      btn.disabled = true;
-      btn.textContent = 'Extracting...';
-      showIngestStatus('Sending to AI for extraction...', false);
-      try {
-        var res = await fetch('/api/admin/events/ingest-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
-          body: JSON.stringify({ htmlContent: content, defaultOrganizer: organizer || undefined })
-        });
-        var data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed');
-        showIngestStatus('Extracted ' + data.events.length + ' event(s). Review below:', false);
-        renderIngestResults(data.events);
-      } catch (err) {
-        showIngestStatus('Error: ' + err.message, true);
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Extract Events with AI';
-      }
-    }
-
-    async function ingestInstagram() {
-      var handle = document.getElementById('ingestIgHandle').value.trim().replace(/^@/, '');
-      if (!handle) { showToast('Enter an Instagram handle', true); return; }
-      var btn = document.getElementById('ingestIgBtn');
-      btn.disabled = true;
-      btn.textContent = 'Scanning...';
-      showIngestStatus('Scraping Instagram posts for @' + handle + '...', false);
-      try {
-        var res = await fetch('/api/admin/events/ingest-instagram', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
-          body: JSON.stringify({ handle: handle })
-        });
-        var data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed');
-        showIngestStatus('Found ' + data.events.length + ' event(s) from @' + handle + '. Review below:', false);
-        renderIngestResults(data.events);
-      } catch (err) {
-        showIngestStatus('Error: ' + err.message, true);
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Scan Posts for Events';
-      }
-    }
-
-    function renderIngestResults(events) {
-      var container = document.getElementById('ingestResults');
-      if (!events || events.length === 0) {
-        container.innerHTML = '<p style="color:#9CA3AF;font-size:13px;">No events found.</p>';
-        return;
-      }
-      var html = '';
-      events.forEach(function(ev, idx) {
-        html += '<div style="background:#1E1E1E;border:1px solid #333;border-radius:10px;padding:12px;margin-bottom:10px;">';
-        html += '<div style="font-weight:600;color:#F5F5F5;font-size:14px;">' + (ev.title || 'Untitled') + '</div>';
-        if (ev.organizer) html += '<div style="color:#10B981;font-size:12px;margin-top:2px;">' + ev.organizer + '</div>';
-        if (ev.start) html += '<div style="color:#9CA3AF;font-size:12px;margin-top:4px;">📅 ' + new Date(ev.start).toLocaleString() + '</div>';
-        if (ev.location) html += '<div style="color:#9CA3AF;font-size:12px;margin-top:2px;">📍 ' + ev.location + '</div>';
-        if (ev.description) html += '<div style="color:#6B7280;font-size:11px;margin-top:4px;max-height:60px;overflow:hidden;">' + ev.description.substring(0, 200) + '</div>';
-        html += '<button class="btn btn-gold" onclick="publishIngestedEvent(' + idx + ')" style="margin-top:8px;font-size:12px;padding:6px 12px;">Publish</button>';
-        html += '</div>';
-      });
-      container.innerHTML = html;
-      container._events = events;
-    }
-
-    async function publishIngestedEvent(idx) {
-      var container = document.getElementById('ingestResults');
-      var ev = container._events[idx];
-      if (!ev) return;
-      try {
-        var payload = {
-          title: ev.title,
-          description: ev.description || '',
-          start: ev.start,
-          end: ev.end || null,
-          location: ev.location || '',
-          organizer: ev.organizer || '',
-          category: ev.category || 'community',
-          source: 'admin-ingest'
-        };
-        var res = await fetch('/api/admin/community-events', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },
-          body: JSON.stringify(payload)
-        });
-        if (!res.ok) throw new Error('Failed to publish');
-        showToast('Published: ' + ev.title);
-        var cards = container.querySelectorAll('div[style*="background:#1E1E1E"]');
-        if (cards[idx]) {
-          cards[idx].style.opacity = '0.4';
-          cards[idx].querySelector('button').disabled = true;
-          cards[idx].querySelector('button').textContent = 'Published ✓';
-        }
-      } catch (err) {
-        showToast('Error: ' + err.message, true);
-      }
-    }
 
     async function publishCommunityEvent() {
       var title = document.getElementById('flyerTitle').value.trim();
@@ -1981,6 +1849,201 @@
         btn.disabled = false;
         btn.textContent = 'Publish Event';
       }
+    }
+
+    var ingestedEvents = [];
+
+    async function ingestEmail() {
+      var html = document.getElementById('ingestEmailHtml').value.trim();
+      if (!html) { showToast('Paste newsletter HTML first', true); return; }
+      var btn = document.getElementById('ingestEmailBtn');
+      var status = document.getElementById('ingestEmailStatus');
+      btn.disabled = true;
+      btn.textContent = 'Extracting...';
+      status.style.display = 'block';
+      status.style.background = '#1A2E22';
+      status.style.color = '#6EE7B7';
+      status.textContent = 'Sending email to AI for event extraction...';
+      try {
+        var res = await fetch('/api/admin/events/ingest-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify({ html: html }),
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        var data = await res.json();
+        if (!res.ok) {
+          status.style.background = '#2A1818';
+          status.style.color = '#F87171';
+          status.textContent = data.error || 'Extraction failed';
+          return;
+        }
+        if (!data.events || data.events.length === 0) {
+          status.style.background = '#2A2318';
+          status.style.color = '#D4A843';
+          status.textContent = 'No events found in this newsletter.';
+          return;
+        }
+        status.style.background = '#1A2E22';
+        status.style.color = '#6EE7B7';
+        status.textContent = 'Found ' + data.events.length + ' event(s). Review below.';
+        addIngestedEvents(data.events, 'email');
+      } catch(e) {
+        status.style.background = '#2A1818';
+        status.style.color = '#F87171';
+        status.textContent = 'Connection error';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Extract Events from Email';
+      }
+    }
+
+    async function ingestInstagram() {
+      var handle = document.getElementById('ingestIgHandle').value.trim();
+      if (!handle) { showToast('Enter an Instagram handle first', true); return; }
+      var btn = document.getElementById('ingestIgBtn');
+      var status = document.getElementById('ingestIgStatus');
+      btn.disabled = true;
+      btn.textContent = 'Fetching...';
+      status.style.display = 'block';
+      status.style.background = '#1A2E22';
+      status.style.color = '#6EE7B7';
+      status.textContent = 'Fetching Instagram profile and extracting events...';
+      try {
+        var res = await fetch('/api/admin/events/ingest-instagram', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify({ handle: handle }),
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        var data = await res.json();
+        if (!res.ok) {
+          status.style.background = '#2A1818';
+          status.style.color = '#F87171';
+          status.textContent = data.error || 'Extraction failed';
+          return;
+        }
+        if (!data.events || data.events.length === 0) {
+          status.style.background = '#2A2318';
+          status.style.color = '#D4A843';
+          status.textContent = 'No event announcements found from @' + (data.handle || handle) + '.';
+          return;
+        }
+        status.style.background = '#1A2E22';
+        status.style.color = '#6EE7B7';
+        status.textContent = 'Found ' + data.events.length + ' event(s) from @' + (data.handle || handle) + '. Review below.';
+        addIngestedEvents(data.events, 'instagram');
+      } catch(e) {
+        status.style.background = '#2A1818';
+        status.style.color = '#F87171';
+        status.textContent = 'Connection error';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Fetch & Extract Events';
+      }
+    }
+
+    function addIngestedEvents(events, source) {
+      for (var i = 0; i < events.length; i++) {
+        events[i]._source = source;
+        events[i]._id = Date.now().toString() + Math.random().toString(36).substr(2, 6) + i;
+        ingestedEvents.push(events[i]);
+      }
+      renderIngestedEvents();
+    }
+
+    function renderIngestedEvents() {
+      var section = document.getElementById('ingestedEventsSection');
+      var container = document.getElementById('ingestedEventsList');
+      if (ingestedEvents.length === 0) {
+        section.style.display = 'none';
+        return;
+      }
+      section.style.display = 'block';
+      container.innerHTML = ingestedEvents.map(function(ev, idx) {
+        var sourceBadge = ev._source === 'email'
+          ? '<span style="background:#312E81;color:#A5B4FC;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600;">EMAIL</span>'
+          : '<span style="background:#831843;color:#F9A8D4;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600;">INSTAGRAM</span>';
+        var startVal = '';
+        if (ev.date && ev.startTime) {
+          startVal = ev.date + 'T' + ev.startTime;
+        }
+        var endVal = '';
+        if (ev.date && ev.endTime) {
+          endVal = ev.date + 'T' + ev.endTime;
+        }
+        return '<div style="background:#1E1E1E;border:1px solid #333;border-radius:12px;padding:16px;margin-bottom:12px;" id="ingested-' + ev._id + '">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
+            '<div style="display:flex;align-items:center;gap:8px;">' + sourceBadge +
+              '<span style="font-size:14px;font-weight:700;color:#F5F5F5;">' + escHtml(ev.title || 'Untitled Event') + '</span>' +
+            '</div>' +
+            '<div style="display:flex;gap:6px;">' +
+              '<button class="btn btn-sm btn-primary" onclick="publishIngested(\'' + ev._id + '\')">Publish</button>' +
+              '<button class="btn btn-sm btn-danger" onclick="dismissIngested(\'' + ev._id + '\')">Dismiss</button>' +
+            '</div>' +
+          '</div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
+            '<div><label>Title</label><input type="text" id="ing-title-' + ev._id + '" value="' + escAttr(ev.title || '') + '"></div>' +
+            '<div><label>Organizer</label><input type="text" id="ing-org-' + ev._id + '" value="' + escAttr(ev.organizer || '') + '"></div>' +
+            '<div><label>Start</label><input type="datetime-local" id="ing-start-' + ev._id + '" value="' + escAttr(startVal) + '"></div>' +
+            '<div><label>End</label><input type="datetime-local" id="ing-end-' + ev._id + '" value="' + escAttr(endVal) + '"></div>' +
+            '<div style="grid-column:1/-1;"><label>Location</label><input type="text" id="ing-loc-' + ev._id + '" value="' + escAttr(ev.location || '') + '"></div>' +
+            '<div style="grid-column:1/-1;"><label>Description</label><textarea id="ing-desc-' + ev._id + '" style="min-height:60px;">' + escHtml(ev.description || '') + '</textarea></div>' +
+            '<div style="grid-column:1/-1;"><label>Registration URL</label><input type="text" id="ing-url-' + ev._id + '" value="' + escAttr(ev.registrationUrl || '') + '"></div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function escAttr(s) {
+      if (!s) return '';
+      return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    async function publishIngested(id) {
+      var ev = ingestedEvents.find(function(e) { return e._id === id; });
+      if (!ev) return;
+      var title = document.getElementById('ing-title-' + id).value.trim();
+      var startTime = document.getElementById('ing-start-' + id).value;
+      if (!title) { showToast('Title is required', true); return; }
+      if (!startTime) { showToast('Start date & time is required', true); return; }
+      var card = document.getElementById('ingested-' + id);
+      var publishBtn = card.querySelector('.btn-primary');
+      publishBtn.disabled = true;
+      publishBtn.textContent = 'Publishing...';
+      try {
+        var body = {
+          title: title,
+          description: document.getElementById('ing-desc-' + id).value.trim(),
+          location: document.getElementById('ing-loc-' + id).value.trim(),
+          organizer: document.getElementById('ing-org-' + id).value.trim(),
+          startTime: new Date(startTime).toISOString(),
+          endTime: document.getElementById('ing-end-' + id).value ? new Date(document.getElementById('ing-end-' + id).value).toISOString() : null,
+          registrationUrl: document.getElementById('ing-url-' + id).value.trim(),
+        };
+        var res = await fetch('/api/admin/events/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify(body),
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        var data = await res.json();
+        if (!res.ok) { showToast(data.error || 'Failed to publish', true); publishBtn.disabled = false; publishBtn.textContent = 'Publish'; return; }
+        showToast('Published: ' + title);
+        ingestedEvents = ingestedEvents.filter(function(e) { return e._id !== id; });
+        renderIngestedEvents();
+        loadCommunityEvents();
+      } catch(e) {
+        showToast('Connection error', true);
+        publishBtn.disabled = false;
+        publishBtn.textContent = 'Publish';
+      }
+    }
+
+    function dismissIngested(id) {
+      ingestedEvents = ingestedEvents.filter(function(e) { return e._id !== id; });
+      renderIngestedEvents();
+      showToast('Event dismissed');
     }
 
     var cachedCommunityEvents = [];
