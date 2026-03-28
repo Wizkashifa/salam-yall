@@ -1068,9 +1068,19 @@
       allEvents = [];
       allRestaurants = [];
       allBusinesses = [];
-      if (section === 'events') fetchEvents();
-      else if (section === 'restaurants') fetchRestaurants();
-      else if (section === 'directory') fetchBusinesses();
+      var grids = { events: 'events-grid', restaurants: 'restaurants-grid', directory: 'directory-grid' };
+      var loaders = { events: 'events-loading', restaurants: 'restaurants-loading', directory: 'directory-loading' };
+      var loaderText = { events: 'Loading events...', restaurants: 'Loading restaurants...', directory: 'Loading businesses...' };
+      var g = document.getElementById(grids[section]);
+      if (g) { g.style.opacity = '0'; g.style.transition = 'opacity 0.2s ease'; }
+      setTimeout(function() {
+        if (g) { g.innerHTML = ''; g.style.opacity = '1'; }
+        var l = document.getElementById(loaders[section]);
+        if (l) { l.innerHTML = '<div class="loading-spinner"></div>' + loaderText[section]; l.style.display = ''; }
+        if (section === 'events') fetchEvents();
+        else if (section === 'restaurants') fetchRestaurants();
+        else if (section === 'directory') fetchBusinesses();
+      }, 200);
     }
 
     function updateHeroWithMetro(lat, lng) {
