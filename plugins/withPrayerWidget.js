@@ -143,23 +143,36 @@ function withWidgetTarget(config) {
     }
 
     const mainTargetKey = xcodeProject.getFirstTarget().uuid;
-    const nativeTargets = xcodeProject.pbxNativeTargetSection();
-    if (nativeTargets[mainTargetKey]) {
-      if (!nativeTargets[mainTargetKey].dependencies) {
-        nativeTargets[mainTargetKey].dependencies = [];
+
+    const productFile = widgetTarget.pbxNativeTarget?.productReference;
+    if (productFile) {
+      const copyPhaseUuid = xcodeProject.generateUuid();
+      const buildFileUuid = xcodeProject.generateUuid();
+
+      xcodeProject.hash.project.objects["PBXBuildFile"] = xcodeProject.hash.project.objects["PBXBuildFile"] || {};
+      xcodeProject.hash.project.objects["PBXBuildFile"][buildFileUuid] = {
+        isa: "PBXBuildFile",
+        fileRef: productFile,
+        settings: { ATTRIBUTES: ["RemoveHeadersOnCopy"] },
+      };
+      xcodeProject.hash.project.objects["PBXBuildFile"][buildFileUuid + "_comment"] = `${WIDGET_TARGET_NAME}.appex in Embed App Extensions`;
+
+      xcodeProject.hash.project.objects["PBXCopyFilesBuildPhase"] = xcodeProject.hash.project.objects["PBXCopyFilesBuildPhase"] || {};
+      xcodeProject.hash.project.objects["PBXCopyFilesBuildPhase"][copyPhaseUuid] = {
+        isa: "PBXCopyFilesBuildPhase",
+        buildActionMask: 2147483647,
+        dstPath: '""',
+        dstSubfolderSpec: 13,
+        files: [{ value: buildFileUuid, comment: `${WIDGET_TARGET_NAME}.appex in Embed App Extensions` }],
+        name: '"Embed App Extensions"',
+        runOnlyForDeploymentPostprocessing: 0,
+      };
+      xcodeProject.hash.project.objects["PBXCopyFilesBuildPhase"][copyPhaseUuid + "_comment"] = "Embed App Extensions";
+
+      const mainNativeTarget = xcodeProject.pbxNativeTargetSection()[mainTargetKey];
+      if (mainNativeTarget && mainNativeTarget.buildPhases) {
+        mainNativeTarget.buildPhases.push({ value: copyPhaseUuid, comment: "Embed App Extensions" });
       }
-    }
-
-    const embedExtPhase = xcodeProject.addBuildPhase(
-      [`${WIDGET_TARGET_NAME}.appex`],
-      "PBXCopyFilesBuildPhase",
-      "Embed App Extensions",
-      mainTargetKey,
-      "app_extension"
-    );
-
-    if (embedExtPhase && embedExtPhase.buildPhase) {
-      embedExtPhase.buildPhase.dstSubfolderSpec = 13;
     }
 
     return mod;
