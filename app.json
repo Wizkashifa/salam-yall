@@ -23,7 +23,8 @@
       },
       "buildNumber": "6",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "We need your location to calculate prayer times and find the nearest masjid."
+        "NSLocationWhenInUseUsageDescription": "We need your location to calculate prayer times and find the nearest masjid.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
