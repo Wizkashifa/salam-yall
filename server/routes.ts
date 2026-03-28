@@ -378,6 +378,9 @@ const KNOWN_COORDINATES: Record<string, { lat: number; lng: number }> = {
   "Roots DFW": { lat: 32.9857, lng: -96.7502 },
   "Roots Community": { lat: 32.9857, lng: -96.7502 },
   "NC State Fairgrounds": { lat: 35.7939, lng: -78.7117 },
+  "Islamic Center of Fremont": { lat: 37.5241, lng: -121.9660 },
+  "Islamic Center of Fremont (ICF-Irvington)": { lat: 37.5241, lng: -121.9660 },
+  "Masjid Zakariya": { lat: 37.5094, lng: -121.9628 },
 };
 
 function resolveCoordinates(organizer: string, location: string): { latitude: number | null; longitude: number | null } {
@@ -1603,7 +1606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const startDate = new Date(start);
       if (startDate < now || startDate > threeMonthsLater) continue;
 
-      const resolvedLocation = opts.defaultLocation;
+      const resolvedLocation = location || opts.defaultLocation;
       const coords = resolveCoordinates(organizer, resolvedLocation);
       const registrationUrl = url || "";
 
@@ -1679,6 +1682,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       console.error("[SRVIC] iCal fetch error:", err.message);
       return cachedSRVICEvents.filter(e => new Date(e.end || e.start) >= new Date());
+    }
+  }
+
+  const ICF_ICAL_URL = "https://icfbayarea.com/?post_type=tribe_events&ical=1&eventDisplay=list";
+  let cachedICFEvents: CachedEvent[] = [];
+  let icfLastFetch = 0;
+  const ICF_CACHE_TTL = 15 * 60 * 1000;
+
+  async function fetchICFEvents(): Promise<CachedEvent[]> {
+    const now = Date.now();
+    if (cachedICFEvents.length > 0 && (now - icfLastFetch) < ICF_CACHE_TTL) {
+      return cachedICFEvents.filter(e => new Date(e.end || e.start) >= new Date());
+    }
+    try {
+      const response = await fetch(ICF_ICAL_URL);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const icalText = await response.text();
+      const events = parseICalFeed(icalText, {
+        idPrefix: "icf",
+        defaultOrganizer: "Islamic Center of Fremont",
+        defaultLocation: "4039 Irvington Ave, Fremont, CA 94538",
+      });
+      cachedICFEvents = events;
+      icfLastFetch = Date.now();
+      console.log(`[ICF] Fetched ${events.length} events from iCal feed`);
+      return events;
+    } catch (err: any) {
+      console.error("[ICF] iCal fetch error:", err.message);
+      return cachedICFEvents.filter(e => new Date(e.end || e.start) >= new Date());
     }
   }
 
@@ -1828,7 +1860,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const mccEastBayEvents = await fetchMCCEastBayEvents();
       const srvicEvents = await fetchSRVICEvents();
       const mcaEvents = await fetchMCAEvents();
-      const merged = [...communityEvents, ...rootsDfwEvents, ...mccEastBayEvents, ...srvicEvents, ...mcaEvents]
+      const icfEvents = await fetchICFEvents();
+      const merged = [...communityEvents, ...rootsDfwEvents, ...mccEastBayEvents, ...srvicEvents, ...mcaEvents, ...icfEvents]
         .filter(ev => !ev.title.toLowerCase().includes("private event"));
       const seen = new Set<string>();
       const allEvents = merged.filter(ev => {
@@ -6335,7 +6368,7 @@ Return ONLY the JSON object, no markdown, no explanation.`,
       if (externalEventIds.length > 0) {
         const allExternal: CachedEvent[] = [];
         const results = await Promise.allSettled([
-          fetchRootsDfwEvents(), fetchMCCEastBayEvents(), fetchSRVICEvents(), fetchMCAEvents()
+          fetchRootsDfwEvents(), fetchMCCEastBayEvents(), fetchSRVICEvents(), fetchMCAEvents(), fetchICFEvents()
         ]);
         for (const r of results) {
           if (r.status === "fulfilled") {
