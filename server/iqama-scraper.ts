@@ -16,7 +16,7 @@ export interface MasjidIqamaSchedule {
   iqama: DayIqama;
 }
 
-type IqamaSourceType = "dpt" | "iar" | "mca-html" | "alnoor-html" | "sbia-html" | "icf-html" | "athanplus";
+type IqamaSourceType = "dpt" | "iar" | "mca-html" | "alnoor-html" | "sbia-html" | "icf-html" | "athanplus" | "alhuda-html";
 
 interface IqamaSource {
   name: string;
@@ -98,6 +98,12 @@ const IQAMA_SOURCES: IqamaSource[] = [
     url: "https://timing.athanplus.com/masjid/widgets/monthly?theme=1&masjid_id=MA582zLr",
     timezone: "America/New_York",
     maghribOffset: 5,
+  },
+  {
+    name: "Al-Huda",
+    type: "alhuda-html",
+    url: "https://alhudafoundation.org/",
+    timezone: "America/Indiana/Indianapolis",
   },
 ];
 
@@ -653,6 +659,60 @@ async function fetchSBIAHtml(pool: pg.Pool, source: IqamaSource): Promise<void> 
   }
 }
 
+async function fetchAlHudaHtml(pool: pg.Pool, source: IqamaSource): Promise<void> {
+  try {
+    const resp = await fetch(source.url, { headers: {
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    } });
+    if (!resp.ok) {
+      console.error(`[Iqama] ${source.name} page returned ${resp.status}`);
+      return;
+    }
+    const html = await resp.text();
+
+    const prayerMap: Record<string, string> = {};
+    const prayerNames = [
+      { pattern: /Fajr\s*[\d:]+\s*(?:AM|PM)\s*([\d:]+\s*(?:AM|PM))/i, key: "fajr" },
+      { pattern: /Zuhr\s*[\d:]+\s*(?:AM|PM)\s*([\d:]+\s*(?:AM|PM))/i, key: "dhuhr" },
+      { pattern: /Asr\s*[\d:]+\s*(?:AM|PM)\s*([\d:]+\s*(?:AM|PM))/i, key: "asr" },
+      { pattern: /Magrib\s*[\d:]+\s*(?:AM|PM)\s*([\d:]+\s*(?:AM|PM))/i, key: "maghrib" },
+      { pattern: /Isha\s*[\d:]+\s*(?:AM|PM)\s*([\d:]+\s*(?:AM|PM))/i, key: "isha" },
+    ];
+
+    const textContent = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+    for (const { pattern, key } of prayerNames) {
+      const match = textContent.match(pattern);
+      if (match) prayerMap[key] = match[1].trim();
+    }
+
+    if (!prayerMap.fajr || !prayerMap.isha) {
+      console.error(`[Iqama] ${source.name}: could not parse prayer times from HTML`);
+      return;
+    }
+
+    const normalize = (t: string): string => {
+      const m = t.match(/(\d{1,2}:\d{2})\s*(AM|PM)/i);
+      if (m) return `${m[1]} ${m[2].toUpperCase()}`;
+      return t;
+    };
+
+    const { dateKey } = getDateInTz(source.timezone);
+    const count = await bulkUpsert(pool, [{
+      masjid: source.name,
+      date: dateKey,
+      fajr: normalize(prayerMap.fajr),
+      dhuhr: normalize(prayerMap.dhuhr || ""),
+      asr: normalize(prayerMap.asr || ""),
+      maghrib: normalize(prayerMap.maghrib || ""),
+      isha: normalize(prayerMap.isha),
+    }]);
+    if (count > 0) console.log(`[Iqama] Synced ${source.name} for ${dateKey}`);
+  } catch (err: any) {
+    console.error(`[Iqama] Error syncing ${source.name}:`, err.message);
+  }
+}
+
 async function syncSource(pool: pg.Pool, source: IqamaSource, year: number, month: number): Promise<void> {
   switch (source.type) {
     case "dpt":
@@ -675,6 +735,9 @@ async function syncSource(pool: pg.Pool, source: IqamaSource, year: number, mont
       break;
     case "athanplus":
       await fetchAthanPlus(pool, source);
+      break;
+    case "alhuda-html":
+      await fetchAlHudaHtml(pool, source);
       break;
   }
 }

@@ -142,7 +142,7 @@ export const NEARBY_MASJIDS: Masjid[] = [
   { name: "Islamic Society of Greater Charlotte", latitude: 35.2025, longitude: -80.7937, address: "1700 Progress Ln, Charlotte, NC 28205", website: "https://isgcharlotte.org", matchTerms: ["isgc", "islamic society of greater charlotte", "progress ln"], hasIqama: true },
   { name: "Los Gatos Islamic Center (LGIC)", latitude: 37.2358, longitude: -121.9175, address: "16769 Farley Rd, Los Gatos, CA 95032", website: "https://wvmuslim.org", matchTerms: ["lgic", "los gatos islamic", "los gatos masjid", "wvmuslim", "farley rd"], hasIqama: true, campusGroup: "lgic" },
   { name: "Saratoga Musalla", latitude: 37.3137, longitude: -122.0310, address: "12370 Saratoga-Sunnyvale Rd, Saratoga, CA 95070", website: "https://wvmuslim.org", matchTerms: ["saratoga musalla", "saratoga-sunnyvale rd"], hasIqama: true, campusGroup: "lgic" },
-  { name: "Al-Huda Foundation", latitude: 39.9567, longitude: -86.0131, address: "12213 Lantern Rd, Fishers, IN 46038", website: "https://alhudafoundation.org", matchTerms: ["al-huda", "alhuda", "al huda foundation", "lantern rd", "fishers", "aici"], hasIqama: false },
+  { name: "Al-Huda Foundation", latitude: 39.9567, longitude: -86.0131, address: "12213 Lantern Rd, Fishers, IN 46038", website: "https://alhudafoundation.org", matchTerms: ["al-huda", "alhuda", "al huda foundation", "lantern rd", "fishers", "aici"], hasIqama: true, iqamaSource: "Al-Huda" },
 ];
 
 export interface OrgCampus {
