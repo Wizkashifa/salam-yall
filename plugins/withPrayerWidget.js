@@ -68,8 +68,9 @@ function withWidgetTarget(config) {
     const entitlementsContent = buildPlistXml(entitlements);
     fs.writeFileSync(path.join(widgetPath, `${WIDGET_TARGET_NAME}.entitlements`), entitlementsContent);
 
+    const nativeTargetSec = xcodeProject.pbxNativeTargetSection();
     const appName = xcodeProject.getFirstProject().firstProject.targets
-      .map((t) => xcodeProject.nativeTargetSection()[t.value]?.name)
+      .map((t) => nativeTargetSec[t.value]?.name)
       .find((name) => name && !name.includes("Tests"));
 
     const existingTargets = xcodeProject.pbxNativeTargetSection();
