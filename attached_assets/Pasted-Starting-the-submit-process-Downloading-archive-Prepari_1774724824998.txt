@@ -1,0 +1,36 @@
+Starting the submit process
+Downloading archive
+Preparing artifact
+Verifying archive
+Creating ascApiJsonKey.json file with ASC credentials
+Submitting iOS app to TestFlight...
+Submitting the app with fastlane pilot
+-------------------
+--- Step: pilot ---
+-------------------
+Creating authorization token for App Store Connect API
+Ready to upload new build to TestFlight (App: 6760231963)...
+Going to upload updated app to App Store Connect
+This might take a few minutes. Please don't interrupt the script.
+[altool] 2026-03-28 11:53:29.687 *** Error: No suitable application records were found. Verify your bundle identifier “com.salamyall” is correct and that you are signed in with an Apple ID that has access to the app in App Store Connect. App Store operation failed. (-19000)
+[altool]  {
+
+[altool]     NSLocalizedDescription = "No suitable application records were found. Verify your bundle identifier \U201ccom.salamyall\U201d is correct and that you are signed in with an Apple ID that has access to the app in App Store Connect.";
+
+[altool]     NSLocalizedFailureReason = "App Store operation failed.";
+
+[altool]     NSLocalizedRecoverySuggestion = "No suitable application records were found. Verify your bundle identifier \U201ccom.salamyall\U201d is correct and that you are signed in with an Apple ID that has access to the app in App Store Connect.";
+
+[altool] }
+
+Application Loader output above ^
+Error uploading '/var/folders/m1/8_w9962s3b79dqm00nnlm85m0000gn/T/81dfedb7-33c8-49d7-9647-1272d52b9ec6.ipa'.
+No suitable application records were found. Verify your bundle identifier “com.salamyall” is correct and that you are signed in with an Apple ID that has access to the app in App Store Connect. App Store operation failed. (-19000)
+The call to the altool completed with a non-zero exit status: 1. This indicates a failure.
+Could not download/upload from App Store Connect!
+[!] Error uploading ipa file: 
+ [Application Loader Error Output]: Error uploading '/var/folders/m1/8_w9962s3b79dqm00nnlm85m0000gn/T/81dfedb7-33c8-49d7-9647-1272d52b9ec6.ipa'.
+[Application Loader Error Output]: No suitable application records were found. Verify your bundle identifier “com.salamyall” is correct and that you are signed in with an Apple ID that has access to the app in App Store Connect. App Store operation failed. (-19000)
+[Application Loader Error Output]: The call to the altool completed with a non-zero exit status: 1. This indicates a failure.
+Fastlane pilot failed
+Failed to submit the app to the store
