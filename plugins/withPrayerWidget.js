@@ -118,11 +118,27 @@ function withWidgetTarget(config) {
       }
     }
 
+    let widgetGroupKey = xcodeProject.findPBXGroupKey({ name: WIDGET_DIR }) || xcodeProject.findPBXGroupKey({ path: WIDGET_DIR });
+    if (!widgetGroupKey) {
+      const mainGroupId = xcodeProject.getFirstProject().firstProject.mainGroup;
+      xcodeProject.addPbxGroup([], WIDGET_DIR, WIDGET_DIR, null);
+      widgetGroupKey = xcodeProject.findPBXGroupKey({ name: WIDGET_DIR }) || xcodeProject.findPBXGroupKey({ path: WIDGET_DIR });
+      if (widgetGroupKey) {
+        const mainGroup = xcodeProject.getPBXGroupByKey(mainGroupId);
+        if (mainGroup && mainGroup.children) {
+          const alreadyLinked = mainGroup.children.some((c) => c.comment === WIDGET_DIR);
+          if (!alreadyLinked) {
+            mainGroup.children.push({ value: widgetGroupKey, comment: WIDGET_DIR });
+          }
+        }
+      }
+    }
+
     for (const file of swiftFiles) {
       xcodeProject.addSourceFile(
         `${WIDGET_DIR}/${file}`,
         { target: targetUuid },
-        xcodeProject.findPBXGroupKey({ name: WIDGET_DIR }) || xcodeProject.findPBXGroupKey({ path: WIDGET_DIR })
+        widgetGroupKey
       );
     }
 
