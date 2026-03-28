@@ -1419,10 +1419,11 @@ export default function SettingsScreen() {
                   <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: colors.textSecondary, marginLeft: "auto" }}>{heatmapData.length < 30 ? `Last ${heatmapData.length} day${heatmapData.length === 1 ? "" : "s"}` : "Last 30 days"}</Text>
                 </View>
                 {(() => {
+                  const numDots = heatmapData.length || 30;
                   const labelW = 48;
                   const availableW = screenWidth - 66 - 24 - labelW;
                   const gap = 2;
-                  const dotSize = Math.floor((availableW - (34 * gap)) / 35);
+                  const dotSize = Math.floor((availableW - ((numDots - 1) * gap)) / numDots);
                   const clampedDot = Math.min(Math.max(dotSize, 5), 10);
                   return (["fajr", "dhuhr", "asr", "maghrib", "isha"] as const).map((prayer) => (
                     <View key={prayer} style={{ flexDirection: "row", alignItems: "center", marginBottom: 3 }}>
@@ -2274,34 +2275,30 @@ export default function SettingsScreen() {
             <>
               {(() => {
                 const heatDays: { date: string; fajr: PrayerStatus; dhuhr: PrayerStatus; asr: PrayerStatus; maghrib: PrayerStatus; isha: PrayerStatus; quran: boolean }[] = [];
-                const today2 = new Date();
                 const quranSet = new Set(growthData.quranReadingDates);
-                for (let i = 29; i >= 0; i--) {
-                  const d2 = new Date(today2);
-                  d2.setDate(d2.getDate() - i);
-                  const key2 = `${d2.getFullYear()}-${String(d2.getMonth() + 1).padStart(2, "0")}-${String(d2.getDate()).padStart(2, "0")}`;
-                  const existing = heatmapData.find(h => h.date === key2);
+                for (const h of heatmapData) {
                   heatDays.push({
-                    date: key2,
-                    fajr: existing?.fajr ?? 0,
-                    dhuhr: existing?.dhuhr ?? 0,
-                    asr: existing?.asr ?? 0,
-                    maghrib: existing?.maghrib ?? 0,
-                    isha: existing?.isha ?? 0,
-                    quran: quranSet.has(key2),
+                    date: h.date,
+                    fajr: h.fajr,
+                    dhuhr: h.dhuhr,
+                    asr: h.asr,
+                    maghrib: h.maghrib,
+                    isha: h.isha,
+                    quran: quranSet.has(h.date),
                   });
                 }
+                const numDots2 = heatDays.length || 30;
                 const labelW2 = 48;
                 const availableW2 = screenWidth - 66 - 24 - labelW2;
                 const gap2 = 2;
-                const dotSize2 = Math.floor((availableW2 - (34 * gap2)) / 35);
+                const dotSize2 = Math.floor((availableW2 - ((numDots2 - 1) * gap2)) / numDots2);
                 const clampedDot2 = Math.min(Math.max(dotSize2, 5), 10);
                 return (
                   <View style={{ backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 12, marginBottom: 16 }}>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
                       <Ionicons name="grid" size={16} color={colors.emerald} />
                       <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: colors.text }}>Activity Heatmap</Text>
-                      <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: colors.textSecondary, marginLeft: "auto" }}>Last 30 days</Text>
+                      <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: colors.textSecondary, marginLeft: "auto" }}>{heatDays.length < 30 ? `Last ${heatDays.length} day${heatDays.length === 1 ? "" : "s"}` : "Last 30 days"}</Text>
                     </View>
                     {(["fajr", "dhuhr", "asr", "maghrib", "isha"] as const).map((prayer) => (
                       <View key={prayer} style={{ flexDirection: "row", alignItems: "center", marginBottom: 3 }}>
