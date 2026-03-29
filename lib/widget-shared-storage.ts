@@ -45,7 +45,7 @@ async function writeToAppGroup(data: WidgetPrayerData): Promise<void> {
   if (Platform.OS !== "ios") return;
   try {
     const SharedGroupPreferences = (await import("react-native-shared-group-preferences")).default;
-    await SharedGroupPreferences.setItem(PRAYER_DATA_KEY, JSON.stringify(data), APP_GROUP);
+    await SharedGroupPreferences.setItem(PRAYER_DATA_KEY, data, APP_GROUP);
   } catch (e) {
     console.warn("[WidgetStorage] Failed to write to App Group:", e);
   }
