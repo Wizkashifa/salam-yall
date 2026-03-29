@@ -16,35 +16,49 @@ function withWidgetKitHelper(config) {
     "ios",
     async (config) => {
       const iosPath = path.join(config.modRequest.projectRoot, "ios", config.modRequest.projectName);
+      fs.mkdirSync(iosPath, { recursive: true });
 
-      const headerContent = `#import <React/RCTBridgeModule.h>
+      const swiftContent = `import Foundation
+import WidgetKit
 
-@interface WidgetKitHelper : NSObject <RCTBridgeModule>
-@end
-`;
+@objc(WidgetKitHelper)
+class WidgetKitHelper: NSObject {
 
-      const implContent = `#import "WidgetKitHelper.h"
-#import <WidgetKit/WidgetKit.h>
+  @objc
+  static func requiresMainQueueSetup() -> Bool {
+    return false
+  }
 
-@implementation WidgetKitHelper
-
-RCT_EXPORT_MODULE();
-
-RCT_EXPORT_METHOD(reloadAllTimelines)
-{
-  if (@available(iOS 14.0, *)) {
-    dispatch_async(dispatch_get_main_queue(), ^{
-      [WidgetCenter.shared reloadAllTimelines];
-    });
+  @objc
+  func reloadAllTimelines() {
+    if #available(iOS 14.0, *) {
+      DispatchQueue.main.async {
+        WidgetCenter.shared.reloadAllTimelines()
+      }
+    }
   }
 }
+`;
+
+      const bridgingHeaderContent = `#import <React/RCTBridgeModule.h>
+`;
+
+      const objcBridgeContent = `#import <React/RCTBridgeModule.h>
+
+@interface RCT_EXTERN_MODULE(WidgetKitHelper, NSObject)
+
+RCT_EXTERN_METHOD(reloadAllTimelines)
 
 @end
 `;
 
-      fs.mkdirSync(iosPath, { recursive: true });
-      fs.writeFileSync(path.join(iosPath, "WidgetKitHelper.h"), headerContent);
-      fs.writeFileSync(path.join(iosPath, "WidgetKitHelper.m"), implContent);
+      fs.writeFileSync(path.join(iosPath, "WidgetKitHelper.swift"), swiftContent);
+      fs.writeFileSync(path.join(iosPath, "WidgetKitHelper.m"), objcBridgeContent);
+
+      const bridgingHeaderPath = path.join(iosPath, `${config.modRequest.projectName}-Bridging-Header.h`);
+      if (!fs.existsSync(bridgingHeaderPath)) {
+        fs.writeFileSync(bridgingHeaderPath, bridgingHeaderContent);
+      }
 
       return config;
     },
@@ -53,48 +67,50 @@ RCT_EXPORT_METHOD(reloadAllTimelines)
   config = withXcodeProject(config, (config) => {
     const xcodeProject = config.modResults;
     const projectName = config.modRequest.projectName;
+    const swiftFilePath = `${projectName}/WidgetKitHelper.swift`;
+    const objcFilePath = `${projectName}/WidgetKitHelper.m`;
 
-    const headerFileName = "WidgetKitHelper.h";
-    const implFileName = "WidgetKitHelper.m";
+    const sourcesBuildPhase = xcodeProject.pbxSourcesBuildPhaseObj();
+    let swiftAdded = false;
+    let objcAdded = false;
+    if (sourcesBuildPhase && sourcesBuildPhase.files) {
+      swiftAdded = sourcesBuildPhase.files.some((f) =>
+        f.comment && f.comment.includes("WidgetKitHelper.swift")
+      );
+      objcAdded = sourcesBuildPhase.files.some((f) =>
+        f.comment && f.comment.includes("WidgetKitHelper.m")
+      );
+    }
 
-    const mainGroup = xcodeProject.getFirstProject().firstProject.mainGroup;
+    const groupKey = xcodeProject.findPBXGroupKey({ name: projectName }) ||
+                     xcodeProject.findPBXGroupKey({ path: projectName });
+    const target = xcodeProject.getFirstTarget().uuid;
 
-    const existingSources = xcodeProject.pbxSourcesBuildPhaseObj();
-    const alreadyAdded = existingSources && existingSources.files &&
-      existingSources.files.some((f) => {
-        const ref = xcodeProject.getPBXGroupByKeyAndType(f.value, "PBXBuildFile");
-        return ref && ref.fileRef_comment === implFileName;
-      });
-
-    if (!alreadyAdded) {
-      const groupKey = xcodeProject.findPBXGroupKey({ name: projectName }) ||
-                       xcodeProject.findPBXGroupKey({ path: projectName });
-
-      if (groupKey) {
-        xcodeProject.addSourceFile(
-          `${projectName}/${implFileName}`,
-          { target: xcodeProject.getFirstTarget().uuid },
-          groupKey
-        );
-        xcodeProject.addHeaderFile(
-          `${projectName}/${headerFileName}`,
-          {},
-          groupKey
-        );
+    if (groupKey) {
+      if (!swiftAdded) {
+        xcodeProject.addSourceFile(swiftFilePath, { target }, groupKey);
+      }
+      if (!objcAdded) {
+        xcodeProject.addSourceFile(objcFilePath, { target }, groupKey);
       }
     }
 
-    const targetBuildConfigs = xcodeProject.pbxXCBuildConfigurationSection();
-    for (const key in targetBuildConfigs) {
-      if (typeof targetBuildConfigs[key] === "object" && targetBuildConfigs[key].buildSettings) {
-        const settings = targetBuildConfigs[key].buildSettings;
-        if (!settings.OTHER_LDFLAGS) {
-          settings.OTHER_LDFLAGS = ['"$(inherited)"', '"-framework"', '"WidgetKit"'];
-        } else if (Array.isArray(settings.OTHER_LDFLAGS)) {
-          const hasWidgetKit = settings.OTHER_LDFLAGS.some((f) => f === '"WidgetKit"');
-          if (!hasWidgetKit) {
-            settings.OTHER_LDFLAGS.push('"-framework"', '"WidgetKit"');
-          }
+    const bridgingHeaderRelPath = `${projectName}/${projectName}-Bridging-Header.h`;
+    const buildConfigs = xcodeProject.pbxXCBuildConfigurationSection();
+    for (const key in buildConfigs) {
+      const entry = buildConfigs[key];
+      if (typeof entry !== "object" || !entry.buildSettings) continue;
+      const settings = entry.buildSettings;
+
+      if (!settings.SWIFT_OBJC_BRIDGING_HEADER) {
+        settings.SWIFT_OBJC_BRIDGING_HEADER = `"${bridgingHeaderRelPath}"`;
+      }
+
+      if (!settings.OTHER_LDFLAGS) {
+        settings.OTHER_LDFLAGS = ['"$(inherited)"', '"-framework"', '"WidgetKit"'];
+      } else if (Array.isArray(settings.OTHER_LDFLAGS)) {
+        if (!settings.OTHER_LDFLAGS.some((f) => f === '"WidgetKit"')) {
+          settings.OTHER_LDFLAGS.push('"-framework"', '"WidgetKit"');
         }
       }
     }
