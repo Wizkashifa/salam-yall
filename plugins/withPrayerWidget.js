@@ -1,6 +1,7 @@
 const { withXcodeProject, withEntitlementsPlist, withInfoPlist, IOSConfig } = require("@expo/config-plugins");
 const fs = require("fs");
 const path = require("path");
+const { execSync } = require("child_process");
 
 const WIDGET_TARGET_NAME = "SalamPrayerWidget";
 const WIDGET_BUNDLE_ID_SUFFIX = ".PrayerWidget";
@@ -112,6 +113,12 @@ function withWidgetTarget(config) {
           config_obj.buildSettings.DEVELOPMENT_TEAM = `"${APPLE_TEAM_ID}"`;
           config_obj.buildSettings.CODE_SIGN_STYLE = '"Manual"';
           config_obj.buildSettings.CODE_SIGN_IDENTITY = '"Apple Distribution"';
+
+          const profileResult = installWidgetProfile(projectRoot);
+          if (profileResult) {
+            config_obj.buildSettings.PROVISIONING_PROFILE_SPECIFIER = `"${profileResult.name}"`;
+            config_obj.buildSettings.PROVISIONING_PROFILE = `"${profileResult.uuid}"`;
+          }
         }
       }
     }
@@ -142,6 +149,58 @@ function withWidgetTarget(config) {
 
     return mod;
   });
+}
+
+function installWidgetProfile(projectRoot) {
+  const profileFileName = "SalamPrayerWidget.mobileprovision";
+  const possiblePaths = [
+    path.join(projectRoot, profileFileName),
+    path.join(projectRoot, "profiles", profileFileName),
+  ];
+
+  let profilePath = null;
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      profilePath = p;
+      break;
+    }
+  }
+
+  if (!profilePath) {
+    console.warn(`[PrayerWidget] Widget provisioning profile not found. Looked in: ${possiblePaths.join(", ")}`);
+    return null;
+  }
+
+  try {
+    const plistXml = execSync(`security cms -D -i "${profilePath}" 2>/dev/null`).toString();
+    const uuidMatch = plistXml.match(/<key>UUID<\/key>\s*<string>([^<]+)<\/string>/);
+    const nameMatch = plistXml.match(/<key>Name<\/key>\s*<string>([^<]+)<\/string>/);
+
+    if (!uuidMatch) {
+      console.warn("[PrayerWidget] Could not extract UUID from widget provisioning profile");
+      return null;
+    }
+
+    const profileUuid = uuidMatch[1];
+    const profileName = nameMatch ? nameMatch[1] : "";
+
+    const profilesDir = path.join(
+      process.env.HOME || "/tmp",
+      "Library/MobileDevice/Provisioning Profiles"
+    );
+    if (!fs.existsSync(profilesDir)) {
+      fs.mkdirSync(profilesDir, { recursive: true });
+    }
+
+    const destPath = path.join(profilesDir, `${profileUuid}.mobileprovision`);
+    fs.copyFileSync(profilePath, destPath);
+    console.log(`[PrayerWidget] Installed widget profile: ${profileName} (${profileUuid})`);
+
+    return { uuid: profileUuid, name: profileName };
+  } catch (e) {
+    console.warn(`[PrayerWidget] Could not process widget provisioning profile: ${e.message}`);
+    return null;
+  }
 }
 
 function buildPlistXml(obj) {
