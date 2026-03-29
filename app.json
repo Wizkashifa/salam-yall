@@ -16,6 +16,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "app.ummahconnect",
+      "usesAppleSignIn": true,
       "icon": {
         "light": "./assets/images/icon.png",
         "dark": "./assets/images/icon-dark.png",
@@ -23,12 +24,14 @@
       },
       "buildNumber": "6",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "We need your location to calculate prayer times and find the nearest masjid."
+        "NSLocationWhenInUseUsageDescription": "We need your location to calculate prayer times and find the nearest masjid.",
+        "UIBackgroundModes": ["remote-notification"]
       },
       "entitlements": {
         "com.apple.security.application-groups": [
           "group.app.ummahconnect"
-        ]
+        ],
+        "aps-environment": "production"
       }
     },
     "android": {
