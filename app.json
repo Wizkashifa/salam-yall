@@ -59,7 +59,6 @@
           }
         }
       ],
-      "./plugins/withWidgetKit",
       "./plugins/withPrayerTimesWidget"
     ],
     "experiments": {

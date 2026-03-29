@@ -7,6 +7,15 @@ const WIDGET_BUNDLE_ID = "app.ummahconnect.PrayerTimesWidget";
 const APP_GROUP = "group.app.ummahconnect";
 const DEPLOYMENT_TARGET = "17.0";
 
+function generateUUID() {
+  const hex = "0123456789ABCDEF";
+  let uuid = "";
+  for (let i = 0; i < 24; i++) {
+    uuid += hex.charAt(Math.floor(Math.random() * 16));
+  }
+  return uuid;
+}
+
 function getWidgetSwiftFiles() {
   const models = `import WidgetKit
 import Foundation
@@ -546,6 +555,44 @@ struct PrayerTimesWidgetBundle: WidgetBundle {
   };
 }
 
+function getWidgetKitHelperFiles(projectName) {
+  const swiftContent = `import Foundation
+import WidgetKit
+
+@objc(WidgetKitHelper)
+class WidgetKitHelper: NSObject {
+
+  @objc
+  static func requiresMainQueueSetup() -> Bool {
+    return false
+  }
+
+  @objc
+  func reloadAllTimelines() {
+    if #available(iOS 14.0, *) {
+      DispatchQueue.main.async {
+        WidgetCenter.shared.reloadAllTimelines()
+      }
+    }
+  }
+}
+`;
+
+  const objcBridge = `#import <React/RCTBridgeModule.h>
+
+@interface RCT_EXTERN_MODULE(WidgetKitHelper, NSObject)
+
+RCT_EXTERN_METHOD(reloadAllTimelines)
+
+@end
+`;
+
+  const bridgingHeader = `#import <React/RCTBridgeModule.h>
+`;
+
+  return { swiftContent, objcBridge, bridgingHeader };
+}
+
 function getWidgetEntitlements() {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -593,6 +640,230 @@ function getWidgetInfoPlist() {
 `;
 }
 
+function addWidgetTarget(xcodeProject) {
+  const widgetTarget = xcodeProject.addTarget(
+    WIDGET_NAME,
+    "app_extension",
+    WIDGET_NAME,
+    WIDGET_BUNDLE_ID
+  );
+
+  const widgetGroupKey = xcodeProject.pbxCreateGroup(WIDGET_NAME, WIDGET_NAME);
+  const mainGroupKey = xcodeProject.getFirstProject().firstProject.mainGroup;
+  const mainGroup = xcodeProject.getPBXGroupByKey(mainGroupKey);
+  if (mainGroup && mainGroup.children) {
+    const alreadyInGroup = mainGroup.children.some(
+      (c) => c.comment === WIDGET_NAME
+    );
+    if (!alreadyInGroup) {
+      mainGroup.children.push({
+        value: widgetGroupKey,
+        comment: WIDGET_NAME,
+      });
+    }
+  }
+
+  const sourceFiles = [
+    "PrayerTimesWidget.swift",
+    "Models.swift",
+    "Provider.swift",
+    "WidgetViews.swift",
+    "TogglePrayerIntent.swift",
+  ];
+  for (const file of sourceFiles) {
+    xcodeProject.addSourceFile(
+      `${WIDGET_NAME}/${file}`,
+      { target: widgetTarget.uuid },
+      widgetGroupKey
+    );
+  }
+
+  return widgetTarget;
+}
+
+function configureWidgetBuildSettings(xcodeProject) {
+  const buildConfigs = xcodeProject.pbxXCBuildConfigurationSection();
+  for (const key in buildConfigs) {
+    const entry = buildConfigs[key];
+    if (typeof entry !== "object" || !entry.buildSettings) continue;
+
+    const bundleId = entry.buildSettings.PRODUCT_BUNDLE_IDENTIFIER;
+    if (bundleId && (bundleId === `"${WIDGET_BUNDLE_ID}"` || bundleId === WIDGET_BUNDLE_ID)) {
+      entry.buildSettings.IPHONEOS_DEPLOYMENT_TARGET = DEPLOYMENT_TARGET;
+      entry.buildSettings.SWIFT_VERSION = "5.0";
+      entry.buildSettings.TARGETED_DEVICE_FAMILY = '"1"';
+      entry.buildSettings.CODE_SIGN_ENTITLEMENTS = `"${WIDGET_NAME}/${WIDGET_NAME}.entitlements"`;
+      entry.buildSettings.INFOPLIST_FILE = `"${WIDGET_NAME}/Info.plist"`;
+      entry.buildSettings.GENERATE_INFOPLIST_FILE = "NO";
+      entry.buildSettings.PRODUCT_NAME = `"$(TARGET_NAME)"`;
+      entry.buildSettings.MARKETING_VERSION = "1.0";
+      entry.buildSettings.CURRENT_PROJECT_VERSION = "1";
+      entry.buildSettings.SWIFT_EMIT_LOC_STRINGS = "YES";
+      entry.buildSettings.LD_RUNPATH_SEARCH_PATHS = [
+        '"$(inherited)"',
+        '"@executable_path/Frameworks"',
+        '"@executable_path/../../Frameworks"',
+      ];
+      entry.buildSettings.SKIP_INSTALL = "YES";
+      if (!entry.buildSettings.OTHER_LDFLAGS) {
+        entry.buildSettings.OTHER_LDFLAGS = ['"$(inherited)"'];
+      }
+    }
+  }
+}
+
+function addEmbedExtensionPhase(xcodeProject, widgetTarget) {
+  const mainTarget = xcodeProject.getFirstTarget();
+  if (!mainTarget) return;
+
+  const productRefUuid = widgetTarget.pbxNativeTarget.productReference;
+  if (!productRefUuid) return;
+
+  const buildFileUuid = generateUUID();
+  const buildFileCommentUuid = buildFileUuid + "_comment";
+
+  const pbxBuildFileSection = xcodeProject.hash.project.objects["PBXBuildFile"];
+  pbxBuildFileSection[buildFileUuid] = {
+    isa: "PBXBuildFile",
+    fileRef: productRefUuid,
+    fileRef_comment: `${WIDGET_NAME}.appex`,
+    settings: { ATTRIBUTES: ["RemoveHeadersOnCopy"] },
+  };
+  pbxBuildFileSection[buildFileCommentUuid] = `${WIDGET_NAME}.appex in Embed App Extensions`;
+
+  const copyPhaseUuid = generateUUID();
+  const copyPhaseCommentUuid = copyPhaseUuid + "_comment";
+
+  const pbxCopySection = xcodeProject.hash.project.objects["PBXCopyFilesBuildPhase"] || {};
+  xcodeProject.hash.project.objects["PBXCopyFilesBuildPhase"] = pbxCopySection;
+
+  pbxCopySection[copyPhaseUuid] = {
+    isa: "PBXCopyFilesBuildPhase",
+    buildActionMask: 2147483647,
+    dstPath: '""',
+    dstSubfolderSpec: 13,
+    files: [
+      { value: buildFileUuid, comment: `${WIDGET_NAME}.appex in Embed App Extensions` },
+    ],
+    name: '"Embed App Extensions"',
+    runOnlyForDeploymentPostprocessing: 0,
+  };
+  pbxCopySection[copyPhaseCommentUuid] = "Embed App Extensions";
+
+  const nativeTargets = xcodeProject.hash.project.objects["PBXNativeTarget"];
+  const mainTargetObj = nativeTargets[mainTarget.uuid];
+  if (mainTargetObj && mainTargetObj.buildPhases) {
+    mainTargetObj.buildPhases.push({
+      value: copyPhaseUuid,
+      comment: "Embed App Extensions",
+    });
+  }
+}
+
+function addTargetDependency(xcodeProject, widgetTarget) {
+  const mainTarget = xcodeProject.getFirstTarget();
+  if (!mainTarget) return;
+
+  const nativeTargets = xcodeProject.hash.project.objects["PBXNativeTarget"];
+  const mainTargetObj = nativeTargets[mainTarget.uuid];
+  if (!mainTargetObj) return;
+
+  const containerItemProxyUuid = generateUUID();
+  const containerItemProxyCommentUuid = containerItemProxyUuid + "_comment";
+
+  const proxySection = xcodeProject.hash.project.objects["PBXContainerItemProxy"] || {};
+  xcodeProject.hash.project.objects["PBXContainerItemProxy"] = proxySection;
+
+  const projectUuid = xcodeProject.getFirstProject().uuid;
+
+  proxySection[containerItemProxyUuid] = {
+    isa: "PBXContainerItemProxy",
+    containerPortal: projectUuid,
+    containerPortal_comment: "Project object",
+    proxyType: 1,
+    remoteGlobalIDString: widgetTarget.uuid,
+    remoteInfo: `"${WIDGET_NAME}"`,
+  };
+  proxySection[containerItemProxyCommentUuid] = "PBXContainerItemProxy";
+
+  const targetDependencyUuid = generateUUID();
+  const targetDependencyCommentUuid = targetDependencyUuid + "_comment";
+
+  const depSection = xcodeProject.hash.project.objects["PBXTargetDependency"] || {};
+  xcodeProject.hash.project.objects["PBXTargetDependency"] = depSection;
+
+  depSection[targetDependencyUuid] = {
+    isa: "PBXTargetDependency",
+    target: widgetTarget.uuid,
+    target_comment: WIDGET_NAME,
+    targetProxy: containerItemProxyUuid,
+    targetProxy_comment: "PBXContainerItemProxy",
+  };
+  depSection[targetDependencyCommentUuid] = "PBXTargetDependency";
+
+  if (!mainTargetObj.dependencies) {
+    mainTargetObj.dependencies = [];
+  }
+  mainTargetObj.dependencies.push({
+    value: targetDependencyUuid,
+    comment: "PBXTargetDependency",
+  });
+}
+
+function addWidgetKitHelperToProject(xcodeProject, projectName) {
+  const swiftFilePath = `${projectName}/WidgetKitHelper.swift`;
+  const objcFilePath = `${projectName}/WidgetKitHelper.m`;
+
+  const sourcesBuildPhase = xcodeProject.pbxSourcesBuildPhaseObj();
+  let swiftAdded = false;
+  let objcAdded = false;
+  if (sourcesBuildPhase && sourcesBuildPhase.files) {
+    swiftAdded = sourcesBuildPhase.files.some((f) =>
+      f.comment && f.comment.includes("WidgetKitHelper.swift")
+    );
+    objcAdded = sourcesBuildPhase.files.some((f) =>
+      f.comment && f.comment.includes("WidgetKitHelper.m")
+    );
+  }
+
+  const groupKey = xcodeProject.findPBXGroupKey({ name: projectName }) ||
+                   xcodeProject.findPBXGroupKey({ path: projectName });
+  const target = xcodeProject.getFirstTarget().uuid;
+
+  if (groupKey) {
+    if (!swiftAdded) {
+      xcodeProject.addSourceFile(swiftFilePath, { target }, groupKey);
+    }
+    if (!objcAdded) {
+      xcodeProject.addSourceFile(objcFilePath, { target }, groupKey);
+    }
+  }
+
+  const bridgingHeaderRelPath = `${projectName}/${projectName}-Bridging-Header.h`;
+  const buildConfigs = xcodeProject.pbxXCBuildConfigurationSection();
+  for (const key in buildConfigs) {
+    const entry = buildConfigs[key];
+    if (typeof entry !== "object" || !entry.buildSettings) continue;
+    const settings = entry.buildSettings;
+
+    const bundleId = settings.PRODUCT_BUNDLE_IDENTIFIER;
+    const isWidgetTarget = bundleId && (bundleId === `"${WIDGET_BUNDLE_ID}"` || bundleId === WIDGET_BUNDLE_ID);
+    if (isWidgetTarget) continue;
+
+    if (!settings.SWIFT_OBJC_BRIDGING_HEADER) {
+      settings.SWIFT_OBJC_BRIDGING_HEADER = `"${bridgingHeaderRelPath}"`;
+    }
+
+    if (!settings.OTHER_LDFLAGS) {
+      settings.OTHER_LDFLAGS = ['"$(inherited)"', '"-framework"', '"WidgetKit"'];
+    } else if (Array.isArray(settings.OTHER_LDFLAGS)) {
+      if (!settings.OTHER_LDFLAGS.some((f) => f === '"WidgetKit"')) {
+        settings.OTHER_LDFLAGS.push('"-framework"', '"WidgetKit"');
+      }
+    }
+  }
+}
+
 function withPrayerTimesWidget(config) {
   config = withEntitlementsPlist(config, (modConfig) => {
     const groups = modConfig.modResults["com.apple.security.application-groups"] || [];
@@ -607,9 +878,12 @@ function withPrayerTimesWidget(config) {
     "ios",
     async (modConfig) => {
       const projectRoot = modConfig.modRequest.projectRoot;
+      const projectName = modConfig.modRequest.projectName;
       const widgetDir = path.join(projectRoot, "ios", WIDGET_NAME);
+      const appDir = path.join(projectRoot, "ios", projectName);
 
       fs.mkdirSync(widgetDir, { recursive: true });
+      fs.mkdirSync(appDir, { recursive: true });
 
       const swiftFiles = getWidgetSwiftFiles();
       for (const [filename, content] of Object.entries(swiftFiles)) {
@@ -626,109 +900,37 @@ function withPrayerTimesWidget(config) {
         getWidgetInfoPlist()
       );
 
+      const helperFiles = getWidgetKitHelperFiles(projectName);
+      fs.writeFileSync(path.join(appDir, "WidgetKitHelper.swift"), helperFiles.swiftContent);
+      fs.writeFileSync(path.join(appDir, "WidgetKitHelper.m"), helperFiles.objcBridge);
+
+      const bridgingHeaderPath = path.join(appDir, `${projectName}-Bridging-Header.h`);
+      if (!fs.existsSync(bridgingHeaderPath)) {
+        fs.writeFileSync(bridgingHeaderPath, helperFiles.bridgingHeader);
+      }
+
       return modConfig;
     },
   ]);
 
   config = withXcodeProject(config, (modConfig) => {
     const xcodeProject = modConfig.modResults;
+    const projectName = modConfig.modRequest.projectName;
 
     const existingTargets = xcodeProject.pbxNativeTargetSection();
     for (const key in existingTargets) {
       if (typeof existingTargets[key] === "object" &&
           existingTargets[key].name === `"${WIDGET_NAME}"`) {
+        addWidgetKitHelperToProject(xcodeProject, projectName);
         return modConfig;
       }
     }
 
-    const widgetTarget = xcodeProject.addTarget(
-      WIDGET_NAME,
-      "app_extension",
-      WIDGET_NAME,
-      WIDGET_BUNDLE_ID
-    );
-
-    const widgetGroupKey = xcodeProject.pbxCreateGroup(WIDGET_NAME, WIDGET_NAME);
-    const mainGroupKey = xcodeProject.getFirstProject().firstProject.mainGroup;
-    const mainGroup = xcodeProject.getPBXGroupByKey(mainGroupKey);
-    if (mainGroup && mainGroup.children) {
-      const alreadyInGroup = mainGroup.children.some(
-        (c) => c.comment === WIDGET_NAME
-      );
-      if (!alreadyInGroup) {
-        mainGroup.children.push({
-          value: widgetGroupKey,
-          comment: WIDGET_NAME,
-        });
-      }
-    }
-
-    const sourceFiles = [
-      "PrayerTimesWidget.swift",
-      "Models.swift",
-      "Provider.swift",
-      "WidgetViews.swift",
-      "TogglePrayerIntent.swift",
-    ];
-    for (const file of sourceFiles) {
-      xcodeProject.addSourceFile(
-        `${WIDGET_NAME}/${file}`,
-        { target: widgetTarget.uuid },
-        widgetGroupKey
-      );
-    }
-
-    const buildConfigs = xcodeProject.pbxXCBuildConfigurationSection();
-    for (const key in buildConfigs) {
-      const entry = buildConfigs[key];
-      if (typeof entry !== "object" || !entry.buildSettings) continue;
-
-      const bundleId = entry.buildSettings.PRODUCT_BUNDLE_IDENTIFIER;
-      if (bundleId && (bundleId === `"${WIDGET_BUNDLE_ID}"` || bundleId === WIDGET_BUNDLE_ID)) {
-        entry.buildSettings.IPHONEOS_DEPLOYMENT_TARGET = DEPLOYMENT_TARGET;
-        entry.buildSettings.SWIFT_VERSION = "5.0";
-        entry.buildSettings.TARGETED_DEVICE_FAMILY = '"1"';
-        entry.buildSettings.CODE_SIGN_ENTITLEMENTS = `"${WIDGET_NAME}/${WIDGET_NAME}.entitlements"`;
-        entry.buildSettings.INFOPLIST_FILE = `"${WIDGET_NAME}/Info.plist"`;
-        entry.buildSettings.GENERATE_INFOPLIST_FILE = "NO";
-        entry.buildSettings.PRODUCT_NAME = `"$(TARGET_NAME)"`;
-        entry.buildSettings.MARKETING_VERSION = "1.0";
-        entry.buildSettings.CURRENT_PROJECT_VERSION = "1";
-        entry.buildSettings.SWIFT_EMIT_LOC_STRINGS = "YES";
-        entry.buildSettings.LD_RUNPATH_SEARCH_PATHS = [
-          '"$(inherited)"',
-          '"@executable_path/Frameworks"',
-          '"@executable_path/../../Frameworks"',
-        ];
-        entry.buildSettings.SKIP_INSTALL = "YES";
-        if (!entry.buildSettings.OTHER_LDFLAGS) {
-          entry.buildSettings.OTHER_LDFLAGS = ['"$(inherited)"'];
-        }
-      }
-    }
-
-    const mainTarget = xcodeProject.getFirstTarget();
-    if (mainTarget) {
-      const embedPhase = xcodeProject.addBuildPhase(
-        [`${WIDGET_NAME}.appex`],
-        "PBXCopyFilesBuildPhase",
-        "Embed App Extensions",
-        mainTarget.uuid,
-        "app_extension"
-      );
-
-      if (embedPhase && embedPhase.buildPhase) {
-        embedPhase.buildPhase.dstSubfolderSpec = 13;
-        embedPhase.buildPhase.dstPath = '""';
-      }
-
-      const mainTargetObj = xcodeProject.pbxNativeTargetSection()[mainTarget.uuid];
-      if (mainTargetObj) {
-        if (!mainTargetObj.dependencies) {
-          mainTargetObj.dependencies = [];
-        }
-      }
-    }
+    const widgetTarget = addWidgetTarget(xcodeProject);
+    configureWidgetBuildSettings(xcodeProject);
+    addEmbedExtensionPhase(xcodeProject, widgetTarget);
+    addTargetDependency(xcodeProject, widgetTarget);
+    addWidgetKitHelperToProject(xcodeProject, projectName);
 
     return modConfig;
   });
