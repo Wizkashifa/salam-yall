@@ -88,3 +88,13 @@ The application follows a client-server architecture:
 - `lib/widget-shared-storage.ts` provides `savePrayerTimes()`, `savePrayerCompletion()`, and `getPrayerCompletions()` for writing prayer times and tracking status to iOS App Group shared storage.
 - `plugins/withWidgetKit.js` is an Expo config plugin that adds the `WidgetKitHelper` native module (calls `WidgetCenter.shared.reloadAllTimelines()`) and configures the App Group entitlement.
 - Data is written on prayer time load, iqama update, and prayer pill press. All calls are no-ops on Android/web.
+
+**iOS Widget Extension:**
+- `plugins/withPrayerTimesWidget.js` is an Expo config plugin that injects a full iOS Widget Extension target at prebuild time.
+- Widget target: "PrayerTimesWidget" with bundle ID `app.ummahconnect.PrayerTimesWidget`.
+- Supports `.systemSmall` (next prayer countdown with status dots) and `.systemMedium` (all 5 prayers with athan/iqama times and interactive toggle buttons).
+- Swift source files generated: `PrayerTimesWidget.swift`, `PrayerTimesEntry.swift`, `PrayerTimesProvider.swift`, `PrayerTimesWidgetViews.swift`, `TogglePrayerIntent.swift`.
+- Interactive buttons use iOS 17+ AppIntent (`TogglePrayerIntent`) to toggle prayer status directly from the widget (null → completed → at_masjid → null cycle).
+- Reads/writes prayer data from `UserDefaults(suiteName: "group.app.ummahconnect")` key `"prayerData"`.
+- Uses the app's emerald/gold color scheme with dark/light mode support.
+- Deployment target: iOS 17.0. Timeline refreshes every 15 minutes.

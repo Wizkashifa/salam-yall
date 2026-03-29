@@ -55,7 +55,8 @@
           }
         }
       ],
-      "./plugins/withWidgetKit"
+      "./plugins/withWidgetKit",
+      "./plugins/withPrayerTimesWidget"
     ],
     "experiments": {
       "typedRoutes": true,
