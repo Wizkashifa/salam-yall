@@ -24,6 +24,11 @@
       "buildNumber": "6",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "We need your location to calculate prayer times and find the nearest masjid."
+      },
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.app.ummahconnect"
+        ]
       }
     },
     "android": {
@@ -41,7 +46,16 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ],
+      "./plugins/withWidgetKit"
     ],
     "experiments": {
       "typedRoutes": true,

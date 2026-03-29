@@ -56,6 +56,7 @@ import { getDailyVerse, isFriday, type DailyVerse } from "@/lib/daily-content";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 import { expandSearchTerms } from "@/lib/search-synonyms";
 import { useLocationOverride } from "@/lib/location-override-context";
+import { savePrayerTimes as saveWidgetPrayerTimes, savePrayerCompletion as saveWidgetCompletion } from "@/lib/widget-shared-storage";
 
 interface CalendarEvent {
   id: string;
@@ -717,6 +718,17 @@ export default function PrayerScreen() {
       maghrib: todayPrayers.find(p => p.name === "maghrib")?.time,
       isha: todayPrayers.find(p => p.name === "isha")?.time,
     });
+
+    if (Platform.OS === "ios") {
+      getPrayerLog(now).then((log) => {
+        saveWidgetPrayerTimes(
+          todayPrayers.filter(p => p.name !== "sunrise").map(p => ({ name: p.name, time: p.time })),
+          undefined,
+          log as unknown as Record<string, number>
+        ).catch(() => {});
+      }).catch(() => {});
+    }
+
     setHijriDate(toHijriDate(now, hijriOffset));
     setUserCoords({ lat, lon });
 
@@ -848,6 +860,26 @@ export default function PrayerScreen() {
     getOnTimeStreak().then(setOnTimeStreak).catch(() => {});
   }, []));
 
+  useEffect(() => {
+    if (Platform.OS !== "ios" || !prayers.length) return;
+    const iqamaMap: Record<string, string | undefined> = {};
+    if (activeIqama?.iqama) {
+      const iq = activeIqama.iqama as any;
+      if (iq.fajr) iqamaMap.fajr = iq.fajr;
+      if (iq.dhuhr) iqamaMap.dhuhr = iq.dhuhr;
+      if (iq.asr) iqamaMap.asr = iq.asr;
+      if (iq.maghrib) iqamaMap.maghrib = iq.maghrib;
+      if (iq.isha) iqamaMap.isha = iq.isha;
+    }
+    getPrayerLog(new Date()).then((log) => {
+      saveWidgetPrayerTimes(
+        prayers.filter(p => p.name !== "sunrise").map(p => ({ name: p.name, time: p.time })),
+        Object.keys(iqamaMap).length > 0 ? iqamaMap : undefined,
+        log as unknown as Record<string, number>
+      ).catch(() => {});
+    }).catch(() => {});
+  }, [activeIqama, prayers]);
+
   const handlePrayerPillPress = useCallback(async (prayerName: string) => {
     const trackerName = prayerName as TrackerPrayerName;
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -857,6 +889,9 @@ export default function PrayerScreen() {
     getPrayerStreak().then(setPrayerStreak).catch(() => {});
     getOnTimeStreak().then(setOnTimeStreak).catch(() => {});
     trackEvent("prayer_tracked", { prayer: prayerName, status: updated[trackerName] });
+    if (Platform.OS === "ios") {
+      saveWidgetCompletion(trackerName, updated[trackerName]).catch(() => {});
+    }
   }, []);
 
   const dailyVerse = useMemo(() => getDailyVerse(), []);

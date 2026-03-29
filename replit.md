@@ -81,3 +81,10 @@ The application follows a client-server architecture:
 - **@react-native-async-storage/async-storage:** React Native community package for AsyncStorage.
 - **@expo-google-fonts/playfair-display:** For custom font usage.
 - **@anthropic-ai/sdk:** Anthropic Claude API client (via Replit AI Integrations) for flyer image analysis and event data extraction.
+- **react-native-shared-group-preferences:** iOS App Group UserDefaults bridge for sharing prayer data with iOS widgets. App Group: `group.app.ummahconnect`.
+- **expo-build-properties:** Configures native build settings (iOS frameworks).
+
+**iOS Widget Bridge:**
+- `lib/widget-shared-storage.ts` provides `savePrayerTimes()`, `savePrayerCompletion()`, and `getPrayerCompletions()` for writing prayer times and tracking status to iOS App Group shared storage.
+- `plugins/withWidgetKit.js` is an Expo config plugin that adds the `WidgetKitHelper` native module (calls `WidgetCenter.shared.reloadAllTimelines()`) and configures the App Group entitlement.
+- Data is written on prayer time load, iqama update, and prayer pill press. All calls are no-ops on Android/web.
