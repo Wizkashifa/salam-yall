@@ -15,19 +15,15 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "app.ummahconnect",
+      "bundleIdentifier": "com.salamyall",
       "icon": {
         "light": "./assets/images/icon.png",
         "dark": "./assets/images/icon-dark.png",
         "tinted": "./assets/images/icon-tinted.png"
       },
       "buildNumber": "6",
-      "entitlements": {
-        "com.apple.security.application-groups": ["group.app.ummahconnect"]
-      },
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "We need your location to calculate prayer times and find the nearest masjid.",
-        "ITSAppUsesNonExemptEncryption": false
+        "NSLocationWhenInUseUsageDescription": "We need your location to calculate prayer times and find the nearest masjid."
       }
     },
     "android": {
@@ -37,7 +33,6 @@
     "web": {
       "favicon": "./assets/images/favicon.png"
     },
-
     "plugins": [
       [
         "expo-router",
@@ -46,18 +41,11 @@
         }
       ],
       "expo-font",
-      "expo-web-browser",
-      "./plugins/withPrayerWidget"
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    },
-    "extra": {
-      "eas": {
-        "projectId": "da3384a8-5d60-4efe-8e88-6c98202f6aeb"
-      }
-    },
-    "owner": "wizkashifa"
+    }
   }
 }
