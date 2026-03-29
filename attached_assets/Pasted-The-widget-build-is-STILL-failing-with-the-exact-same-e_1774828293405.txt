@@ -1,0 +1,43 @@
+The widget build is STILL failing with the exact same error:
+
+[Xcodeproj] Consistency issue: no parent for object `PrayerTimesWidget.appex`: `Copy Files`, `Embed App Extensions`
+
+I'm looking at the current withPrayerTimesWidget.js plugin code. The addEmbedExtensionPhase function manually creates PBXBuildFile and PBXCopyFilesBuildPhase objects, but Xcodeproj still can't find a parent for the .appex build file.
+
+The problem is that manually constructing PBX objects bypasses Xcodeproj's internal bookkeeping. Xcodeproj tracks parent-child relationships internally, and hand-inserting objects into the hash doesn't register those relationships.
+
+COMPLETELY REPLACE the addEmbedExtensionPhase function with this approach:
+
+Instead of manually creating PBXBuildFile and PBXCopyFilesBuildPhase objects in the hash, use the xcodeProject node module's built-in APIs that properly register parent relationships:
+
+1. DO NOT manually write to xcodeProject.hash.project.objects
+2. Instead, use xcodeProject.addBuildPhase() but pass the product file reference that's ALREADY in the Products group
+3. Or better yet — skip the embed phase entirely in the config plugin. Instead, add it via a Podfile post_install hook or by modifying the .pbxproj file as raw text after Xcodeproj serializes it
+
+Actually, the most reliable approach that other Expo widget plugins use (like expo-apple-targets and @bacons/apple-targets) is:
+
+Option A: Use addBuildPhase with the correct file path that matches an existing file reference in a group:
+```js
+xcodeProject.addBuildPhase(
+  [`${WIDGET_NAME}.appex`],
+  'PBXCopyFilesBuildPhase', 
+  'Embed App Extensions',
+  mainTarget.uuid,
+  { dstSubfolderSpec: 13, dstPath: '' }
+);
+```
+BUT this only works if `PrayerTimesWidget.appex` already exists as a PBXFileReference in a group. The addTarget() call creates the product reference and adds it to the Products group, so this SHOULD work — but only if addTarget actually adds the product to the Products group properly.
+
+Option B (MOST RELIABLE): After addTarget(), directly use the raw project file manipulation. After xcodeProject is fully built and BEFORE it's returned, do a string replacement on the serialized output. But since we can't do that in withXcodeProject...
+
+Option C (RECOMMENDED): Use the pbxproj file directly. Instead of using withXcodeProject for the embed phase, use withDangerousMod to read the .pbxproj file as text AFTER it's been written, find the main target's buildPhases section, and insert the embed phase as text. This bypasses Xcodeproj's parent tracking entirely.
+
+Please implement Option C:
+1. Keep everything in withXcodeProject EXCEPT the addEmbedExtensionPhase call — remove that call
+2. Add a new withDangerousMod that runs AFTER the withXcodeProject mod
+3. In that mod, read the .pbxproj file as text
+4. Parse it to find the main target's buildPhases array
+5. Create the PBXCopyFilesBuildPhase and PBXBuildFile entries as text insertions
+6. Write the modified .pbxproj back
+
+This is how other production Expo widget plugins handle the embed phase because Xcodeproj's parent tracking makes programmatic embed phases unreliable.
