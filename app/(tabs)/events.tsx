@@ -52,6 +52,7 @@ interface CalendarEvent {
   isAllDay: boolean;
   organizer: string;
   imageUrl: string;
+  additionalImageUrls?: string[];
   registrationUrl: string;
   speaker: string;
   latitude: number | null;
@@ -438,15 +439,7 @@ function EventDetailModal({ event, visible, onClose, isSaved, onToggleSave }: { 
         </View>
 
         <ScrollView style={styles.modalScroll} contentContainerStyle={{ paddingBottom: insets.bottom + 40 }} bounces={false} showsVerticalScrollIndicator={false}>
-          {event.imageUrl ? (
-            <Image source={{ uri: event.imageUrl }} style={styles.modalImage} resizeMode="cover" />
-          ) : getOrgLogo(event.organizer) ? (
-            <Image source={getOrgLogo(event.organizer)} style={styles.modalImage} resizeMode="cover" />
-          ) : (
-            <View style={[styles.modalImagePlaceholder, { backgroundColor: colors.prayerIconBg }]}>
-              <Ionicons name="calendar" size={48} color={colors.emerald} />
-            </View>
-          )}
+          <EventImageGallery event={event} colors={colors} isDark={isDark} getOrgLogo={getOrgLogo} />
 
           <View style={styles.modalBody}>
             {event.organizer ? (
@@ -537,6 +530,49 @@ function EventDetailModal({ event, visible, onClose, isSaved, onToggleSave }: { 
       </GlassModalContainer>
     </Modal>
   );
+}
+
+function EventImageGallery({ event, colors, isDark, getOrgLogo }: { event: CalendarEvent; colors: any; isDark: boolean; getOrgLogo: (org: string) => any }) {
+  const [activeIdx, setActiveIdx] = React.useState(0);
+  const allImages: string[] = [];
+  if (event.imageUrl) allImages.push(event.imageUrl);
+  if (event.additionalImageUrls?.length) allImages.push(...event.additionalImageUrls);
+
+  if (allImages.length > 1) {
+    return (
+      <View>
+        <ScrollView
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          style={{ width: SCREEN_WIDTH }}
+          onMomentumScrollEnd={(e) => {
+            const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+            setActiveIdx(idx);
+          }}
+        >
+          {allImages.map((url, i) => (
+            <Image key={i} source={{ uri: url }} style={[styles.modalImage, { width: SCREEN_WIDTH }]} resizeMode="cover" />
+          ))}
+        </ScrollView>
+        <View style={{ flexDirection: "row", justifyContent: "center", gap: 6, marginTop: 8, marginBottom: 4 }}>
+          {allImages.map((_, i) => (
+            <View key={i} style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: i === activeIdx ? colors.gold : (isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.2)") }} />
+          ))}
+        </View>
+      </View>
+    );
+  } else if (allImages.length === 1) {
+    return <Image source={{ uri: allImages[0] }} style={styles.modalImage} resizeMode="cover" />;
+  } else if (getOrgLogo(event.organizer)) {
+    return <Image source={getOrgLogo(event.organizer)} style={styles.modalImage} resizeMode="cover" />;
+  } else {
+    return (
+      <View style={[styles.modalImagePlaceholder, { backgroundColor: colors.prayerIconBg }]}>
+        <Ionicons name="calendar" size={48} color={colors.emerald} />
+      </View>
+    );
+  }
 }
 
 export default function EventsScreen() {

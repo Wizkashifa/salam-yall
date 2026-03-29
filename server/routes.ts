@@ -1443,6 +1443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   await pool.query("ALTER TABLE community_events ADD COLUMN IF NOT EXISTS is_virtual BOOLEAN DEFAULT false").catch(() => {});
   await pool.query("ALTER TABLE community_events ADD COLUMN IF NOT EXISTS is_featured BOOLEAN DEFAULT false").catch(() => {});
+  await pool.query("ALTER TABLE community_events ADD COLUMN IF NOT EXISTS additional_images JSONB DEFAULT '[]'").catch(() => {});
   await pool.query("ALTER TABLE community_events ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION").catch(() => {});
   await pool.query("ALTER TABLE community_events ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION").catch(() => {});
   await pool.query("ALTER TABLE event_overrides ADD COLUMN IF NOT EXISTS is_virtual BOOLEAN").catch(() => {});
@@ -1547,6 +1548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isAllDay: false,
           organizer,
           imageUrl: r.image_data ? `${baseUrl}/api/events/image/${r.id}` : "",
+          additionalImageUrls: (Array.isArray(r.additional_images) ? r.additional_images : []).map((_: any, i: number) => `${baseUrl}/api/events/image/${r.id}/${i}`),
           registrationUrl: r.registration_url || "",
           speaker: "",
           latitude: coords.latitude,
@@ -1575,6 +1577,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.send(buffer);
     } catch (error: any) {
       console.error("Error serving community event image:", error.message);
+      res.status(500).json({ error: "Failed to serve image" });
+    }
+  });
+
+  app.get("/api/events/image/:id/:index", async (req, res) => {
+    try {
+      const { id, index } = req.params;
+      const idx = parseInt(index);
+      const { rows } = await pool.query("SELECT additional_images FROM community_events WHERE id = $1", [id]);
+      if (!rows.length) return res.status(404).json({ error: "Event not found" });
+      const images = rows[0].additional_images || [];
+      if (idx < 0 || idx >= images.length || !images[idx]?.data) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+      const mime = images[idx].mime || "image/jpeg";
+      const buffer = Buffer.from(images[idx].data, "base64");
+      res.set("Content-Type", mime);
+      res.set("Cache-Control", "public, max-age=86400");
+      res.send(buffer);
+    } catch (error: any) {
+      console.error("Error serving additional event image:", error.message);
       res.status(500).json({ error: "Failed to serve image" });
     }
   });
@@ -5990,7 +6013,7 @@ ${profileInfo.slice(0, 30000)}`,
   app.post("/api/admin/events/publish", async (req, res) => {
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {
-      const { title, description, location, startTime, endTime, organizer, registrationUrl, image, imageMime, isVirtual, isFeatured, recurring } = req.body;
+      const { title, description, location, startTime, endTime, organizer, registrationUrl, image, imageMime, additionalImages, isVirtual, isFeatured, recurring } = req.body;
       if (!title || !startTime) return res.status(400).json({ error: "Title and start time are required" });
 
       if (isFeatured) {
@@ -6027,11 +6050,12 @@ ${profileInfo.slice(0, 30000)}`,
       for (let w = 0; w < weeks; w++) {
         const wStart = new Date(baseStart.getTime() + w * 7 * 24 * 60 * 60 * 1000);
         const wEnd = baseEnd ? new Date(wStart.getTime() + durationMs) : null;
+        const addImgs = Array.isArray(additionalImages) && additionalImages.length > 0 ? JSON.stringify(additionalImages) : '[]';
         const result = await pool.query(
-          `INSERT INTO community_events (title, description, location, start_time, end_time, organizer, registration_url, image_data, image_mime, is_virtual, is_featured, status, lat, lng)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'approved', $12, $13)
+          `INSERT INTO community_events (title, description, location, start_time, end_time, organizer, registration_url, image_data, image_mime, additional_images, is_virtual, is_featured, status, lat, lng)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12, 'approved', $13, $14)
            RETURNING id`,
-          [title, description || null, location || null, wStart, wEnd, organizer || null, registrationUrl || null, image || null, imageMime || "image/jpeg", !!isVirtual, !!isFeatured, eventLat, eventLng]
+          [title, description || null, location || null, wStart, wEnd, organizer || null, registrationUrl || null, image || null, imageMime || "image/jpeg", addImgs, !!isVirtual, !!isFeatured, eventLat, eventLng]
         );
         ids.push(result.rows[0].id);
       }
@@ -6048,7 +6072,7 @@ ${profileInfo.slice(0, 30000)}`,
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {
       const { rows } = await pool.query(
-        "SELECT id, title, description, location, start_time, end_time, organizer, registration_url, is_virtual, is_featured, status, created_at, CASE WHEN image_data IS NOT NULL THEN true ELSE false END as has_image FROM community_events ORDER BY start_time ASC"
+        "SELECT id, title, description, location, start_time, end_time, organizer, registration_url, is_virtual, is_featured, status, created_at, CASE WHEN image_data IS NOT NULL THEN true ELSE false END as has_image, COALESCE(jsonb_array_length(additional_images), 0) as additional_image_count, additional_images FROM community_events ORDER BY start_time ASC"
       );
       const normalized = rows.map((r: any) => {
         const resolved = resolveOrgName(r.organizer || "");
@@ -6066,7 +6090,7 @@ ${profileInfo.slice(0, 30000)}`,
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {
       const { id } = req.params;
-      const { title, description, location, start_time, end_time, organizer, registration_url, image_data, image_mime, is_virtual, is_featured } = req.body;
+      const { title, description, location, start_time, end_time, organizer, registration_url, image_data, image_mime, additional_images, is_virtual, is_featured } = req.body;
 
       if (is_featured) {
         const { rows: current } = await pool.query("SELECT is_featured FROM community_events WHERE id = $1", [id]);
@@ -6094,6 +6118,7 @@ ${profileInfo.slice(0, 30000)}`,
       if (registration_url !== undefined) { fields.push(`registration_url = $${idx++}`); values.push(registration_url); }
       if (image_data !== undefined) { fields.push(`image_data = $${idx++}`); values.push(image_data || null); }
       if (image_mime !== undefined) { fields.push(`image_mime = $${idx++}`); values.push(image_mime || 'image/jpeg'); }
+      if (additional_images !== undefined) { fields.push(`additional_images = $${idx++}::jsonb`); values.push(JSON.stringify(additional_images || [])); }
       if (is_virtual !== undefined) { fields.push(`is_virtual = $${idx++}`); values.push(!!is_virtual); }
       if (is_featured !== undefined) { fields.push(`is_featured = $${idx++}`); values.push(!!is_featured); }
       if (fields.length === 0) return res.status(400).json({ error: "No fields to update" });

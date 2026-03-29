@@ -327,6 +327,12 @@
           </div>
           <label>Registration URL (optional)</label>
           <input type="text" id="flyerRegUrl" placeholder="https://...">
+          <div style="margin:14px 0;">
+            <label>Additional Flyers (optional)</label>
+            <div id="additionalFlyersContainer" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;"></div>
+            <button type="button" class="btn btn-sm" onclick="document.getElementById('additionalFlyerInput').click()" style="background:#1E1E1E;color:#9CA3AF;font-size:12px;">+ Add More Flyers</button>
+            <input type="file" id="additionalFlyerInput" accept="image/jpeg,image/png,image/webp" multiple style="display:none;" onchange="handleAdditionalFlyers(event)">
+          </div>
           <div style="display:flex;align-items:center;gap:8px;margin:10px 0;">
             <label style="margin:0;cursor:pointer;display:flex;align-items:center;gap:6px;">
               <input type="checkbox" id="flyerRecurring" style="width:16px;height:16px;accent-color:#10B981;">
@@ -448,6 +454,12 @@
             </label>
             <button type="button" class="btn btn-sm" style="background:#333;color:#EF4444;" onclick="clearEditCEImage()">Remove Image</button>
           </div>
+        </div>
+        <label>Additional Flyers</label>
+        <div style="margin-bottom:14px;">
+          <div id="editCEAdditionalImages" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;"></div>
+          <button type="button" class="btn btn-sm" onclick="document.getElementById('editCEAdditionalInput').click()" style="background:#1E1E1E;color:#9CA3AF;font-size:12px;">+ Add More Flyers</button>
+          <input type="file" id="editCEAdditionalInput" accept="image/jpeg,image/png,image/webp" multiple style="display:none;" onchange="handleEditCEAdditionalImages(event)">
         </div>
         <div style="display:flex;gap:8px;">
           <button class="btn btn-primary" onclick="saveCommunityEvent()" style="flex:1;">Save Changes</button>
@@ -1708,6 +1720,40 @@
 
     var flyerBase64 = null;
     var flyerMime = null;
+    var additionalFlyerImages = [];
+
+    function handleAdditionalFlyers(e) {
+      var files = Array.from(e.target.files);
+      files.forEach(function(file) {
+        if (!file.type.startsWith('image/')) return;
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+          var dataUrl = ev.target.result;
+          var base64 = dataUrl.split(',')[1];
+          additionalFlyerImages.push({ data: base64, mime: file.type });
+          renderAdditionalFlyerThumbs();
+        };
+        reader.readAsDataURL(file);
+      });
+      e.target.value = '';
+    }
+
+    function removeAdditionalFlyer(idx) {
+      additionalFlyerImages.splice(idx, 1);
+      renderAdditionalFlyerThumbs();
+    }
+
+    function renderAdditionalFlyerThumbs() {
+      var container = document.getElementById('additionalFlyersContainer');
+      container.innerHTML = '';
+      additionalFlyerImages.forEach(function(img, i) {
+        var wrapper = document.createElement('div');
+        wrapper.style.cssText = 'position:relative;width:80px;height:80px;';
+        wrapper.innerHTML = '<img src="data:' + img.mime + ';base64,' + img.data + '" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid #333;">' +
+          '<button onclick="removeAdditionalFlyer(' + i + ')" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#EF4444;color:#fff;border:none;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>';
+        container.appendChild(wrapper);
+      });
+    }
 
     function handleFlyerDrop(e) {
       e.preventDefault();
@@ -1738,10 +1784,12 @@
     function clearFlyer() {
       flyerBase64 = null;
       flyerMime = null;
+      additionalFlyerImages = [];
       document.getElementById('flyerPreview').style.display = 'none';
       document.getElementById('flyerUploadArea').style.display = 'block';
       document.getElementById('extractFlyerBtn').disabled = true;
       document.getElementById('flyerFileInput').value = '';
+      renderAdditionalFlyerThumbs();
     }
 
     function toggleManualEntry() {
@@ -1820,6 +1868,7 @@
           registrationUrl: document.getElementById('flyerRegUrl').value.trim(),
           image: flyerBase64,
           imageMime: flyerMime,
+          additionalImages: additionalFlyerImages.length > 0 ? additionalFlyerImages : [],
           recurring: isRecurring,
         };
         var res = await fetch('/api/admin/events/publish', {
@@ -1840,6 +1889,8 @@
         document.getElementById('flyerEndTime').value = '';
         document.getElementById('flyerRegUrl').value = '';
         document.getElementById('flyerRecurring').checked = false;
+        additionalFlyerImages = [];
+        renderAdditionalFlyerThumbs();
         document.getElementById('flyerForm').style.display = 'none';
         document.getElementById('extractStatus').style.display = 'none';
         clearFlyer();
@@ -2110,7 +2161,8 @@
         var dateStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
         var org = e.organizer ? '<div style="font-size:11px;color:#6B7280;margin-top:2px;">' + escHtml(e.organizer) + '</div>' : '';
         var loc = e.location ? '<div style="font-size:11px;color:#6B7280;">' + escHtml(e.location) + '</div>' : '';
-        var imgBadge = e.has_image ? '<span style="font-size:10px;padding:2px 6px;background:#1A2E22;color:#6EE7B7;border-radius:4px;margin-left:6px;">IMAGE</span>' : '';
+        var totalImgs = (e.has_image ? 1 : 0) + (parseInt(e.additional_image_count) || 0);
+        var imgBadge = totalImgs > 0 ? '<span style="font-size:10px;padding:2px 6px;background:#1A2E22;color:#6EE7B7;border-radius:4px;margin-left:6px;">' + totalImgs + ' IMAGE' + (totalImgs > 1 ? 'S' : '') + '</span>' : '';
         return '<li class="message-item" style="flex-direction:column;gap:8px;">' +
           '<div style="display:flex;align-items:flex-start;gap:12px;width:100%;">' +
             '<span class="message-badge badge-event" style="white-space:nowrap;">' + dateStr + '</span>' +
@@ -2146,6 +2198,8 @@
     var editCEImageData = null;
     var editCEImageMime = null;
     var editCEImageChanged = false;
+    var editCEAdditionalImages = [];
+    var editCEAdditionalChanged = false;
 
     function openCommunityEventEditor(id) {
       var event = cachedCommunityEvents.find(function(e) { return e.id === id; });
@@ -2161,6 +2215,8 @@
       editCEImageData = null;
       editCEImageMime = null;
       editCEImageChanged = false;
+      editCEAdditionalImages = (event.additional_images || []).slice();
+      editCEAdditionalChanged = false;
       var preview = document.getElementById('editCEImagePreview');
       if (event.has_image) {
         preview.innerHTML = '<img src="/api/community-events/' + id + '/image" style="max-width:200px;max-height:120px;border-radius:8px;border:1px solid #333;">';
@@ -2168,7 +2224,46 @@
         preview.innerHTML = '<span style="color:#6B7280;font-size:12px;">No image</span>';
       }
       document.getElementById('editCEImageInput').value = '';
+      renderEditCEAdditionalThumbs(id);
       document.getElementById('editCommunityEventModal').style.display = 'block';
+    }
+
+    function handleEditCEAdditionalImages(e) {
+      var files = Array.from(e.target.files);
+      files.forEach(function(file) {
+        if (!file.type.startsWith('image/')) return;
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+          var dataUrl = ev.target.result;
+          var base64 = dataUrl.split(',')[1];
+          editCEAdditionalImages.push({ data: base64, mime: file.type });
+          editCEAdditionalChanged = true;
+          var id = document.getElementById('editCommunityEventId').value;
+          renderEditCEAdditionalThumbs(id);
+        };
+        reader.readAsDataURL(file);
+      });
+      e.target.value = '';
+    }
+
+    function removeEditCEAdditionalImage(idx) {
+      editCEAdditionalImages.splice(idx, 1);
+      editCEAdditionalChanged = true;
+      var id = document.getElementById('editCommunityEventId').value;
+      renderEditCEAdditionalThumbs(id);
+    }
+
+    function renderEditCEAdditionalThumbs(eventId) {
+      var container = document.getElementById('editCEAdditionalImages');
+      container.innerHTML = '';
+      editCEAdditionalImages.forEach(function(img, i) {
+        var wrapper = document.createElement('div');
+        wrapper.style.cssText = 'position:relative;width:80px;height:80px;';
+        var src = img.data ? 'data:' + (img.mime || 'image/jpeg') + ';base64,' + img.data : '/api/events/image/' + eventId + '/' + i;
+        wrapper.innerHTML = '<img src="' + src + '" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid #333;">' +
+          '<button onclick="removeEditCEAdditionalImage(' + i + ')" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#EF4444;color:#fff;border:none;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>';
+        container.appendChild(wrapper);
+      });
     }
 
     function closeCommunityEventEditor() {
@@ -2214,6 +2309,9 @@
       if (editCEImageChanged) {
         body.image_data = editCEImageData || null;
         body.image_mime = editCEImageMime || null;
+      }
+      if (editCEAdditionalChanged) {
+        body.additional_images = editCEAdditionalImages;
       }
       try {
         var res = await fetch('/api/admin/community-events/' + id, {

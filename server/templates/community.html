@@ -1706,9 +1706,25 @@
       const endDate = e.end ? new Date(e.end) : null;
       const dateStr = formatEventDate(startDate, endDate);
       const desc = e.description ? stripHtml(e.description) : '';
-      let imgHtml = e.imageUrl
-        ? `<img class="modal-image" src="${e.imageUrl}" alt="${esc(e.title)}" onerror="this.outerHTML='<div class=\\'modal-image-placeholder\\'>📅</div>'" />`
-        : '<div class="modal-image-placeholder">📅</div>';
+      const allImages = [];
+      if (e.imageUrl) allImages.push(e.imageUrl);
+      if (e.additionalImageUrls && e.additionalImageUrls.length) {
+        e.additionalImageUrls.forEach(u => allImages.push(u));
+      }
+      let imgHtml;
+      if (allImages.length > 1) {
+        const galleryId = 'gallery-' + Date.now();
+        imgHtml = `<div style="position:relative;overflow:hidden;">
+          <div id="${galleryId}" style="display:flex;transition:transform 0.3s ease;"><style>#${galleryId} img{min-width:100%;max-height:300px;object-fit:cover;}</style>${allImages.map(u => `<img src="${u}" alt="${esc(e.title)}" onerror="this.style.display='none'">`).join('')}</div>
+          <div style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:6px;">${allImages.map((_, i) => `<button onclick="document.getElementById('${galleryId}').style.transform='translateX(-${i * 100}%)';this.parentNode.querySelectorAll('button').forEach(b=>b.style.opacity='0.5');this.style.opacity='1'" style="width:8px;height:8px;border-radius:50%;background:#fff;border:none;cursor:pointer;opacity:${i === 0 ? '1' : '0.5'};"></button>`).join('')}</div>
+          <button onclick="(function(g){var c=g.querySelectorAll('img').length;var t=g.style.transform||'';var m=t.match(/-?(\\d+)/);var cur=m?parseInt(m[1])/100:0;if(cur>0){g.style.transform='translateX(-'+(cur-1)*100+'%)';var dots=g.parentNode.querySelectorAll('div:last-of-type button');dots.forEach((b,i)=>b.style.opacity=i===(cur-1)?'1':'0.5')}})(document.getElementById('${galleryId}'))" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.5);color:#fff;border:none;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;">‹</button>
+          <button onclick="(function(g){var c=g.querySelectorAll('img').length;var t=g.style.transform||'';var m=t.match(/-?(\\d+)/);var cur=m?parseInt(m[1])/100:0;if(cur<c-1){g.style.transform='translateX(-'+(cur+1)*100+'%)';var dots=g.parentNode.querySelectorAll('div:last-of-type button');dots.forEach((b,i)=>b.style.opacity=i===(cur+1)?'1':'0.5')}})(document.getElementById('${galleryId}'))" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.5);color:#fff;border:none;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;">›</button>
+        </div>`;
+      } else if (allImages.length === 1) {
+        imgHtml = `<img class="modal-image" src="${allImages[0]}" alt="${esc(e.title)}" onerror="this.outerHTML='<div class=\\'modal-image-placeholder\\'>📅</div>'" />`;
+      } else {
+        imgHtml = '<div class="modal-image-placeholder">📅</div>';
+      }
       let badges = '';
       if (e.isFeatured) badges += '<span class="badge badge-featured">★ Featured</span>';
       if (e.isVirtual) badges += '<span class="badge badge-virtual">Virtual</span>';
