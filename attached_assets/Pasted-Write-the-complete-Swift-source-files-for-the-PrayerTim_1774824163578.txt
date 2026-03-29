@@ -1,0 +1,34 @@
+Write the complete Swift source files for the PrayerTimesWidget extension. These files will live at ios/PrayerTimesWidget/:
+
+1. PrayerTimesWidget.swift:
+   - @main widget bundle entry point
+   - Registers the widget with kind "PrayerTimesWidget"
+   - Supports .systemSmall and .systemMedium
+
+2. Models.swift:
+   - PrayerData struct (Codable): date string, array of Prayer
+   - Prayer struct (Codable): name, athan, iqama, status (optional string)
+   - PrayerTimesEntry: TimelineEntry with date and PrayerData
+
+3. Provider.swift:
+   - PrayerTimesProvider conforming to TimelineProvider
+   - placeholder(): returns sample data
+   - getSnapshot(): reads from UserDefaults(suiteName: "group.app.ummahconnect") key "prayerData", parses JSON
+   - getTimeline(): same read, creates entries that refresh every 30 minutes
+   - Helper to determine "next prayer" based on current time
+
+4. WidgetViews.swift:
+   - SmallWidgetView: shows next upcoming prayer name, athan time, countdown, and iqama time
+   - MediumWidgetView: all 5 prayers, each row shows name, athan, iqama, and an interactive Button (using TogglePrayerIntent) showing completion status using the same visual treatment as our Home Screen prayer tracker cards — same icons, same color coding for completed, missed, excused, at_masjid, made_up states
+   - Both views should support dark mode and light mode, matching the same color scheme and card styling used on our Home Screen prayer tracker
+   - Do NOT create a .systemLarge view
+
+5. TogglePrayerIntent.swift:
+   - Conforms to AppIntent
+   - @Parameter for prayerName: String
+   - perform() reads shared UserDefaults, finds the prayer, cycles status (null → completed → at_masjid → null), writes back, returns .result()
+   - After write, triggers WidgetCenter.shared.reloadAllTimelines()
+
+Use the same color scheme as our Home Screen prayer tracker cards for both light and dark mode. Match the existing card background colors, text colors, and status indicator colors exactly.
+
+Use SF Symbols for icons: checkmark.circle.fill (completed), building.columns (at_masjid), arrow.counterclockwise (made_up), xmark.circle (missed), circle (pending/null)

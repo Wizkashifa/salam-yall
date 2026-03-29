@@ -8,10 +8,10 @@ const APP_GROUP = "group.app.ummahconnect";
 const DEPLOYMENT_TARGET = "17.0";
 
 function getWidgetSwiftFiles() {
-  const prayerTimesEntry = `import WidgetKit
+  const models = `import WidgetKit
 import Foundation
 
-struct PrayerEntry: Codable {
+struct Prayer: Codable {
     let name: String
     let athan: String
     let iqama: String?
@@ -20,7 +20,7 @@ struct PrayerEntry: Codable {
 
 struct PrayerData: Codable {
     let date: String
-    var prayers: [PrayerEntry]
+    var prayers: [Prayer]
 }
 
 struct PrayerTimesEntry: TimelineEntry {
@@ -30,7 +30,7 @@ struct PrayerTimesEntry: TimelineEntry {
 }
 `;
 
-  const prayerTimesProvider = `import WidgetKit
+  const provider = `import WidgetKit
 import Foundation
 
 struct PrayerTimesProvider: TimelineProvider {
@@ -41,11 +41,11 @@ struct PrayerTimesProvider: TimelineProvider {
         PrayerTimesEntry(
             date: Date(),
             prayerData: PrayerData(date: "", prayers: [
-                PrayerEntry(name: "Fajr", athan: "5:30 AM", iqama: "6:00 AM", status: nil),
-                PrayerEntry(name: "Dhuhr", athan: "1:00 PM", iqama: "1:30 PM", status: "completed"),
-                PrayerEntry(name: "Asr", athan: "4:30 PM", iqama: "5:00 PM", status: nil),
-                PrayerEntry(name: "Maghrib", athan: "7:15 PM", iqama: "7:20 PM", status: nil),
-                PrayerEntry(name: "Isha", athan: "8:45 PM", iqama: "9:15 PM", status: nil)
+                Prayer(name: "Fajr", athan: "5:30 AM", iqama: "6:00 AM", status: nil),
+                Prayer(name: "Dhuhr", athan: "1:00 PM", iqama: "1:30 PM", status: "completed"),
+                Prayer(name: "Asr", athan: "4:30 PM", iqama: "5:00 PM", status: nil),
+                Prayer(name: "Maghrib", athan: "7:15 PM", iqama: "7:20 PM", status: nil),
+                Prayer(name: "Isha", athan: "8:45 PM", iqama: "9:15 PM", status: nil)
             ]),
             nextPrayerIndex: 2
         )
@@ -58,7 +58,7 @@ struct PrayerTimesProvider: TimelineProvider {
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<PrayerTimesEntry>) -> Void) {
         let entry = buildEntry()
-        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: Date()) ?? Date()
+        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 30, to: Date()) ?? Date()
         let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
         completion(timeline)
     }
@@ -67,12 +67,16 @@ struct PrayerTimesProvider: TimelineProvider {
         guard let defaults = UserDefaults(suiteName: suiteName) else { return nil }
 
         if let data = defaults.data(forKey: dataKey) {
-            return try? JSONDecoder().decode(PrayerData.self, from: data)
+            if let parsed = try? JSONDecoder().decode(PrayerData.self, from: data) {
+                return parsed
+            }
         }
 
         if let str = defaults.string(forKey: dataKey),
            let data = str.data(using: .utf8) {
-            return try? JSONDecoder().decode(PrayerData.self, from: data)
+            if let parsed = try? JSONDecoder().decode(PrayerData.self, from: data) {
+                return parsed
+            }
         }
 
         if let dict = defaults.dictionary(forKey: dataKey) {
@@ -88,10 +92,10 @@ struct PrayerTimesProvider: TimelineProvider {
             return nil
         }
 
-        let prayers: [PrayerEntry] = prayersArray.compactMap { p in
+        let prayers: [Prayer] = prayersArray.compactMap { p in
             guard let name = p["name"] as? String,
                   let athan = p["athan"] as? String else { return nil }
-            return PrayerEntry(
+            return Prayer(
                 name: name,
                 athan: athan,
                 iqama: p["iqama"] as? String,
@@ -110,7 +114,7 @@ struct PrayerTimesProvider: TimelineProvider {
         return PrayerTimesEntry(date: Date(), prayerData: prayerData, nextPrayerIndex: nextIdx)
     }
 
-    private func findNextPrayerIndex(prayers: [PrayerEntry]) -> Int? {
+    private func findNextPrayerIndex(prayers: [Prayer]) -> Int? {
         let now = Date()
         let calendar = Calendar.current
         let formatter = DateFormatter()
@@ -174,9 +178,8 @@ struct TogglePrayerIntent: AppIntent {
         }
 
         if let index = data.prayers.firstIndex(where: { $0.name == prayerName }) {
-            let current = data.prayers[index]
             let newStatus: String?
-            switch current.status {
+            switch data.prayers[index].status {
             case nil:
                 newStatus = "completed"
             case "completed":
@@ -204,10 +207,10 @@ struct TogglePrayerIntent: AppIntent {
             return nil
         }
 
-        let prayers: [PrayerEntry] = prayersArray.compactMap { p in
+        let prayers: [Prayer] = prayersArray.compactMap { p in
             guard let name = p["name"] as? String,
                   let athan = p["athan"] as? String else { return nil }
-            return PrayerEntry(
+            return Prayer(
                 name: name,
                 athan: athan,
                 iqama: p["iqama"] as? String,
@@ -220,7 +223,7 @@ struct TogglePrayerIntent: AppIntent {
 }
 `;
 
-  const prayerTimesWidgetViews = `import SwiftUI
+  const widgetViews = `import SwiftUI
 import WidgetKit
 import AppIntents
 
@@ -248,9 +251,38 @@ struct StatusIcon {
             return ("arrow.counterclockwise.circle.fill", Color.blue)
         case "excused":
             return ("minus.circle.fill", Color.gray)
+        case "missed":
+            return ("xmark.circle.fill", Color.red)
         default:
             return ("circle", Color.gray.opacity(0.4))
         }
+    }
+}
+
+private func prayerDate(from timeString: String) -> Date? {
+    let now = Date()
+    let calendar = Calendar.current
+    let formatter = DateFormatter()
+    formatter.dateFormat = "h:mm a"
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    guard let parsed = formatter.date(from: timeString) else { return nil }
+    var components = calendar.dateComponents([.year, .month, .day], from: now)
+    let timeComponents = calendar.dateComponents([.hour, .minute], from: parsed)
+    components.hour = timeComponents.hour
+    components.minute = timeComponents.minute
+    return calendar.date(from: components)
+}
+
+private func countdownText(to target: Date) -> String {
+    let now = Date()
+    let diff = target.timeIntervalSince(now)
+    if diff <= 0 { return "" }
+    let hours = Int(diff) / 3600
+    let minutes = (Int(diff) % 3600) / 60
+    if hours > 0 {
+        return "in \\(hours)h \\(minutes)m"
+    } else {
+        return "in \\(minutes)m"
     }
 }
 
@@ -298,6 +330,15 @@ struct SmallWidgetView: View {
                             Text(next.athan)
                                 .font(.system(size: 16, weight: .semibold, design: .monospaced))
                                 .foregroundColor(WidgetColors.emerald)
+
+                            if let target = prayerDate(from: next.athan) {
+                                let countdown = countdownText(to: target)
+                                if !countdown.isEmpty {
+                                    Text(countdown)
+                                        .font(.system(size: 11, weight: .medium))
+                                        .foregroundColor(WidgetColors.richGold.opacity(0.8))
+                                }
+                            }
 
                             if let iqama = next.iqama, !iqama.isEmpty {
                                 Text("Iqama: \\(iqama)")
@@ -497,10 +538,10 @@ struct PrayerTimesWidgetBundle: WidgetBundle {
 `;
 
   return {
-    "PrayerTimesEntry.swift": prayerTimesEntry,
-    "PrayerTimesProvider.swift": prayerTimesProvider,
+    "Models.swift": models,
+    "Provider.swift": provider,
     "TogglePrayerIntent.swift": togglePrayerIntent,
-    "PrayerTimesWidgetViews.swift": prayerTimesWidgetViews,
+    "WidgetViews.swift": widgetViews,
     "PrayerTimesWidget.swift": prayerTimesWidget,
   };
 }
@@ -624,9 +665,9 @@ function withPrayerTimesWidget(config) {
 
     const sourceFiles = [
       "PrayerTimesWidget.swift",
-      "PrayerTimesEntry.swift",
-      "PrayerTimesProvider.swift",
-      "PrayerTimesWidgetViews.swift",
+      "Models.swift",
+      "Provider.swift",
+      "WidgetViews.swift",
       "TogglePrayerIntent.swift",
     ];
     for (const file of sourceFiles) {
