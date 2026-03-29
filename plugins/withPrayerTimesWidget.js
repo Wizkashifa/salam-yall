@@ -640,6 +640,18 @@ function getWidgetInfoPlist() {
 `;
 }
 
+function findProductsGroup(xcodeProject) {
+  const pbxGroupSection = xcodeProject.hash.project.objects["PBXGroup"];
+  for (const key in pbxGroupSection) {
+    if (key.endsWith("_comment")) continue;
+    const group = pbxGroupSection[key];
+    if (typeof group === "object" && group.name === "Products") {
+      return key;
+    }
+  }
+  return null;
+}
+
 function addWidgetTarget(xcodeProject) {
   const widgetTarget = xcodeProject.addTarget(
     WIDGET_NAME,
@@ -647,6 +659,25 @@ function addWidgetTarget(xcodeProject) {
     WIDGET_NAME,
     WIDGET_BUNDLE_ID
   );
+
+  const productRefUuid = widgetTarget.pbxNativeTarget.productReference;
+  if (productRefUuid) {
+    const productsGroupKey = findProductsGroup(xcodeProject);
+    if (productsGroupKey) {
+      const productsGroup = xcodeProject.getPBXGroupByKey(productsGroupKey);
+      if (productsGroup && productsGroup.children) {
+        const alreadyInProducts = productsGroup.children.some(
+          (c) => c.value === productRefUuid
+        );
+        if (!alreadyInProducts) {
+          productsGroup.children.push({
+            value: productRefUuid,
+            comment: `${WIDGET_NAME}.appex`,
+          });
+        }
+      }
+    }
+  }
 
   const widgetGroupKey = xcodeProject.pbxCreateGroup(WIDGET_NAME, WIDGET_NAME);
   const mainGroupKey = xcodeProject.getFirstProject().firstProject.mainGroup;
