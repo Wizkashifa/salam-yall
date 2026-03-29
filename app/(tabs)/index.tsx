@@ -720,11 +720,18 @@ export default function PrayerScreen() {
     });
 
     if (Platform.OS === "ios") {
-      getPrayerLog(now).then((log) => {
+      getPrayerLog(now).then((log: DayLog) => {
+        const statusMap: Record<string, number> = {
+          fajr: log.fajr,
+          dhuhr: log.dhuhr,
+          asr: log.asr,
+          maghrib: log.maghrib,
+          isha: log.isha,
+        };
         saveWidgetPrayerTimes(
           todayPrayers.filter(p => p.name !== "sunrise").map(p => ({ name: p.name, time: p.time })),
           undefined,
-          log as unknown as Record<string, number>
+          statusMap
         ).catch(() => {});
       }).catch(() => {});
     }
@@ -864,18 +871,25 @@ export default function PrayerScreen() {
     if (Platform.OS !== "ios" || !prayers.length) return;
     const iqamaMap: Record<string, string | undefined> = {};
     if (activeIqama?.iqama) {
-      const iq = activeIqama.iqama as any;
+      const iq = activeIqama.iqama;
       if (iq.fajr) iqamaMap.fajr = iq.fajr;
       if (iq.dhuhr) iqamaMap.dhuhr = iq.dhuhr;
       if (iq.asr) iqamaMap.asr = iq.asr;
       if (iq.maghrib) iqamaMap.maghrib = iq.maghrib;
       if (iq.isha) iqamaMap.isha = iq.isha;
     }
-    getPrayerLog(new Date()).then((log) => {
+    getPrayerLog(new Date()).then((log: DayLog) => {
+      const statusMap: Record<string, number> = {
+        fajr: log.fajr,
+        dhuhr: log.dhuhr,
+        asr: log.asr,
+        maghrib: log.maghrib,
+        isha: log.isha,
+      };
       saveWidgetPrayerTimes(
         prayers.filter(p => p.name !== "sunrise").map(p => ({ name: p.name, time: p.time })),
         Object.keys(iqamaMap).length > 0 ? iqamaMap : undefined,
-        log as unknown as Record<string, number>
+        statusMap
       ).catch(() => {});
     }).catch(() => {});
   }, [activeIqama, prayers]);

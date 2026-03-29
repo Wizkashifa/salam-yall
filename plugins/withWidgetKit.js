@@ -84,14 +84,16 @@ RCT_EXPORT_METHOD(reloadAllTimelines)
       }
     }
 
-    const buildSettings = xcodeProject.getBuildProperty("OTHER_LDFLAGS");
-    if (buildSettings) {
-      const targetBuildConfigs = xcodeProject.pbxXCBuildConfigurationSection();
-      for (const key in targetBuildConfigs) {
-        if (typeof targetBuildConfigs[key] === "object" && targetBuildConfigs[key].buildSettings) {
-          const ldFlags = targetBuildConfigs[key].buildSettings.OTHER_LDFLAGS;
-          if (Array.isArray(ldFlags) && !ldFlags.includes('"-framework"') && !ldFlags.some((f) => f === '"WidgetKit"')) {
-            ldFlags.push('"-framework"', '"WidgetKit"');
+    const targetBuildConfigs = xcodeProject.pbxXCBuildConfigurationSection();
+    for (const key in targetBuildConfigs) {
+      if (typeof targetBuildConfigs[key] === "object" && targetBuildConfigs[key].buildSettings) {
+        const settings = targetBuildConfigs[key].buildSettings;
+        if (!settings.OTHER_LDFLAGS) {
+          settings.OTHER_LDFLAGS = ['"$(inherited)"', '"-framework"', '"WidgetKit"'];
+        } else if (Array.isArray(settings.OTHER_LDFLAGS)) {
+          const hasWidgetKit = settings.OTHER_LDFLAGS.some((f) => f === '"WidgetKit"');
+          if (!hasWidgetKit) {
+            settings.OTHER_LDFLAGS.push('"-framework"', '"WidgetKit"');
           }
         }
       }
