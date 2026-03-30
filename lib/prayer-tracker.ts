@@ -431,4 +431,26 @@ export async function getOnTimeStreak(): Promise<number> {
   return streak;
 }
 
+export async function syncFromWidgetData(widgetCodes: Record<string, number>): Promise<DayLog | null> {
+  const data = await loadAll();
+  const key = formatDateKey(new Date());
+  const existing = data[key] ?? { ...DEFAULT_DAY_LOG };
+  let changed = false;
+
+  for (const p of PRAYER_ORDER) {
+    const widgetStatus = widgetCodes[p] as PrayerStatus | undefined;
+    if (widgetStatus !== undefined && widgetStatus !== existing[p]) {
+      existing[p] = widgetStatus;
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    data[key] = existing;
+    await saveAll(data);
+    return existing;
+  }
+  return null;
+}
+
 export { formatDateKey };

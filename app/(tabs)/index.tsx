@@ -15,6 +15,7 @@ import {
   TextInput,
   FlatList,
   Share,
+  DeviceEventEmitter,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
@@ -858,6 +859,16 @@ export default function PrayerScreen() {
     getMissedPrayerCount().then(setMissedPrayerCount);
     getPrayerStreak().then(setPrayerStreak).catch(() => {});
     getOnTimeStreak().then(setOnTimeStreak).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener("widgetSyncCompleted", (updated: DayLog) => {
+      setTodayLog(updated);
+      getMissedPrayerCount().then(setMissedPrayerCount);
+      getPrayerStreak().then(setPrayerStreak).catch(() => {});
+      getOnTimeStreak().then(setOnTimeStreak).catch(() => {});
+    });
+    return () => sub.remove();
   }, []);
 
   useFocusEffect(useCallback(() => {

@@ -47,7 +47,8 @@ import {
 import { getApiUrl } from "@/lib/query-client";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useDeepLink } from "@/lib/deeplink-context";
-import { getMonthLogs, cyclePrayerStatus, getMonthMissedFasts, toggleMissedFast, toggleExcusedDay, getAllLogs, getPrayerStreak, getMissedPrayerCount, getMissedPrayersByType, makeUpOldestMissedPrayer, getFirstUseDate, type DayLog, type PrayerName, type PrayerStatus, type MissedPrayerCounts } from "@/lib/prayer-tracker";
+import { getMonthLogs, cyclePrayerStatus, getMonthMissedFasts, toggleMissedFast, toggleExcusedDay, getAllLogs, getPrayerStreak, getMissedPrayerCount, getMissedPrayersByType, makeUpOldestMissedPrayer, getFirstUseDate, getPrayerLog, type DayLog, type PrayerName, type PrayerStatus, type MissedPrayerCounts } from "@/lib/prayer-tracker";
+import { savePrayerTimes as saveWidgetPrayerTimes, savePrayerCompletion as saveWidgetCompletion } from "@/lib/widget-shared-storage";
 import { DHIKR_PRESETS, getDhikrCounts, incrementDhikr, resetDhikr, type DhikrDayData } from "@/lib/dhikr-tracker";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 import { MasjidMap } from "@/components/MasjidMap";
@@ -1654,7 +1655,11 @@ export default function SettingsScreen() {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         const parts = selectedDay.split("-");
                         const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-                        await cyclePrayerStatus(date, p);
+                        const dayLog = await cyclePrayerStatus(date, p);
+                        const todayKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`;
+                        if (selectedDay === todayKey && Platform.OS === "ios") {
+                          saveWidgetCompletion(p, dayLog[p]).catch(() => {});
+                        }
                         const updated = await getMonthLogs(trackerYear, trackerMonth);
                         setMonthLogs(updated);
                         getMissedPrayerCount().then(setMissedPrayerCount);

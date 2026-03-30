@@ -16,7 +16,7 @@ import * as Linking from "expo-linking";
 import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { AppState, Platform } from "react-native";
+import { AppState, Platform, DeviceEventEmitter } from "react-native";
 import Constants from "expo-constants";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
@@ -32,6 +32,8 @@ import { trackEvent } from "@/lib/analytics";
 import { DeepLinkProvider, parseDeepLinkUrl, useDeepLink } from "@/lib/deeplink-context";
 import { AuthProvider } from "@/lib/auth-context";
 import { LocationOverrideProvider } from "@/lib/location-override-context";
+import { getWidgetCompletionsAsCodes } from "@/lib/widget-shared-storage";
+import { syncFromWidgetData } from "@/lib/prayer-tracker";
 
 const ONBOARDING_VERSION_KEY = "onboarding_version";
 const APP_VERSION = Constants.expoConfig?.version ?? "1.0.0";
@@ -113,9 +115,25 @@ function RootLayoutNav() {
     registerPushToken();
     trackEvent("app_open");
 
+    const syncWidgetData = async () => {
+      if (Platform.OS !== "ios") return;
+      try {
+        const widgetCodes = await getWidgetCompletionsAsCodes();
+        if (widgetCodes) {
+          const updated = await syncFromWidgetData(widgetCodes);
+          if (updated) {
+            DeviceEventEmitter.emit("widgetSyncCompleted", updated);
+          }
+        }
+      } catch {}
+    };
+
+    syncWidgetData();
+
     const sub = AppState.addEventListener("change", (nextState) => {
       if (appState.current.match(/inactive|background/) && nextState === "active") {
         trackEvent("app_open");
+        syncWidgetData();
       }
       appState.current = nextState;
     });

@@ -150,3 +150,30 @@ export async function getPrayerCompletions(): Promise<Record<string, string | nu
   }
   return result;
 }
+
+function statusToCode(status: string | null): number {
+  switch (status) {
+    case "completed": return 1;
+    case "at_masjid": return 2;
+    case "made_up": return 3;
+    case "excused": return 4;
+    default: return 0;
+  }
+}
+
+export async function getWidgetCompletionsAsCodes(): Promise<Record<string, number> | null> {
+  if (Platform.OS !== "ios") return null;
+
+  const data = await readFromAppGroup();
+  if (!data) return null;
+
+  const today = new Date();
+  const todayKey = formatDateKey(today);
+  if (data.date !== todayKey) return null;
+
+  const result: Record<string, number> = {};
+  for (const p of data.prayers) {
+    result[p.name.toLowerCase()] = statusToCode(p.status);
+  }
+  return result;
+}
