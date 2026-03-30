@@ -1,0 +1,107 @@
+{
+  "id": "512388bf-b4a9-4a02-83a6-0a098f1a3919",
+  "createdAt": "2026-03-28T01:55:20.562Z",
+  "runtimeVersion": "exposdk:54.0.0",
+  "launchAsset": {
+    "key": "bundle-1774662920562-28052",
+    "contentType": "application/javascript",
+    "url": "https://33003ebc-ab16-4368-8da4-cee0b0cdb674-00-8hztmps638d8.picard.replit.dev/1774662920562-28052/_expo/static/js/ios/bundle.js"
+  },
+  "assets": [],
+  "metadata": {},
+  "extra": {
+    "eas": {},
+    "expoClient": {
+      "name": "Salam Y'all",
+      "slug": "salam-yall",
+      "version": "1.1.3",
+      "orientation": "portrait",
+      "icon": "./assets/images/icon.png",
+      "scheme": "salamyall",
+      "userInterfaceStyle": "automatic",
+      "newArchEnabled": true,
+      "splash": {
+        "image": "./assets/images/splash-icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#0d2b1a",
+        "imageUrl": "https://33003ebc-ab16-4368-8da4-cee0b0cdb674-00-8hztmps638d8.picard.replit.dev/assets/./assets/images/splash-icon.png"
+      },
+      "ios": {
+        "supportsTablet": false,
+        "bundleIdentifier": "com.salamyall",
+        "icon": {
+          "light": "./assets/images/icon.png",
+          "dark": "./assets/images/icon-dark.png",
+          "tinted": "./assets/images/icon-tinted.png"
+        },
+        "buildNumber": "6",
+        "infoPlist": {
+          "NSLocationWhenInUseUsageDescription": "We need your location to calculate prayer times and find the nearest masjid."
+        }
+      },
+      "android": {
+        "package": "com.salamyall",
+        "versionCode": 6
+      },
+      "web": {
+        "favicon": "./assets/images/favicon.png"
+      },
+      "plugins": [
+        [
+          "expo-router",
+          {
+            "origin": "https://replit.com/"
+          }
+        ],
+        "expo-font",
+        "expo-web-browser"
+      ],
+      "experiments": {
+        "typedRoutes": true,
+        "reactCompiler": true
+      },
+      "_internal": {
+        "isDebug": false,
+        "projectRoot": "/home/runner/workspace",
+        "dynamicConfigPath": {},
+        "staticConfigPath": "/home/runner/workspace/app.json",
+        "packageJsonPath": "/home/runner/workspace/package.json",
+        "pluginHistory": {
+          "expo-font": {
+            "name": "expo-font",
+            "version": "14.0.11"
+          },
+          "expo-web-browser": {
+            "name": "expo-web-browser",
+            "version": "15.0.10"
+          }
+        }
+      },
+      "sdkVersion": "54.0.0",
+      "platforms": [
+        "ios",
+        "android",
+        "web"
+      ],
+      "extra": {
+        "router": {
+          "origin": "https://replit.com/"
+        }
+      },
+      "iconUrl": "https://33003ebc-ab16-4368-8da4-cee0b0cdb674-00-8hztmps638d8.picard.replit.dev/assets/./assets/images/icon.png",
+      "hostUri": "33003ebc-ab16-4368-8da4-cee0b0cdb674-00-8hztmps638d8.picard.replit.dev/ios"
+    },
+    "expoGo": {
+      "debuggerHost": "33003ebc-ab16-4368-8da4-cee0b0cdb674-00-8hztmps638d8.picard.replit.dev/ios",
+      "developer": {
+        "tool": "expo-cli",
+        "projectRoot": "/home/runner/workspace"
+      },
+      "packagerOpts": {
+        "dev": false
+      },
+      "mainModuleName": "node_modules/expo-router/entry"
+    },
+    "scopeKey": "@anonymous/salam-yall-5d02da6d-71e3-43bb-9561-b4b87a185aff"
+  }
+}
