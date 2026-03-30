@@ -1,0 +1,34 @@
+ WARN  [WidgetStorage] Failed to read from App Group: 1
+ WARN  [WidgetStorage] Failed to read from App Group: 1
+iOS Bundled 94ms node_modules/expo-router/entry.js (1 module)
+iOS Bundled 38ms node_modules/react-native-shared-group-preferences/index.js (1 module)
+ WARN  [WidgetStorage] Failed to read from App Group: 1
+ WARN  [WidgetStorage] Failed to read from App Group: 1
+iOS Bundled 206ms node_modules/react-native/index.js (435 modules)
+ WARN  ProgressBarAndroid has been extracted from react-native core and will be removed in a future release. It can now be installed and imported from '@react-native-community/progress-bar-android' instead of 'react-native'. See https://github.com/react-native-progress-view/progress-bar-android
+ WARN  SafeAreaView has been deprecated and will be removed in a future release. Please use 'react-native-safe-area-context' instead. See https://github.com/th3rdwave/react-native-safe-area-context
+ WARN  Clipboard has been extracted from react-native core and will be removed in a future release. It can now be installed and imported from '@react-native-clipboard/clipboard' instead of 'react-native'. See https://github.com/react-native-clipboard/clipboard
+ WARN  PushNotificationIOS has been extracted from react-native core and will be removed in a future release. It can now be installed and imported from '@react-native-community/push-notification-ios' instead of 'react-native'. See https://github.com/react-native-push-notification/ios
+ WARN  [WidgetStorage] WidgetKit reload not available: [TypeError: Cannot read property 'default' of undefined]
+ WARN  [WidgetStorage] WidgetKit reload not available: [TypeError: Cannot read property 'default' of undefined]
+ ERROR  [Invariant Violation: `new NativeEventEmitter()` requires a non-null argument.] 
+
+Call Stack
+  invariant (node_modules/invariant/browser.js:38:24)
+  constructor (node_modules/react-native/Libraries/EventEmitter/NativeEventEmitter.js:57:16)
+  <global> (node_modules/react-native/Libraries/PushNotificationIOS/PushNotificationIOS.js:67:25)
+  module.exports.get__PushNotificationIOS (node_modules/react-native/index.js:280:19)
+  importAll (node_modules/expo/src/async-require/asyncRequireModule.ts:67:73)
+  tryCallOne (address at (InternalBytecode.js:1:1180)
+  anonymous (address at (InternalBytecode.js:1:1874)
+ ERROR  [Invariant Violation: `new NativeEventEmitter()` requires a non-null argument.] 
+
+Call Stack
+  invariant (node_modules/invariant/browser.js:38:24)
+  constructor (node_modules/react-native/Libraries/EventEmitter/NativeEventEmitter.js:57:16)
+  <global> (node_modules/react-native/Libraries/PushNotificationIOS/PushNotificationIOS.js:67:25)
+  module.exports.get__PushNotificationIOS (node_modules/react-native/index.js:280:19)
+  importAll (node_modules/expo/src/async-require/asyncRequireModule.ts:67:73)
+  tryCallOne (address at (InternalBytecode.js:1:1180)
+  anonymous (address at (InternalBytecode.js:1:1874)
+
