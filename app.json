@@ -58,8 +58,7 @@
             "deploymentTarget": "17.0"
           }
         }
-      ],
-      "./plugins/withPrayerTimesWidget"
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
