@@ -246,6 +246,9 @@ export default function SettingsScreen() {
   const [showTrackerOnboarding, setShowTrackerOnboarding] = useState(false);
   const badgeShareRef = useRef<ViewShot | null>(null);
   const [sharingBadgeKey, setSharingBadgeKey] = useState<string | null>(null);
+  const [votingId, setVotingId] = useState<string | null>(null);
+  const [voteStatus, setVoteStatus] = useState<string | null>(null);
+  const [voteDescription, setVoteDescription] = useState<string>("");
 
   useEffect(() => {
     if (isOverrideActive) {
@@ -2545,6 +2548,12 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
+  glassCard: {
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden",
+    marginBottom: 16,
+  },
   backRow: {
     flexDirection: "row",
     alignItems: "center",
