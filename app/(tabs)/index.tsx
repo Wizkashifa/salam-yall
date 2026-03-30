@@ -695,17 +695,6 @@ export default function PrayerScreen() {
       });
   }, [calendarEvents, userCoords, isDaytimeMode]);
 
-  const nearbyHalalPreview = useMemo(() => {
-    if (!halalRestaurants) return [];
-    return halalRestaurants
-      .map((r) => ({
-        ...r,
-        _distance: r.lat && r.lng ? kmToMiles(getDistanceKm(userCoords.lat, userCoords.lon, r.lat, r.lng)) : undefined,
-      }))
-      .filter((r) => r._distance !== undefined && r._distance! < 50)
-      .sort((a, b) => (a._distance ?? 999) - (b._distance ?? 999))
-      .slice(0, 6);
-  }, [halalRestaurants, userCoords]);
 
   const loadDefaultPrayers = useCallback((lat = 35.7796, lon = -78.6382) => {
     const now = new Date();
@@ -1739,55 +1728,6 @@ export default function PrayerScreen() {
           </View>
         ) : null}
 
-        {nearbyHalalPreview.length > 0 ? (
-          <View style={styles.halalSection}>
-            <View style={styles.halalSectionHeader}>
-              <Text style={[styles.sectionCardTitle, { color: colors.text }]}>Halal Restaurants Near You</Text>
-              <Pressable onPress={() => router.push("/(tabs)/halal")} hitSlop={8}>
-                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-              </Pressable>
-            </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.halalScrollContent}
-            >
-              {nearbyHalalPreview.map((restaurant) => (
-                <View key={restaurant.id} style={[styles.halalCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder, borderWidth: 1 }]}>
-                  <View style={[styles.halalCardImage, { backgroundColor: colors.prayerIconBg }]}>
-                    <MaterialCommunityIcons name="silverware-fork-knife" size={28} color={isDark ? "#2A5A40" : "#8DC4A8"} />
-                  </View>
-                  <View style={styles.halalCardInfo}>
-                    <Text style={[styles.halalCardName, { color: colors.text }]} numberOfLines={1}>
-                      {restaurant.name}
-                    </Text>
-                    <Text style={[styles.halalCardCuisine, { color: colors.textSecondary }]} numberOfLines={1}>
-                      {restaurant.cuisine_types?.join(", ") || "Restaurant"}
-                    </Text>
-                    <View style={styles.halalCardMeta}>
-                      {restaurant._distance !== undefined ? (
-                        <Text style={[styles.halalCardDistance, { color: colors.textSecondary }]}>
-                          {restaurant._distance.toFixed(1)} mi
-                        </Text>
-                      ) : null}
-                      {restaurant.rating ? (
-                        <View style={styles.halalRatingRow}>
-                          <Ionicons name="star" size={12} color={colors.gold} />
-                          <Text style={[styles.halalRating, { color: colors.gold }]}>{restaurant.rating.toFixed(1)}</Text>
-                          {restaurant.user_ratings_total ? (
-                            <Text style={[styles.halalRatingCount, { color: colors.textTertiary }]}>
-                              ({restaurant.user_ratings_total})
-                            </Text>
-                          ) : null}
-                        </View>
-                      ) : null}
-                    </View>
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        ) : null}
 
       </ScrollView>
       <HomeEventDetailModal
