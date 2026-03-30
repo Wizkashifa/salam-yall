@@ -1808,10 +1808,16 @@
       status.style.color = '#6EE7B7';
       status.textContent = 'Sending image to AI for analysis...';
       try {
+        var allImages = [{ data: flyerBase64, mimeType: flyerMime }];
+        if (additionalFlyerImages && additionalFlyerImages.length > 0) {
+          additionalFlyerImages.forEach(function(img) {
+            allImages.push({ data: img.data, mimeType: img.mime });
+          });
+        }
         var res = await fetch('/api/admin/events/extract-flyer', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
-          body: JSON.stringify({ image: flyerBase64, mimeType: flyerMime }),
+          body: JSON.stringify({ images: allImages }),
         });
         if (res.status === 401) { handleUnauthorized(); return; }
         var data = await res.json();

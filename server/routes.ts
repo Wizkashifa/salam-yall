@@ -2015,6 +2015,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  const anthropicPublic = new Anthropic({
+    apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
+    baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
+  });
+
+  const publicExtractRateLimit = new Map<string, number>();
+  app.post("/api/public/events/extract-flyer", async (req, res) => {
+    try {
+      const clientIp = req.ip || req.socket.remoteAddress || "unknown";
+      const now = Date.now();
+      const lastReq = publicExtractRateLimit.get(clientIp) || 0;
+      if (now - lastReq < 10000) {
+        return res.status(429).json({ error: "Please wait a moment before trying again" });
+      }
+      publicExtractRateLimit.set(clientIp, now);
+      if (publicExtractRateLimit.size > 1000) {
+        const cutoff = now - 60000;
+        for (const [k, v] of publicExtractRateLimit) { if (v < cutoff) publicExtractRateLimit.delete(k); }
+      }
+
+      const { images } = req.body;
+      if (!images || !Array.isArray(images) || images.length === 0) {
+        return res.status(400).json({ error: "At least one image is required" });
+      }
+      if (images.length > 5) {
+        return res.status(400).json({ error: "Maximum 5 images allowed" });
+      }
+
+      const imageBlocks: any[] = [];
+      for (const img of images) {
+        if (!img.data || typeof img.data !== "string") continue;
+        if (img.data.length > 10 * 1024 * 1024) continue;
+        imageBlocks.push({
+          type: "image",
+          source: {
+            type: "base64",
+            media_type: (img.mimeType || "image/jpeg") as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
+            data: img.data,
+          },
+        });
+      }
+
+      if (imageBlocks.length === 0) {
+        return res.status(400).json({ error: "No valid images provided" });
+      }
+
+      const message = await anthropicPublic.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 1500,
+        messages: [{
+          role: "user",
+          content: [
+            ...imageBlocks,
+            {
+              type: "text",
+              text: `Extract event details from ${imageBlocks.length > 1 ? 'these flyer images (they are multiple pages/views of the same event). Combine information from ALL images to build the most complete event details.' : 'this flyer image'}. Today's date is ${new Date().toISOString().split("T")[0]}. IMPORTANT: If the flyer does not specify a year, assume the next upcoming occurrence of that date (i.e. use ${new Date().getFullYear()} or ${new Date().getFullYear() + 1}, whichever makes the date in the future). Also look carefully for any QR codes in the image — if you find one, decode it and use the URL as the registrationUrl.
+
+Return ONLY a JSON object with these fields (use null for any field you cannot determine):
+{
+  "title": "event title",
+  "date": "YYYY-MM-DD",
+  "startTime": "HH:MM" (24-hour format),
+  "endTime": "HH:MM" (24-hour format, null if not shown),
+  "location": "full address or venue name",
+  "description": "brief description of the event (2-3 sentences max)",
+  "organizer": "organization or group hosting the event",
+  "registrationUrl": "decoded QR code URL, or visible registration/RSVP URL"
+}
+Return ONLY the JSON object, no markdown, no explanation.`,
+            },
+          ],
+        }],
+      });
+
+      const textContent = message.content.find((c: any) => c.type === "text");
+      if (!textContent || textContent.type !== "text") return res.status(500).json({ error: "Failed to read flyer" });
+      let extracted;
+      try {
+        let jsonStr = textContent.text.trim();
+        const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+        if (jsonMatch) jsonStr = jsonMatch[0];
+        extracted = JSON.parse(jsonStr);
+      } catch {
+        return res.status(500).json({ error: "Could not extract details from this flyer" });
+      }
+      res.json(extracted);
+    } catch (error: any) {
+      console.error("[Public Flyer Extract] Error:", error.message);
+      res.status(500).json({ error: "Something went wrong. Please try again." });
+    }
+  });
+
+  app.post("/api/public/events/submit", async (req, res) => {
+    try {
+      const { title, description, location, startTime, endTime, organizer, registrationUrl, image, imageMime, additionalImages, submitterName, submitterEmail } = req.body;
+      if (!title || !startTime) return res.status(400).json({ error: "Title and start time are required" });
+
+      let eventLat: number | null = null;
+      let eventLng: number | null = null;
+      const resolvedOrg = resolveOrgName(organizer || "") || organizer || "";
+      const resolved = resolveCoordinates(resolvedOrg, location || "");
+      if (resolved.latitude && resolved.longitude) {
+        eventLat = resolved.latitude;
+        eventLng = resolved.longitude;
+      } else if (location) {
+        const geocoded = await geocodeAddress(location);
+        if (geocoded) { eventLat = geocoded.lat; eventLng = geocoded.lng; }
+      }
+
+      const addImgs = Array.isArray(additionalImages) && additionalImages.length > 0 ? JSON.stringify(additionalImages) : '[]';
+      const result = await pool.query(
+        `INSERT INTO community_events (title, description, location, start_time, end_time, organizer, registration_url, image_data, image_mime, additional_images, is_virtual, is_featured, status, lat, lng)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, false, false, 'pending', $11, $12)
+         RETURNING id`,
+        [title, description || null, location || null, new Date(startTime), endTime ? new Date(endTime) : null, organizer || null, registrationUrl || null, image || null, imageMime || "image/jpeg", addImgs, eventLat, eventLng]
+      );
+
+      console.log(`[Public Event Submit] "${title}" by ${submitterName || 'anonymous'} (${submitterEmail || 'no email'}) — pending approval (ID: ${result.rows[0].id})`);
+      res.json({ id: result.rows[0].id, status: "pending", message: "Event submitted for review. It will appear once approved." });
+    } catch (error: any) {
+      console.error("[Public Event Submit] Error:", error.message);
+      res.status(500).json({ error: "Failed to submit event. Please try again." });
+    }
+  });
+
   app.post("/api/admin/import-calendar-events", async (req, res) => {
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {
@@ -5643,10 +5768,33 @@ Return ONLY the JSON object, no markdown, no explanation.`,
   app.post("/api/admin/events/extract-flyer", async (req, res) => {
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {
-      const { image, mimeType } = req.body;
-      if (!image) return res.status(400).json({ error: "Image data is required" });
+      const { image, mimeType, images } = req.body;
+      if (!image && (!images || !Array.isArray(images) || images.length === 0)) {
+        return res.status(400).json({ error: "Image data is required" });
+      }
 
-      const mediaType = (mimeType || "image/jpeg") as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+      const imageBlocks: any[] = [];
+      if (images && Array.isArray(images) && images.length > 0) {
+        for (const img of images) {
+          imageBlocks.push({
+            type: "image",
+            source: {
+              type: "base64",
+              media_type: (img.mimeType || "image/jpeg") as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
+              data: img.data,
+            },
+          });
+        }
+      } else {
+        imageBlocks.push({
+          type: "image",
+          source: {
+            type: "base64",
+            media_type: (mimeType || "image/jpeg") as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
+            data: image,
+          },
+        });
+      }
 
       const message = await anthropic.messages.create({
         model: "claude-sonnet-4-6",
@@ -5654,17 +5802,10 @@ Return ONLY the JSON object, no markdown, no explanation.`,
         messages: [{
           role: "user",
           content: [
-            {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: mediaType,
-                data: image,
-              },
-            },
+            ...imageBlocks,
             {
               type: "text",
-              text: `Extract event details from this flyer image. Today's date is ${new Date().toISOString().split("T")[0]}. IMPORTANT: If the flyer does not specify a year, assume the next upcoming occurrence of that date (i.e. use ${new Date().getFullYear()} or ${new Date().getFullYear() + 1}, whichever makes the date in the future). Also look carefully for any QR codes in the image — if you find one, decode it and use the URL as the registrationUrl. QR codes on event flyers typically link to registration or RSVP pages. If both a visible text URL and a QR code URL are present, prefer the QR code URL.
+              text: `Extract event details from ${imageBlocks.length > 1 ? 'these flyer images (they are multiple pages/views of the same event)' : 'this flyer image'}. Today's date is ${new Date().toISOString().split("T")[0]}. IMPORTANT: If the flyer does not specify a year, assume the next upcoming occurrence of that date (i.e. use ${new Date().getFullYear()} or ${new Date().getFullYear() + 1}, whichever makes the date in the future). Also look carefully for any QR codes in the image — if you find one, decode it and use the URL as the registrationUrl. QR codes on event flyers typically link to registration or RSVP pages. If both a visible text URL and a QR code URL are present, prefer the QR code URL.${imageBlocks.length > 1 ? ' Combine information from ALL images to build the most complete event details.' : ''}
 
 Return ONLY a JSON object with these fields (use null for any field you cannot determine):
 {
