@@ -672,15 +672,17 @@
       }
 
       .footer-upload-link {
-        font-size: 11px;
-        color: rgba(255,255,255,0.15);
+        font-size: 12px;
+        color: var(--gold);
+        opacity: 0.5;
         text-decoration: none;
         cursor: pointer;
-        transition: color 0.3s;
+        transition: opacity 0.3s;
         margin-top: 8px;
         display: inline-block;
+        letter-spacing: 0.5px;
       }
-      .footer-upload-link:hover { color: rgba(255,255,255,0.4); }
+      .footer-upload-link:hover { opacity: 1; }
 
       .upload-overlay {
         display: none;
@@ -1066,7 +1068,7 @@
 
     <!-- FEATURES -->
     <section class="section">
-      <p class="section-label reveal">Everything You Need</p>
+      <p class="section-label reveal" style="color: var(--gold);">Everything You Need</p>
       <h2 class="section-title reveal">Built for Our Community</h2>
       <p class="section-subtitle reveal">From daily prayers to finding the best halal food — we've got you covered.</p>
       <div class="features-grid">
