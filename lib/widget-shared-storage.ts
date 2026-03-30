@@ -1,4 +1,4 @@
-import { Platform } from "react-native";
+import { Platform, NativeModules } from "react-native";
 
 const APP_GROUP = "group.app.ummahconnect";
 const PRAYER_DATA_KEY = "prayerData";
