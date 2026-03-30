@@ -112,7 +112,6 @@ function RootLayoutNav() {
   const appState = useRef(AppState.currentState);
 
   useEffect(() => {
-    registerPushToken();
     trackEvent("app_open");
 
     const syncWidgetData = async () => {
@@ -128,7 +127,13 @@ function RootLayoutNav() {
       } catch {}
     };
 
-    syncWidgetData();
+    const staggeredInit = setTimeout(() => {
+      registerPushToken();
+    }, 800);
+
+    const widgetSyncTimer = setTimeout(() => {
+      syncWidgetData();
+    }, 1500);
 
     const sub = AppState.addEventListener("change", (nextState) => {
       if (appState.current.match(/inactive|background/) && nextState === "active") {
@@ -137,7 +142,11 @@ function RootLayoutNav() {
       }
       appState.current = nextState;
     });
-    return () => sub.remove();
+    return () => {
+      clearTimeout(staggeredInit);
+      clearTimeout(widgetSyncTimer);
+      sub.remove();
+    };
   }, []);
 
   return (

@@ -849,7 +849,10 @@ export default function PrayerScreen() {
   }, [loadDefaultPrayers, masjidList, isOverrideActive, getEffectiveLocation]);
 
   useEffect(() => {
-    loadPrayerData();
+    const timer = setTimeout(() => {
+      loadPrayerData();
+    }, 500);
+    return () => clearTimeout(timer);
   }, [loadPrayerData]);
 
   useEffect(() => {

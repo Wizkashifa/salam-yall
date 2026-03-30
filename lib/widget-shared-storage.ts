@@ -67,7 +67,6 @@ async function readFromAppGroup(): Promise<WidgetPrayerData | null> {
 async function reloadWidgets(): Promise<void> {
   if (Platform.OS !== "ios") return;
   try {
-    const { NativeModules } = await import("react-native");
     if (NativeModules.WidgetKitHelper?.reloadAllTimelines) {
       NativeModules.WidgetKitHelper.reloadAllTimelines();
     }
