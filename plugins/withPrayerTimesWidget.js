@@ -1,657 +1,77 @@
-const { withXcodeProject, withDangerousMod, withEntitlementsPlist } = require("@expo/config-plugins");
+const { withDangerousMod, withEntitlementsPlist } = require("@expo/config-plugins");
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
+
+const {
+  getWidgetSwiftFiles,
+  getWidgetKitHelperFiles,
+  getWidgetEntitlements,
+  getWidgetInfoPlist,
+} = require("./widget-swift-files");
 
 const WIDGET_NAME = "PrayerTimesWidget";
 const WIDGET_BUNDLE_ID = "app.ummahconnect.PrayerTimesWidget";
 const APP_GROUP = "group.app.ummahconnect";
 const DEPLOYMENT_TARGET = "17.0";
 
-function getWidgetSwiftFiles() {
-  const models = `import WidgetKit
-import Foundation
-
-struct Prayer: Codable {
-    let name: String
-    let athan: String
-    let iqama: String?
-    var status: String?
+function makeUUID(seed) {
+  return crypto
+    .createHash("md5")
+    .update(seed)
+    .digest("hex")
+    .substring(0, 24)
+    .toUpperCase();
 }
 
-struct PrayerData: Codable {
-    let date: String
-    var prayers: [Prayer]
-}
-
-struct PrayerTimesEntry: TimelineEntry {
-    let date: Date
-    let prayerData: PrayerData?
-    let nextPrayerIndex: Int?
-}
-`;
-
-  const provider = `import WidgetKit
-import Foundation
-
-struct PrayerTimesProvider: TimelineProvider {
-    private let suiteName = "${APP_GROUP}"
-    private let dataKey = "prayerData"
-
-    func placeholder(in context: Context) -> PrayerTimesEntry {
-        PrayerTimesEntry(
-            date: Date(),
-            prayerData: PrayerData(date: "", prayers: [
-                Prayer(name: "Fajr", athan: "5:30 AM", iqama: "6:00 AM", status: nil),
-                Prayer(name: "Dhuhr", athan: "1:00 PM", iqama: "1:30 PM", status: "completed"),
-                Prayer(name: "Asr", athan: "4:30 PM", iqama: "5:00 PM", status: nil),
-                Prayer(name: "Maghrib", athan: "7:15 PM", iqama: "7:20 PM", status: nil),
-                Prayer(name: "Isha", athan: "8:45 PM", iqama: "9:15 PM", status: nil)
-            ]),
-            nextPrayerIndex: 2
-        )
-    }
-
-    func getSnapshot(in context: Context, completion: @escaping (PrayerTimesEntry) -> Void) {
-        let entry = buildEntry()
-        completion(entry)
-    }
-
-    func getTimeline(in context: Context, completion: @escaping (Timeline<PrayerTimesEntry>) -> Void) {
-        let entry = buildEntry()
-        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 30, to: Date()) ?? Date()
-        let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
-        completion(timeline)
-    }
-
-    private func loadPrayerData() -> PrayerData? {
-        guard let defaults = UserDefaults(suiteName: suiteName) else { return nil }
-
-        if let data = defaults.data(forKey: dataKey) {
-            if let parsed = try? JSONDecoder().decode(PrayerData.self, from: data) {
-                return parsed
-            }
-        }
-
-        if let str = defaults.string(forKey: dataKey),
-           let data = str.data(using: .utf8) {
-            if let parsed = try? JSONDecoder().decode(PrayerData.self, from: data) {
-                return parsed
-            }
-        }
-
-        if let dict = defaults.dictionary(forKey: dataKey) {
-            return decodePrayerDataFromDict(dict)
-        }
-
-        return nil
-    }
-
-    private func decodePrayerDataFromDict(_ dict: [String: Any]) -> PrayerData? {
-        guard let date = dict["date"] as? String,
-              let prayersArray = dict["prayers"] as? [[String: Any]] else {
-            return nil
-        }
-
-        let prayers: [Prayer] = prayersArray.compactMap { p in
-            guard let name = p["name"] as? String,
-                  let athan = p["athan"] as? String else { return nil }
-            return Prayer(
-                name: name,
-                athan: athan,
-                iqama: p["iqama"] as? String,
-                status: p["status"] as? String
-            )
-        }
-
-        return PrayerData(date: date, prayers: prayers)
-    }
-
-    private func buildEntry() -> PrayerTimesEntry {
-        guard let prayerData = loadPrayerData() else {
-            return PrayerTimesEntry(date: Date(), prayerData: nil, nextPrayerIndex: nil)
-        }
-        let nextIdx = findNextPrayerIndex(prayers: prayerData.prayers)
-        return PrayerTimesEntry(date: Date(), prayerData: prayerData, nextPrayerIndex: nextIdx)
-    }
-
-    private func findNextPrayerIndex(prayers: [Prayer]) -> Int? {
-        let now = Date()
-        let calendar = Calendar.current
-        let formatter = DateFormatter()
-        formatter.dateFormat = "h:mm a"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-
-        for (index, prayer) in prayers.enumerated() {
-            if let prayerTime = formatter.date(from: prayer.athan) {
-                var components = calendar.dateComponents([.year, .month, .day], from: now)
-                let timeComponents = calendar.dateComponents([.hour, .minute], from: prayerTime)
-                components.hour = timeComponents.hour
-                components.minute = timeComponents.minute
-                if let fullDate = calendar.date(from: components), fullDate > now {
-                    return index
-                }
-            }
-        }
-        return nil
-    }
-}
-`;
-
-  const togglePrayerIntent = `import AppIntents
-import WidgetKit
-import Foundation
-
-struct TogglePrayerIntent: AppIntent {
-    static var title: LocalizedStringResource = "Toggle Prayer Status"
-    static var description = IntentDescription("Toggle the completion status of a prayer")
-
-    @Parameter(title: "Prayer Name")
-    var prayerName: String
-
-    init() {}
-
-    init(prayerName: String) {
-        self.prayerName = prayerName
-    }
-
-    func perform() async throws -> some IntentResult {
-        let suiteName = "${APP_GROUP}"
-        let dataKey = "prayerData"
-
-        guard let defaults = UserDefaults(suiteName: suiteName) else {
-            return .result()
-        }
-
-        var prayerData: PrayerData?
-
-        if let data = defaults.data(forKey: dataKey) {
-            prayerData = try? JSONDecoder().decode(PrayerData.self, from: data)
-        } else if let str = defaults.string(forKey: dataKey),
-                  let data = str.data(using: .utf8) {
-            prayerData = try? JSONDecoder().decode(PrayerData.self, from: data)
-        } else if let dict = defaults.dictionary(forKey: dataKey) {
-            prayerData = decodePrayerDataFromDict(dict)
-        }
-
-        guard var data = prayerData else {
-            return .result()
-        }
-
-        if let index = data.prayers.firstIndex(where: { $0.name == prayerName }) {
-            let newStatus: String?
-            switch data.prayers[index].status {
-            case nil:
-                newStatus = "completed"
-            case "completed":
-                newStatus = "at_masjid"
-            case "at_masjid":
-                newStatus = nil
-            default:
-                newStatus = nil
-            }
-            data.prayers[index].status = newStatus
-        }
-
-        if let encoded = try? JSONEncoder().encode(data) {
-            defaults.set(encoded, forKey: dataKey)
-            defaults.synchronize()
-        }
-
-        WidgetCenter.shared.reloadAllTimelines()
-        return .result()
-    }
-
-    private func decodePrayerDataFromDict(_ dict: [String: Any]) -> PrayerData? {
-        guard let date = dict["date"] as? String,
-              let prayersArray = dict["prayers"] as? [[String: Any]] else {
-            return nil
-        }
-
-        let prayers: [Prayer] = prayersArray.compactMap { p in
-            guard let name = p["name"] as? String,
-                  let athan = p["athan"] as? String else { return nil }
-            return Prayer(
-                name: name,
-                athan: athan,
-                iqama: p["iqama"] as? String,
-                status: p["status"] as? String
-            )
-        }
-
-        return PrayerData(date: date, prayers: prayers)
-    }
-}
-`;
-
-  const widgetViews = `import SwiftUI
-import WidgetKit
-import AppIntents
-
-struct WidgetColors {
-    static let emerald = Color(red: 0.106, green: 0.420, blue: 0.290)
-    static let deepGreen = Color(red: 0.059, green: 0.239, blue: 0.169)
-    static let forestGreen = Color(red: 0.078, green: 0.322, blue: 0.227)
-    static let richGold = Color(red: 0.831, green: 0.659, blue: 0.263)
-    static let darkGold = Color(red: 0.722, green: 0.573, blue: 0.180)
-    static let lightGold = Color(red: 0.941, green: 0.867, blue: 0.627)
-    static let darkBg = Color(red: 0.039, green: 0.102, blue: 0.071)
-    static let cardBg = Color(red: 0.086, green: 0.086, blue: 0.086).opacity(0.9)
-    static let lightBg = Color(red: 0.976, green: 0.957, blue: 0.922)
-    static let lightCard = Color.white.opacity(0.85)
-}
-
-struct StatusIcon {
-    static func icon(for status: String?) -> (name: String, color: Color) {
-        switch status {
-        case "completed":
-            return ("checkmark.circle.fill", WidgetColors.emerald)
-        case "at_masjid":
-            return ("building.columns.fill", WidgetColors.richGold)
-        case "made_up":
-            return ("arrow.counterclockwise.circle.fill", Color.blue)
-        case "excused":
-            return ("minus.circle.fill", Color.gray)
-        case "missed":
-            return ("xmark.circle.fill", Color.red)
-        default:
-            return ("circle", Color.gray.opacity(0.4))
-        }
-    }
-}
-
-private func prayerDate(from timeString: String) -> Date? {
-    let now = Date()
-    let calendar = Calendar.current
-    let formatter = DateFormatter()
-    formatter.dateFormat = "h:mm a"
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    guard let parsed = formatter.date(from: timeString) else { return nil }
-    var components = calendar.dateComponents([.year, .month, .day], from: now)
-    let timeComponents = calendar.dateComponents([.hour, .minute], from: parsed)
-    components.hour = timeComponents.hour
-    components.minute = timeComponents.minute
-    return calendar.date(from: components)
-}
-
-private func countdownText(to target: Date) -> String {
-    let now = Date()
-    let diff = target.timeIntervalSince(now)
-    if diff <= 0 { return "" }
-    let hours = Int(diff) / 3600
-    let minutes = (Int(diff) % 3600) / 60
-    if hours > 0 {
-        return "in \\(hours)h \\(minutes)m"
-    } else {
-        return "in \\(minutes)m"
-    }
-}
-
-struct SmallWidgetView: View {
-    let entry: PrayerTimesEntry
-
-    @Environment(\\.colorScheme) var colorScheme
-
-    var body: some View {
-        let isDark = colorScheme == .dark
-        let bgGradient = LinearGradient(
-            colors: isDark
-                ? [WidgetColors.darkBg, WidgetColors.deepGreen.opacity(0.7)]
-                : [WidgetColors.lightBg, WidgetColors.emerald.opacity(0.08)],
-            startPoint: .topLeading, endPoint: .bottomTrailing
-        )
-
-        ZStack {
-            bgGradient
-
-            if let data = entry.prayerData {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Image(systemName: "moon.stars.fill")
-                            .font(.system(size: 12))
-                            .foregroundColor(WidgetColors.richGold)
-                        Text("Salam Y'all")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(isDark ? .white.opacity(0.7) : .black.opacity(0.5))
-                        Spacer()
-                    }
-
-                    if let nextIdx = entry.nextPrayerIndex, nextIdx < data.prayers.count {
-                        let next = data.prayers[nextIdx]
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("NEXT PRAYER")
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundColor(WidgetColors.richGold)
-                                .tracking(1)
-
-                            Text(next.name)
-                                .font(.system(size: 24, weight: .bold, design: .serif))
-                                .foregroundColor(isDark ? .white : WidgetColors.deepGreen)
-
-                            Text(next.athan)
-                                .font(.system(size: 16, weight: .semibold, design: .monospaced))
-                                .foregroundColor(WidgetColors.emerald)
-
-                            if let target = prayerDate(from: next.athan) {
-                                let countdown = countdownText(to: target)
-                                if !countdown.isEmpty {
-                                    Text(countdown)
-                                        .font(.system(size: 11, weight: .medium))
-                                        .foregroundColor(WidgetColors.richGold.opacity(0.8))
-                                }
-                            }
-
-                            if let iqama = next.iqama, !iqama.isEmpty {
-                                Text("Iqama: \\(iqama)")
-                                    .font(.system(size: 10, weight: .medium))
-                                    .foregroundColor(isDark ? .white.opacity(0.5) : .black.opacity(0.4))
-                            }
-                        }
-                    } else {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("ALL PRAYERS")
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundColor(WidgetColors.richGold)
-                                .tracking(1)
-                            Text("Complete")
-                                .font(.system(size: 22, weight: .bold, design: .serif))
-                                .foregroundColor(WidgetColors.emerald)
-
-                            let completed = data.prayers.filter {
-                                $0.status == "completed" || $0.status == "at_masjid"
-                            }.count
-                            Text("\\(completed)/5 tracked")
-                                .font(.system(size: 11))
-                                .foregroundColor(isDark ? .white.opacity(0.5) : .black.opacity(0.4))
-                        }
-                    }
-
-                    Spacer(minLength: 0)
-
-                    HStack(spacing: 4) {
-                        ForEach(data.prayers, id: \\.name) { prayer in
-                            let info = StatusIcon.icon(for: prayer.status)
-                            Image(systemName: info.name)
-                                .font(.system(size: 10))
-                                .foregroundColor(info.color)
-                        }
-                    }
-                }
-                .padding(14)
-            } else {
-                VStack(spacing: 8) {
-                    Image(systemName: "moon.stars.fill")
-                        .font(.system(size: 28))
-                        .foregroundColor(WidgetColors.richGold)
-                    Text("Open app to\\nload prayers")
-                        .font(.system(size: 12))
-                        .multilineTextAlignment(.center)
-                        .foregroundColor(isDark ? .white.opacity(0.6) : .black.opacity(0.5))
-                }
-            }
-        }
-    }
-}
-
-struct MediumWidgetView: View {
-    let entry: PrayerTimesEntry
-
-    @Environment(\\.colorScheme) var colorScheme
-
-    var body: some View {
-        let isDark = colorScheme == .dark
-        let bgGradient = LinearGradient(
-            colors: isDark
-                ? [WidgetColors.darkBg, WidgetColors.deepGreen.opacity(0.7)]
-                : [WidgetColors.lightBg, WidgetColors.emerald.opacity(0.08)],
-            startPoint: .topLeading, endPoint: .bottomTrailing
-        )
-
-        ZStack {
-            bgGradient
-
-            if let data = entry.prayerData {
-                VStack(spacing: 0) {
-                    HStack {
-                        Image(systemName: "moon.stars.fill")
-                            .font(.system(size: 11))
-                            .foregroundColor(WidgetColors.richGold)
-                        Text("Salam Y'all")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(isDark ? .white.opacity(0.7) : .black.opacity(0.5))
-                        Spacer()
-                        Text(data.date)
-                            .font(.system(size: 10))
-                            .foregroundColor(isDark ? .white.opacity(0.4) : .black.opacity(0.3))
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.top, 10)
-                    .padding(.bottom, 6)
-
-                    ForEach(Array(data.prayers.enumerated()), id: \\.element.name) { index, prayer in
-                        let isNext = index == entry.nextPrayerIndex
-                        let info = StatusIcon.icon(for: prayer.status)
-
-                        HStack(spacing: 8) {
-                            Button(intent: TogglePrayerIntent(prayerName: prayer.name)) {
-                                Image(systemName: info.name)
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(info.color)
-                                    .frame(width: 22, height: 22)
-                            }
-                            .buttonStyle(.plain)
-
-                            Text(prayer.name)
-                                .font(.system(size: 13, weight: isNext ? .bold : .medium, design: .serif))
-                                .foregroundColor(isNext
-                                    ? WidgetColors.richGold
-                                    : (isDark ? .white : WidgetColors.deepGreen))
-                                .frame(width: 60, alignment: .leading)
-
-                            Spacer()
-
-                            VStack(alignment: .trailing, spacing: 0) {
-                                Text(prayer.athan)
-                                    .font(.system(size: 12, weight: isNext ? .bold : .regular, design: .monospaced))
-                                    .foregroundColor(isNext
-                                        ? WidgetColors.emerald
-                                        : (isDark ? .white.opacity(0.8) : .black.opacity(0.7)))
-
-                                if let iqama = prayer.iqama, !iqama.isEmpty {
-                                    Text(iqama)
-                                        .font(.system(size: 10))
-                                        .foregroundColor(isDark ? .white.opacity(0.4) : .black.opacity(0.35))
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 3)
-                        .background(
-                            isNext
-                                ? (isDark
-                                    ? WidgetColors.emerald.opacity(0.12)
-                                    : WidgetColors.emerald.opacity(0.06))
-                                : Color.clear
-                        )
-                    }
-
-                    Spacer(minLength: 0)
-                }
-            } else {
-                VStack(spacing: 8) {
-                    Image(systemName: "moon.stars.fill")
-                        .font(.system(size: 28))
-                        .foregroundColor(WidgetColors.richGold)
-                    Text("Open Salam Y'all to load prayer times")
-                        .font(.system(size: 13))
-                        .foregroundColor(isDark ? .white.opacity(0.6) : .black.opacity(0.5))
-                }
-            }
-        }
-    }
-}
-`;
-
-  const prayerTimesWidget = `import WidgetKit
-import SwiftUI
-
-struct PrayerTimesWidget: Widget {
-    let kind: String = "PrayerTimesWidget"
-
-    var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: PrayerTimesProvider()) { entry in
-            if #available(iOSApplicationExtension 17.0, *) {
-                WidgetContentView(entry: entry)
-                    .containerBackground(for: .widget) { Color.clear }
-            } else {
-                WidgetContentView(entry: entry)
-            }
-        }
-        .configurationDisplayName("Prayer Times")
-        .description("View prayer times and track your daily prayers.")
-        .supportedFamilies([.systemSmall, .systemMedium])
-    }
-}
-
-struct WidgetContentView: View {
-    let entry: PrayerTimesEntry
-
-    @Environment(\\.widgetFamily) var family
-
-    var body: some View {
-        switch family {
-        case .systemSmall:
-            SmallWidgetView(entry: entry)
-        case .systemMedium:
-            MediumWidgetView(entry: entry)
-        default:
-            SmallWidgetView(entry: entry)
-        }
-    }
-}
-
-@main
-struct PrayerTimesWidgetBundle: WidgetBundle {
-    var body: some Widget {
-        PrayerTimesWidget()
-    }
-}
-`;
-
-  return {
-    "Models.swift": models,
-    "Provider.swift": provider,
-    "TogglePrayerIntent.swift": togglePrayerIntent,
-    "WidgetViews.swift": widgetViews,
-    "PrayerTimesWidget.swift": prayerTimesWidget,
-  };
-}
-
-function getWidgetKitHelperFiles(projectName) {
-  const swiftContent = `import Foundation
-import WidgetKit
-
-@objc(WidgetKitHelper)
-class WidgetKitHelper: NSObject {
-
-  @objc
-  static func requiresMainQueueSetup() -> Bool {
-    return false
+function writeWidgetSourceFiles(projectRoot) {
+  const widgetDir = path.join(projectRoot, "ios", WIDGET_NAME);
+  if (!fs.existsSync(widgetDir)) {
+    fs.mkdirSync(widgetDir, { recursive: true });
   }
 
-  @objc
-  func reloadAllTimelines() {
-    if #available(iOS 14.0, *) {
-      DispatchQueue.main.async {
-        WidgetCenter.shared.reloadAllTimelines()
-      }
-    }
+  const swiftFiles = getWidgetSwiftFiles();
+  for (const [fileName, content] of Object.entries(swiftFiles)) {
+    fs.writeFileSync(path.join(widgetDir, fileName), content, "utf8");
   }
-}
-`;
 
-  const objcBridge = `#import <React/RCTBridgeModule.h>
-
-@interface RCT_EXTERN_MODULE(WidgetKitHelper, NSObject)
-
-RCT_EXTERN_METHOD(reloadAllTimelines)
-
-@end
-`;
-
-  const bridgingHeader = `#import <React/RCTBridgeModule.h>
-`;
-
-  return { swiftContent, objcBridge, bridgingHeader };
-}
-
-function getWidgetEntitlements() {
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>com.apple.security.application-groups</key>
-    <array>
-        <string>${APP_GROUP}</string>
-    </array>
-</dict>
-</plist>
-`;
-}
-
-function getWidgetInfoPlist() {
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleDevelopmentRegion</key>
-    <string>en</string>
-    <key>CFBundleDisplayName</key>
-    <string>Prayer Times</string>
-    <key>CFBundleExecutable</key>
-    <string>$(EXECUTABLE_NAME)</string>
-    <key>CFBundleIdentifier</key>
-    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-    <key>CFBundleInfoDictionaryVersion</key>
-    <string>6.0</string>
-    <key>CFBundleName</key>
-    <string>$(PRODUCT_NAME)</string>
-    <key>CFBundlePackageType</key>
-    <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
-    <key>CFBundleShortVersionString</key>
-    <string>1.0</string>
-    <key>CFBundleVersion</key>
-    <string>1</string>
-    <key>NSExtension</key>
-    <dict>
-        <key>NSExtensionPointIdentifier</key>
-        <string>com.apple.widgetkit-extension</string>
-    </dict>
-</dict>
-</plist>
-`;
-}
-
-function addWidgetTarget(xcodeProject) {
-  const widgetTarget = xcodeProject.addTarget(
-    WIDGET_NAME,
-    "app_extension",
-    WIDGET_NAME,
-    WIDGET_BUNDLE_ID
+  const entitlements = getWidgetEntitlements();
+  fs.writeFileSync(
+    path.join(widgetDir, `${WIDGET_NAME}.entitlements`),
+    entitlements,
+    "utf8"
   );
 
-  const widgetGroupKey = xcodeProject.pbxCreateGroup(WIDGET_NAME, WIDGET_NAME);
-  const mainGroupKey = xcodeProject.getFirstProject().firstProject.mainGroup;
-  const mainGroup = xcodeProject.getPBXGroupByKey(mainGroupKey);
-  if (mainGroup && mainGroup.children) {
-    const alreadyInGroup = mainGroup.children.some(
-      (c) => c.comment === WIDGET_NAME
-    );
-    if (!alreadyInGroup) {
-      mainGroup.children.push({
-        value: widgetGroupKey,
-        comment: WIDGET_NAME,
-      });
-    }
+  const infoPlist = getWidgetInfoPlist();
+  fs.writeFileSync(path.join(widgetDir, "Info.plist"), infoPlist, "utf8");
+}
+
+function writeWidgetKitHelperFiles(projectRoot, projectName) {
+  const appDir = path.join(projectRoot, "ios", projectName);
+  const { swiftContent, objcBridge, bridgingHeader } = getWidgetKitHelperFiles();
+
+  fs.writeFileSync(
+    path.join(appDir, "WidgetKitHelper.swift"),
+    swiftContent,
+    "utf8"
+  );
+  fs.writeFileSync(
+    path.join(appDir, "WidgetKitHelper.m"),
+    objcBridge,
+    "utf8"
+  );
+
+  const bridgingPath = path.join(appDir, `${projectName}-Bridging-Header.h`);
+  if (!fs.existsSync(bridgingPath)) {
+    fs.writeFileSync(bridgingPath, bridgingHeader, "utf8");
+  }
+}
+
+function insertWidgetTargetRawText(pbxprojPath, projectName) {
+  let content = fs.readFileSync(pbxprojPath, "utf8");
+
+  if (content.includes(`productType = "com.apple.product-type.app-extension"`)) {
+    return;
   }
 
   const sourceFiles = [
@@ -661,50 +81,237 @@ function addWidgetTarget(xcodeProject) {
     "WidgetViews.swift",
     "TogglePrayerIntent.swift",
   ];
-  for (const file of sourceFiles) {
-    xcodeProject.addSourceFile(
-      `${WIDGET_NAME}/${file}`,
-      { target: widgetTarget.uuid },
-      widgetGroupKey
+
+  const ids = {};
+  for (const f of sourceFiles) {
+    ids[`fr_${f}`] = makeUUID(`widget_fileref_${f}`);
+    ids[`bf_${f}`] = makeUUID(`widget_buildfile_${f}`);
+  }
+  ids.productRef = makeUUID("widget_product_appex");
+  ids.group = makeUUID("widget_group");
+  ids.sourcesPhase = makeUUID("widget_sources_phase");
+  ids.frameworksPhase = makeUUID("widget_frameworks_phase");
+  ids.debugConfig = makeUUID("widget_config_debug");
+  ids.releaseConfig = makeUUID("widget_config_release");
+  ids.configList = makeUUID("widget_configlist");
+  ids.target = makeUUID("widget_native_target");
+
+  let fileRefBlock = "";
+  for (const f of sourceFiles) {
+    fileRefBlock += `\t\t${ids[`fr_${f}`]} /* ${f} */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ${f}; sourceTree = "<group>"; };\n`;
+  }
+  fileRefBlock += `\t\t${ids.productRef} /* ${WIDGET_NAME}.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ${WIDGET_NAME}.appex; sourceTree = BUILT_PRODUCTS_DIR; };\n`;
+
+  content = content.replace(
+    "/* End PBXFileReference section */",
+    fileRefBlock + "/* End PBXFileReference section */"
+  );
+
+  let buildFileBlock = "";
+  for (const f of sourceFiles) {
+    buildFileBlock += `\t\t${ids[`bf_${f}`]} /* ${f} in Sources */ = {isa = PBXBuildFile; fileRef = ${ids[`fr_${f}`]} /* ${f} */; };\n`;
+  }
+
+  content = content.replace(
+    "/* End PBXBuildFile section */",
+    buildFileBlock + "/* End PBXBuildFile section */"
+  );
+
+  const groupChildren = sourceFiles
+    .map((f) => `\t\t\t\t${ids[`fr_${f}`]} /* ${f} */,`)
+    .join("\n");
+  const groupBlock = `\t\t${ids.group} /* ${WIDGET_NAME} */ = {\n\t\t\tisa = PBXGroup;\n\t\t\tchildren = (\n${groupChildren}\n\t\t\t);\n\t\t\tpath = ${WIDGET_NAME};\n\t\t\tsourceTree = "<group>";\n\t\t};\n`;
+
+  content = content.replace(
+    "/* End PBXGroup section */",
+    groupBlock + "/* End PBXGroup section */"
+  );
+
+  const mainGroupRe = /([A-F0-9]{24}\s*(?:\/\*.*?\*\/\s*)?=\s*\{\s*isa\s*=\s*PBXGroup;\s*children\s*=\s*\([\s\S]*?\);\s*sourceTree\s*=\s*"<group>";\s*\})/;
+  const mainGroupMatch = content.match(mainGroupRe);
+  if (mainGroupMatch) {
+    const mg = mainGroupMatch[0];
+    const closeParen = mg.lastIndexOf(");");
+    const updated =
+      mg.substring(0, closeParen) +
+      `\t\t\t\t${ids.group} /* ${WIDGET_NAME} */,\n\t\t\t` +
+      mg.substring(closeParen);
+    content = content.replace(mg, updated);
+  }
+
+  const productsRe =
+    /(\/\*\s*Products\s*\*\/\s*=\s*\{\s*isa\s*=\s*PBXGroup;\s*children\s*=\s*\()([\s\S]*?)(\);)/;
+  const productsMatch = content.match(productsRe);
+  if (productsMatch) {
+    content = content.replace(
+      productsMatch[0],
+      productsMatch[1] +
+        productsMatch[2] +
+        `\t\t\t\t${ids.productRef} /* ${WIDGET_NAME}.appex */,\n\t\t\t` +
+        productsMatch[3]
     );
   }
 
-  return widgetTarget;
-}
+  const sourcesFiles = sourceFiles
+    .map((f) => `\t\t\t\t${ids[`bf_${f}`]} /* ${f} in Sources */,`)
+    .join("\n");
+  const sourcesPhaseBlock = `\t\t${ids.sourcesPhase} /* Sources */ = {\n\t\t\tisa = PBXSourcesBuildPhase;\n\t\t\tbuildActionMask = 2147483647;\n\t\t\tfiles = (\n${sourcesFiles}\n\t\t\t);\n\t\t\trunOnlyForDeploymentPostprocessing = 0;\n\t\t};\n`;
 
-function configureWidgetBuildSettings(xcodeProject) {
-  const buildConfigs = xcodeProject.pbxXCBuildConfigurationSection();
-  for (const key in buildConfigs) {
-    const entry = buildConfigs[key];
-    if (typeof entry !== "object" || !entry.buildSettings) continue;
+  content = content.replace(
+    "/* End PBXSourcesBuildPhase section */",
+    sourcesPhaseBlock + "/* End PBXSourcesBuildPhase section */"
+  );
 
-    const bundleId = entry.buildSettings.PRODUCT_BUNDLE_IDENTIFIER;
-    if (bundleId && (bundleId === `"${WIDGET_BUNDLE_ID}"` || bundleId === WIDGET_BUNDLE_ID)) {
-      entry.buildSettings.IPHONEOS_DEPLOYMENT_TARGET = DEPLOYMENT_TARGET;
-      entry.buildSettings.SWIFT_VERSION = "5.0";
-      entry.buildSettings.TARGETED_DEVICE_FAMILY = '"1"';
-      entry.buildSettings.CODE_SIGN_ENTITLEMENTS = `"${WIDGET_NAME}/${WIDGET_NAME}.entitlements"`;
-      entry.buildSettings.INFOPLIST_FILE = `"${WIDGET_NAME}/Info.plist"`;
-      entry.buildSettings.GENERATE_INFOPLIST_FILE = "NO";
-      entry.buildSettings.PRODUCT_NAME = `"$(TARGET_NAME)"`;
-      entry.buildSettings.MARKETING_VERSION = "1.0";
-      entry.buildSettings.CURRENT_PROJECT_VERSION = "1";
-      entry.buildSettings.SWIFT_EMIT_LOC_STRINGS = "YES";
-      entry.buildSettings.LD_RUNPATH_SEARCH_PATHS = [
-        '"$(inherited)"',
-        '"@executable_path/Frameworks"',
-        '"@executable_path/../../Frameworks"',
-      ];
-      entry.buildSettings.SKIP_INSTALL = "YES";
-      if (!entry.buildSettings.OTHER_LDFLAGS) {
-        entry.buildSettings.OTHER_LDFLAGS = ['"$(inherited)"'];
-      }
-    }
+  if (!content.includes("/* Begin PBXFrameworksBuildPhase section */")) {
+    content = content.replace(
+      "/* Begin PBXGroup section */",
+      "/* Begin PBXFrameworksBuildPhase section */\n/* End PBXFrameworksBuildPhase section */\n\n/* Begin PBXGroup section */"
+    );
   }
+  const frameworksPhaseBlock = `\t\t${ids.frameworksPhase} /* Frameworks */ = {\n\t\t\tisa = PBXFrameworksBuildPhase;\n\t\t\tbuildActionMask = 2147483647;\n\t\t\tfiles = (\n\t\t\t);\n\t\t\trunOnlyForDeploymentPostprocessing = 0;\n\t\t};\n`;
+  content = content.replace(
+    "/* End PBXFrameworksBuildPhase section */",
+    frameworksPhaseBlock + "/* End PBXFrameworksBuildPhase section */"
+  );
+
+  const buildSettings = `{
+\t\t\t\tCODE_SIGN_ENTITLEMENTS = "${WIDGET_NAME}/${WIDGET_NAME}.entitlements";
+\t\t\t\tCURRENT_PROJECT_VERSION = 1;
+\t\t\t\tGENERATE_INFOPLIST_FILE = NO;
+\t\t\t\tINFOPLIST_FILE = "${WIDGET_NAME}/Info.plist";
+\t\t\t\tIPHONEOS_DEPLOYMENT_TARGET = ${DEPLOYMENT_TARGET};
+\t\t\t\tLD_RUNPATH_SEARCH_PATHS = (
+\t\t\t\t\t"$(inherited)",
+\t\t\t\t\t"@executable_path/Frameworks",
+\t\t\t\t\t"@executable_path/../../Frameworks",
+\t\t\t\t);
+\t\t\t\tMARKETING_VERSION = 1.0;
+\t\t\t\tOTHER_LDFLAGS = (
+\t\t\t\t\t"$(inherited)",
+\t\t\t\t);
+\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = "${WIDGET_BUNDLE_ID}";
+\t\t\t\tPRODUCT_NAME = "$(TARGET_NAME)";
+\t\t\t\tSKIP_INSTALL = YES;
+\t\t\t\tSWIFT_EMIT_LOC_STRINGS = YES;
+\t\t\t\tSWIFT_VERSION = 5.0;
+\t\t\t\tTARGETED_DEVICE_FAMILY = 1;
+\t\t\t}`;
+
+  const debugConfigBlock = `\t\t${ids.debugConfig} /* Debug */ = {\n\t\t\tisa = XCBuildConfiguration;\n\t\t\tbuildSettings = ${buildSettings}\n\t\t\tname = Debug;\n\t\t};\n`;
+  const releaseConfigBlock = `\t\t${ids.releaseConfig} /* Release */ = {\n\t\t\tisa = XCBuildConfiguration;\n\t\t\tbuildSettings = ${buildSettings}\n\t\t\tname = Release;\n\t\t};\n`;
+
+  content = content.replace(
+    "/* End XCBuildConfiguration section */",
+    debugConfigBlock +
+      releaseConfigBlock +
+      "/* End XCBuildConfiguration section */"
+  );
+
+  const configListBlock = `\t\t${ids.configList} /* Build configuration list for PBXNativeTarget "${WIDGET_NAME}" */ = {\n\t\t\tisa = XCConfigurationList;\n\t\t\tbuildConfigurations = (\n\t\t\t\t${ids.debugConfig} /* Debug */,\n\t\t\t\t${ids.releaseConfig} /* Release */,\n\t\t\t);\n\t\t\tdefaultConfigurationIsVisible = 0;\n\t\t\tdefaultConfigurationName = Release;\n\t\t};\n`;
+
+  content = content.replace(
+    "/* End XCConfigurationList section */",
+    configListBlock + "/* End XCConfigurationList section */"
+  );
+
+  const nativeTargetBlock = `\t\t${ids.target} /* ${WIDGET_NAME} */ = {\n\t\t\tisa = PBXNativeTarget;\n\t\t\tbuildConfigurationList = ${ids.configList} /* Build configuration list for PBXNativeTarget "${WIDGET_NAME}" */;\n\t\t\tbuildPhases = (\n\t\t\t\t${ids.sourcesPhase} /* Sources */,\n\t\t\t\t${ids.frameworksPhase} /* Frameworks */,\n\t\t\t);\n\t\t\tbuildRules = (\n\t\t\t);\n\t\t\tdependencies = (\n\t\t\t);\n\t\t\tname = ${WIDGET_NAME};\n\t\t\tproductName = ${WIDGET_NAME};\n\t\t\tproductReference = ${ids.productRef} /* ${WIDGET_NAME}.appex */;\n\t\t\tproductType = "com.apple.product-type.app-extension";\n\t\t};\n`;
+
+  content = content.replace(
+    "/* End PBXNativeTarget section */",
+    nativeTargetBlock + "/* End PBXNativeTarget section */"
+  );
+
+  const targetsRe = /(\/\*\s*Begin PBXProject section\s*\*\/[\s\S]*?targets\s*=\s*\()([\s\S]*?)(\);)/;
+  const targetsMatch = content.match(targetsRe);
+  if (targetsMatch) {
+    content = content.replace(
+      targetsMatch[0],
+      targetsMatch[1] +
+        targetsMatch[2] +
+        `\t\t\t\t${ids.target} /* ${WIDGET_NAME} */,\n\t\t\t` +
+        targetsMatch[3]
+    );
+  }
+
+  fs.writeFileSync(pbxprojPath, content, "utf8");
 }
 
-function getPostIntegrateHook(projectName) {
-  return `
+function addWidgetKitHelperToPbxproj(pbxprojPath, projectName) {
+  let content = fs.readFileSync(pbxprojPath, "utf8");
+
+  if (content.includes("WidgetKitHelper.swift")) {
+    return;
+  }
+
+  const swiftFr = makeUUID("helper_fileref_swift");
+  const objcFr = makeUUID("helper_fileref_objc");
+  const swiftBf = makeUUID("helper_buildfile_swift");
+  const objcBf = makeUUID("helper_buildfile_objc");
+
+  const fileRefs =
+    `\t\t${swiftFr} /* WidgetKitHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetKitHelper.swift; sourceTree = "<group>"; };\n` +
+    `\t\t${objcFr} /* WidgetKitHelper.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WidgetKitHelper.m; sourceTree = "<group>"; };\n`;
+
+  content = content.replace(
+    "/* End PBXFileReference section */",
+    fileRefs + "/* End PBXFileReference section */"
+  );
+
+  const buildFiles =
+    `\t\t${swiftBf} /* WidgetKitHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = ${swiftFr} /* WidgetKitHelper.swift */; };\n` +
+    `\t\t${objcBf} /* WidgetKitHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = ${objcFr} /* WidgetKitHelper.m */; };\n`;
+
+  content = content.replace(
+    "/* End PBXBuildFile section */",
+    buildFiles + "/* End PBXBuildFile section */"
+  );
+
+  const appGroupRe = new RegExp(
+    `(\\/\\*\\s*${projectName}\\s*\\*\\/\\s*=\\s*\\{\\s*isa\\s*=\\s*PBXGroup;\\s*children\\s*=\\s*\\()([\\s\\S]*?)(\\);)`
+  );
+  const appGroupMatch = content.match(appGroupRe);
+  if (appGroupMatch) {
+    content = content.replace(
+      appGroupMatch[0],
+      appGroupMatch[1] +
+        appGroupMatch[2] +
+        `\t\t\t\t${swiftFr} /* WidgetKitHelper.swift */,\n\t\t\t\t${objcFr} /* WidgetKitHelper.m */,\n\t\t\t` +
+        appGroupMatch[3]
+    );
+  }
+
+  const mainTargetSourcesRe =
+    /([A-F0-9]{24}\s*\/\*\s*Sources\s*\*\/\s*=\s*\{\s*isa\s*=\s*PBXSourcesBuildPhase;\s*buildActionMask\s*=\s*2147483647;\s*files\s*=\s*\()([\s\S]*?)(\);)/;
+  const sourcesMatch = content.match(mainTargetSourcesRe);
+  if (sourcesMatch) {
+    content = content.replace(
+      sourcesMatch[0],
+      sourcesMatch[1] +
+        sourcesMatch[2] +
+        `\t\t\t\t${swiftBf} /* WidgetKitHelper.swift in Sources */,\n\t\t\t\t${objcBf} /* WidgetKitHelper.m in Sources */,\n\t\t\t` +
+        sourcesMatch[3]
+    );
+  }
+
+  const bridgingHeaderSetting = `SWIFT_OBJC_BRIDGING_HEADER = "${projectName}/${projectName}-Bridging-Header.h";`;
+  if (!content.includes("SWIFT_OBJC_BRIDGING_HEADER")) {
+    content = content.replace(
+      /SWIFT_VERSION = 5\.0;/g,
+      `SWIFT_VERSION = 5.0;\n\t\t\t\t${bridgingHeaderSetting}`
+    );
+  }
+
+  fs.writeFileSync(pbxprojPath, content, "utf8");
+}
+
+function injectPostIntegrateHook(podfilePath, projectName) {
+  let podfileContent = fs.readFileSync(podfilePath, "utf8");
+
+  if (podfileContent.includes("Embed App Extensions")) {
+    return;
+  }
+
+  const hook = `
 post_integrate do |installer|
   project_path = File.join(__dir__, '${projectName}.xcodeproj')
   project = Xcodeproj::Project.open(project_path)
@@ -716,83 +323,35 @@ post_integrate do |installer|
     unless main_target.build_phases.any? { |p| p.respond_to?(:name) && p.name == 'Embed App Extensions' }
       embed_phase = main_target.new_copy_files_build_phase('Embed App Extensions')
       embed_phase.dst_subfolder_spec = '13'
-      embed_phase.dst_path = ''
-
-      build_file = embed_phase.add_file_reference(widget_target.product_reference)
-      build_file.settings = { 'ATTRIBUTES' => ['RemoveHeadersOnCopy'] }
-
-      unless main_target.dependencies.any? { |d| d.target == widget_target }
-        main_target.add_dependency(widget_target)
-      end
-
-      project.save
+      embed_phase.add_file_reference(widget_target.product_reference)
     end
+
+    unless main_target.dependencies.any? { |d| d.target == widget_target }
+      main_target.add_dependency(widget_target)
+    end
+
+    project.save
   end
 end
 `;
-}
 
-function addWidgetKitHelperToProject(xcodeProject, projectName) {
-  const swiftFilePath = `${projectName}/WidgetKitHelper.swift`;
-  const objcFilePath = `${projectName}/WidgetKitHelper.m`;
-
-  const sourcesBuildPhase = xcodeProject.pbxSourcesBuildPhaseObj();
-  let swiftAdded = false;
-  let objcAdded = false;
-  if (sourcesBuildPhase && sourcesBuildPhase.files) {
-    swiftAdded = sourcesBuildPhase.files.some((f) =>
-      f.comment && f.comment.includes("WidgetKitHelper.swift")
-    );
-    objcAdded = sourcesBuildPhase.files.some((f) =>
-      f.comment && f.comment.includes("WidgetKitHelper.m")
-    );
+  const lastEndIdx = podfileContent.lastIndexOf("\nend");
+  if (lastEndIdx !== -1) {
+    podfileContent =
+      podfileContent.substring(0, lastEndIdx + 4) +
+      "\n" +
+      hook +
+      podfileContent.substring(lastEndIdx + 4);
+  } else {
+    podfileContent += "\n" + hook;
   }
 
-  const groupKey = xcodeProject.findPBXGroupKey({ name: projectName }) ||
-                   xcodeProject.findPBXGroupKey({ path: projectName });
-  const target = xcodeProject.getFirstTarget().uuid;
-
-  if (groupKey) {
-    if (!swiftAdded) {
-      xcodeProject.addSourceFile(swiftFilePath, { target }, groupKey);
-    }
-    if (!objcAdded) {
-      xcodeProject.addSourceFile(objcFilePath, { target }, groupKey);
-    }
-  }
-
-  const bridgingHeaderRelPath = `${projectName}/${projectName}-Bridging-Header.h`;
-  const buildConfigs = xcodeProject.pbxXCBuildConfigurationSection();
-  for (const key in buildConfigs) {
-    const entry = buildConfigs[key];
-    if (typeof entry !== "object" || !entry.buildSettings) continue;
-    const settings = entry.buildSettings;
-
-    const bundleId = settings.PRODUCT_BUNDLE_IDENTIFIER;
-    const isWidgetTarget = bundleId && (bundleId === `"${WIDGET_BUNDLE_ID}"` || bundleId === WIDGET_BUNDLE_ID);
-    if (isWidgetTarget) continue;
-
-    if (!settings.SWIFT_OBJC_BRIDGING_HEADER) {
-      settings.SWIFT_OBJC_BRIDGING_HEADER = `"${bridgingHeaderRelPath}"`;
-    }
-
-    if (!settings.OTHER_LDFLAGS) {
-      settings.OTHER_LDFLAGS = ['"$(inherited)"', '"-framework"', '"WidgetKit"'];
-    } else if (Array.isArray(settings.OTHER_LDFLAGS)) {
-      if (!settings.OTHER_LDFLAGS.some((f) => f === '"WidgetKit"')) {
-        settings.OTHER_LDFLAGS.push('"-framework"', '"WidgetKit"');
-      }
-    }
-  }
+  fs.writeFileSync(podfilePath, podfileContent, "utf8");
 }
 
 function withPrayerTimesWidget(config) {
   config = withEntitlementsPlist(config, (modConfig) => {
-    const groups = modConfig.modResults["com.apple.security.application-groups"] || [];
-    if (!groups.includes(APP_GROUP)) {
-      groups.push(APP_GROUP);
-    }
-    modConfig.modResults["com.apple.security.application-groups"] = groups;
+    modConfig.modResults["com.apple.security.application-groups"] = [APP_GROUP];
     return modConfig;
   });
 
@@ -801,83 +360,25 @@ function withPrayerTimesWidget(config) {
     async (modConfig) => {
       const projectRoot = modConfig.modRequest.projectRoot;
       const projectName = modConfig.modRequest.projectName;
-      const widgetDir = path.join(projectRoot, "ios", WIDGET_NAME);
-      const appDir = path.join(projectRoot, "ios", projectName);
 
-      fs.mkdirSync(widgetDir, { recursive: true });
-      fs.mkdirSync(appDir, { recursive: true });
+      writeWidgetSourceFiles(projectRoot);
+      writeWidgetKitHelperFiles(projectRoot, projectName);
 
-      const swiftFiles = getWidgetSwiftFiles();
-      for (const [filename, content] of Object.entries(swiftFiles)) {
-        fs.writeFileSync(path.join(widgetDir, filename), content);
-      }
-
-      fs.writeFileSync(
-        path.join(widgetDir, `${WIDGET_NAME}.entitlements`),
-        getWidgetEntitlements()
+      const pbxprojPath = path.join(
+        projectRoot,
+        "ios",
+        `${projectName}.xcodeproj`,
+        "project.pbxproj"
       );
 
-      fs.writeFileSync(
-        path.join(widgetDir, "Info.plist"),
-        getWidgetInfoPlist()
-      );
-
-      const helperFiles = getWidgetKitHelperFiles(projectName);
-      fs.writeFileSync(path.join(appDir, "WidgetKitHelper.swift"), helperFiles.swiftContent);
-      fs.writeFileSync(path.join(appDir, "WidgetKitHelper.m"), helperFiles.objcBridge);
-
-      const bridgingHeaderPath = path.join(appDir, `${projectName}-Bridging-Header.h`);
-      if (!fs.existsSync(bridgingHeaderPath)) {
-        fs.writeFileSync(bridgingHeaderPath, helperFiles.bridgingHeader);
+      if (fs.existsSync(pbxprojPath)) {
+        insertWidgetTargetRawText(pbxprojPath, projectName);
+        addWidgetKitHelperToPbxproj(pbxprojPath, projectName);
       }
 
-      return modConfig;
-    },
-  ]);
-
-  config = withXcodeProject(config, (modConfig) => {
-    const xcodeProject = modConfig.modResults;
-    const projectName = modConfig.modRequest.projectName;
-
-    const existingTargets = xcodeProject.pbxNativeTargetSection();
-    for (const key in existingTargets) {
-      if (typeof existingTargets[key] === "object" &&
-          existingTargets[key].name === `"${WIDGET_NAME}"`) {
-        addWidgetKitHelperToProject(xcodeProject, projectName);
-        return modConfig;
-      }
-    }
-
-    const widgetTarget = addWidgetTarget(xcodeProject);
-    configureWidgetBuildSettings(xcodeProject);
-    addWidgetKitHelperToProject(xcodeProject, projectName);
-
-    return modConfig;
-  });
-
-  config = withDangerousMod(config, [
-    "ios",
-    async (modConfig) => {
-      const projectRoot = modConfig.modRequest.projectRoot;
-      const projectName = modConfig.modRequest.projectName;
       const podfilePath = path.join(projectRoot, "ios", "Podfile");
-
       if (fs.existsSync(podfilePath)) {
-        let podfileContent = fs.readFileSync(podfilePath, "utf8");
-
-        if (!podfileContent.includes("Embed App Extensions")) {
-          const hook = getPostIntegrateHook(projectName);
-          const lastEndIndex = podfileContent.lastIndexOf("\nend");
-          if (lastEndIndex !== -1) {
-            podfileContent =
-              podfileContent.substring(0, lastEndIndex) +
-              "\n" + hook + "\n" +
-              podfileContent.substring(lastEndIndex);
-          } else {
-            podfileContent += "\n" + hook;
-          }
-          fs.writeFileSync(podfilePath, podfileContent, "utf8");
-        }
+        injectPostIntegrateHook(podfilePath, projectName);
       }
 
       return modConfig;

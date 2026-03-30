@@ -1,0 +1,62 @@
+The build has now failed 5 times with the SAME error. Every approach has failed because the xcode npm module's addTarget() function ITSELF creates an orphaned PBXCopyFilesBuildPhase for the .appex product. No amount of post-processing fixes this because CocoaPods' post_install hook re-saves the project through Xcodeproj Ruby before any post_integrate hook runs.
+
+WE NEED A COMPLETELY DIFFERENT APPROACH. Stop using addTarget() entirely.
+
+Replace the ENTIRE withXcodeProject modifier with a single withDangerousMod that:
+
+1. First runs expo prebuild's normal xcode project generation (don't touch it)
+2. Then reads the .pbxproj file as RAW TEXT
+3. Inserts ALL widget target objects (PBXNativeTarget, PBXGroup, PBXFileReference, PBXSourcesBuildPhase, PBXBuildFile entries for Swift source files, XCBuildConfiguration, XCConfigurationList) as raw text into the correct sections of the .pbxproj
+4. Does NOT create any PBXCopyFilesBuildPhase or embed phase at this stage
+5. Writes the modified .pbxproj back
+
+Then ALSO modify the Podfile to add a post_integrate hook that uses Xcodeproj Ruby API to add ONLY the embed phase and target dependency AFTER CocoaPods is completely done.
+
+The key insight: the post_install hook in react-native's Podfile calls fix_library_search_paths which re-saves the project. If ANY orphaned objects exist at that point, it crashes. So the widget target itself must be clean — no embed phase, no copy files phase — when post_install runs. The embed phase gets added ONLY in post_integrate, after everything else is done.
+
+Here is a concrete template for the raw .pbxproj text insertion approach. The withDangerousMod should:
+
+1. Read ios/SalamYall.xcodeproj/project.pbxproj as a string
+2. Find the /* Begin PBXFileReference section */ and insert file references for all Swift files and the .appex product
+3. Find the /* Begin PBXGroup section */ and insert a group for PrayerTimesWidget containing the Swift file references  
+4. Add that group as a child of the main project group
+5. Find the /* Begin PBXSourcesBuildPhase section */ and insert a sources build phase for the widget target
+6. Find the /* Begin PBXBuildFile section */ and insert build file entries for each Swift source file
+7. Find the /* Begin XCBuildConfiguration section */ and insert Debug and Release configs for the widget
+8. Find the /* Begin XCConfigurationList section */ and insert a config list for the widget
+9. Find the /* Begin PBXNativeTarget section */ and insert the widget target referencing the above objects
+10. Add the widget target to the project's targets array in the PBXProject section
+11. Do NOT add any PBXCopyFilesBuildPhase — this is critical
+12. Write the file back
+
+Generate deterministic UUIDs (not random) by hashing known strings so they're stable across builds.
+
+For the Podfile post_integrate hook, append this Ruby code to the Podfile:
+
+post_integrate do |installer|
+  project_path = File.join(__dir__, 'SalamYall.xcodeproj')
+  project = Xcodeproj::Project.open(project_path)
+  
+  main_target = project.targets.find { |t| t.name == 'SalamYall' }
+  widget_target = project.targets.find { |t| t.name == 'PrayerTimesWidget' }
+  
+  if main_target && widget_target
+    unless main_target.build_phases.any? { |p| p.respond_to?(:name) && p.name == 'Embed App Extensions' }
+      embed_phase = main_target.new_copy_files_build_phase('Embed App Extensions')
+      embed_phase.dst_subfolder_spec = '13'
+      embed_phase.add_file_reference(widget_target.product_reference)
+    end
+    
+    unless main_target.dependencies.any? { |d| d.target == widget_target }
+      main_target.add_dependency(widget_target)
+    end
+    
+    project.save
+  end
+end
+
+This MUST work because:
+- The widget target is added as clean raw text with NO embed phase
+- CocoaPods post_install runs, re-saves the project — no orphaned objects exist so it succeeds
+- post_integrate runs AFTER post_install, uses Ruby API to add embed phase with proper parent tracking
+- Ruby API's add_file_reference properly registers the parent relationship
