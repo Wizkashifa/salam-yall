@@ -7,15 +7,6 @@ const WIDGET_BUNDLE_ID = "app.ummahconnect.PrayerTimesWidget";
 const APP_GROUP = "group.app.ummahconnect";
 const DEPLOYMENT_TARGET = "17.0";
 
-function generateUUID() {
-  const hex = "0123456789ABCDEF";
-  let uuid = "";
-  for (let i = 0; i < 24; i++) {
-    uuid += hex.charAt(Math.floor(Math.random() * 16));
-  }
-  return uuid;
-}
-
 function getWidgetSwiftFiles() {
   const models = `import WidgetKit
 import Foundation
@@ -640,18 +631,6 @@ function getWidgetInfoPlist() {
 `;
 }
 
-function findProductsGroup(xcodeProject) {
-  const pbxGroupSection = xcodeProject.hash.project.objects["PBXGroup"];
-  for (const key in pbxGroupSection) {
-    if (key.endsWith("_comment")) continue;
-    const group = pbxGroupSection[key];
-    if (typeof group === "object" && group.name === "Products") {
-      return key;
-    }
-  }
-  return null;
-}
-
 function addWidgetTarget(xcodeProject) {
   const widgetTarget = xcodeProject.addTarget(
     WIDGET_NAME,
@@ -659,25 +638,6 @@ function addWidgetTarget(xcodeProject) {
     WIDGET_NAME,
     WIDGET_BUNDLE_ID
   );
-
-  const productRefUuid = widgetTarget.pbxNativeTarget.productReference;
-  if (productRefUuid) {
-    const productsGroupKey = findProductsGroup(xcodeProject);
-    if (productsGroupKey) {
-      const productsGroup = xcodeProject.getPBXGroupByKey(productsGroupKey);
-      if (productsGroup && productsGroup.children) {
-        const alreadyInProducts = productsGroup.children.some(
-          (c) => c.value === productRefUuid
-        );
-        if (!alreadyInProducts) {
-          productsGroup.children.push({
-            value: productRefUuid,
-            comment: `${WIDGET_NAME}.appex`,
-          });
-        }
-      }
-    }
-  }
 
   const widgetGroupKey = xcodeProject.pbxCreateGroup(WIDGET_NAME, WIDGET_NAME);
   const mainGroupKey = xcodeProject.getFirstProject().firstProject.mainGroup;
@@ -743,177 +703,33 @@ function configureWidgetBuildSettings(xcodeProject) {
   }
 }
 
-function patchPbxprojForEmbedAndDependency(pbxprojPath) {
-  let content = fs.readFileSync(pbxprojPath, "utf8");
+function getPostIntegrateHook(projectName) {
+  return `
+post_integrate do |installer|
+  project_path = File.join(__dir__, '${projectName}.xcodeproj')
+  project = Xcodeproj::Project.open(project_path)
 
-  if (content.includes("Embed App Extensions")) {
-    return;
-  }
+  main_target = project.targets.find { |t| t.name == '${projectName}' }
+  widget_target = project.targets.find { |t| t.name == '${WIDGET_NAME}' }
 
-  let productRefUuid = null;
-  const fileRefSection = content.match(/\/\* Begin PBXFileReference section \*\/([\s\S]*?)\/\* End PBXFileReference section \*\//);
-  if (fileRefSection) {
-    const appexMatch = fileRefSection[1].match(/\t\t([A-F0-9]{24})\s*\/\* PrayerTimesWidget\.appex \*\//);
-    if (appexMatch) {
-      productRefUuid = appexMatch[1];
-    }
-  }
-  if (!productRefUuid) return;
+  if main_target && widget_target
+    unless main_target.build_phases.any? { |p| p.respond_to?(:name) && p.name == 'Embed App Extensions' }
+      embed_phase = main_target.new_copy_files_build_phase('Embed App Extensions')
+      embed_phase.dst_subfolder_spec = '13'
+      embed_phase.dst_path = ''
 
-  let widgetTargetUuid = null;
-  const nativeTargetSection = content.match(/\/\* Begin PBXNativeTarget section \*\/([\s\S]*?)\/\* End PBXNativeTarget section \*\//);
-  if (nativeTargetSection) {
-    const widgetTargetMatch = nativeTargetSection[1].match(/\t\t([A-F0-9]{24})\s*\/\* PrayerTimesWidget \*\/\s*=\s*\{/);
-    if (widgetTargetMatch) {
-      widgetTargetUuid = widgetTargetMatch[1];
-    }
-  }
-  if (!widgetTargetUuid) return;
+      build_file = embed_phase.add_file_reference(widget_target.product_reference)
+      build_file.settings = { 'ATTRIBUTES' => ['RemoveHeadersOnCopy'] }
 
-  let mainTargetUuid = null;
-  if (nativeTargetSection) {
-    const allTargets = [...nativeTargetSection[1].matchAll(/\t\t([A-F0-9]{24})\s*\/\* ([^*]+) \*\/\s*=\s*\{/g)];
-    for (const m of allTargets) {
-      if (m[2].trim() !== "PrayerTimesWidget") {
-        mainTargetUuid = m[1];
-        break;
-      }
-    }
-  }
-  if (!mainTargetUuid) return;
+      unless main_target.dependencies.any? { |d| d.target == widget_target }
+        main_target.add_dependency(widget_target)
+      end
 
-  let projectUuid = null;
-  const projectObjMatch = content.match(/rootObject\s*=\s*([A-F0-9]{24})/);
-  if (projectObjMatch) {
-    projectUuid = projectObjMatch[1];
-  }
-  if (!projectUuid) return;
-
-  const embedBuildFileUuid = generateUUID();
-  const embedPhaseUuid = generateUUID();
-  const containerProxyUuid = generateUUID();
-  const targetDepUuid = generateUUID();
-
-  const buildFileEntry = `\t\t${embedBuildFileUuid} /* ${WIDGET_NAME}.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = ${productRefUuid} /* ${WIDGET_NAME}.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };\n`;
-
-  content = content.replace(
-    "/* End PBXBuildFile section */",
-    buildFileEntry + "/* End PBXBuildFile section */"
-  );
-
-  const copyFilesPhaseEntry = `/* Begin PBXCopyFilesBuildPhase section */
-\t\t${embedPhaseUuid} /* Embed App Extensions */ = {
-\t\t\tisa = PBXCopyFilesBuildPhase;
-\t\t\tbuildActionMask = 2147483647;
-\t\t\tdstPath = "";
-\t\t\tdstSubfolderSpec = 13;
-\t\t\tfiles = (
-\t\t\t\t${embedBuildFileUuid} /* ${WIDGET_NAME}.appex in Embed App Extensions */,
-\t\t\t);
-\t\t\tname = "Embed App Extensions";
-\t\t\trunOnlyForDeploymentPostprocessing = 0;
-\t\t};
-/* End PBXCopyFilesBuildPhase section */
+      project.save
+    end
+  end
+end
 `;
-
-  if (content.includes("/* Begin PBXCopyFilesBuildPhase section */")) {
-    content = content.replace(
-      "/* End PBXCopyFilesBuildPhase section */",
-      `\t\t${embedPhaseUuid} /* Embed App Extensions */ = {
-\t\t\tisa = PBXCopyFilesBuildPhase;
-\t\t\tbuildActionMask = 2147483647;
-\t\t\tdstPath = "";
-\t\t\tdstSubfolderSpec = 13;
-\t\t\tfiles = (
-\t\t\t\t${embedBuildFileUuid} /* ${WIDGET_NAME}.appex in Embed App Extensions */,
-\t\t\t);
-\t\t\tname = "Embed App Extensions";
-\t\t\trunOnlyForDeploymentPostprocessing = 0;
-\t\t};
-/* End PBXCopyFilesBuildPhase section */`
-    );
-  } else {
-    content = content.replace(
-      "/* Begin PBXContainerItemProxy section */",
-      copyFilesPhaseEntry + "\n/* Begin PBXContainerItemProxy section */"
-    );
-    if (!content.includes("/* Begin PBXContainerItemProxy section */")) {
-      content = content.replace(
-        "/* Begin PBXFileReference section */",
-        copyFilesPhaseEntry + "\n/* Begin PBXFileReference section */"
-      );
-    }
-  }
-
-  const containerProxyEntry = `\t\t${containerProxyUuid} /* PBXContainerItemProxy */ = {
-\t\t\tisa = PBXContainerItemProxy;
-\t\t\tcontainerPortal = ${projectUuid} /* Project object */;
-\t\t\tproxyType = 1;
-\t\t\tremoteGlobalIDString = ${widgetTargetUuid};
-\t\t\tremoteInfo = ${WIDGET_NAME};
-\t\t};\n`;
-
-  if (content.includes("/* Begin PBXContainerItemProxy section */")) {
-    content = content.replace(
-      "/* End PBXContainerItemProxy section */",
-      containerProxyEntry + "/* End PBXContainerItemProxy section */"
-    );
-  } else {
-    content = content.replace(
-      "/* Begin PBXCopyFilesBuildPhase section */",
-      `/* Begin PBXContainerItemProxy section */\n${containerProxyEntry}/* End PBXContainerItemProxy section */\n\n/* Begin PBXCopyFilesBuildPhase section */`
-    );
-  }
-
-  const targetDepEntry = `\t\t${targetDepUuid} /* PBXTargetDependency */ = {
-\t\t\tisa = PBXTargetDependency;
-\t\t\ttarget = ${widgetTargetUuid} /* ${WIDGET_NAME} */;
-\t\t\ttargetProxy = ${containerProxyUuid} /* PBXContainerItemProxy */;
-\t\t};\n`;
-
-  if (content.includes("/* Begin PBXTargetDependency section */")) {
-    content = content.replace(
-      "/* End PBXTargetDependency section */",
-      targetDepEntry + "/* End PBXTargetDependency section */"
-    );
-  } else {
-    content = content.replace(
-      "/* Begin PBXVariantGroup section */",
-      `/* Begin PBXTargetDependency section */\n${targetDepEntry}/* End PBXTargetDependency section */\n\n/* Begin PBXVariantGroup section */`
-    );
-    if (!content.includes("/* Begin PBXTargetDependency section */")) {
-      content = content.replace(
-        "/* Begin PBXXCBuildConfiguration section */",
-        `/* Begin PBXTargetDependency section */\n${targetDepEntry}/* End PBXTargetDependency section */\n\n/* Begin PBXXCBuildConfiguration section */`
-      );
-    }
-  }
-
-  const mainTargetPattern = new RegExp(
-    `(${mainTargetUuid}\\s*\\/\\*[^*]*\\*\\/\\s*=\\s*\\{[\\s\\S]*?buildPhases\\s*=\\s*\\()`,
-    "m"
-  );
-  const mainTargetMatch = content.match(mainTargetPattern);
-  if (mainTargetMatch) {
-    content = content.replace(
-      mainTargetMatch[1],
-      mainTargetMatch[1] + `\n\t\t\t\t${embedPhaseUuid} /* Embed App Extensions */,`
-    );
-  }
-
-  const depsPattern = new RegExp(
-    `(${mainTargetUuid}\\s*\\/\\*[^*]*\\*\\/\\s*=\\s*\\{[\\s\\S]*?dependencies\\s*=\\s*\\()`,
-    "m"
-  );
-  const depsMatch = content.match(depsPattern);
-  if (depsMatch) {
-    content = content.replace(
-      depsMatch[1],
-      depsMatch[1] + `\n\t\t\t\t${targetDepUuid} /* PBXTargetDependency */,`
-    );
-  }
-
-  fs.writeFileSync(pbxprojPath, content, "utf8");
 }
 
 function addWidgetKitHelperToProject(xcodeProject, projectName) {
@@ -1044,12 +860,24 @@ function withPrayerTimesWidget(config) {
     async (modConfig) => {
       const projectRoot = modConfig.modRequest.projectRoot;
       const projectName = modConfig.modRequest.projectName;
-      const pbxprojPath = path.join(
-        projectRoot, "ios", `${projectName}.xcodeproj`, "project.pbxproj"
-      );
+      const podfilePath = path.join(projectRoot, "ios", "Podfile");
 
-      if (fs.existsSync(pbxprojPath)) {
-        patchPbxprojForEmbedAndDependency(pbxprojPath);
+      if (fs.existsSync(podfilePath)) {
+        let podfileContent = fs.readFileSync(podfilePath, "utf8");
+
+        if (!podfileContent.includes("Embed App Extensions")) {
+          const hook = getPostIntegrateHook(projectName);
+          const lastEndIndex = podfileContent.lastIndexOf("\nend");
+          if (lastEndIndex !== -1) {
+            podfileContent =
+              podfileContent.substring(0, lastEndIndex) +
+              "\n" + hook + "\n" +
+              podfileContent.substring(lastEndIndex);
+          } else {
+            podfileContent += "\n" + hook;
+          }
+          fs.writeFileSync(podfilePath, podfileContent, "utf8");
+        }
       }
 
       return modConfig;

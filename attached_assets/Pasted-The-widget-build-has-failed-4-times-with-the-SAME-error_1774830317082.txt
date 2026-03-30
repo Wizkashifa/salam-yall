@@ -1,0 +1,74 @@
+The widget build has failed 4 times with the SAME error. None of the approaches have worked because the root cause is deeper than we thought.
+
+THE REAL PROBLEM:
+When xcode npm's addTarget() creates the widget target, it creates a PBXFileReference for PrayerTimesWidget.appex as the product. This file reference gets added to a PBXBuildFile. But CocoaPods' post_install hook uses the Xcodeproj RUBY gem to re-open and re-save the .pbxproj file. The Ruby gem's parent-tracking is stricter than the Node xcode module — it requires every PBXBuildFile's fileRef to be traceable through the group hierarchy. The Node module doesn't set this up correctly, and no amount of patching after the fact fixes it because Ruby re-validates on save.
+
+THE SOLUTION:
+Do NOT add the embed extension phase or any copy files phase in the config plugin AT ALL. Instead:
+
+1. In withXcodeProject: Keep addTarget() for creating the widget target, adding source files, and configuring build settings. But REMOVE all embed phase code — no addEmbedExtensionPhase, no patchPbxprojForEmbedAndDependency, nothing that creates a PBXCopyFilesBuildPhase referencing the .appex.
+
+2. Instead, add a withDangerousMod that modifies the Podfile to add a post_integrate hook (NOT post_install — post_integrate runs AFTER CocoaPods has finished saving). In that hook, use Ruby code to properly add the embed phase using Xcodeproj's Ruby API which WILL set up parent tracking correctly.
+
+Here's the exact approach:
+
+In the withDangerousMod, read the ios/Podfile, and before the final `end`, insert:
+```ruby
+post_integrate do |installer|
+  project_path = File.join(__dir__, 'SalamYall.xcodeproj', 'project.pbxproj')  
+  # Read the raw pbxproj and add embed phase as text
+  content = File.read(project_path)
+  
+  unless content.include?('Embed App Extensions')
+    # Find the PrayerTimesWidget.appex product reference UUID
+    appex_ref = content.match(/([A-F0-9]{24})\s*\/\*\s*PrayerTimesWidget\.appex\s*\*\/.*?isa\s*=\s*PBXFileReference/m)
+    if appex_ref.nil?
+      # Try alternative pattern - look in PBXFileReference section
+      content.scan(/([A-F0-9]{24})\s*\/\*\s*PrayerTimesWidget\.appex\s*\*\/\s*=\s*\{[^}]*isa\s*=\s*PBXFileReference/) do |match|
+        appex_ref = match
+      end
+    end
+    
+    # Just write the patched file directly after CocoaPods is completely done
+    # This avoids all Xcodeproj parent-tracking issues
+  end
+end
+```
+
+Actually, the SIMPLEST reliable approach: use post_integrate to run a Ruby script that uses Xcodeproj's Ruby API directly:
+```ruby
+post_integrate do |installer|
+  project_path = File.join(__dir__, 'SalamYall.xcodeproj')
+  project = Xcodeproj::Project.open(project_path)
+  
+  main_target = project.targets.find { |t| t.name == 'SalamYall' }
+  widget_target = project.targets.find { |t| t.name == 'PrayerTimesWidget' }
+  
+  if main_target && widget_target
+    # Check if embed phase already exists
+    unless main_target.build_phases.any? { |p| p.respond_to?(:name) && p.name == 'Embed App Extensions' }
+      # Add embed phase using Ruby API (which properly tracks parents)
+      embed_phase = main_target.new_copy_files_build_phase('Embed App Extensions')
+      embed_phase.dst_subfolder_spec = '13'  # PlugIns folder
+      embed_phase.add_file_reference(widget_target.product_reference)
+      
+      # Add target dependency
+      unless main_target.dependencies.any? { |d| d.target == widget_target }
+        main_target.add_dependency(widget_target)
+      end
+      
+      project.save
+    end
+  end
+end
+```
+
+This is the correct fix because:
+1. post_integrate runs AFTER CocoaPods has finished all its work
+2. We use Xcodeproj's Ruby API (the SAME library that's been rejecting our changes) to add the embed phase
+3. The Ruby API properly sets up parent tracking because we're using add_file_reference() which does the internal bookkeeping
+4. We save through the Ruby API so the parent validation passes
+
+Remove ALL embed phase code from the withXcodeProject modifier and the withDangerousMod pbxproj text patching. The ONLY thing that should touch the embed phase is this Podfile post_integrate hook.
+
+Also remove the addTargetDependency code from withXcodeProject — the Ruby post_integrate hook handles that too.
