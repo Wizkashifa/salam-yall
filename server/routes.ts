@@ -6213,6 +6213,19 @@ ${profileInfo.slice(0, 30000)}`,
     }
   });
 
+  app.get("/api/admin/community-events/pending", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { rows } = await pool.query(
+        "SELECT id, title, description, location, start_time, end_time, organizer, registration_url, is_virtual, status, created_at, CASE WHEN image_data IS NOT NULL THEN true ELSE false END as has_image FROM community_events WHERE status = 'pending' ORDER BY created_at DESC"
+      );
+      res.json(rows);
+    } catch (error: any) {
+      console.error("[Community Events] Pending list error:", error.message);
+      res.status(500).json({ error: "Failed to list pending events" });
+    }
+  });
+
   app.get("/api/admin/community-events", async (req, res) => {
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {
@@ -6266,6 +6279,9 @@ ${profileInfo.slice(0, 30000)}`,
       if (additional_images !== undefined) { fields.push(`additional_images = $${idx++}::jsonb`); values.push(JSON.stringify(additional_images || [])); }
       if (is_virtual !== undefined) { fields.push(`is_virtual = $${idx++}`); values.push(!!is_virtual); }
       if (is_featured !== undefined) { fields.push(`is_featured = $${idx++}`); values.push(!!is_featured); }
+      if (req.body.status !== undefined && ["approved", "rejected", "pending"].includes(req.body.status)) {
+        fields.push(`status = $${idx++}`); values.push(req.body.status);
+      }
       if (fields.length === 0) return res.status(400).json({ error: "No fields to update" });
       values.push(id);
       const result = await pool.query(

@@ -343,28 +343,10 @@
         </div>
       </div>
 
-      <div class="section" style="border-left:3px solid #6366F1;">
-        <div class="section-title"><span class="icon">📧</span> Ingest from Email Newsletter</div>
-        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Paste the HTML source of a forwarded newsletter email. AI will extract all events mentioned in it for review before publishing.</p>
-        <label>Newsletter HTML</label>
-        <textarea id="ingestEmailHtml" placeholder="Paste newsletter email HTML here..." style="min-height:120px;font-family:monospace;font-size:12px;"></textarea>
-        <button class="btn btn-gold" onclick="ingestEmail()" id="ingestEmailBtn">Extract Events from Email</button>
-        <div id="ingestEmailStatus" style="display:none;font-size:12px;padding:8px 12px;border-radius:8px;margin-top:10px;"></div>
-      </div>
-
-      <div class="section" style="border-left:3px solid #EC4899;">
-        <div class="section-title"><span class="icon">📷</span> Ingest from Instagram</div>
-        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Enter a public Instagram handle to fetch recent posts and extract event announcements.</p>
-        <label>Instagram Handle</label>
-        <input type="text" id="ingestIgHandle" placeholder="@masjid_handle">
-        <button class="btn btn-gold" onclick="ingestInstagram()" id="ingestIgBtn">Fetch & Extract Events</button>
-        <div id="ingestIgStatus" style="display:none;font-size:12px;padding:8px 12px;border-radius:8px;margin-top:10px;"></div>
-      </div>
-
-      <div class="section" id="ingestedEventsSection" style="display:none;border-left:3px solid #10B981;">
-        <div class="section-title"><span class="icon">✅</span> Ingested Events — Review & Publish</div>
-        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Review extracted events below. Edit any fields, then publish or dismiss each one.</p>
-        <div id="ingestedEventsList"></div>
+      <div class="section" id="pendingEventsSection" style="border-left:3px solid #F59E0B;">
+        <div class="section-title"><span class="icon">⏳</span> Community Submissions — Pending Approval</div>
+        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Events submitted by community members through the website. Review and approve or reject.</p>
+        <div id="pendingEventsList"><div class="loading">Loading...</div></div>
       </div>
 
 
@@ -936,6 +918,7 @@
           loadBusinesses('pending');
           loadJumuah();
           loadCommunityEvents();
+          loadPendingEvents();
           loadCommunityGoal();
           loadJzMasjids();
           loadJzHistory();
@@ -1908,199 +1891,81 @@
       }
     }
 
-    var ingestedEvents = [];
-
-    async function ingestEmail() {
-      var html = document.getElementById('ingestEmailHtml').value.trim();
-      if (!html) { showToast('Paste newsletter HTML first', true); return; }
-      var btn = document.getElementById('ingestEmailBtn');
-      var status = document.getElementById('ingestEmailStatus');
-      btn.disabled = true;
-      btn.textContent = 'Extracting...';
-      status.style.display = 'block';
-      status.style.background = '#1A2E22';
-      status.style.color = '#6EE7B7';
-      status.textContent = 'Sending email to AI for event extraction...';
-      try {
-        var res = await fetch('/api/admin/events/ingest-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
-          body: JSON.stringify({ html: html }),
-        });
-        if (res.status === 401) { handleUnauthorized(); return; }
-        var data = await res.json();
-        if (!res.ok) {
-          status.style.background = '#2A1818';
-          status.style.color = '#F87171';
-          status.textContent = data.error || 'Extraction failed';
-          return;
-        }
-        if (!data.events || data.events.length === 0) {
-          status.style.background = '#2A2318';
-          status.style.color = '#D4A843';
-          status.textContent = 'No events found in this newsletter.';
-          return;
-        }
-        status.style.background = '#1A2E22';
-        status.style.color = '#6EE7B7';
-        status.textContent = 'Found ' + data.events.length + ' event(s). Review below.';
-        addIngestedEvents(data.events, 'email');
-      } catch(e) {
-        status.style.background = '#2A1818';
-        status.style.color = '#F87171';
-        status.textContent = 'Connection error';
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Extract Events from Email';
-      }
-    }
-
-    async function ingestInstagram() {
-      var handle = document.getElementById('ingestIgHandle').value.trim();
-      if (!handle) { showToast('Enter an Instagram handle first', true); return; }
-      var btn = document.getElementById('ingestIgBtn');
-      var status = document.getElementById('ingestIgStatus');
-      btn.disabled = true;
-      btn.textContent = 'Fetching...';
-      status.style.display = 'block';
-      status.style.background = '#1A2E22';
-      status.style.color = '#6EE7B7';
-      status.textContent = 'Fetching Instagram profile and extracting events...';
-      try {
-        var res = await fetch('/api/admin/events/ingest-instagram', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
-          body: JSON.stringify({ handle: handle }),
-        });
-        if (res.status === 401) { handleUnauthorized(); return; }
-        var data = await res.json();
-        if (!res.ok) {
-          status.style.background = '#2A1818';
-          status.style.color = '#F87171';
-          status.textContent = data.error || 'Extraction failed';
-          return;
-        }
-        if (!data.events || data.events.length === 0) {
-          status.style.background = '#2A2318';
-          status.style.color = '#D4A843';
-          status.textContent = 'No event announcements found from @' + (data.handle || handle) + '.';
-          return;
-        }
-        status.style.background = '#1A2E22';
-        status.style.color = '#6EE7B7';
-        status.textContent = 'Found ' + data.events.length + ' event(s) from @' + (data.handle || handle) + '. Review below.';
-        addIngestedEvents(data.events, 'instagram');
-      } catch(e) {
-        status.style.background = '#2A1818';
-        status.style.color = '#F87171';
-        status.textContent = 'Connection error';
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Fetch & Extract Events';
-      }
-    }
-
-    function addIngestedEvents(events, source) {
-      for (var i = 0; i < events.length; i++) {
-        events[i]._source = source;
-        events[i]._id = Date.now().toString() + Math.random().toString(36).substr(2, 6) + i;
-        ingestedEvents.push(events[i]);
-      }
-      renderIngestedEvents();
-    }
-
-    function renderIngestedEvents() {
-      var section = document.getElementById('ingestedEventsSection');
-      var container = document.getElementById('ingestedEventsList');
-      if (ingestedEvents.length === 0) {
-        section.style.display = 'none';
-        return;
-      }
-      section.style.display = 'block';
-      container.innerHTML = ingestedEvents.map(function(ev, idx) {
-        var sourceBadge = ev._source === 'email'
-          ? '<span style="background:#312E81;color:#A5B4FC;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600;">EMAIL</span>'
-          : '<span style="background:#831843;color:#F9A8D4;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600;">INSTAGRAM</span>';
-        var startVal = '';
-        if (ev.date && ev.startTime) {
-          startVal = ev.date + 'T' + ev.startTime;
-        }
-        var endVal = '';
-        if (ev.date && ev.endTime) {
-          endVal = ev.date + 'T' + ev.endTime;
-        }
-        return '<div style="background:#1E1E1E;border:1px solid #333;border-radius:12px;padding:16px;margin-bottom:12px;" id="ingested-' + ev._id + '">' +
-          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
-            '<div style="display:flex;align-items:center;gap:8px;">' + sourceBadge +
-              '<span style="font-size:14px;font-weight:700;color:#F5F5F5;">' + escHtml(ev.title || 'Untitled Event') + '</span>' +
-            '</div>' +
-            '<div style="display:flex;gap:6px;">' +
-              '<button class="btn btn-sm btn-primary" onclick="publishIngested(\'' + ev._id + '\')">Publish</button>' +
-              '<button class="btn btn-sm btn-danger" onclick="dismissIngested(\'' + ev._id + '\')">Dismiss</button>' +
-            '</div>' +
-          '</div>' +
-          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
-            '<div><label>Title</label><input type="text" id="ing-title-' + ev._id + '" value="' + escAttr(ev.title || '') + '"></div>' +
-            '<div><label>Organizer</label><input type="text" id="ing-org-' + ev._id + '" value="' + escAttr(ev.organizer || '') + '"></div>' +
-            '<div><label>Start</label><input type="datetime-local" id="ing-start-' + ev._id + '" value="' + escAttr(startVal) + '"></div>' +
-            '<div><label>End</label><input type="datetime-local" id="ing-end-' + ev._id + '" value="' + escAttr(endVal) + '"></div>' +
-            '<div style="grid-column:1/-1;"><label>Location</label><input type="text" id="ing-loc-' + ev._id + '" value="' + escAttr(ev.location || '') + '"></div>' +
-            '<div style="grid-column:1/-1;"><label>Description</label><textarea id="ing-desc-' + ev._id + '" style="min-height:60px;">' + escHtml(ev.description || '') + '</textarea></div>' +
-            '<div style="grid-column:1/-1;"><label>Registration URL</label><input type="text" id="ing-url-' + ev._id + '" value="' + escAttr(ev.registrationUrl || '') + '"></div>' +
-          '</div>' +
-        '</div>';
-      }).join('');
-    }
-
     function escAttr(s) {
       if (!s) return '';
       return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
-    async function publishIngested(id) {
-      var ev = ingestedEvents.find(function(e) { return e._id === id; });
-      if (!ev) return;
-      var title = document.getElementById('ing-title-' + id).value.trim();
-      var startTime = document.getElementById('ing-start-' + id).value;
-      if (!title) { showToast('Title is required', true); return; }
-      if (!startTime) { showToast('Start date & time is required', true); return; }
-      var card = document.getElementById('ingested-' + id);
-      var publishBtn = card.querySelector('.btn-primary');
-      publishBtn.disabled = true;
-      publishBtn.textContent = 'Publishing...';
+    async function loadPendingEvents() {
+      var list = document.getElementById('pendingEventsList');
       try {
-        var body = {
-          title: title,
-          description: document.getElementById('ing-desc-' + id).value.trim(),
-          location: document.getElementById('ing-loc-' + id).value.trim(),
-          organizer: document.getElementById('ing-org-' + id).value.trim(),
-          startTime: new Date(startTime).toISOString(),
-          endTime: document.getElementById('ing-end-' + id).value ? new Date(document.getElementById('ing-end-' + id).value).toISOString() : null,
-          registrationUrl: document.getElementById('ing-url-' + id).value.trim(),
-        };
-        var res = await fetch('/api/admin/events/publish', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
-          body: JSON.stringify(body),
+        var res = await fetch('/api/admin/community-events/pending', {
+          headers: { 'Authorization': 'Bearer ' + adminToken },
         });
         if (res.status === 401) { handleUnauthorized(); return; }
-        var data = await res.json();
-        if (!res.ok) { showToast(data.error || 'Failed to publish', true); publishBtn.disabled = false; publishBtn.textContent = 'Publish'; return; }
-        showToast('Published: ' + title);
-        ingestedEvents = ingestedEvents.filter(function(e) { return e._id !== id; });
-        renderIngestedEvents();
-        loadCommunityEvents();
-      } catch(e) {
-        showToast('Connection error', true);
-        publishBtn.disabled = false;
-        publishBtn.textContent = 'Publish';
-      }
+        if (!res.ok) { list.innerHTML = '<div class="empty-state">Failed to load pending events</div>'; return; }
+        var events = await res.json();
+        if (!events.length) {
+          list.innerHTML = '<div class="empty-state">No pending submissions</div>';
+          return;
+        }
+        list.innerHTML = events.map(function(ev) {
+          var startDate = new Date(ev.start_time);
+          var dateStr = startDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+          var timeStr = startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+          var submitted = new Date(ev.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+          var imgBadge = ev.has_image ? '<span style="font-size:10px;padding:2px 6px;background:#1A2E22;color:#6EE7B7;border-radius:4px;margin-left:6px;">HAS IMAGE</span>' : '';
+          return '<div style="background:#1E1E1E;border:1px solid #333;border-radius:12px;padding:16px;margin-bottom:12px;" id="pending-' + ev.id + '">' +
+            '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">' +
+              '<div style="flex:1;">' +
+                '<div style="font-size:15px;font-weight:700;color:#F5F5F5;">' + escHtml(ev.title) + imgBadge + '</div>' +
+                '<div style="font-size:12px;color:#6B7280;margin-top:4px;">' + dateStr + ' at ' + timeStr + '</div>' +
+                (ev.organizer ? '<div style="font-size:12px;color:#6B7280;">' + escHtml(ev.organizer) + '</div>' : '') +
+                (ev.location ? '<div style="font-size:12px;color:#6B7280;">' + escHtml(ev.location) + '</div>' : '') +
+                (ev.description ? '<div style="font-size:12px;color:#9CA3AF;margin-top:6px;line-height:1.4;">' + escHtml(ev.description) + '</div>' : '') +
+                (ev.registration_url ? '<div style="margin-top:4px;"><a href="' + escAttr(ev.registration_url) + '" target="_blank" style="font-size:11px;color:#60A5FA;">Registration Link</a></div>' : '') +
+                '<div style="font-size:10px;color:#4B5563;margin-top:8px;">Submitted ' + submitted + '</div>' +
+              '</div>' +
+            '</div>' +
+            '<div style="display:flex;gap:8px;">' +
+              '<button class="btn btn-primary btn-sm" onclick="approvePendingEvent(' + ev.id + ')" style="flex:1;">Approve</button>' +
+              '<button class="btn btn-gold btn-sm" onclick="openCommunityEventEditor(' + ev.id + ')" style="flex:1;">Edit First</button>' +
+              '<button class="btn btn-danger btn-sm" onclick="rejectPendingEvent(' + ev.id + ')" style="flex:1;">Reject</button>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+      } catch { list.innerHTML = '<div class="empty-state">Failed to load pending events</div>'; }
     }
 
-    function dismissIngested(id) {
-      ingestedEvents = ingestedEvents.filter(function(e) { return e._id !== id; });
-      renderIngestedEvents();
-      showToast('Event dismissed');
+    async function approvePendingEvent(id) {
+      if (!confirm('Approve this event? It will become visible to all users.')) return;
+      try {
+        var res = await fetch('/api/admin/community-events/' + id, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify({ status: 'approved' }),
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        if (!res.ok) { showToast('Failed to approve', true); return; }
+        showToast('Event approved!');
+        loadPendingEvents();
+        loadCommunityEvents();
+      } catch { showToast('Connection error', true); }
+    }
+
+    async function rejectPendingEvent(id) {
+      if (!confirm('Reject this event? It will not be shown to users.')) return;
+      try {
+        var res = await fetch('/api/admin/community-events/' + id, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify({ status: 'rejected' }),
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        if (!res.ok) { showToast('Failed to reject', true); return; }
+        showToast('Event rejected');
+        loadPendingEvents();
+      } catch { showToast('Connection error', true); }
     }
 
     var cachedCommunityEvents = [];
@@ -3333,6 +3198,7 @@
             loadBusinesses('pending');
             loadJumuah();
             loadCommunityEvents();
+            loadPendingEvents();
             loadCommunityGoal();
             loadJzMasjids();
             loadJzHistory();
