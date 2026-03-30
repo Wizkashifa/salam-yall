@@ -2124,7 +2124,11 @@ Return ONLY the JSON object, no markdown, no explanation.`,
         if (geocoded) { eventLat = geocoded.lat; eventLng = geocoded.lng; }
       }
 
-      const addImgs = Array.isArray(additionalImages) && additionalImages.length > 0 ? JSON.stringify(additionalImages) : '[]';
+      const normalizedAdditional = Array.isArray(additionalImages) ? additionalImages.map((img: any) => ({
+        data: img.data,
+        mime: img.mime || img.mimeType || "image/jpeg",
+      })) : [];
+      const addImgs = normalizedAdditional.length > 0 ? JSON.stringify(normalizedAdditional) : '[]';
       const result = await pool.query(
         `INSERT INTO community_events (title, description, location, start_time, end_time, organizer, registration_url, image_data, image_mime, additional_images, is_virtual, is_featured, status, lat, lng)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, false, false, 'pending', $11, $12)
