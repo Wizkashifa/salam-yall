@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 70;
+	objectVersion = 56;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -68,7 +68,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		60A5A9DA2F7A44E9007DF338 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+		60A5A9DA2F7A44E9007DF338 /* Exceptions for "PrayerTimesWidget" folder in "PrayerTimesWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -78,7 +78,18 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		60A5A9C82F7A44E7007DF338 /* PrayerTimesWidget */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (60A5A9DA2F7A44E9007DF338 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = PrayerTimesWidget; sourceTree = "<group>"; };
+		60A5A9C82F7A44E7007DF338 /* PrayerTimesWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				60A5A9DA2F7A44E9007DF338 /* Exceptions for "PrayerTimesWidget" folder in "PrayerTimesWidgetExtension" target */,
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = PrayerTimesWidget;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -209,6 +220,7 @@
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
+				A1B2C3D4E5F60001 /* Set Build Number from Git */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
 				63B9A4625B5B53BB4B585837 /* [CP] Embed Pods Frameworks */,
 				60A5A9D72F7A44E9007DF338 /* Embed Foundation Extensions */,
@@ -239,8 +251,6 @@
 				60A5A9C82F7A44E7007DF338 /* PrayerTimesWidget */,
 			);
 			name = PrayerTimesWidgetExtension;
-			packageProductDependencies = (
-			);
 			productName = PrayerTimesWidgetExtension;
 			productReference = 60A5A9C32F7A44E7007DF338 /* PrayerTimesWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
@@ -428,6 +438,20 @@
 			shellPath = /bin/sh;
 			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-SalamYall/expo-configure-project.sh\"\n";
 		};
+		A1B2C3D4E5F60001 /* Set Build Number from Git */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Set Build Number from Git";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "BUILD_NUMBER=$(git rev-list --count HEAD)\n/usr/libexec/PlistBuddy -c \"Set :CFBundleVersion $BUILD_NUMBER\" \"${TARGET_BUILD_DIR}/${INFOPLIST_PATH}\"\n";
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -574,6 +598,7 @@
 				MARKETING_VERSION = 1.2;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
+				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = app.ummahconnect.PrayerTimesWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -626,6 +651,7 @@
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.2;
 				MTL_FAST_MATH = YES;
+				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = app.ummahconnect.PrayerTimesWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
