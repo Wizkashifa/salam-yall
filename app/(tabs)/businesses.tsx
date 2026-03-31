@@ -1256,10 +1256,9 @@ export default function BusinessesScreen() {
         if (!matchesCategory) return false;
         if (selectedSubcategory && b.subcategory !== selectedSubcategory) return false;
         if (b.location_type === "service_area" || b.location_type === "popup") {
-          if (userLocation && b.lat && b.lng) {
-            const dist = haversineDistance(userLocation.lat, userLocation.lng, b.lat, b.lng);
-            if (dist > 50) return false;
-          }
+          if (!userLocation || !b.lat || !b.lng) return false;
+          const dist = haversineDistance(userLocation.lat, userLocation.lng, b.lat, b.lng);
+          if (dist > 50) return false;
         } else if (b.location_type === "virtual") {
         } else if (distanceFilter > 0 && userLocation) {
           if (b.lat && b.lng) {
