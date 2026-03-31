@@ -107,6 +107,7 @@ struct MediumWidgetView: View {
                     .padding(.top, 6)
                     .padding(.bottom, 10)
             }
+            .frame(maxWidth: .infinity)
         } else {
             emptyState(isDark: isDark)
         }
@@ -120,6 +121,31 @@ struct MediumWidgetView: View {
         if prayedCount(prayers) == prayers.count { return WC.emerald }
         let hasMissed = prayers.contains { isPast($0) && $0.status == nil }
         return hasMissed ? WC.missed : WC.richGold
+    }
+
+    @ViewBuilder
+    private func rightColumn(data: PrayerData, isDark: Bool) -> some View {
+        VStack(alignment: .trailing, spacing: 3) {
+            if let h = data.hijriDate, !h.isEmpty {
+                Text(h)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(isDark ? .white.opacity(0.4) : .black.opacity(0.35))
+                    .multilineTextAlignment(.trailing)
+            }
+            Text("\(prayedCount(data.prayers))/\(data.prayers.count) prayed")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundColor(prayedColor(data.prayers, isDark: isDark))
+            if let s = data.streak, s > 0 {
+                HStack(spacing: 3) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(WC.richGold)
+                    Text("\(s)d streak")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(WC.richGold)
+                }
+            }
+        }
     }
 
     @ViewBuilder
@@ -166,29 +192,7 @@ struct MediumWidgetView: View {
             Spacer()
 
             // Right side: hijri date + prayed count + streak
-            VStack(alignment: .trailing, spacing: 3) {
-                if let h = data.hijriDate, !h.isEmpty {
-                    Text(h)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(isDark ? .white.opacity(0.4) : .black.opacity(0.35))
-                        .multilineTextAlignment(.trailing)
-                }
-                let pc = prayedCount(data.prayers)
-                let pc_color = prayedColor(data.prayers, isDark: isDark)
-                Text("\(pc)/\(data.prayers.count) prayed")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(pc_color)
-                if let s = data.streak, s > 0 {
-                    HStack(spacing: 3) {
-                        Image(systemName: "flame.fill")
-                            .font(.system(size: 10))
-                            .foregroundColor(WC.richGold)
-                        Text("\(s)d streak")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundColor(WC.richGold)
-                    }
-                }
-            }
+            rightColumn(data: data, isDark: isDark)
         }
         .padding(.horizontal, 14).padding(.top, 10).padding(.bottom, 8)
     }
@@ -232,6 +236,7 @@ struct MediumWidgetView: View {
                 .buttonStyle(.plain)
             }
         }
+        .frame(maxWidth: .infinity)
     }
 
     @ViewBuilder
