@@ -2877,8 +2877,15 @@ Return ONLY the JSON object, no markdown, no explanation.`,
       }
       const saValue = service_area_description || "";
 
-      if ((location_type === "service_area" || location_type === "popup") && (!saValue || lat == null || lng == null)) {
-        return res.status(400).json({ error: "Service area and pop-up businesses require a metro area selection." });
+      const VALID_METROS = [
+        "Triangle NC", "Bay Area CA", "Los Angeles CA", "DFW TX", "Houston TX", "Chicago IL",
+        "NYC Metro", "DMV", "Detroit MI", "Atlanta GA", "Philadelphia PA", "Minneapolis MN",
+        "San Diego CA", "Orlando FL", "Tampa FL", "Miami FL", "Phoenix AZ", "Seattle WA",
+        "Denver CO", "Charlotte NC", "Columbus OH", "Nashville TN", "San Antonio TX",
+        "Austin TX", "St. Louis MO", "Sacramento CA", "Boston MA", "Baltimore MD",
+      ];
+      if ((location_type === "service_area" || location_type === "popup") && (!saValue || !VALID_METROS.includes(saValue) || lat == null || lng == null)) {
+        return res.status(400).json({ error: "Service area and pop-up businesses require a valid metro area selection." });
       }
 
       const filterTagsArray = Array.isArray(filter_tags) ? filter_tags : [];
