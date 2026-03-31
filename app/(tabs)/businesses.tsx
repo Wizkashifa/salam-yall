@@ -1,4 +1,5 @@
 import { useCallback, useState, useEffect } from "react";
+import { METRO_AREAS } from "@/lib/location-override-context";
 import {
   StyleSheet,
   Text,
@@ -124,12 +125,6 @@ const SUBCATEGORIES: Record<string, string[]> = {
   ],
 };
 
-const SERVICE_AREA_OPTIONS = [
-  "Local Area",
-  "Metro Area",
-  "Statewide",
-  "Nationwide / Remote",
-];
 
 const UNIVERSAL_TAGS = [
   "Women-owned", "Arabic-speaking", "Urdu-speaking", "Spanish-speaking",
@@ -609,9 +604,13 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
 
   const submitMutation = useMutation({
     mutationFn: async () => {
+      const selectedMetro = (locationType === "service_area" || locationType === "popup")
+        ? METRO_AREAS.find(m => m.name === serviceAreaDescription)
+        : null;
       const res = await apiRequest("POST", "/api/businesses/submit", {
         name, category, subcategory, description, address, phone, website, google_url: googleUrl,
         filter_tags: selectedKeywords, photo_url: photoUrl, booking_url: bookingUrl, instagram_url: instagramUrl, affiliation, location_type: locationType, service_area_description: serviceAreaDescription,
+        ...(selectedMetro ? { lat: selectedMetro.lat, lng: selectedMetro.lng } : {}),
       });
       return res.json();
     },
@@ -882,25 +881,26 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
 
             {(locationType === "service_area" || locationType === "popup") ? (
               <>
-                <Text style={[styles.fieldLabel, { color: colors.text }]}>Service Area</Text>
+                <Text style={[styles.fieldLabel, { color: colors.text }]}>Metro Area *</Text>
                 <View style={styles.categoryGrid}>
-                  {SERVICE_AREA_OPTIONS.map((sa) => {
-                    const isSelected = serviceAreaDescription === sa;
+                  {METRO_AREAS.map((metro) => {
+                    const isSelected = serviceAreaDescription === metro.name;
                     return (
                       <Pressable
-                        key={sa}
+                        key={metro.name}
                         style={[
                           styles.categoryOption,
                           { backgroundColor: colors.surface, borderColor: isSelected ? colors.emerald : colors.border },
                           isSelected && { borderWidth: 2 },
                         ]}
                         onPress={() => {
-                          setServiceAreaDescription(isSelected ? "" : sa);
+                          setServiceAreaDescription(isSelected ? "" : metro.name);
                           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         }}
                       >
+                        <Ionicons name="location-outline" size={12} color={isSelected ? colors.emerald : colors.textSecondary} />
                         <Text style={[styles.categoryOptionText, { color: isSelected ? colors.emerald : colors.text }]}>
-                          {sa}
+                          {metro.name}
                         </Text>
                       </Pressable>
                     );
@@ -1247,10 +1247,14 @@ export default function BusinessesScreen() {
         const matchesCategory = selectedCategory === "All" || b.category === selectedCategory;
         if (!matchesCategory) return false;
         if (selectedSubcategory && b.subcategory !== selectedSubcategory) return false;
-        if (distanceFilter > 0 && userLocation) {
-          if (b.location_type === "virtual" || b.location_type === "service_area" || b.location_type === "popup") {
-            // pass through
-          } else if (b.lat && b.lng) {
+        if (b.location_type === "service_area" || b.location_type === "popup") {
+          if (userLocation && b.lat && b.lng) {
+            const dist = haversineDistance(userLocation.lat, userLocation.lng, b.lat, b.lng);
+            if (dist > 50) return false;
+          }
+        } else if (b.location_type === "virtual") {
+        } else if (distanceFilter > 0 && userLocation) {
+          if (b.lat && b.lng) {
             const dist = haversineDistance(userLocation.lat, userLocation.lng, b.lat, b.lng);
             if (dist > distanceFilter) return false;
           } else {

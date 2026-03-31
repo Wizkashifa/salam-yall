@@ -1472,6 +1472,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
   console.log("[DB] Upserted Fishers-area businesses");
 
+  await pool.query(`UPDATE businesses SET lat = 35.7796, lng = -78.6382 WHERE location_type IN ('service_area', 'popup') AND (lat IS NULL OR lng IS NULL) AND service_area_description = 'Serves the Triangle area'`).catch(() => {});
+  await pool.query(`UPDATE businesses SET lat = 39.9567, lng = -86.0139 WHERE location_type IN ('service_area', 'popup') AND (lat IS NULL OR lng IS NULL) AND service_area_description = 'Fishers, IN Metro Area'`).catch(() => {});
+  await pool.query(`UPDATE businesses SET lat = 35.4727, lng = -77.4155 WHERE location_type IN ('service_area', 'popup') AND (lat IS NULL OR lng IS NULL) AND service_area_description ILIKE '%Ayden%'`).catch(() => {});
+  await pool.query(`UPDATE businesses SET lat = 35.7796, lng = -78.6382 WHERE location_type IN ('service_area', 'popup') AND (lat IS NULL OR lng IS NULL) AND service_area_description ILIKE '%pop-up%'`).catch(() => {});
+  console.log("[DB] Backfilled service-area/popup business coordinates");
+
   const fishersRestaurantUpserts = [
     { name: 'Kanoon Smoked Meat & Steakhouse', address: '8594 East 116th Street #30, Fishers, IN 46038', lat: 39.9557, lng: -86.0055, cuisine: ['Middle Eastern', 'Persian', 'Steakhouse', 'BBQ', 'Mediterranean'], emoji: '🥩', website: 'https://kanoon-indiana.com/', comment: '100% Zabiha halal. Smoked meats, steaks, kebabs, and Mediterranean dishes.' },
     { name: 'MOTW Coffee & Pastries - Indianapolis', address: '4873 W 38th St, Indianapolis, IN 46254', lat: 39.8241, lng: -86.2069, cuisine: ['Coffee', 'Cafe', 'Pastries', 'Middle Eastern'], emoji: '☕', website: 'https://motw.coffee/', comment: 'Muslim-owned coffee and pastry shop. Middle Eastern pastries and specialty coffee.' },
@@ -2850,7 +2856,7 @@ Return ONLY the JSON object, no markdown, no explanation.`,
 
   app.post("/api/businesses/submit", async (req, res) => {
     try {
-      const { name, category, subcategory, description, address, phone, website, google_url, filter_tags, photo_url, booking_url, affiliation, instagram_url, location_type, service_area_description } = req.body;
+      const { name, category, subcategory, description, address, phone, website, google_url, filter_tags, photo_url, booking_url, affiliation, instagram_url, location_type, service_area_description, lat, lng } = req.body;
 
       if (!name || !category) {
         return res.status(400).json({ error: "Name and category are required" });
@@ -2869,20 +2875,18 @@ Return ONLY the JSON object, no markdown, no explanation.`,
       if (!location_type || !validLocationTypes.includes(location_type)) {
         return res.status(400).json({ error: "Location type is required. Choose: Physical Location, Service Area, Virtual, or Pop-up" });
       }
-      const validServiceAreas = ["", "Local Area", "Metro Area", "Statewide", "Nationwide / Remote", "Triangle Area (Raleigh, Durham, Chapel Hill)", "Raleigh Metro", "Durham / Chapel Hill", "Cary / Apex / Morrisville", "Wake County", "NC Statewide"];
       const saValue = service_area_description || "";
-      if (saValue && !validServiceAreas.includes(saValue)) {
-        return res.status(400).json({ error: "Invalid service area. Choose from the predefined options." });
-      }
 
       const filterTagsArray = Array.isArray(filter_tags) ? filter_tags : [];
 
       const usedQuickAdd = !!(google_url && google_url.trim());
+      const latVal = lat != null ? parseFloat(lat) : null;
+      const lngVal = lng != null ? parseFloat(lng) : null;
       const result = await pool.query(
-        `INSERT INTO businesses (name, category, subcategory, description, address, phone, website, google_url, filter_tags, photo_url, booking_url, affiliation, instagram_url, location_type, service_area_description, place_id, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 'pending')
+        `INSERT INTO businesses (name, category, subcategory, description, address, phone, website, google_url, filter_tags, photo_url, booking_url, affiliation, instagram_url, location_type, service_area_description, place_id, lat, lng, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 'pending')
          RETURNING id`,
-        [name, category, subcategory || "", description || "", address || "", phone || "", website || "", google_url || "", filterTagsArray, photo_url || "", booking_url || "", affiliation || "", instagram_url || "", location_type, saValue, usedQuickAdd ? null : "none"]
+        [name, category, subcategory || "", description || "", address || "", phone || "", website || "", google_url || "", filterTagsArray, photo_url || "", booking_url || "", affiliation || "", instagram_url || "", location_type, saValue, usedQuickAdd ? null : "none", latVal, lngVal]
       );
 
       res.status(201).json({
