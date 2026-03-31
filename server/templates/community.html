@@ -135,14 +135,14 @@
     .hero-eyebrow svg { opacity: 0.7; }
     .hero-eyebrow:hover { background: rgba(27,107,74,0.18); border-color: rgba(27,107,74,0.25); }
     .metro-selector-overlay {
-      position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.6);
+      position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.75);
       display: none; align-items: center; justify-content: center;
-      backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
       animation: fadeIn 0.2s ease;
     }
     .metro-selector-overlay.open { display: flex; }
     .metro-selector {
-      background: var(--card-bg); border: 1px solid var(--card-border);
+      background: var(--bg-elevated); border: 1px solid var(--card-border);
       border-radius: 16px; width: 90%; max-width: 420px; max-height: 80vh;
       overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.3);
       animation: modalSlideUp 0.25s ease;
@@ -1011,7 +1011,7 @@
       var html = '<button class="metro-item-detect" onclick="detectMyLocation()">' +
         '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>' +
         'Detect My Location</button>';
-      allMetros.forEach(function(m) {
+      allMetros.slice().sort(function(a, b) { return a.name.localeCompare(b.name); }).forEach(function(m) {
         var isActive = currentMetroName === m.name;
         html += '<button class="metro-item' + (isActive ? ' active' : '') + '" onclick="selectMetro(\'' + m.name.replace(/'/g, "\\'") + '\',' + m.lat + ',' + m.lng + ')">' +
           '<div class="metro-item-dot"></div>' +
