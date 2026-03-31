@@ -1691,7 +1691,7 @@ export default function PrayerScreen() {
             </Text>
         </Pressable>
 
-        <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
+        <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder, padding: 16 }]}>
           <View style={styles.dailyContentHeader}>
             <Ionicons name="people" size={16} color={colors.gold} />
             <Text style={[styles.dailyContentType, { color: colors.gold }]}>Community Goal</Text>
@@ -2210,7 +2210,8 @@ const styles = StyleSheet.create({
   sectionCard: {
     marginHorizontal: 16,
     marginTop: 10,
-    padding: 16,
+    padding: 0,
+    paddingBottom: 4,
   },
   sectionCardHeader: {
     flexDirection: "row",
