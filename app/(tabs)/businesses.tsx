@@ -1,5 +1,4 @@
 import { useCallback, useState, useEffect } from "react";
-import { METRO_AREAS } from "@/lib/location-override-context";
 import {
   StyleSheet,
   Text,
@@ -562,6 +561,7 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
 
 function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: boolean; onClose: () => void; colors: any; isDark: boolean }) {
   const insets = useSafeAreaInsets();
+  const { metroAreas } = useLocationOverride();
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
@@ -614,7 +614,7 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
     mutationFn: async () => {
       const needsMetro = locationType === "service_area" || locationType === "popup";
       const selectedMetro = needsMetro
-        ? METRO_AREAS.find(m => m.name === serviceAreaDescription)
+        ? metroAreas.find(m => m.name === serviceAreaDescription)
         : null;
       if (needsMetro && !selectedMetro) {
         throw new Error("Please select a metro area for your service area or pop-up business.");
@@ -896,7 +896,7 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
                 <Text style={[styles.fieldLabel, { color: colors.text }]}>Metro Area *</Text>
                 <View style={{ borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, maxHeight: 220, overflow: "hidden" }}>
                   <ScrollView nestedScrollEnabled>
-                    {[...METRO_AREAS].sort((a, b) => a.name.localeCompare(b.name)).map((metro) => {
+                    {metroAreas.map((metro) => {
                       const isSelected = serviceAreaDescription === metro.name;
                       return (
                         <Pressable

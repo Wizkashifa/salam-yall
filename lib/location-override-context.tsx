@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getApiUrl } from "@/lib/query-client";
 
 export interface MetroArea {
   name: string;
@@ -7,7 +8,7 @@ export interface MetroArea {
   lng: number;
 }
 
-export const METRO_AREAS: MetroArea[] = [
+const FALLBACK_METROS: MetroArea[] = [
   { name: "Atlanta GA", lat: 33.7490, lng: -84.3880 },
   { name: "Austin TX", lat: 30.2672, lng: -97.7431 },
   { name: "Baltimore MD", lat: 39.2904, lng: -76.6122 },
@@ -40,30 +41,56 @@ export const METRO_AREAS: MetroArea[] = [
 ];
 
 const STORAGE_KEY = "location_override_metro";
+const METROS_CACHE_KEY = "cached_metro_areas";
 
 interface LocationOverrideContextValue {
   overrideMetro: MetroArea | null;
   setOverrideMetro: (metro: MetroArea | null) => void;
   getEffectiveLocation: (realLat: number, realLng: number) => { lat: number; lng: number };
   isOverrideActive: boolean;
+  metroAreas: MetroArea[];
 }
 
 const LocationOverrideContext = createContext<LocationOverrideContextValue | null>(null);
 
 export function LocationOverrideProvider({ children }: { children: ReactNode }) {
   const [overrideMetro, setOverrideMetroState] = useState<MetroArea | null>(null);
+  const [metroAreas, setMetroAreas] = useState<MetroArea[]>(FALLBACK_METROS);
+
+  useEffect(() => {
+    AsyncStorage.getItem(METROS_CACHE_KEY).then((cached) => {
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached) as MetroArea[];
+          if (parsed.length > 0) setMetroAreas(parsed);
+        } catch {}
+      }
+    });
+
+    const url = new URL("/api/geo/metros", getApiUrl());
+    fetch(url.toString())
+      .then((r) => r.json())
+      .then((data: MetroArea[]) => {
+        if (Array.isArray(data) && data.length > 0) {
+          const sorted = data.sort((a, b) => a.name.localeCompare(b.name));
+          setMetroAreas(sorted);
+          AsyncStorage.setItem(METROS_CACHE_KEY, JSON.stringify(sorted));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY).then((raw) => {
       if (raw) {
         try {
           const parsed = JSON.parse(raw);
-          const found = METRO_AREAS.find((m) => m.name === parsed.name);
+          const found = metroAreas.find((m) => m.name === parsed.name);
           if (found) setOverrideMetroState(found);
         } catch {}
       }
     });
-  }, []);
+  }, [metroAreas]);
 
   const setOverrideMetro = useCallback((metro: MetroArea | null) => {
     setOverrideMetroState(metro);
@@ -91,6 +118,7 @@ export function LocationOverrideProvider({ children }: { children: ReactNode }) 
         setOverrideMetro,
         getEffectiveLocation,
         isOverrideActive: overrideMetro !== null,
+        metroAreas,
       }}
     >
       {children}

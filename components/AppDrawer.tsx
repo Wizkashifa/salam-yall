@@ -18,7 +18,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "@/lib/theme-context";
 import { useSettings } from "@/lib/settings-context";
-import { useLocationOverride, METRO_AREAS } from "@/lib/location-override-context";
+import { useLocationOverride } from "@/lib/location-override-context";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const DRAWER_WIDTH = Math.min(SCREEN_WIDTH * 0.85, 340);
@@ -30,7 +30,7 @@ export function AppDrawer() {
   const insets = useSafeAreaInsets();
   const { colors, isDark, themeMode, setThemeMode, ramadanMode, setRamadanMode } = useTheme();
   const { menuOpen, closeMenu, consumePendingDrawerSection } = useSettings();
-  const { overrideMetro, setOverrideMetro, isOverrideActive } = useLocationOverride();
+  const { overrideMetro, setOverrideMetro, isOverrideActive, metroAreas } = useLocationOverride();
   const [section, setSection] = useState<DrawerSection>("main");
   const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
@@ -229,7 +229,7 @@ export function AppDrawer() {
 
       <Text style={[styles.sectionLabel, { color: colors.textSecondary, marginTop: 16 }]}>METRO AREAS</Text>
 
-      {METRO_AREAS.map((metro) => {
+      {metroAreas.map((metro) => {
         const isActive = overrideMetro?.name === metro.name;
         return (
           <Pressable
