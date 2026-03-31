@@ -4153,6 +4153,11 @@ Return ONLY the description text, nothing else.`,
     res.send(downloadHtml);
   });
 
+  app.get("/download", (_req, res) => {
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.send(downloadHtml);
+  });
+
   app.get("/admin", (_req, res) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.send(adminHtml);
