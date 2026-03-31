@@ -102,14 +102,49 @@ struct MediumWidgetView: View {
         if let data = entry.prayerData {
             VStack(spacing: 0) {
                 headerRow(data: data, isDark: isDark)
-                divider(isDark: isDark).padding(.horizontal, 12)
+                divider(isDark: isDark)
                 pillRow(data: data, isDark: isDark)
-                    .padding(.horizontal, 10)
                     .padding(.top, 6)
                     .padding(.bottom, 10)
             }
+            .frame(maxWidth: .infinity)
         } else {
             emptyState(isDark: isDark)
+        }
+    }
+
+    private func prayedCount(_ prayers: [Prayer]) -> Int {
+        prayers.filter { ["completed", "at_masjid", "made_up", "excused"].contains($0.status ?? "") }.count
+    }
+
+    private func prayedColor(_ prayers: [Prayer], isDark: Bool) -> Color {
+        if prayedCount(prayers) == prayers.count { return WC.emerald }
+        let hasMissed = prayers.contains { isPast($0) && $0.status == nil }
+        return hasMissed ? WC.missed : WC.richGold
+    }
+
+    @ViewBuilder
+    private func rightColumn(data: PrayerData, isDark: Bool) -> some View {
+        VStack(alignment: .trailing, spacing: 3) {
+            if let h = data.hijriDate, !h.isEmpty {
+                Text(h)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(isDark ? .white.opacity(0.4) : .black.opacity(0.35))
+                    .multilineTextAlignment(.trailing)
+            }
+            Text("\(prayedCount(data.prayers))/\(data.prayers.count) prayed")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundColor(prayedColor(data.prayers, isDark: isDark))
+            if let s = data.streak, s > 0 {
+                HStack(spacing: 3) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(WC.richGold)
+                    Text("\(s)d streak")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(WC.richGold)
+                }
+            }
         }
     }
 
@@ -126,7 +161,7 @@ struct MediumWidgetView: View {
                         .foregroundColor(isDark ? .white.opacity(0.55) : WC.deepGreen.opacity(0.65))
                     HStack(alignment: .firstTextBaseline, spacing: 5) {
                         Text(next.name)
-                            .font(.system(size: 18, weight: .bold, design: .serif))
+                            .font(.system(size: 18, weight: .bold))
                             .foregroundColor(isDark ? .white : WC.deepGreen)
                         if let t = prayerDate(from: next.athan) {
                             let cd = countdown(to: t)
@@ -143,7 +178,7 @@ struct MediumWidgetView: View {
                 let ishaInfo = StatusInfo.from(isha?.status, isPast: true, isDark: isDark)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Isha")
-                        .font(.system(size: 18, weight: .bold, design: .serif))
+                        .font(.system(size: 18, weight: .bold))
                         .foregroundColor(isDark ? .white : WC.deepGreen)
                     HStack(spacing: 5) {
                         Image(systemName: ishaInfo.icon).font(.system(size: 11)).foregroundColor(ishaInfo.color)
@@ -156,25 +191,8 @@ struct MediumWidgetView: View {
 
             Spacer()
 
-            // Right side: hijri date + streak
-            VStack(alignment: .trailing, spacing: 2) {
-                if let h = data.hijriDate, !h.isEmpty {
-                    Text(h)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(isDark ? .white.opacity(0.4) : .black.opacity(0.35))
-                        .multilineTextAlignment(.trailing)
-                }
-                if let s = data.streak, s > 0 {
-                    HStack(spacing: 3) {
-                        Image(systemName: "flame.fill")
-                            .font(.system(size: 10))
-                            .foregroundColor(WC.richGold)
-                        Text("\(s)d streak")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundColor(WC.richGold)
-                    }
-                }
-            }
+            // Right side: hijri date + prayed count + streak
+            rightColumn(data: data, isDark: isDark)
         }
         .padding(.horizontal, 14).padding(.top, 10).padding(.bottom, 8)
     }
@@ -218,6 +236,7 @@ struct MediumWidgetView: View {
                 .buttonStyle(.plain)
             }
         }
+        .frame(maxWidth: .infinity)
     }
 
     @ViewBuilder
@@ -312,7 +331,9 @@ struct SmallWidgetView: View {
                         .frame(maxWidth: .infinity)
                     }
                 }
+                .frame(maxWidth: .infinity)
             }
+            .frame(maxWidth: .infinity)
             .padding(14)
         } else {
             VStack(spacing: 8) {
@@ -382,18 +403,18 @@ struct CircularLockScreenView: View {
            let nextIdx = entry.nextPrayerIndex,
            nextIdx < data.prayers.count {
             let next = data.prayers[nextIdx]
-            VStack(spacing: 1) {
+            VStack(spacing: 0) {
                 Image(systemName: "moon.stars.fill")
-                    .font(.system(size: 10))
+                    .font(.system(size: 8))
                 Text(String(next.name.prefix(3)).uppercased())
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.system(size: 14, weight: .bold))
                     .lineLimit(1)
                 if let t = prayerDate(from: next.athan) {
                     let diff = t.timeIntervalSince(Date())
                     if diff > 0 {
                         let m = Int(diff) / 60
                         Text(m >= 60 ? "\(m/60)h" : "\(m)m")
-                            .font(.system(size: 13, weight: .bold, design: .monospaced))
+                            .font(.system(size: 17, weight: .bold, design: .monospaced))
                     }
                 }
             }
