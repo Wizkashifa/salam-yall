@@ -1674,43 +1674,51 @@ export default function PrayerScreen() {
 
         <Pressable
             onPress={openVerseModal}
-            style={({ pressed }) => [styles.glassCard, styles.prayerCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder, padding: 16, opacity: pressed ? 0.85 : 1 }]}
+            style={({ pressed }) => [styles.glassCard, styles.prayerCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder, opacity: pressed ? 0.85 : 1 }]}
           >
-            <View style={styles.dailyContentHeader}>
-              <Ionicons name="book" size={16} color={colors.gold} />
-              <Text style={[styles.iqamaCardLabel, { color: colors.gold }]}>DAILY VERSE</Text>
+            <View style={styles.iqamaCardHeader}>
+              <View style={styles.iqamaCardHeaderLeft}>
+                <Ionicons name="book" size={16} color={colors.gold} />
+                <Text style={[styles.iqamaCardLabel, { color: colors.gold }]}>DAILY VERSE</Text>
+              </View>
             </View>
-            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 22, color: colors.text, textAlign: "right" as const, lineHeight: 38, marginBottom: 12, writingDirection: "rtl" as const }}>
-              {dailyVerse.arabic}
-            </Text>
-            <Text style={[styles.dailyContentText, { color: colors.text }]}>
-              "{dailyVerse.translation}"
-            </Text>
-            <Text style={[styles.dailyContentSource, { color: colors.textTertiary }]}>
-              — {dailyVerse.source} · Dr. Mustafa Khattab
-            </Text>
+            <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
+              <Text style={{ fontFamily: "Inter_400Regular", fontSize: 22, color: colors.text, textAlign: "right" as const, lineHeight: 38, marginBottom: 12, writingDirection: "rtl" as const }}>
+                {dailyVerse.arabic}
+              </Text>
+              <Text style={[styles.dailyContentText, { color: colors.text }]}>
+                "{dailyVerse.translation}"
+              </Text>
+              <Text style={[styles.dailyContentSource, { color: colors.textTertiary }]}>
+                — {dailyVerse.source} · Dr. Mustafa Khattab
+              </Text>
+            </View>
         </Pressable>
 
-        <View style={[styles.glassCard, styles.prayerCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder, padding: 16 }]}>
-          <View style={styles.dailyContentHeader}>
-            <Ionicons name="people" size={16} color={colors.gold} />
-            <Text style={[styles.dailyContentType, { color: colors.gold }]}>Community Goal</Text>
+        <View style={[styles.glassCard, styles.prayerCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
+          <View style={styles.iqamaCardHeader}>
+            <View style={styles.iqamaCardHeaderLeft}>
+              <Ionicons name="people" size={16} color={colors.gold} />
+              <Text style={[styles.iqamaCardLabel, { color: colors.gold }]}>COMMUNITY GOAL</Text>
+            </View>
           </View>
-          <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 15, color: colors.text, marginBottom: 8 }}>
-            {communityGoal
-              ? `Our community has logged ${communityGoal.totalCount.toLocaleString()} acts of worship this ${communityGoal.month}`
-              : "Loading community progress\u2026"}
-          </Text>
-          <View style={{ height: 8, borderRadius: 4, backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)", overflow: "hidden", marginBottom: 8 }}>
-            <View style={{ height: "100%", width: `${Math.min(100, (communityGoal?.progress ?? 0) * 100)}%` as any, backgroundColor: colors.emerald, borderRadius: 4 }} />
-          </View>
-          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textSecondary }}>
-              {communityGoal ? `${communityGoal.prayerCount.toLocaleString()} prayers · ${communityGoal.quranCount.toLocaleString()} readings` : ""}
+          <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
+            <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 15, color: colors.text, marginBottom: 8 }}>
+              {communityGoal
+                ? `Our community has logged ${communityGoal.totalCount.toLocaleString()} acts of worship this ${communityGoal.month}`
+                : "Loading community progress\u2026"}
             </Text>
-            <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: colors.emerald }}>
-              {Math.round((communityGoal?.progress ?? 0) * 100)}%
-            </Text>
+            <View style={{ height: 8, borderRadius: 4, backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)", overflow: "hidden", marginBottom: 8 }}>
+              <View style={{ height: "100%", width: `${Math.min(100, (communityGoal?.progress ?? 0) * 100)}%` as any, backgroundColor: colors.emerald, borderRadius: 4 }} />
+            </View>
+            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+              <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textSecondary }}>
+                {communityGoal ? `${communityGoal.prayerCount.toLocaleString()} prayers · ${communityGoal.quranCount.toLocaleString()} readings` : ""}
+              </Text>
+              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 12, color: colors.emerald }}>
+                {Math.round((communityGoal?.progress ?? 0) * 100)}%
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -2133,18 +2141,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     maxWidth: 160,
   },
-  dailyContentHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 10,
-  },
-  dailyContentType: {
-    fontSize: 11,
-    fontFamily: "Inter_700Bold",
-    textTransform: "uppercase" as const,
-    letterSpacing: 0.8,
-  },
   dailyContentText: {
     fontSize: 15,
     fontFamily: "Inter_500Medium",
@@ -2195,16 +2191,6 @@ const styles = StyleSheet.create({
     padding: 12,
     flexDirection: "row",
     alignItems: "center",
-  },
-  sectionCardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  sectionCardTitle: {
-    fontSize: 17,
-    fontFamily: "Inter_700Bold",
   },
   masjidRow: {
     flexDirection: "row",
