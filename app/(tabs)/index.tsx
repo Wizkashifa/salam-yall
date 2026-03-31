@@ -1603,6 +1603,7 @@ export default function PrayerScreen() {
                   onPress={onPress}
                   style={({ pressed }) => [
                     styles.eventRow,
+                    { paddingHorizontal: 16 },
                     idx < communityEvents.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight },
                     pressed && { opacity: 0.7 },
                   ]}
@@ -1649,6 +1650,7 @@ export default function PrayerScreen() {
                   }}
                   style={({ pressed }) => [
                     styles.eventRow,
+                    { paddingHorizontal: 16 },
                     idx < followedOrgEvents.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight },
                     pressed && { opacity: 0.7 },
                   ]}
@@ -1676,7 +1678,7 @@ export default function PrayerScreen() {
           >
             <View style={styles.dailyContentHeader}>
               <Ionicons name="book" size={16} color={colors.gold} />
-              <Text style={[styles.dailyContentType, { color: colors.gold }]}>Daily Verse</Text>
+              <Text style={[styles.iqamaCardLabel, { color: colors.gold }]}>DAILY VERSE</Text>
             </View>
             <Text style={{ fontFamily: "Inter_400Regular", fontSize: 22, color: colors.text, textAlign: "right" as const, lineHeight: 38, marginBottom: 12, writingDirection: "rtl" as const }}>
               {dailyVerse.arabic}
