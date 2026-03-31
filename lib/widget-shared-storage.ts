@@ -13,6 +13,8 @@ export interface WidgetPrayerEntry {
 export interface WidgetPrayerData {
   date: string;
   prayers: WidgetPrayerEntry[];
+  hijriDate?: string;
+  streak?: number;
 }
 
 function statusFromCode(code: number): WidgetPrayerEntry["status"] {
@@ -78,7 +80,9 @@ async function reloadWidgets(): Promise<void> {
 export async function savePrayerTimes(
   times: { name: string; time: Date }[],
   iqamaMap?: Record<string, string | undefined>,
-  todayLog?: Record<string, number>
+  todayLog?: Record<string, number>,
+  hijriDate?: string,
+  streak?: number
 ): Promise<void> {
   if (Platform.OS !== "ios") return;
 
@@ -105,7 +109,7 @@ export async function savePrayerTimes(
     };
   });
 
-  const data: WidgetPrayerData = { date: dateKey, prayers };
+  const data: WidgetPrayerData = { date: dateKey, prayers, hijriDate, streak };
   await writeToAppGroup(data);
   await reloadWidgets();
 }

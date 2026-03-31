@@ -61,7 +61,7 @@ export async function cacheTodayPrayerTimes(times: PrayerTimesMap): Promise<void
   await AsyncStorage.setItem(CACHED_PRAYER_TIMES_KEY, JSON.stringify(raw));
 }
 
-async function getCachedPrayerTimes(): Promise<PrayerTimesMap | undefined> {
+export async function getCachedPrayerTimes(): Promise<PrayerTimesMap | undefined> {
   try {
     const raw = await AsyncStorage.getItem(CACHED_PRAYER_TIMES_KEY);
     if (!raw) return undefined;
@@ -439,7 +439,9 @@ export async function syncFromWidgetData(widgetCodes: Record<string, number>): P
 
   for (const p of PRAYER_ORDER) {
     const widgetStatus = widgetCodes[p] as PrayerStatus | undefined;
-    if (widgetStatus !== undefined && widgetStatus !== existing[p]) {
+    // Only apply widget status if it's non-zero (an explicit user action).
+    // Never let stale widget zeros overwrite real prayer data in AsyncStorage.
+    if (widgetStatus !== undefined && widgetStatus > 0 && widgetStatus !== existing[p]) {
       existing[p] = widgetStatus;
       changed = true;
     }
