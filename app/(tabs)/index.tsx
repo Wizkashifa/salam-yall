@@ -1552,9 +1552,12 @@ export default function PrayerScreen() {
         ) : null}
 
         {communityEvents.length > 0 ? (
-          <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
-            <View style={styles.sectionCardHeader}>
-              <Text style={[styles.sectionCardTitle, { color: colors.text }]}>{isDaytimeMode ? "Today" : "Tonight"} in the Community</Text>
+          <View style={[styles.glassCard, styles.iqamaCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
+            <View style={styles.iqamaCardHeader}>
+              <View style={styles.iqamaCardHeaderLeft}>
+                <Ionicons name="calendar" size={16} color={colors.gold} />
+                <Text style={[styles.iqamaCardLabel, { color: colors.gold }]}>{isDaytimeMode ? "TODAY" : "TONIGHT"} IN THE COMMUNITY</Text>
+              </View>
             </View>
             {communityEvents.map((ev, idx) => {
               const title = (ev.title ?? "").toLowerCase();
@@ -1595,6 +1598,7 @@ export default function PrayerScreen() {
                   onPress={onPress}
                   style={({ pressed }) => [
                     styles.eventRow,
+                    { paddingHorizontal: 16 },
                     idx < communityEvents.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight },
                     pressed && { opacity: 0.7 },
                   ]}
@@ -1621,11 +1625,11 @@ export default function PrayerScreen() {
         ) : null}
 
         {followedOrgEvents.length > 0 ? (
-          <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
-            <View style={styles.sectionCardHeader}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Ionicons name="notifications" size={14} color={colors.emerald} />
-                <Text style={[styles.sectionCardTitle, { color: colors.text }]}>From Organizers You Follow</Text>
+          <View style={[styles.glassCard, styles.iqamaCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
+            <View style={styles.iqamaCardHeader}>
+              <View style={styles.iqamaCardHeaderLeft}>
+                <Ionicons name="notifications" size={16} color={colors.gold} />
+                <Text style={[styles.iqamaCardLabel, { color: colors.gold }]}>FROM ORGANIZERS YOU FOLLOW</Text>
               </View>
             </View>
             {followedOrgEvents.map((ev: any, idx: number) => {
@@ -1641,6 +1645,7 @@ export default function PrayerScreen() {
                   }}
                   style={({ pressed }) => [
                     styles.eventRow,
+                    { paddingHorizontal: 16 },
                     idx < followedOrgEvents.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight },
                     pressed && { opacity: 0.7 },
                   ]}
@@ -1668,7 +1673,7 @@ export default function PrayerScreen() {
           >
             <View style={styles.dailyContentHeader}>
               <Ionicons name="book" size={16} color={colors.gold} />
-              <Text style={[styles.dailyContentType, { color: colors.gold }]}>Daily Verse</Text>
+              <Text style={[styles.iqamaCardLabel, { color: colors.gold }]}>DAILY VERSE</Text>
             </View>
             <Text style={{ fontFamily: "Inter_400Regular", fontSize: 22, color: colors.text, textAlign: "right" as const, lineHeight: 38, marginBottom: 12, writingDirection: "rtl" as const }}>
               {dailyVerse.arabic}
@@ -1683,8 +1688,8 @@ export default function PrayerScreen() {
 
         <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
           <View style={styles.dailyContentHeader}>
-            <Ionicons name="people" size={16} color={colors.emerald} />
-            <Text style={[styles.dailyContentType, { color: colors.emerald }]}>Community Goal</Text>
+            <Ionicons name="people" size={16} color={colors.gold} />
+            <Text style={[styles.iqamaCardLabel, { color: colors.gold }]}>COMMUNITY GOAL</Text>
           </View>
           <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 15, color: colors.text, marginBottom: 8 }}>
             {communityGoal
@@ -1704,90 +1709,6 @@ export default function PrayerScreen() {
           </View>
         </View>
 
-        {masjidsExpanded ? (
-          <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
-            <View style={styles.sectionCardHeader}>
-              <Text style={[styles.sectionCardTitle, { color: colors.text }]}>Masjids Nearby</Text>
-              <Pressable onPress={() => setMasjidsExpanded(false)} hitSlop={8}>
-                <Ionicons name="close" size={18} color={colors.textSecondary} />
-              </Pressable>
-            </View>
-            {nearbyMasjids.map((item, idx) => (
-              <Pressable
-                key={item.masjid.name}
-                style={({ pressed }) => [
-                  styles.masjidRow,
-                  idx < nearbyMasjids.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight },
-                  pressed && { opacity: 0.7 },
-                ]}
-                onPress={() => openMasjidNav(item.masjid)}
-              >
-                <View style={[styles.masjidIcon, { backgroundColor: colors.prayerIconBg }]}>
-                  <MaterialCommunityIcons name="mosque" size={18} color={colors.emerald} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.masjidName, { color: colors.text }]} numberOfLines={1}>
-                    {item.masjid.name.replace(/\s*\(.*\)/, "")}
-                  </Text>
-                  <Text style={[styles.masjidDist, { color: colors.textSecondary }]}>
-                    {item.distanceMiles.toFixed(1)} mi
-                  </Text>
-                </View>
-                <Ionicons name="navigate-outline" size={16} color={colors.emerald} />
-              </Pressable>
-            ))}
-          </View>
-        ) : null}
-
-        {nearbyHalalPreview.length > 0 ? (
-          <View style={styles.halalSection}>
-            <View style={styles.halalSectionHeader}>
-              <Text style={[styles.sectionCardTitle, { color: colors.text }]}>Halal Restaurants Near You</Text>
-              <Pressable onPress={() => router.push("/(tabs)/halal")} hitSlop={8}>
-                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-              </Pressable>
-            </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.halalScrollContent}
-            >
-              {nearbyHalalPreview.map((restaurant) => (
-                <View key={restaurant.id} style={[styles.halalCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder, borderWidth: 1 }]}>
-                  <View style={[styles.halalCardImage, { backgroundColor: colors.prayerIconBg }]}>
-                    <MaterialCommunityIcons name="silverware-fork-knife" size={28} color={isDark ? "#2A5A40" : "#8DC4A8"} />
-                  </View>
-                  <View style={styles.halalCardInfo}>
-                    <Text style={[styles.halalCardName, { color: colors.text }]} numberOfLines={1}>
-                      {restaurant.name}
-                    </Text>
-                    <Text style={[styles.halalCardCuisine, { color: colors.textSecondary }]} numberOfLines={1}>
-                      {restaurant.cuisine_types?.join(", ") || "Restaurant"}
-                    </Text>
-                    <View style={styles.halalCardMeta}>
-                      {restaurant._distance !== undefined ? (
-                        <Text style={[styles.halalCardDistance, { color: colors.textSecondary }]}>
-                          {restaurant._distance.toFixed(1)} mi
-                        </Text>
-                      ) : null}
-                      {restaurant.rating ? (
-                        <View style={styles.halalRatingRow}>
-                          <Ionicons name="star" size={12} color={colors.gold} />
-                          <Text style={[styles.halalRating, { color: colors.gold }]}>{restaurant.rating.toFixed(1)}</Text>
-                          {restaurant.user_ratings_total ? (
-                            <Text style={[styles.halalRatingCount, { color: colors.textTertiary }]}>
-                              ({restaurant.user_ratings_total})
-                            </Text>
-                          ) : null}
-                        </View>
-                      ) : null}
-                    </View>
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        ) : null}
 
       </ScrollView>
       <HomeEventDetailModal
