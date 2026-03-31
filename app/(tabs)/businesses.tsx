@@ -604,9 +604,13 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      const selectedMetro = (locationType === "service_area" || locationType === "popup")
+      const needsMetro = locationType === "service_area" || locationType === "popup";
+      const selectedMetro = needsMetro
         ? METRO_AREAS.find(m => m.name === serviceAreaDescription)
         : null;
+      if (needsMetro && !selectedMetro) {
+        throw new Error("Please select a metro area for your service area or pop-up business.");
+      }
       const res = await apiRequest("POST", "/api/businesses/submit", {
         name, category, subcategory, description, address, phone, website, google_url: googleUrl,
         filter_tags: selectedKeywords, photo_url: photoUrl, booking_url: bookingUrl, instagram_url: instagramUrl, affiliation, location_type: locationType, service_area_description: serviceAreaDescription,
@@ -1188,37 +1192,41 @@ export default function BusinessesScreen() {
     setUserLocation(null);
   }, [isOverrideActive, getEffectiveLocation]);
 
+  const { data: businesses, isLoading } = useQuery<Business[]>({
+    queryKey: ["/api/businesses"],
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const hasServiceAreaBusinesses = !!businesses?.some(b => b.location_type === "service_area" || b.location_type === "popup");
+
   useEffect(() => {
     if (isOverrideActive) return;
-    if (distanceFilter > 0 && !userLocation) {
+    if ((distanceFilter > 0 || hasServiceAreaBusinesses) && !userLocation) {
       (async () => {
         try {
           if (Platform.OS === "web") {
             navigator.geolocation?.getCurrentPosition(
               (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-              () => { Alert.alert("Location unavailable", "Enable location to filter by distance."); setDistanceFilter(0); }
+              () => { if (distanceFilter > 0) { Alert.alert("Location unavailable", "Enable location to filter by distance."); setDistanceFilter(0); } }
             );
           } else {
             const { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== "granted") {
-              Alert.alert("Permission needed", "Enable location access to filter businesses by distance.");
-              setDistanceFilter(0);
+              if (distanceFilter > 0) {
+                Alert.alert("Permission needed", "Enable location access to filter businesses by distance.");
+                setDistanceFilter(0);
+              }
               return;
             }
             const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
             setUserLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
           }
         } catch {
-          setDistanceFilter(0);
+          if (distanceFilter > 0) setDistanceFilter(0);
         }
       })();
     }
-  }, [distanceFilter, userLocation, isOverrideActive]);
-
-  const { data: businesses, isLoading } = useQuery<Business[]>({
-    queryKey: ["/api/businesses"],
-    staleTime: 10 * 60 * 1000,
-  });
+  }, [distanceFilter, userLocation, isOverrideActive, hasServiceAreaBusinesses]);
 
   useEffect(() => {
     if (!businesses || businesses.length === 0) return;

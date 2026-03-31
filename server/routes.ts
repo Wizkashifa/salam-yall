@@ -2877,6 +2877,10 @@ Return ONLY the JSON object, no markdown, no explanation.`,
       }
       const saValue = service_area_description || "";
 
+      if ((location_type === "service_area" || location_type === "popup") && (!saValue || lat == null || lng == null)) {
+        return res.status(400).json({ error: "Service area and pop-up businesses require a metro area selection." });
+      }
+
       const filterTagsArray = Array.isArray(filter_tags) ? filter_tags : [];
 
       const usedQuickAdd = !!(google_url && google_url.trim());
