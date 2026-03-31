@@ -237,19 +237,49 @@
     }
     .search-input::placeholder { color: var(--text-tertiary); }
     .search-input:focus { border-color: var(--emerald); background: var(--card-bg-hover); box-shadow: 0 0 0 3px rgba(27,107,74,0.15); }
-    .filter-select {
-      padding: 11px 16px; background: rgba(14,26,19,0.85); border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 12px; color: var(--text); font-size: 14px; font-family: inherit;
-      outline: none; cursor: pointer; min-width: 140px; transition: all 0.25s ease;
-      -webkit-appearance: none; appearance: none;
-      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-      background-repeat: no-repeat; background-position: right 12px center;
-      padding-right: 36px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    .filter-select { display: none; }
+    .custom-dropdown {
+      position: relative; min-width: 140px;
     }
-    .filter-select:focus { border-color: var(--emerald); box-shadow: 0 0 0 3px rgba(27,107,74,0.15); }
-    .filter-select option { background: var(--bg-elevated); }
+    .custom-dropdown-trigger {
+      padding: 11px 36px 11px 16px; background: rgba(14,26,19,0.85); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px; color: var(--text); font-size: 14px; font-family: inherit;
+      cursor: pointer; transition: all 0.25s ease; width: 100%;
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      position: relative;
+    }
+    .custom-dropdown-trigger::after {
+      content: ''; position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      width: 12px; height: 12px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-size: contain; background-repeat: no-repeat;
+      transition: transform 0.2s ease;
+    }
+    .custom-dropdown.open .custom-dropdown-trigger::after { transform: translateY(-50%) rotate(180deg); }
+    .custom-dropdown.open .custom-dropdown-trigger { border-color: var(--emerald); }
+    .custom-dropdown-menu {
+      position: absolute; top: calc(100% + 6px); left: 0; min-width: 100%; z-index: 50;
+      background: rgba(14,26,19,0.92); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px; padding: 6px;
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      opacity: 0; transform: translateY(-4px); pointer-events: none;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+      max-height: 280px; overflow-y: auto;
+    }
+    .custom-dropdown.open .custom-dropdown-menu {
+      opacity: 1; transform: translateY(0); pointer-events: auto;
+    }
+    .custom-dropdown-item {
+      display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+      border-radius: 8px; cursor: pointer; transition: background 0.15s;
+      border: none; background: none; width: 100%; text-align: left;
+      color: var(--text); font-size: 14px; font-family: inherit;
+    }
+    .custom-dropdown-item:hover { background: rgba(27,107,74,0.08); }
+    .custom-dropdown-item.active { background: rgba(27,107,74,0.12); color: var(--emerald); }
     .result-count {
       color: var(--text-tertiary); font-size: 12px; font-weight: 500;
       text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
@@ -494,7 +524,7 @@
       .section-header h2 { font-size: 24px; }
       .card-grid { grid-template-columns: 1fr; }
       .filter-bar { gap: 8px; }
-      .filter-select { min-width: 110px; }
+      .custom-dropdown { min-width: 110px; }
       .map-container { height: 350px; }
       .app-banner { flex-direction: column; text-align: center; padding: 32px 24px; }
       .app-banner-text h2 { font-size: 20px; }
@@ -753,14 +783,20 @@
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='rgba(0,0,0,0.3)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
       }
       .search-input:focus { box-shadow: 0 0 0 3px rgba(27,107,74,0.1); }
-      .filter-select {
+      .custom-dropdown-trigger {
         background: rgba(245,248,246,0.88); border-color: rgba(0,0,0,0.1);
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(0,0,0,0.35)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-        background-repeat: no-repeat; background-position: right 12px center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06); color: #1a1a1a;
       }
-      .filter-select:focus { box-shadow: 0 0 0 3px rgba(27,107,74,0.1); }
-      .filter-select option { background: #fff; }
+      .custom-dropdown-trigger::after {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(0,0,0,0.35)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      }
+      .custom-dropdown-menu {
+        background: rgba(255,255,255,0.94); border-color: rgba(0,0,0,0.1);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+      }
+      .custom-dropdown-item { color: #1a1a1a; }
+      .custom-dropdown-item:hover { background: rgba(0,0,0,0.04); }
+      .custom-dropdown-item.active { background: rgba(27,107,74,0.08); color: var(--emerald); }
       .view-toggle { background: rgba(0,0,0,0.04); }
       .halal-badge.full { background: rgba(27,107,74,0.08); border-color: rgba(27,107,74,0.12); }
       .halal-badge.partial { background: rgba(212,168,67,0.08); border-color: rgba(212,168,67,0.12); }
@@ -1430,6 +1466,7 @@
         const sel = document.getElementById('events-organizer');
         sel.innerHTML = '<option value="">All Organizers</option>';
         orgs.forEach(o => { const opt = document.createElement('option'); opt.value = o; opt.textContent = o; sel.appendChild(opt); });
+        refreshCustomDropdown(sel);
         dataLoaded.events = true;
         document.getElementById('events-loading').style.display = 'none';
         eventsPage = 1;
@@ -1518,6 +1555,7 @@
         const sel = document.getElementById('restaurants-cuisine');
         sel.innerHTML = '<option value="">All Cuisines</option>';
         [...cuisines].sort().forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = formatCuisine(c); sel.appendChild(opt); });
+        refreshCustomDropdown(sel);
         dataLoaded.restaurants = true;
         document.getElementById('restaurants-loading').style.display = 'none';
         restaurantsPage = 1;
@@ -1610,6 +1648,7 @@
         const categories = [...new Set(allBusinesses.map(b => b.category).filter(Boolean))].sort();
         const sel = document.getElementById('directory-category');
         categories.forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; sel.appendChild(opt); });
+        refreshCustomDropdown(sel);
         dataLoaded.directory = true;
         document.getElementById('directory-loading').style.display = 'none';
         renderBusinesses();
@@ -1661,6 +1700,64 @@
           <div class="business-links">${links}</div>
         </div>`;
       return card;
+    }
+
+    function initCustomDropdown(selectEl) {
+      var wrapper = document.createElement('div');
+      wrapper.className = 'custom-dropdown';
+      var trigger = document.createElement('div');
+      trigger.className = 'custom-dropdown-trigger';
+      var menu = document.createElement('div');
+      menu.className = 'custom-dropdown-menu';
+
+      function getLabel() {
+        var opt = selectEl.options[selectEl.selectedIndex];
+        return opt ? opt.textContent : '';
+      }
+      function buildMenu() {
+        menu.innerHTML = '';
+        Array.from(selectEl.options).forEach(function(opt) {
+          var item = document.createElement('button');
+          item.className = 'custom-dropdown-item' + (opt.value === selectEl.value ? ' active' : '');
+          item.textContent = opt.textContent;
+          item.type = 'button';
+          item.addEventListener('click', function(e) {
+            e.stopPropagation();
+            selectEl.value = opt.value;
+            selectEl.dispatchEvent(new Event('change'));
+            trigger.textContent = opt.textContent;
+            wrapper.classList.remove('open');
+            buildMenu();
+          });
+          menu.appendChild(item);
+        });
+      }
+      trigger.textContent = getLabel();
+      buildMenu();
+      trigger.addEventListener('click', function(e) {
+        e.stopPropagation();
+        document.querySelectorAll('.custom-dropdown.open').forEach(function(d) { if (d !== wrapper) d.classList.remove('open'); });
+        wrapper.classList.toggle('open');
+        buildMenu();
+      });
+      wrapper.appendChild(trigger);
+      wrapper.appendChild(menu);
+      selectEl.parentNode.insertBefore(wrapper, selectEl);
+
+      selectEl._customDropdown = { trigger: trigger, buildMenu: buildMenu, getLabel: getLabel };
+    }
+
+    document.querySelectorAll('.filter-select').forEach(initCustomDropdown);
+
+    document.addEventListener('click', function() {
+      document.querySelectorAll('.custom-dropdown.open').forEach(function(d) { d.classList.remove('open'); });
+    });
+
+    function refreshCustomDropdown(selectEl) {
+      if (selectEl._customDropdown) {
+        selectEl._customDropdown.trigger.textContent = selectEl._customDropdown.getLabel();
+        selectEl._customDropdown.buildMenu();
+      }
     }
 
     document.getElementById('events-search').addEventListener('input', () => { eventsPage = 1; renderEvents(); });
