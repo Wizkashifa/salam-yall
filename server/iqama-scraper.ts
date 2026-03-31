@@ -16,7 +16,7 @@ export interface MasjidIqamaSchedule {
   iqama: DayIqama;
 }
 
-type IqamaSourceType = "dpt" | "iar" | "mca-html" | "alnoor-html" | "sbia-html" | "icf-html" | "athanplus" | "alhuda-html";
+type IqamaSourceType = "dpt" | "iar" | "mca-html" | "alnoor-html" | "sbia-html" | "icf-html" | "athanplus" | "alhuda-html" | "berkeley-json";
 
 interface IqamaSource {
   name: string;
@@ -104,6 +104,12 @@ const IQAMA_SOURCES: IqamaSource[] = [
     type: "alhuda-html",
     url: "https://alhudafoundation.org/",
     timezone: "America/Indiana/Indianapolis",
+  },
+  {
+    name: "Berkeley Masjid",
+    type: "berkeley-json",
+    url: "https://berkeleymasjid.org/prayer-times-display/timetable.json",
+    timezone: "America/Los_Angeles",
   },
 ];
 
@@ -713,6 +719,75 @@ async function fetchAlHudaHtml(pool: pg.Pool, source: IqamaSource): Promise<void
   }
 }
 
+async function fetchBerkeleyJson(pool: pg.Pool, source: IqamaSource): Promise<void> {
+  try {
+    const resp = await fetch(source.url);
+    if (!resp.ok) {
+      console.error(`[Iqama] ${source.name} timetable returned ${resp.status}`);
+      return;
+    }
+    const json = await resp.json() as Record<string, any>;
+
+    const { year, month } = getDateInTz(source.timezone);
+    const monthStr = String(month).padStart(2, "0");
+    const monthPrefix = `${year}${monthStr}`;
+
+    const rows: { masjid: string; date: string; fajr: string; dhuhr: string; asr: string; maghrib: string; isha: string }[] = [];
+
+    for (const [dateKey8, dayData] of Object.entries(json)) {
+      if (!dateKey8.startsWith(monthPrefix)) continue;
+
+      const yyyy = dateKey8.slice(0, 4);
+      const mm = dateKey8.slice(4, 6);
+      const dd = dateKey8.slice(6, 8);
+      const dateKey = `${yyyy}-${mm}-${dd}`;
+
+      const fajrIqama = dayData.fajr?.[1];
+      const dhuhrIqama = dayData.dhuhr?.[1];
+      const asrIqama = dayData.asr?.[1];
+      const maghribAdhan = dayData.maghrib?.[0];
+      const maghribIqamaRaw = dayData.maghrib?.[1];
+      const ishaIqama = dayData.isha?.[1];
+
+      if (!fajrIqama || !ishaIqama) continue;
+
+      let maghribIqama = "";
+      const offsetMatch = maghribIqamaRaw?.match(/^\+(\d+)\s*min/i);
+      if (offsetMatch) {
+        const offset = parseInt(offsetMatch[1]);
+        const adhanMatch = maghribAdhan?.match(/^(\d{1,2}):(\d{2})$/);
+        if (adhanMatch) {
+          let h = parseInt(adhanMatch[1]);
+          let m = parseInt(adhanMatch[2]) + offset;
+          if (m >= 60) { m -= 60; h++; }
+          maghribIqama = to12h(`${h}:${String(m).padStart(2, "0")}`);
+        } else {
+          maghribIqama = to12h(maghribAdhan || "");
+        }
+      } else if (maghribIqamaRaw) {
+        maghribIqama = to12h(maghribIqamaRaw);
+      } else {
+        maghribIqama = to12h(maghribAdhan || "");
+      }
+
+      rows.push({
+        masjid: source.name,
+        date: dateKey,
+        fajr: to12h(fajrIqama),
+        dhuhr: to12h(dhuhrIqama || ""),
+        asr: to12h(asrIqama || ""),
+        maghrib: maghribIqama,
+        isha: to12h(ishaIqama),
+      });
+    }
+
+    const count = await bulkUpsert(pool, rows);
+    if (count > 0) console.log(`[Iqama] Synced ${count} ${source.name} days for ${monthPrefix}`);
+  } catch (err: any) {
+    console.error(`[Iqama] Error syncing ${source.name}:`, err.message);
+  }
+}
+
 async function syncSource(pool: pg.Pool, source: IqamaSource, year: number, month: number): Promise<void> {
   switch (source.type) {
     case "dpt":
@@ -738,6 +813,9 @@ async function syncSource(pool: pg.Pool, source: IqamaSource, year: number, mont
       break;
     case "alhuda-html":
       await fetchAlHudaHtml(pool, source);
+      break;
+    case "berkeley-json":
+      await fetchBerkeleyJson(pool, source);
       break;
   }
 }
