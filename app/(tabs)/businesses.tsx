@@ -158,7 +158,7 @@ const BUSINESS_KEYWORDS: Record<string, string[]> = {
     ...UNIVERSAL_TAGS,
   ],
   Services: [
-    "Licensed & insured", "Free estimates", "Emergency service",
+    "Licensed & insured", "Emergency service",
     "Residential", "Commercial", "By appointment only",
     ...UNIVERSAL_TAGS,
   ],
