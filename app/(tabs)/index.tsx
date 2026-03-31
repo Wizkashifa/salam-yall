@@ -1558,8 +1558,11 @@ export default function PrayerScreen() {
 
         {communityEvents.length > 0 ? (
           <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
-            <View style={styles.sectionCardHeader}>
-              <Text style={[styles.sectionCardTitle, { color: colors.text }]}>{isDaytimeMode ? "Today" : "Tonight"} in the Community</Text>
+            <View style={styles.iqamaCardHeader}>
+              <View style={styles.iqamaCardHeaderLeft}>
+                <Ionicons name="calendar" size={16} color={colors.gold} />
+                <Text style={[styles.iqamaCardLabel, { color: colors.gold }]}>{isDaytimeMode ? "TODAY" : "TONIGHT"} IN THE COMMUNITY</Text>
+              </View>
             </View>
             {communityEvents.map((ev, idx) => {
               const title = (ev.title ?? "").toLowerCase();
@@ -1627,10 +1630,10 @@ export default function PrayerScreen() {
 
         {followedOrgEvents.length > 0 ? (
           <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
-            <View style={styles.sectionCardHeader}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Ionicons name="notifications" size={14} color={colors.emerald} />
-                <Text style={[styles.sectionCardTitle, { color: colors.text }]}>From Organizers You Follow</Text>
+            <View style={styles.iqamaCardHeader}>
+              <View style={styles.iqamaCardHeaderLeft}>
+                <Ionicons name="notifications" size={16} color={colors.gold} />
+                <Text style={[styles.iqamaCardLabel, { color: colors.gold }]}>FROM ORGANIZERS YOU FOLLOW</Text>
               </View>
             </View>
             {followedOrgEvents.map((ev: any, idx: number) => {
@@ -1688,8 +1691,8 @@ export default function PrayerScreen() {
 
         <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
           <View style={styles.dailyContentHeader}>
-            <Ionicons name="people" size={16} color={colors.emerald} />
-            <Text style={[styles.dailyContentType, { color: colors.emerald }]}>Community Goal</Text>
+            <Ionicons name="people" size={16} color={colors.gold} />
+            <Text style={[styles.dailyContentType, { color: colors.gold }]}>Community Goal</Text>
           </View>
           <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 15, color: colors.text, marginBottom: 8 }}>
             {communityGoal
@@ -1711,8 +1714,11 @@ export default function PrayerScreen() {
 
         {masjidsExpanded ? (
           <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
-            <View style={styles.sectionCardHeader}>
-              <Text style={[styles.sectionCardTitle, { color: colors.text }]}>Masjids Nearby</Text>
+            <View style={styles.iqamaCardHeader}>
+              <View style={styles.iqamaCardHeaderLeft}>
+                <MaterialCommunityIcons name="mosque" size={16} color={colors.gold} />
+                <Text style={[styles.iqamaCardLabel, { color: colors.gold }]}>MASJIDS NEARBY</Text>
+              </View>
               <Pressable onPress={() => setMasjidsExpanded(false)} hitSlop={8}>
                 <Ionicons name="close" size={18} color={colors.textSecondary} />
               </Pressable>
@@ -2144,7 +2150,7 @@ const styles = StyleSheet.create({
   },
   dailyContentType: {
     fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Inter_700Bold",
     textTransform: "uppercase" as const,
     letterSpacing: 0.8,
   },
