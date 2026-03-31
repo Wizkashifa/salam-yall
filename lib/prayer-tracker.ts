@@ -61,7 +61,7 @@ export async function cacheTodayPrayerTimes(times: PrayerTimesMap): Promise<void
   await AsyncStorage.setItem(CACHED_PRAYER_TIMES_KEY, JSON.stringify(raw));
 }
 
-async function getCachedPrayerTimes(): Promise<PrayerTimesMap | undefined> {
+export async function getCachedPrayerTimes(): Promise<PrayerTimesMap | undefined> {
   try {
     const raw = await AsyncStorage.getItem(CACHED_PRAYER_TIMES_KEY);
     if (!raw) return undefined;

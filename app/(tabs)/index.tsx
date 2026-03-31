@@ -16,6 +16,7 @@ import {
   FlatList,
   Share,
   DeviceEventEmitter,
+  AppState,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
@@ -52,12 +53,12 @@ import {
   type Masjid,
 } from "@/lib/prayer-utils";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { cyclePrayerStatus, getPrayerLog, getMissedFastCount, logMakeupFast, getMissedPrayerCount, getPrayerStreak, getOnTimeStreak, cacheTodayPrayerTimes, ensureFirstUseDate, type DayLog, type PrayerName as TrackerPrayerName } from "@/lib/prayer-tracker";
+import { cyclePrayerStatus, getPrayerLog, getMissedFastCount, logMakeupFast, getMissedPrayerCount, getPrayerStreak, getOnTimeStreak, cacheTodayPrayerTimes, ensureFirstUseDate, syncFromWidgetData, type DayLog, type PrayerName as TrackerPrayerName } from "@/lib/prayer-tracker";
 import { getDailyVerse, isFriday, type DailyVerse } from "@/lib/daily-content";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 import { expandSearchTerms } from "@/lib/search-synonyms";
 import { useLocationOverride } from "@/lib/location-override-context";
-import { savePrayerTimes as saveWidgetPrayerTimes, savePrayerCompletion as saveWidgetCompletion } from "@/lib/widget-shared-storage";
+import { savePrayerTimes as saveWidgetPrayerTimes, savePrayerCompletion as saveWidgetCompletion, getWidgetCompletionsAsCodes } from "@/lib/widget-shared-storage";
 
 interface CalendarEvent {
   id: string;
@@ -709,24 +710,23 @@ export default function PrayerScreen() {
       isha: todayPrayers.find(p => p.name === "isha")?.time,
     });
 
+    const hDate = toHijriDate(now, hijriOffset);
     if (Platform.OS === "ios") {
-      getPrayerLog(now).then((log: DayLog) => {
+      Promise.all([getPrayerLog(now), getPrayerStreak()]).then(([log, streak]) => {
         const statusMap: Record<string, number> = {
-          fajr: log.fajr,
-          dhuhr: log.dhuhr,
-          asr: log.asr,
-          maghrib: log.maghrib,
-          isha: log.isha,
+          fajr: log.fajr, dhuhr: log.dhuhr, asr: log.asr, maghrib: log.maghrib, isha: log.isha,
         };
         saveWidgetPrayerTimes(
           todayPrayers.filter(p => p.name !== "sunrise").map(p => ({ name: p.name, time: p.time })),
           undefined,
-          statusMap
+          statusMap,
+          hDate,
+          streak
         ).catch(() => {});
       }).catch(() => {});
     }
 
-    setHijriDate(toHijriDate(now, hijriOffset));
+    setHijriDate(hDate);
     setUserCoords({ lat, lon });
 
     const nearMosqueCheck = checkNearMosque(lat, lon, masjidList);
@@ -844,31 +844,44 @@ export default function PrayerScreen() {
     return () => clearTimeout(timer);
   }, [loadPrayerData]);
 
-  useEffect(() => {
-    ensureFirstUseDate();
+  const syncWidgetToAsyncStorage = useCallback(async () => {
+    if (Platform.OS !== "ios") return;
+    try {
+      const widgetCodes = await getWidgetCompletionsAsCodes();
+      if (!widgetCodes) return;
+      const updated = await syncFromWidgetData(widgetCodes);
+      if (updated) {
+        setTodayLog(updated);
+      }
+    } catch {}
+  }, []);
+
+  const refreshAllStats = useCallback(async () => {
+    await syncWidgetToAsyncStorage();
     getPrayerLog(new Date()).then(setTodayLog);
     getMissedFastCount().then(setMissedFastCount);
     getMissedPrayerCount().then(setMissedPrayerCount);
     getPrayerStreak().then(setPrayerStreak).catch(() => {});
     getOnTimeStreak().then(setOnTimeStreak).catch(() => {});
+  }, [syncWidgetToAsyncStorage]);
+
+  useEffect(() => {
+    ensureFirstUseDate();
+    refreshAllStats();
   }, []);
 
   useEffect(() => {
-    const sub = DeviceEventEmitter.addListener("widgetSyncCompleted", (updated: DayLog) => {
-      setTodayLog(updated);
-      getMissedPrayerCount().then(setMissedPrayerCount);
-      getPrayerStreak().then(setPrayerStreak).catch(() => {});
-      getOnTimeStreak().then(setOnTimeStreak).catch(() => {});
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        refreshAllStats();
+      }
     });
     return () => sub.remove();
-  }, []);
+  }, [refreshAllStats]);
 
   useFocusEffect(useCallback(() => {
-    getMissedFastCount().then(setMissedFastCount);
-    getMissedPrayerCount().then(setMissedPrayerCount);
-    getPrayerStreak().then(setPrayerStreak).catch(() => {});
-    getOnTimeStreak().then(setOnTimeStreak).catch(() => {});
-  }, []));
+    refreshAllStats();
+  }, [refreshAllStats]));
 
   useEffect(() => {
     if (Platform.OS !== "ios" || !prayers.length) return;
@@ -881,18 +894,16 @@ export default function PrayerScreen() {
       if (iq.maghrib) iqamaMap.maghrib = iq.maghrib;
       if (iq.isha) iqamaMap.isha = iq.isha;
     }
-    getPrayerLog(new Date()).then((log: DayLog) => {
+    Promise.all([getPrayerLog(new Date()), getPrayerStreak()]).then(([log, streak]) => {
       const statusMap: Record<string, number> = {
-        fajr: log.fajr,
-        dhuhr: log.dhuhr,
-        asr: log.asr,
-        maghrib: log.maghrib,
-        isha: log.isha,
+        fajr: log.fajr, dhuhr: log.dhuhr, asr: log.asr, maghrib: log.maghrib, isha: log.isha,
       };
       saveWidgetPrayerTimes(
         prayers.filter(p => p.name !== "sunrise").map(p => ({ name: p.name, time: p.time })),
         Object.keys(iqamaMap).length > 0 ? iqamaMap : undefined,
-        statusMap
+        statusMap,
+        hijriDate || undefined,
+        streak
       ).catch(() => {});
     }).catch(() => {});
   }, [activeIqama, prayers]);
