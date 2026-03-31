@@ -17,7 +17,6 @@ struct PrayerTimesWidget: Widget {
             .accessoryRectangular,
             .accessoryInline,
         ])
-        .contentMarginsDisabled()
     }
 }
 
