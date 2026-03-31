@@ -1436,7 +1436,7 @@ export default function PrayerScreen() {
         </View>
 
         {preferredMasjid && activeIqama ? (
-          <View style={[styles.glassCard, styles.iqamaCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
+          <View style={[styles.glassCard, styles.prayerCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
             <View style={styles.iqamaCardHeader}>
               <View style={styles.iqamaCardHeaderLeft}>
                 <MaterialCommunityIcons name="mosque" size={16} color={colors.gold} />
@@ -1557,7 +1557,7 @@ export default function PrayerScreen() {
         ) : null}
 
         {communityEvents.length > 0 ? (
-          <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
+          <View style={[styles.glassCard, styles.prayerCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
             <View style={styles.iqamaCardHeader}>
               <View style={styles.iqamaCardHeaderLeft}>
                 <Ionicons name="calendar" size={16} color={colors.gold} />
@@ -1630,7 +1630,7 @@ export default function PrayerScreen() {
         ) : null}
 
         {followedOrgEvents.length > 0 ? (
-          <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
+          <View style={[styles.glassCard, styles.prayerCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
             <View style={styles.iqamaCardHeader}>
               <View style={styles.iqamaCardHeaderLeft}>
                 <Ionicons name="notifications" size={16} color={colors.gold} />
@@ -1674,7 +1674,7 @@ export default function PrayerScreen() {
 
         <Pressable
             onPress={openVerseModal}
-            style={({ pressed }) => [styles.glassCard, styles.dailyContentCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder, opacity: pressed ? 0.85 : 1 }]}
+            style={({ pressed }) => [styles.glassCard, styles.prayerCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder, padding: 16, opacity: pressed ? 0.85 : 1 }]}
           >
             <View style={styles.dailyContentHeader}>
               <Ionicons name="book" size={16} color={colors.gold} />
@@ -1691,7 +1691,7 @@ export default function PrayerScreen() {
             </Text>
         </Pressable>
 
-        <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder, padding: 16 }]}>
+        <View style={[styles.glassCard, styles.prayerCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder, padding: 16 }]}>
           <View style={styles.dailyContentHeader}>
             <Ionicons name="people" size={16} color={colors.gold} />
             <Text style={[styles.dailyContentType, { color: colors.gold }]}>Community Goal</Text>
@@ -1715,7 +1715,7 @@ export default function PrayerScreen() {
         </View>
 
         {masjidsExpanded ? (
-          <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
+          <View style={[styles.glassCard, styles.prayerCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
             <View style={styles.iqamaCardHeader}>
               <View style={styles.iqamaCardHeaderLeft}>
                 <MaterialCommunityIcons name="mosque" size={16} color={colors.gold} />
@@ -2110,12 +2110,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inter_400Regular",
   },
-  iqamaCard: {
-    marginHorizontal: 16,
-    marginTop: 10,
-    padding: 0,
-    paddingBottom: 0,
-  },
   iqamaCardHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -2138,11 +2132,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_500Medium",
     maxWidth: 160,
-  },
-  dailyContentCard: {
-    marginHorizontal: 16,
-    marginTop: 10,
-    padding: 16,
   },
   dailyContentHeader: {
     flexDirection: "row",
@@ -2206,12 +2195,6 @@ const styles = StyleSheet.create({
     padding: 12,
     flexDirection: "row",
     alignItems: "center",
-  },
-  sectionCard: {
-    marginHorizontal: 16,
-    marginTop: 10,
-    padding: 0,
-    paddingBottom: 4,
   },
   sectionCardHeader: {
     flexDirection: "row",
