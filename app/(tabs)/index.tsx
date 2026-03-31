@@ -857,12 +857,17 @@ export default function PrayerScreen() {
   }, []);
 
   const refreshAllStats = useCallback(async () => {
-    await syncWidgetToAsyncStorage();
+    // Always read AsyncStorage first — it's the source of truth.
+    // Widget sync runs after and can only add non-zero statuses, never clear real data.
     getPrayerLog(new Date()).then(setTodayLog);
     getMissedFastCount().then(setMissedFastCount);
     getMissedPrayerCount().then(setMissedPrayerCount);
     getPrayerStreak().then(setPrayerStreak).catch(() => {});
     getOnTimeStreak().then(setOnTimeStreak).catch(() => {});
+    // Merge any widget interactions (non-zero only) on top
+    syncWidgetToAsyncStorage().then(() => {
+      getPrayerLog(new Date()).then(setTodayLog);
+    }).catch(() => {});
   }, [syncWidgetToAsyncStorage]);
 
   useEffect(() => {

@@ -139,14 +139,18 @@ struct MediumWidgetView: View {
                     }
                 }
             } else {
+                let isha = data.prayers.last
+                let ishaInfo = StatusInfo.from(isha?.status, isPast: true, isDark: isDark)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("All prayers complete")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(isDark ? .white.opacity(0.55) : WC.emerald.opacity(0.7))
-                    let done = data.prayers.filter { $0.status == "completed" || $0.status == "at_masjid" }.count
-                    Text("\(done)/5 prayed")
+                    Text("Isha")
                         .font(.system(size: 18, weight: .bold, design: .serif))
-                        .foregroundColor(WC.emerald)
+                        .foregroundColor(isDark ? .white : WC.deepGreen)
+                    HStack(spacing: 5) {
+                        Image(systemName: ishaInfo.icon).font(.system(size: 11)).foregroundColor(ishaInfo.color)
+                        Text(isha?.athan ?? "")
+                            .font(.system(size: 12, weight: .medium, design: .monospaced))
+                            .foregroundColor(isDark ? .white.opacity(0.55) : WC.deepGreen.opacity(0.65))
+                    }
                 }
             }
 
@@ -267,13 +271,14 @@ struct SmallWidgetView: View {
                             }
                         }
                     } else {
+                        let isha = data.prayers.last
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("All complete")
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundColor(isDark ? .white.opacity(0.55) : WC.emerald.opacity(0.7))
-                            Text("Alhamdulillah")
-                                .font(.system(size: 18, weight: .bold, design: .serif))
-                                .foregroundColor(WC.emerald)
+                            Text("Isha")
+                                .font(.system(size: 22, weight: .bold, design: .serif))
+                                .foregroundColor(isDark ? .white : WC.deepGreen)
+                            Text(isha?.athan ?? "")
+                                .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                                .foregroundColor(isDark ? .white.opacity(0.55) : WC.deepGreen.opacity(0.65))
                         }
                     }
                 }
@@ -357,11 +362,11 @@ struct RectangularLockScreenView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         } else {
-            HStack(spacing: 6) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 14))
-                Text("All prayers complete")
-                    .font(.system(size: 13, weight: .semibold))
+            if let isha = entry.prayerData?.prayers.last {
+                HStack(spacing: 4) {
+                    Image(systemName: StatusInfo.from(isha.status, isPast: true, isDark: false).icon).font(.system(size: 11))
+                    Text("Isha · \(isha.athan)").font(.system(size: 13, weight: .semibold))
+                }
             }
         }
     }
@@ -418,7 +423,7 @@ struct InlineLockScreenView: View {
             }()
             Label("\(next.name) · \(timeStr)", systemImage: "moon.stars.fill")
         } else {
-            Label("All prayers complete", systemImage: "checkmark.circle.fill")
+            Label("Isha · \(entry.prayerData?.prayers.last?.athan ?? "")", systemImage: "moon.stars.fill")
         }
     }
 }

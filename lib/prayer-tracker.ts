@@ -439,7 +439,9 @@ export async function syncFromWidgetData(widgetCodes: Record<string, number>): P
 
   for (const p of PRAYER_ORDER) {
     const widgetStatus = widgetCodes[p] as PrayerStatus | undefined;
-    if (widgetStatus !== undefined && widgetStatus !== existing[p]) {
+    // Only apply widget status if it's non-zero (an explicit user action).
+    // Never let stale widget zeros overwrite real prayer data in AsyncStorage.
+    if (widgetStatus !== undefined && widgetStatus > 0 && widgetStatus !== existing[p]) {
       existing[p] = widgetStatus;
       changed = true;
     }
