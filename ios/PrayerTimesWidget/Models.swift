@@ -11,6 +11,8 @@ struct Prayer: Codable {
 struct PrayerData: Codable {
     let date: String
     var prayers: [Prayer]
+    var hijriDate: String?
+    var streak: Int?
 }
 
 struct PrayerTimesEntry: TimelineEntry {

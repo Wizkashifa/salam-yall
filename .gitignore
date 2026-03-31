@@ -41,3 +41,5 @@ yarn-error.*
 .vercel
 
 .env
+.env
+.claude/worktrees/

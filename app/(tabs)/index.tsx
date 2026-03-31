@@ -16,6 +16,7 @@ import {
   FlatList,
   Share,
   DeviceEventEmitter,
+  AppState,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
@@ -52,12 +53,12 @@ import {
   type Masjid,
 } from "@/lib/prayer-utils";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { cyclePrayerStatus, getPrayerLog, getMissedFastCount, logMakeupFast, getMissedPrayerCount, getPrayerStreak, getOnTimeStreak, cacheTodayPrayerTimes, ensureFirstUseDate, type DayLog, type PrayerName as TrackerPrayerName } from "@/lib/prayer-tracker";
+import { cyclePrayerStatus, getPrayerLog, getMissedFastCount, logMakeupFast, getMissedPrayerCount, getPrayerStreak, getOnTimeStreak, cacheTodayPrayerTimes, ensureFirstUseDate, syncFromWidgetData, type DayLog, type PrayerName as TrackerPrayerName } from "@/lib/prayer-tracker";
 import { getDailyVerse, isFriday, type DailyVerse } from "@/lib/daily-content";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 import { expandSearchTerms } from "@/lib/search-synonyms";
 import { useLocationOverride } from "@/lib/location-override-context";
-import { savePrayerTimes as saveWidgetPrayerTimes, savePrayerCompletion as saveWidgetCompletion } from "@/lib/widget-shared-storage";
+import { savePrayerTimes as saveWidgetPrayerTimes, savePrayerCompletion as saveWidgetCompletion, getWidgetCompletionsAsCodes } from "@/lib/widget-shared-storage";
 
 interface CalendarEvent {
   id: string;
@@ -695,17 +696,6 @@ export default function PrayerScreen() {
       });
   }, [calendarEvents, userCoords, isDaytimeMode]);
 
-  const nearbyHalalPreview = useMemo(() => {
-    if (!halalRestaurants) return [];
-    return halalRestaurants
-      .map((r) => ({
-        ...r,
-        _distance: r.lat && r.lng ? kmToMiles(getDistanceKm(userCoords.lat, userCoords.lon, r.lat, r.lng)) : undefined,
-      }))
-      .filter((r) => r._distance !== undefined && r._distance! < 50)
-      .sort((a, b) => (a._distance ?? 999) - (b._distance ?? 999))
-      .slice(0, 6);
-  }, [halalRestaurants, userCoords]);
 
   const loadDefaultPrayers = useCallback((lat = 35.7796, lon = -78.6382) => {
     const now = new Date();
@@ -720,24 +710,23 @@ export default function PrayerScreen() {
       isha: todayPrayers.find(p => p.name === "isha")?.time,
     });
 
+    const hDate = toHijriDate(now, hijriOffset);
     if (Platform.OS === "ios") {
-      getPrayerLog(now).then((log: DayLog) => {
+      Promise.all([getPrayerLog(now), getPrayerStreak()]).then(([log, streak]) => {
         const statusMap: Record<string, number> = {
-          fajr: log.fajr,
-          dhuhr: log.dhuhr,
-          asr: log.asr,
-          maghrib: log.maghrib,
-          isha: log.isha,
+          fajr: log.fajr, dhuhr: log.dhuhr, asr: log.asr, maghrib: log.maghrib, isha: log.isha,
         };
         saveWidgetPrayerTimes(
           todayPrayers.filter(p => p.name !== "sunrise").map(p => ({ name: p.name, time: p.time })),
           undefined,
-          statusMap
+          statusMap,
+          hDate,
+          streak
         ).catch(() => {});
       }).catch(() => {});
     }
 
-    setHijriDate(toHijriDate(now, hijriOffset));
+    setHijriDate(hDate);
     setUserCoords({ lat, lon });
 
     const nearMosqueCheck = checkNearMosque(lat, lon, masjidList);
@@ -855,31 +844,49 @@ export default function PrayerScreen() {
     return () => clearTimeout(timer);
   }, [loadPrayerData]);
 
-  useEffect(() => {
-    ensureFirstUseDate();
+  const syncWidgetToAsyncStorage = useCallback(async () => {
+    if (Platform.OS !== "ios") return;
+    try {
+      const widgetCodes = await getWidgetCompletionsAsCodes();
+      if (!widgetCodes) return;
+      const updated = await syncFromWidgetData(widgetCodes);
+      if (updated) {
+        setTodayLog(updated);
+      }
+    } catch {}
+  }, []);
+
+  const refreshAllStats = useCallback(async () => {
+    // Always read AsyncStorage first — it's the source of truth.
+    // Widget sync runs after and can only add non-zero statuses, never clear real data.
     getPrayerLog(new Date()).then(setTodayLog);
     getMissedFastCount().then(setMissedFastCount);
     getMissedPrayerCount().then(setMissedPrayerCount);
     getPrayerStreak().then(setPrayerStreak).catch(() => {});
     getOnTimeStreak().then(setOnTimeStreak).catch(() => {});
+    // Merge any widget interactions (non-zero only) on top
+    syncWidgetToAsyncStorage().then(() => {
+      getPrayerLog(new Date()).then(setTodayLog);
+    }).catch(() => {});
+  }, [syncWidgetToAsyncStorage]);
+
+  useEffect(() => {
+    ensureFirstUseDate();
+    refreshAllStats();
   }, []);
 
   useEffect(() => {
-    const sub = DeviceEventEmitter.addListener("widgetSyncCompleted", (updated: DayLog) => {
-      setTodayLog(updated);
-      getMissedPrayerCount().then(setMissedPrayerCount);
-      getPrayerStreak().then(setPrayerStreak).catch(() => {});
-      getOnTimeStreak().then(setOnTimeStreak).catch(() => {});
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        refreshAllStats();
+      }
     });
     return () => sub.remove();
-  }, []);
+  }, [refreshAllStats]);
 
   useFocusEffect(useCallback(() => {
-    getMissedFastCount().then(setMissedFastCount);
-    getMissedPrayerCount().then(setMissedPrayerCount);
-    getPrayerStreak().then(setPrayerStreak).catch(() => {});
-    getOnTimeStreak().then(setOnTimeStreak).catch(() => {});
-  }, []));
+    refreshAllStats();
+  }, [refreshAllStats]));
 
   useEffect(() => {
     if (Platform.OS !== "ios" || !prayers.length) return;
@@ -892,18 +899,16 @@ export default function PrayerScreen() {
       if (iq.maghrib) iqamaMap.maghrib = iq.maghrib;
       if (iq.isha) iqamaMap.isha = iq.isha;
     }
-    getPrayerLog(new Date()).then((log: DayLog) => {
+    Promise.all([getPrayerLog(new Date()), getPrayerStreak()]).then(([log, streak]) => {
       const statusMap: Record<string, number> = {
-        fajr: log.fajr,
-        dhuhr: log.dhuhr,
-        asr: log.asr,
-        maghrib: log.maghrib,
-        isha: log.isha,
+        fajr: log.fajr, dhuhr: log.dhuhr, asr: log.asr, maghrib: log.maghrib, isha: log.isha,
       };
       saveWidgetPrayerTimes(
         prayers.filter(p => p.name !== "sunrise").map(p => ({ name: p.name, time: p.time })),
         Object.keys(iqamaMap).length > 0 ? iqamaMap : undefined,
-        statusMap
+        statusMap,
+        hijriDate || undefined,
+        streak
       ).catch(() => {});
     }).catch(() => {});
   }, [activeIqama, prayers]);
@@ -1553,8 +1558,11 @@ export default function PrayerScreen() {
 
         {communityEvents.length > 0 ? (
           <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
-            <View style={styles.sectionCardHeader}>
-              <Text style={[styles.sectionCardTitle, { color: colors.text }]}>{isDaytimeMode ? "Today" : "Tonight"} in the Community</Text>
+            <View style={styles.iqamaCardHeader}>
+              <View style={styles.iqamaCardHeaderLeft}>
+                <Ionicons name="calendar" size={16} color={colors.gold} />
+                <Text style={[styles.iqamaCardLabel, { color: colors.gold }]}>{isDaytimeMode ? "TODAY" : "TONIGHT"} IN THE COMMUNITY</Text>
+              </View>
             </View>
             {communityEvents.map((ev, idx) => {
               const title = (ev.title ?? "").toLowerCase();
@@ -1622,10 +1630,10 @@ export default function PrayerScreen() {
 
         {followedOrgEvents.length > 0 ? (
           <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
-            <View style={styles.sectionCardHeader}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Ionicons name="notifications" size={14} color={colors.emerald} />
-                <Text style={[styles.sectionCardTitle, { color: colors.text }]}>From Organizers You Follow</Text>
+            <View style={styles.iqamaCardHeader}>
+              <View style={styles.iqamaCardHeaderLeft}>
+                <Ionicons name="notifications" size={16} color={colors.gold} />
+                <Text style={[styles.iqamaCardLabel, { color: colors.gold }]}>FROM ORGANIZERS YOU FOLLOW</Text>
               </View>
             </View>
             {followedOrgEvents.map((ev: any, idx: number) => {
@@ -1683,8 +1691,8 @@ export default function PrayerScreen() {
 
         <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
           <View style={styles.dailyContentHeader}>
-            <Ionicons name="people" size={16} color={colors.emerald} />
-            <Text style={[styles.dailyContentType, { color: colors.emerald }]}>Community Goal</Text>
+            <Ionicons name="people" size={16} color={colors.gold} />
+            <Text style={[styles.dailyContentType, { color: colors.gold }]}>Community Goal</Text>
           </View>
           <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 15, color: colors.text, marginBottom: 8 }}>
             {communityGoal
@@ -1706,8 +1714,11 @@ export default function PrayerScreen() {
 
         {masjidsExpanded ? (
           <View style={[styles.glassCard, styles.sectionCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
-            <View style={styles.sectionCardHeader}>
-              <Text style={[styles.sectionCardTitle, { color: colors.text }]}>Masjids Nearby</Text>
+            <View style={styles.iqamaCardHeader}>
+              <View style={styles.iqamaCardHeaderLeft}>
+                <MaterialCommunityIcons name="mosque" size={16} color={colors.gold} />
+                <Text style={[styles.iqamaCardLabel, { color: colors.gold }]}>MASJIDS NEARBY</Text>
+              </View>
               <Pressable onPress={() => setMasjidsExpanded(false)} hitSlop={8}>
                 <Ionicons name="close" size={18} color={colors.textSecondary} />
               </Pressable>
@@ -1739,55 +1750,6 @@ export default function PrayerScreen() {
           </View>
         ) : null}
 
-        {nearbyHalalPreview.length > 0 ? (
-          <View style={styles.halalSection}>
-            <View style={styles.halalSectionHeader}>
-              <Text style={[styles.sectionCardTitle, { color: colors.text }]}>Halal Restaurants Near You</Text>
-              <Pressable onPress={() => router.push("/(tabs)/halal")} hitSlop={8}>
-                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-              </Pressable>
-            </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.halalScrollContent}
-            >
-              {nearbyHalalPreview.map((restaurant) => (
-                <View key={restaurant.id} style={[styles.halalCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder, borderWidth: 1 }]}>
-                  <View style={[styles.halalCardImage, { backgroundColor: colors.prayerIconBg }]}>
-                    <MaterialCommunityIcons name="silverware-fork-knife" size={28} color={isDark ? "#2A5A40" : "#8DC4A8"} />
-                  </View>
-                  <View style={styles.halalCardInfo}>
-                    <Text style={[styles.halalCardName, { color: colors.text }]} numberOfLines={1}>
-                      {restaurant.name}
-                    </Text>
-                    <Text style={[styles.halalCardCuisine, { color: colors.textSecondary }]} numberOfLines={1}>
-                      {restaurant.cuisine_types?.join(", ") || "Restaurant"}
-                    </Text>
-                    <View style={styles.halalCardMeta}>
-                      {restaurant._distance !== undefined ? (
-                        <Text style={[styles.halalCardDistance, { color: colors.textSecondary }]}>
-                          {restaurant._distance.toFixed(1)} mi
-                        </Text>
-                      ) : null}
-                      {restaurant.rating ? (
-                        <View style={styles.halalRatingRow}>
-                          <Ionicons name="star" size={12} color={colors.gold} />
-                          <Text style={[styles.halalRating, { color: colors.gold }]}>{restaurant.rating.toFixed(1)}</Text>
-                          {restaurant.user_ratings_total ? (
-                            <Text style={[styles.halalRatingCount, { color: colors.textTertiary }]}>
-                              ({restaurant.user_ratings_total})
-                            </Text>
-                          ) : null}
-                        </View>
-                      ) : null}
-                    </View>
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        ) : null}
 
       </ScrollView>
       <HomeEventDetailModal
@@ -2188,7 +2150,7 @@ const styles = StyleSheet.create({
   },
   dailyContentType: {
     fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Inter_700Bold",
     textTransform: "uppercase" as const,
     letterSpacing: 0.8,
   },

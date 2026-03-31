@@ -47,8 +47,8 @@ import {
 import { getApiUrl } from "@/lib/query-client";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useDeepLink } from "@/lib/deeplink-context";
-import { getMonthLogs, cyclePrayerStatus, getMonthMissedFasts, toggleMissedFast, toggleExcusedDay, getAllLogs, getPrayerStreak, getMissedPrayerCount, getMissedPrayersByType, makeUpOldestMissedPrayer, getFirstUseDate, getPrayerLog, type DayLog, type PrayerName, type PrayerStatus, type MissedPrayerCounts } from "@/lib/prayer-tracker";
-import { savePrayerTimes as saveWidgetPrayerTimes, savePrayerCompletion as saveWidgetCompletion } from "@/lib/widget-shared-storage";
+import { getMonthLogs, cyclePrayerStatus, getMonthMissedFasts, toggleMissedFast, toggleExcusedDay, getAllLogs, getPrayerStreak, getMissedPrayerCount, getMissedPrayersByType, makeUpOldestMissedPrayer, getFirstUseDate, getPrayerLog, syncFromWidgetData, isPrayerExpired, getCachedPrayerTimes, type DayLog, type PrayerName, type PrayerStatus, type PrayerTimesMap, type MissedPrayerCounts } from "@/lib/prayer-tracker";
+import { savePrayerTimes as saveWidgetPrayerTimes, savePrayerCompletion as saveWidgetCompletion, getWidgetCompletionsAsCodes } from "@/lib/widget-shared-storage";
 import { DHIKR_PRESETS, getDhikrCounts, incrementDhikr, resetDhikr, type DhikrDayData } from "@/lib/dhikr-tracker";
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 import { MasjidMap } from "@/components/MasjidMap";
@@ -240,12 +240,15 @@ export default function SettingsScreen() {
       refetchFollows();
     } catch { Alert.alert("Error", "Connection error. Please try again."); }
   };
-  const [heatmapData, setHeatmapData] = useState<{ date: string; fajr: PrayerStatus; dhuhr: PrayerStatus; asr: PrayerStatus; maghrib: PrayerStatus; isha: PrayerStatus }[]>([]);
+  const [heatmapData, setHeatmapData] = useState<{ date: string; fajr: number; dhuhr: number; asr: number; maghrib: number; isha: number }[]>([]);
   const [missedPrayerCount, setMissedPrayerCount] = useState(0);
   const [missedByType, setMissedByType] = useState<MissedPrayerCounts>({ fajr: 0, dhuhr: 0, asr: 0, maghrib: 0, isha: 0 });
   const [showTrackerOnboarding, setShowTrackerOnboarding] = useState(false);
   const badgeShareRef = useRef<ViewShot | null>(null);
   const [sharingBadgeKey, setSharingBadgeKey] = useState<string | null>(null);
+  const [votingId, setVotingId] = useState<string | null>(null);
+  const [voteStatus, setVoteStatus] = useState<string | null>(null);
+  const [voteDescription, setVoteDescription] = useState<string>("");
 
   useEffect(() => {
     if (isOverrideActive) {
@@ -300,6 +303,12 @@ export default function SettingsScreen() {
 
   useEffect(() => {
     if (section === "prayerTracker") {
+      // Sync any widget changes into AsyncStorage before loading
+      if (Platform.OS === "ios") {
+        getWidgetCompletionsAsCodes().then((codes) => {
+          if (codes) return syncFromWidgetData(codes);
+        }).catch(() => {});
+      }
       getMonthLogs(trackerYear, trackerMonth).then(setMonthLogs);
       getMonthMissedFasts(trackerYear, trackerMonth).then(setMissedFasts);
       getMissedPrayerCount().then(setMissedPrayerCount);
@@ -307,8 +316,11 @@ export default function SettingsScreen() {
       (async () => {
         const allLogs = await getAllLogs();
         const firstUse = await getFirstUseDate();
+        const todayTimes = await getCachedPrayerTimes();
         const today = new Date();
+        const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
         const heatmapDays = 30;
+        const pNames: PrayerName[] = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
         const hData: typeof heatmapData = [];
         for (let i = heatmapDays - 1; i >= 0; i--) {
           const d = new Date(today);
@@ -316,7 +328,16 @@ export default function SettingsScreen() {
           const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
           if (firstUse && key < firstUse) continue;
           const log = allLogs[key];
-          hData.push({ date: key, fajr: log?.fajr ?? 0, dhuhr: log?.dhuhr ?? 0, asr: log?.asr ?? 0, maghrib: log?.maghrib ?? 0, isha: log?.isha ?? 0 });
+          const row: any = { date: key };
+          for (const p of pNames) {
+            const status = log?.[p] ?? 0;
+            if (status === 0 && !isPrayerExpired(p, d, key === todayKey ? todayTimes : undefined)) {
+              row[p] = -1; // upcoming / not yet — don't show as missed
+            } else {
+              row[p] = status;
+            }
+          }
+          hData.push(row);
         }
         setHeatmapData(hData);
       })();
@@ -1403,6 +1424,9 @@ export default function SettingsScreen() {
     </>
   );
 
+  const cachedTimesRef = useRef<PrayerTimesMap | undefined>(undefined);
+  useEffect(() => { getCachedPrayerTimes().then(t => { cachedTimesRef.current = t; }); }, [section]);
+
   const PRAYER_NAMES: PrayerName[] = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
   const PRAYER_LABELS: Record<PrayerName, string> = { fajr: "Fajr", dhuhr: "Dhuhr", asr: "Asr", maghrib: "Maghrib", isha: "Isha" };
   const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -1482,7 +1506,8 @@ export default function SettingsScreen() {
                           else if (status === 2) dotColor = colors.gold;
                           else if (status === 3) dotColor = colors.emerald + "80";
                           else if (status === 4) dotColor = colors.surfaceSecondary;
-                          else if (status === 0) dotColor = "#EF4444";
+                          else if (status === -1) dotColor = colors.surfaceSecondary; // upcoming, not yet
+                          else if (status === 0) dotColor = "#EF4444"; // expired & untracked = missed
                           return (
                             <View
                               key={di}
@@ -1538,7 +1563,10 @@ export default function SettingsScreen() {
                             getMonthLogs(trackerYear, trackerMonth).then(setMonthLogs);
                             const allLogs = await getAllLogs();
                             const firstUse = await getFirstUseDate();
+                            const todayTimes = await getCachedPrayerTimes();
                             const today = new Date();
+                            const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+                            const pNames: PrayerName[] = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
                             const hData: typeof heatmapData = [];
                             for (let i = 29; i >= 0; i--) {
                               const d = new Date(today);
@@ -1546,7 +1574,16 @@ export default function SettingsScreen() {
                               const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
                               if (firstUse && key < firstUse) continue;
                               const log = allLogs[key];
-                              hData.push({ date: key, fajr: log?.fajr ?? 0, dhuhr: log?.dhuhr ?? 0, asr: log?.asr ?? 0, maghrib: log?.maghrib ?? 0, isha: log?.isha ?? 0 });
+                              const row: any = { date: key };
+                              for (const p of pNames) {
+                                const status = log?.[p] ?? 0;
+                                if (status === 0 && !isPrayerExpired(p, d, key === todayKey ? todayTimes : undefined)) {
+                                  row[p] = -1;
+                                } else {
+                                  row[p] = status;
+                                }
+                              }
+                              hData.push(row);
                             }
                             setHeatmapData(hData);
                           }
@@ -1625,7 +1662,11 @@ export default function SettingsScreen() {
                     <View style={styles.calDots}>
                       {log ? PRAYER_NAMES.map(p => {
                         const s = log[p];
-                        if (s === 0) return <View key={p} style={[styles.calDot, { backgroundColor: "#EF4444" }]} />;
+                        if (s === 0) {
+                          const dayDate = new Date(trackerYear, trackerMonth - 1, day);
+                          const expired = isPrayerExpired(p, dayDate, dateKey === todayKey ? cachedTimesRef.current : undefined);
+                          return <View key={p} style={[styles.calDot, { backgroundColor: expired ? "#EF4444" : colors.surfaceSecondary }]} />;
+                        }
                         if (s === 4) return <View key={p} style={[styles.calDot, { backgroundColor: "transparent" }]} />;
                         return <View key={p} style={[styles.calDot, { backgroundColor: s === 1 ? colors.emerald : s === 3 ? colors.emerald + "80" : colors.gold }]} />;
                       }) : isMissedFast ? (
@@ -1645,8 +1686,11 @@ export default function SettingsScreen() {
                 <Text style={[styles.dayDetailHint, { color: colors.textTertiary }]}>Tap a prayer to update its status</Text>
                 {PRAYER_NAMES.map(p => {
                   const status = selectedLog ? selectedLog[p] : 0;
-                  const statusLabel = status === 0 ? "Not tracked" : status === 1 ? "On time" : status === 2 ? "At masjid" : status === 3 ? "Made up" : "Excused";
-                  const statusColor = status === 0 ? "#EF4444" : status === 1 ? colors.emerald : status === 2 ? colors.gold : status === 3 ? colors.emerald + "80" : colors.textTertiary;
+                  const selParts = selectedDay!.split("-");
+                  const selDate = new Date(parseInt(selParts[0]), parseInt(selParts[1]) - 1, parseInt(selParts[2]));
+                  const isExpired = status === 0 ? isPrayerExpired(p, selDate, selectedDay === todayKey ? cachedTimesRef.current : undefined) : false;
+                  const statusLabel = status === 0 ? (isExpired ? "Missed" : "Upcoming") : status === 1 ? "On time" : status === 2 ? "At masjid" : status === 3 ? "Made up" : "Excused";
+                  const statusColor = status === 0 ? (isExpired ? "#EF4444" : colors.textTertiary) : status === 1 ? colors.emerald : status === 2 ? colors.gold : status === 3 ? colors.emerald + "80" : colors.textTertiary;
                   return (
                     <Pressable
                       key={p}
@@ -1667,7 +1711,10 @@ export default function SettingsScreen() {
                         (async () => {
                           const allLogs = await getAllLogs();
                           const firstUse = await getFirstUseDate();
+                          const todayTimes = await getCachedPrayerTimes();
                           const today = new Date();
+                          const tdKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+                          const pNames: PrayerName[] = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
                           const hData: typeof heatmapData = [];
                           for (let i = 29; i >= 0; i--) {
                             const dd = new Date(today);
@@ -1675,7 +1722,16 @@ export default function SettingsScreen() {
                             const key = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, "0")}-${String(dd.getDate()).padStart(2, "0")}`;
                             if (firstUse && key < firstUse) continue;
                             const log = allLogs[key];
-                            hData.push({ date: key, fajr: log?.fajr ?? 0, dhuhr: log?.dhuhr ?? 0, asr: log?.asr ?? 0, maghrib: log?.maghrib ?? 0, isha: log?.isha ?? 0 });
+                            const row: any = { date: key };
+                            for (const p of pNames) {
+                              const status = log?.[p] ?? 0;
+                              if (status === 0 && !isPrayerExpired(p, dd, key === tdKey ? todayTimes : undefined)) {
+                                row[p] = -1;
+                              } else {
+                                row[p] = status;
+                              }
+                            }
+                            hData.push(row);
                           }
                           setHeatmapData(hData);
                         })();
@@ -2199,6 +2255,11 @@ export default function SettingsScreen() {
     if (section === "personalGrowth") {
       (async () => {
         try {
+          // Sync any widget changes into AsyncStorage before computing stats
+          if (Platform.OS === "ios") {
+            const codes = await getWidgetCompletionsAsCodes().catch(() => null);
+            if (codes) await syncFromWidgetData(codes).catch(() => {});
+          }
           const prayerRaw = await AsyncStorage.getItem("prayer_tracker");
           const prayerData: { [dateKey: string]: DayLog } = prayerRaw ? JSON.parse(prayerRaw) : {};
 
@@ -2359,6 +2420,7 @@ export default function SettingsScreen() {
                             else if (status === 2) dotColor = colors.gold;
                             else if (status === 3) dotColor = colors.emerald + "80";
                             else if (status === 4) dotColor = colors.surfaceSecondary;
+                            else if (status === -1) dotColor = colors.surfaceSecondary;
                             else if (status === 0) dotColor = "#EF4444";
                             return <View key={di} style={{ flex: 1, aspectRatio: 1, maxWidth: clampedDot2, maxHeight: clampedDot2, borderRadius: 1.5, backgroundColor: dotColor }} />;
                           })}
@@ -2545,6 +2607,12 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
+  glassCard: {
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden",
+    marginBottom: 16,
+  },
   backRow: {
     flexDirection: "row",
     alignItems: "center",

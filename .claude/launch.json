@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Backend (Express)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "server:dev"],
+      "port": 5000
+    },
+    {
+      "name": "Expo (Metro bundler)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "expo:dev"],
+      "port": 8081
+    }
+  ]
+}
