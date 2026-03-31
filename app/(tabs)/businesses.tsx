@@ -886,29 +886,35 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
             {(locationType === "service_area" || locationType === "popup") ? (
               <>
                 <Text style={[styles.fieldLabel, { color: colors.text }]}>Metro Area *</Text>
-                <View style={styles.categoryGrid}>
-                  {METRO_AREAS.map((metro) => {
-                    const isSelected = serviceAreaDescription === metro.name;
-                    return (
-                      <Pressable
-                        key={metro.name}
-                        style={[
-                          styles.categoryOption,
-                          { backgroundColor: colors.surface, borderColor: isSelected ? colors.emerald : colors.border },
-                          isSelected && { borderWidth: 2 },
-                        ]}
-                        onPress={() => {
-                          setServiceAreaDescription(isSelected ? "" : metro.name);
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        }}
-                      >
-                        <Ionicons name="location-outline" size={12} color={isSelected ? colors.emerald : colors.textSecondary} />
-                        <Text style={[styles.categoryOptionText, { color: isSelected ? colors.emerald : colors.text }]}>
-                          {metro.name}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
+                <View style={{ borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, maxHeight: 220, overflow: "hidden" }}>
+                  <ScrollView nestedScrollEnabled>
+                    {[...METRO_AREAS].sort((a, b) => a.name.localeCompare(b.name)).map((metro) => {
+                      const isSelected = serviceAreaDescription === metro.name;
+                      return (
+                        <Pressable
+                          key={metro.name}
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            paddingVertical: 12,
+                            paddingHorizontal: 16,
+                            borderBottomWidth: 1,
+                            borderBottomColor: colors.border,
+                            backgroundColor: isSelected ? `${colors.emerald}18` : "transparent",
+                          }}
+                          onPress={() => {
+                            setServiceAreaDescription(isSelected ? "" : metro.name);
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          }}
+                        >
+                          <Ionicons name={isSelected ? "checkmark-circle" : "ellipse-outline"} size={18} color={isSelected ? colors.emerald : colors.textSecondary} style={{ marginRight: 10 }} />
+                          <Text style={{ fontSize: 15, color: isSelected ? colors.emerald : colors.text, fontWeight: isSelected ? "600" : "400" }}>
+                            {metro.name}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
                 </View>
               </>
             ) : null}
