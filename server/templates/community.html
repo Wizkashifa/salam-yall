@@ -142,9 +142,10 @@
     }
     .metro-selector-overlay.open { display: flex; }
     .metro-selector {
-      background: var(--bg-elevated); border: 1px solid var(--card-border);
+      background: rgba(14,26,19,0.92); border: 1px solid var(--card-border);
       border-radius: 16px; width: 90%; max-width: 420px; max-height: 80vh;
       overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.3);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
       animation: modalSlideUp 0.25s ease;
     }
     .metro-selector-header {
@@ -237,13 +238,15 @@
     .search-input::placeholder { color: var(--text-tertiary); }
     .search-input:focus { border-color: var(--emerald); background: var(--card-bg-hover); box-shadow: 0 0 0 3px rgba(27,107,74,0.15); }
     .filter-select {
-      padding: 11px 16px; background: var(--card-bg); border: 1px solid var(--card-border);
-      border-radius: var(--radius-md); color: var(--text); font-size: 14px; font-family: inherit;
+      padding: 11px 16px; background: rgba(14,26,19,0.85); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px; color: var(--text); font-size: 14px; font-family: inherit;
       outline: none; cursor: pointer; min-width: 140px; transition: all 0.25s ease;
       -webkit-appearance: none; appearance: none;
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
       background-repeat: no-repeat; background-position: right 12px center;
       padding-right: 36px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
     .filter-select:focus { border-color: var(--emerald); box-shadow: 0 0 0 3px rgba(27,107,74,0.15); }
     .filter-select option { background: var(--bg-elevated); }
@@ -751,7 +754,10 @@
       }
       .search-input:focus { box-shadow: 0 0 0 3px rgba(27,107,74,0.1); }
       .filter-select {
+        background: rgba(245,248,246,0.88); border-color: rgba(0,0,0,0.1);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(0,0,0,0.35)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        background-repeat: no-repeat; background-position: right 12px center;
       }
       .filter-select:focus { box-shadow: 0 0 0 3px rgba(27,107,74,0.1); }
       .filter-select option { background: #fff; }
@@ -773,7 +779,7 @@
       .event-card-image { background: linear-gradient(135deg, rgba(27,107,74,0.04), rgba(212,168,67,0.02)); }
       .restaurant-card-image { background: linear-gradient(135deg, rgba(27,107,74,0.03), rgba(212,168,67,0.02)); }
       .modal-overlay { background: rgba(0,0,0,0.4); }
-      .metro-selector-overlay .metro-selector { background: #fff; border-color: rgba(0,0,0,0.1); }
+      .metro-selector-overlay .metro-selector { background: rgba(255,255,255,0.94); border-color: rgba(0,0,0,0.1); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
       .metro-item:hover { background: rgba(0,0,0,0.04); }
       .metro-item.active { background: rgba(27,107,74,0.08); }
       .modal-content { background: #fff; border-color: rgba(0,0,0,0.1); box-shadow: 0 24px 80px rgba(0,0,0,0.15); }
