@@ -1465,18 +1465,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (exists.rows.length === 0) {
       await pool.query(
         `INSERT INTO businesses (name, category, subcategory, description, phone, website, filter_tags, search_aliases, location_type, service_area_description, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'service_area', 'Fishers, IN Metro Area', 'approved')`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'service_area', 'Indianapolis IN', 'approved')`,
         [b.name, b.category, b.subcategory, b.description, b.phone, b.website, b.filter_tags, b.search_aliases]
       ).catch((err: any) => console.error(`[DB] Error upserting business ${b.name}:`, err.message));
     }
   }
   console.log("[DB] Upserted Fishers-area businesses");
 
-  await pool.query(`UPDATE businesses SET lat = 35.7796, lng = -78.6382 WHERE location_type IN ('service_area', 'popup') AND (lat IS NULL OR lng IS NULL) AND service_area_description = 'Serves the Triangle area'`).catch(() => {});
-  await pool.query(`UPDATE businesses SET lat = 39.9567, lng = -86.0139 WHERE location_type IN ('service_area', 'popup') AND (lat IS NULL OR lng IS NULL) AND service_area_description = 'Fishers, IN Metro Area'`).catch(() => {});
-  await pool.query(`UPDATE businesses SET lat = 35.4727, lng = -77.4155 WHERE location_type IN ('service_area', 'popup') AND (lat IS NULL OR lng IS NULL) AND service_area_description ILIKE '%Ayden%'`).catch(() => {});
-  await pool.query(`UPDATE businesses SET lat = 35.7796, lng = -78.6382 WHERE location_type IN ('service_area', 'popup') AND (lat IS NULL OR lng IS NULL) AND service_area_description ILIKE '%pop-up%'`).catch(() => {});
-  console.log("[DB] Backfilled service-area/popup business coordinates");
+  await pool.query(`UPDATE businesses SET service_area_description = 'Triangle NC', lat = 35.7796, lng = -78.6382 WHERE location_type IN ('service_area', 'popup') AND service_area_description = 'Serves the Triangle area'`).catch(() => {});
+  await pool.query(`UPDATE businesses SET service_area_description = 'Indianapolis IN', lat = 39.7684, lng = -86.1581 WHERE location_type IN ('service_area', 'popup') AND service_area_description = 'Fishers, IN Metro Area'`).catch(() => {});
+  await pool.query(`UPDATE businesses SET location_type = 'virtual', service_area_description = NULL WHERE service_area_description ILIKE '%Ayden%' AND location_type = 'service_area'`).catch(() => {});
+  await pool.query(`UPDATE businesses SET service_area_description = 'Triangle NC', lat = 35.7796, lng = -78.6382 WHERE location_type = 'popup' AND service_area_description ILIKE '%pop-up%'`).catch(() => {});
+  console.log("[DB] Migrated service-area/popup businesses to metro format");
 
   const fishersRestaurantUpserts = [
     { name: 'Kanoon Smoked Meat & Steakhouse', address: '8594 East 116th Street #30, Fishers, IN 46038', lat: 39.9557, lng: -86.0055, cuisine: ['Middle Eastern', 'Persian', 'Steakhouse', 'BBQ', 'Mediterranean'], emoji: '🥩', website: 'https://kanoon-indiana.com/', comment: '100% Zabiha halal. Smoked meats, steaks, kebabs, and Mediterranean dishes.' },
@@ -2883,6 +2883,7 @@ Return ONLY the JSON object, no markdown, no explanation.`,
         "San Diego CA", "Orlando FL", "Tampa FL", "Miami FL", "Phoenix AZ", "Seattle WA",
         "Denver CO", "Charlotte NC", "Columbus OH", "Nashville TN", "San Antonio TX",
         "Austin TX", "St. Louis MO", "Sacramento CA", "Boston MA", "Baltimore MD",
+        "Indianapolis IN",
       ];
       if ((location_type === "service_area" || location_type === "popup") && (!saValue || !VALID_METROS.includes(saValue) || lat == null || lng == null)) {
         return res.status(400).json({ error: "Service area and pop-up businesses require a valid metro area selection." });

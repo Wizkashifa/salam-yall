@@ -36,6 +36,7 @@ export const METRO_AREAS: MetroArea[] = [
   { name: "Sacramento CA", lat: 38.5816, lng: -121.4944 },
   { name: "Boston MA", lat: 42.3601, lng: -71.0589 },
   { name: "Baltimore MD", lat: 39.2904, lng: -76.6122 },
+  { name: "Indianapolis IN", lat: 39.7684, lng: -86.1581 },
 ];
 
 const STORAGE_KEY = "location_override_metro";
