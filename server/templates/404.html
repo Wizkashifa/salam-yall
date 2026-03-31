@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Page Not Found — Salam Y'all</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/assets/images/favicon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/apple-touch-icon.png" />
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: #0C0C0C;
+        color: #F5F5F5;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 24px;
+        text-align: center;
+      }
+      .container { max-width: 420px; width: 100%; }
+      .icon {
+        width: 72px; height: 72px;
+        margin: 0 auto 24px;
+      }
+      .code {
+        font-size: 96px;
+        font-weight: 800;
+        color: #1B6B4A;
+        line-height: 1;
+        letter-spacing: -4px;
+        margin-bottom: 16px;
+      }
+      .code span { color: #D4A843; }
+      h1 {
+        font-size: 22px;
+        font-weight: 600;
+        color: #E5E5E5;
+        margin-bottom: 10px;
+      }
+      .subtitle {
+        font-size: 15px;
+        color: #6B7280;
+        line-height: 1.6;
+        margin-bottom: 40px;
+      }
+      .links {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 40px;
+      }
+      .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 14px 24px;
+        background: #1B6B4A;
+        color: #fff;
+        font-size: 15px;
+        font-weight: 600;
+        border-radius: 12px;
+        text-decoration: none;
+        transition: background 0.2s;
+      }
+      .btn-primary:hover { background: #14523A; }
+      .btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 14px 24px;
+        background: #161616;
+        border: 1px solid #252525;
+        color: #9CA3AF;
+        font-size: 15px;
+        font-weight: 500;
+        border-radius: 12px;
+        text-decoration: none;
+        transition: all 0.2s;
+      }
+      .btn-secondary:hover { background: #1E1E1E; color: #E5E5E5; }
+      .footer {
+        font-size: 12px;
+        color: #4B5563;
+        padding-top: 24px;
+        border-top: 1px solid #1E1E1E;
+      }
+      .footer a { color: #6B7280; text-decoration: none; margin: 0 8px; }
+      .footer a:hover { color: #9CA3AF; }
+
+      @media (prefers-color-scheme: light) {
+        body { background: #FAFAF8; color: #1a1a1a; }
+        .btn-secondary { background: #fff; border-color: #E5E5E5; color: #6B7280; }
+        .btn-secondary:hover { background: #F5F5F3; color: #374151; }
+        .subtitle { color: #9CA3AF; }
+        .footer { border-top-color: #E5E5E5; color: #9CA3AF; }
+        .footer a { color: #6B7280; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <svg class="icon" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="44" stroke="#1B6B4A" stroke-width="3" fill="none"/>
+        <path d="M62 14C50.5 20 43 33.5 43 50s7.5 30 19 36c-4 2.5-8.5 4-13.5 4C28 90 12 72 12 50S28 10 48.5 10c4.5 0 9 .8 13.5 4z" fill="#1B6B4A"/>
+        <circle cx="68" cy="28" r="5" fill="#D4A843"/>
+      </svg>
+
+      <div class="code">4<span>0</span>4</div>
+      <h1>Page Not Found</h1>
+      <p class="subtitle">The page you're looking for doesn't exist or may have moved.</p>
+
+      <div class="links">
+        <a href="/" class="btn-primary">Go to Homepage</a>
+        <a href="/community" class="btn-secondary">Community Events &amp; Directory</a>
+        <a href="/download" class="btn-secondary">Download the App</a>
+      </div>
+
+      <div class="footer">
+        <a href="/privacy-policy">Privacy Policy</a>
+        <a href="/support">Support</a>
+      </div>
+    </div>
+  </body>
+</html>

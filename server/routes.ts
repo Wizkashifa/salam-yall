@@ -3619,6 +3619,10 @@ Return ONLY the description text, nothing else.`,
     path.resolve(process.cwd(), "server", "templates", "download.html"),
     "utf-8"
   );
+  const notFoundHtml = fs.readFileSync(
+    path.resolve(process.cwd(), "server", "templates", "404.html"),
+    "utf-8"
+  );
   const adminHtml = fs.readFileSync(
     path.resolve(process.cwd(), "server", "templates", "admin.html"),
     "utf-8"
@@ -7077,6 +7081,10 @@ Return ONLY the JSON object, no markdown, no explanation.`,
       eventReminderRunning = false;
     }
   }, 60000);
+
+  app.use((_req, res) => {
+    res.status(404).setHeader("Content-Type", "text/html; charset=utf-8").send(notFoundHtml);
+  });
 
   const httpServer = createServer(app);
   return httpServer;
