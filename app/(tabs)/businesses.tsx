@@ -111,8 +111,11 @@ const SUBCATEGORIES: Record<string, string[]> = {
     "Mechanic / Repair", "Dealership", "Car Rental", "Auto Body", "Tires", "Detailing", "Other",
   ],
   Services: [
-    "Legal", "Financial", "Insurance", "Tax", "Moving", "Cleaning",
-    "IT / Tech", "Marketing", "Tutoring", "Translation", "Other",
+    "HVAC", "Plumbing", "Electrical", "Roofing", "Landscaping",
+    "Painting", "Handyman", "Pest Control",
+    "Legal", "Financial", "Insurance", "Tax",
+    "Moving", "Cleaning", "IT / Tech", "Marketing",
+    "Tutoring", "Translation", "Other",
   ],
   Events: [
     "Venue", "Caterer", "Photography", "Videography",
@@ -152,6 +155,11 @@ const BUSINESS_KEYWORDS: Record<string, string[]> = {
     ...UNIVERSAL_TAGS,
   ],
   Creator: [
+    ...UNIVERSAL_TAGS,
+  ],
+  Services: [
+    "Licensed & insured", "Free estimates", "Emergency service",
+    "Residential", "Commercial", "By appointment only",
     ...UNIVERSAL_TAGS,
   ],
   _default: [
