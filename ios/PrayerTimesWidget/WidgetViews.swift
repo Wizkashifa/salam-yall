@@ -331,7 +331,9 @@ struct SmallWidgetView: View {
                         .frame(maxWidth: .infinity)
                     }
                 }
+                .frame(maxWidth: .infinity)
             }
+            .frame(maxWidth: .infinity)
             .padding(14)
         } else {
             VStack(spacing: 8) {
