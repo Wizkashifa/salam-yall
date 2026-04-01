@@ -16,7 +16,7 @@ export interface MasjidIqamaSchedule {
   iqama: DayIqama;
 }
 
-type IqamaSourceType = "dpt" | "iar" | "mca-html" | "alnoor-html" | "sbia-html" | "icf-html" | "athanplus" | "alhuda-html" | "berkeley-json";
+type IqamaSourceType = "dpt" | "iar" | "mca-html" | "alnoor-html" | "sbia-html" | "icf-html" | "athanplus" | "alhuda-html" | "berkeley-json" | "mcc-html";
 
 interface IqamaSource {
   name: string;
@@ -110,6 +110,12 @@ const IQAMA_SOURCES: IqamaSource[] = [
     type: "berkeley-json",
     url: "https://berkeleymasjid.org/prayer-times-display/timetable.json",
     timezone: "America/Los_Angeles",
+  },
+  {
+    name: "MCC",
+    type: "mcc-html",
+    url: "https://mccchicago.org/",
+    timezone: "America/Chicago",
   },
 ];
 
@@ -393,6 +399,11 @@ async function fetchMCAHtml(pool: pg.Pool, source: IqamaSource, monthNum?: numbe
 const MONTH_ABBRS: Record<string, number> = {
   Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6,
   Jul: 7, Aug: 8, Sep: 9, Oct: 10, Nov: 11, Dec: 12,
+};
+
+const MONTH_NAMES_FULL: Record<string, number> = {
+  January: 1, February: 2, March: 3, April: 4, May: 5, June: 6,
+  July: 7, August: 8, September: 9, October: 10, November: 11, December: 12,
 };
 
 async function fetchAlNoorHtml(pool: pg.Pool, source: IqamaSource): Promise<void> {
@@ -788,6 +799,82 @@ async function fetchBerkeleyJson(pool: pg.Pool, source: IqamaSource): Promise<vo
   }
 }
 
+async function fetchMCCHtml(pool: pg.Pool, source: IqamaSource): Promise<void> {
+  try {
+    const resp = await fetch(source.url, { headers: { "User-Agent": "Mozilla/5.0" } });
+    if (!resp.ok) {
+      console.error(`[Iqama] ${source.name} page returned ${resp.status}`);
+      return;
+    }
+    const html = await resp.text();
+
+    // Extract MCC (time-r) prayer times — each <li> has the label in pull-left and times in pull-right
+    const prayerMap: Record<string, string> = {};
+    const liRegex = /<div class="pull-left">([^<&]+)<\/div>[\s\S]*?<div class="time-r">([^<]+)<\/div>/gi;
+    let liMatch;
+    while ((liMatch = liRegex.exec(html)) !== null) {
+      const label = liMatch[1].trim();
+      const time = liMatch[2].trim();
+      if (/fajr/i.test(label)) prayerMap.fajr = time;
+      else if (/zuhr|dhuhr/i.test(label)) prayerMap.dhuhr = time;
+      else if (/asr/i.test(label)) prayerMap.asr = time;
+      else if (/mag/i.test(label)) prayerMap.maghrib = time;
+      else if (/isha/i.test(label)) prayerMap.isha = time;
+    }
+
+    if (!prayerMap.fajr || !prayerMap.isha) {
+      console.error(`[Iqama] ${source.name}: could not parse MCC prayer times from page`);
+      return;
+    }
+
+    const { year } = getDateInTz(source.timezone);
+
+    // Parse the date range shown: "April 1st - April 15th"
+    const dateRangeMatch = html.match(/<strong>(\w+ \d+\w* - \w+ \d+\w*)<\/strong>/);
+    if (!dateRangeMatch) {
+      // Fallback: just write today's times
+      const { dateKey } = getDateInTz(source.timezone);
+      const count = await bulkUpsert(pool, [{ masjid: source.name, date: dateKey, fajr: prayerMap.fajr, dhuhr: prayerMap.dhuhr || "", asr: prayerMap.asr || "", maghrib: prayerMap.maghrib || "", isha: prayerMap.isha }]);
+      if (count > 0) console.log(`[Iqama] Synced ${source.name} for today (fallback)`);
+      return;
+    }
+
+    const rangeParts = dateRangeMatch[1].split(" - ");
+    const parseRangeDate = (s: string): { month: number; day: number } | null => {
+      const m = s.trim().match(/^(\w+)\s+(\d+)/);
+      if (!m) return null;
+      const monthNum = MONTH_NAMES_FULL[m[1]];
+      if (!monthNum) return null;
+      return { month: monthNum, day: parseInt(m[2]) };
+    };
+
+    const start = parseRangeDate(rangeParts[0]);
+    const end = parseRangeDate(rangeParts[1] || rangeParts[0]);
+    if (!start || !end) {
+      const { dateKey } = getDateInTz(source.timezone);
+      const count = await bulkUpsert(pool, [{ masjid: source.name, date: dateKey, fajr: prayerMap.fajr, dhuhr: prayerMap.dhuhr || "", asr: prayerMap.asr || "", maghrib: prayerMap.maghrib || "", isha: prayerMap.isha }]);
+      if (count > 0) console.log(`[Iqama] Synced ${source.name} for today (range parse fallback)`);
+      return;
+    }
+
+    // Expand the range into individual day rows (handles cross-month ranges)
+    const rows: { masjid: string; date: string; fajr: string; dhuhr: string; asr: string; maghrib: string; isha: string }[] = [];
+    let cur = new Date(year, start.month - 1, start.day);
+    const endDate = new Date(year, end.month - 1, end.day);
+    while (cur <= endDate) {
+      const mm = String(cur.getMonth() + 1).padStart(2, "0");
+      const dd = String(cur.getDate()).padStart(2, "0");
+      rows.push({ masjid: source.name, date: `${year}-${mm}-${dd}`, fajr: prayerMap.fajr, dhuhr: prayerMap.dhuhr || "", asr: prayerMap.asr || "", maghrib: prayerMap.maghrib || "", isha: prayerMap.isha });
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    const count = await bulkUpsert(pool, rows);
+    if (count > 0) console.log(`[Iqama] Synced ${count} ${source.name} days (${dateRangeMatch[1]})`);
+  } catch (err: any) {
+    console.error(`[Iqama] Error syncing ${source.name}:`, err.message);
+  }
+}
+
 async function syncSource(pool: pg.Pool, source: IqamaSource, year: number, month: number): Promise<void> {
   switch (source.type) {
     case "dpt":
@@ -816,6 +903,9 @@ async function syncSource(pool: pg.Pool, source: IqamaSource, year: number, mont
       break;
     case "berkeley-json":
       await fetchBerkeleyJson(pool, source);
+      break;
+    case "mcc-html":
+      await fetchMCCHtml(pool, source);
       break;
   }
 }
