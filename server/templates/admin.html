@@ -195,21 +195,78 @@
         <div id="tickerList"><div class="loading">Loading...</div></div>
       </div>
 
-      <div class="section">
-        <div class="section-title"><span class="icon">🕌</span> Jumu'ah Schedules</div>
-        <div class="row">
-          <div><label>Masjid</label><input type="text" id="jumuahMasjid" placeholder="Masjid name"></div>
+      <div class="section" id="jumuahSection">
+        <div class="section-title" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;" onclick="toggleJumuahSection()">
+          <span><span class="icon">🕌</span> Jumu'ah Schedules</span>
+          <span id="jumuahToggleIcon" style="font-size:12px;color:#6B7280;">▼ Show</span>
         </div>
-        <div class="row">
-          <div><label>Khutbah Time</label><input type="text" id="jumuahKhutbah" placeholder="1:00 PM"></div>
-          <div><label>Iqama Time</label><input type="text" id="jumuahIqama" placeholder="1:30 PM"></div>
+        <div id="jumuahSectionBody" style="display:none;margin-top:14px;">
+          <p style="font-size:12px;color:#9CA3AF;margin-bottom:14px;">Manage Jumuah schedules across all metro areas. Each entry supports multiple khutbah slots.</p>
+
+          <div style="margin-bottom:16px;">
+            <button class="btn btn-sm" style="background:#1B2E23;color:#4ADE80;margin-bottom:12px;" onclick="showJumuahForm()">+ Add Schedule</button>
+            <div id="jumuahAddForm" style="display:none;background:#1E1E1E;border:1px solid #333;border-radius:10px;padding:16px;margin-bottom:14px;">
+              <input type="hidden" id="jumuahEditId" value="">
+              <h4 id="jumuahFormTitle" style="margin:0 0 12px;font-size:13px;color:#F5F5F5;">New Jumu'ah Schedule</h4>
+              <div class="row">
+                <div><label>Masjid Name</label><input type="text" id="jumuahMasjid" placeholder="e.g. IAR (Atwater)"></div>
+                <div>
+                  <label>Metro Area</label>
+                  <select id="jumuahMetro" style="width:100%;padding:10px 14px;background:#1E1E1E;border:1px solid #333;border-radius:10px;color:#F5F5F5;font-size:14px;">
+                    <option value="Raleigh-Durham NC">Raleigh-Durham NC</option>
+                    <option value="Bay Area CA">Bay Area CA</option>
+                    <option value="Indianapolis IN">Indianapolis IN</option>
+                    <option value="Las Vegas NV">Las Vegas NV</option>
+                    <option value="">Other / None</option>
+                  </select>
+                </div>
+              </div>
+              <div class="row">
+                <div>
+                  <label>Timezone</label>
+                  <select id="jumuahTimezone" style="width:100%;padding:10px 14px;background:#1E1E1E;border:1px solid #333;border-radius:10px;color:#F5F5F5;font-size:14px;">
+                    <option value="America/New_York">Eastern (New York)</option>
+                    <option value="America/Chicago">Central (Chicago)</option>
+                    <option value="America/Denver">Mountain (Denver)</option>
+                    <option value="America/Los_Angeles">Pacific (Los Angeles)</option>
+                    <option value="America/Indiana/Indianapolis">Indiana (Indianapolis)</option>
+                    <option value="America/Phoenix">Arizona (Phoenix)</option>
+                  </select>
+                </div>
+              </div>
+              <div id="jumuahSlots">
+                <div class="jumuah-slot" style="border:1px solid #2A2A2A;border-radius:8px;padding:12px;margin-bottom:10px;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <span style="font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;">Slot 1</span>
+                  </div>
+                  <div class="row">
+                    <div><label>Khutbah Time</label><input type="text" class="slot-khutbah" placeholder="1:00 PM"></div>
+                    <div><label>Iqama Time</label><input type="text" class="slot-iqama" placeholder="1:30 PM"></div>
+                  </div>
+                  <div class="row">
+                    <div><label>Speaker (optional)</label><input type="text" class="slot-speaker" placeholder="Sheikh name"></div>
+                    <div><label>Topic (optional)</label><input type="text" class="slot-topic" placeholder="Khutbah topic"></div>
+                  </div>
+                </div>
+              </div>
+              <button class="btn btn-sm" style="background:#252525;color:#9CA3AF;margin-bottom:12px;" onclick="addJumuahSlot()">+ Add Another Slot</button>
+              <div style="display:flex;gap:8px;">
+                <button class="btn btn-primary" onclick="submitJumuahForm()" id="addJumuahBtn">Save Schedule</button>
+                <button class="btn btn-sm" style="background:#252525;color:#9CA3AF;" onclick="hideJumuahForm()">Cancel</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="jumuahMetroFilter" style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-sm jumuah-filter-btn active-filter" onclick="filterJumuahByMetro(null,this)" style="background:#1B3A2E;color:#4ADE80;">All Metros</button>
+            <button class="btn btn-sm jumuah-filter-btn" onclick="filterJumuahByMetro('Raleigh-Durham NC',this)" style="background:#252525;color:#9CA3AF;">Raleigh-Durham NC</button>
+            <button class="btn btn-sm jumuah-filter-btn" onclick="filterJumuahByMetro('Bay Area CA',this)" style="background:#252525;color:#9CA3AF;">Bay Area CA</button>
+            <button class="btn btn-sm jumuah-filter-btn" onclick="filterJumuahByMetro('Indianapolis IN',this)" style="background:#252525;color:#9CA3AF;">Indianapolis IN</button>
+            <button class="btn btn-sm jumuah-filter-btn" onclick="filterJumuahByMetro('Las Vegas NV',this)" style="background:#252525;color:#9CA3AF;">Las Vegas NV</button>
+          </div>
+
+          <div id="jumuahList"><div class="loading">Loading...</div></div>
         </div>
-        <div class="row">
-          <div><label>Speaker (optional)</label><input type="text" id="jumuahSpeaker" placeholder="Sheikh name"></div>
-          <div><label>Topic (optional)</label><input type="text" id="jumuahTopic" placeholder="Khutbah topic"></div>
-        </div>
-        <button class="btn btn-primary" onclick="addJumuah()" id="addJumuahBtn">Add Schedule</button>
-        <div id="jumuahList" style="margin-top:14px;"><div class="loading">Loading...</div></div>
       </div>
 
       <div class="section">
@@ -2465,60 +2522,202 @@
       } catch { showToast('Connection error', true); }
     }
 
-    async function loadJumuah() {
-      try {
-        const res = await fetch('/api/admin/jumuah', { headers: { 'Authorization': 'Bearer ' + adminToken } });
-        if (res.status === 401) { handleUnauthorized(); return; }
-        const items = await res.json();
-        const list = document.getElementById('jumuahList');
-        if (!items.length) { list.innerHTML = '<div class="empty-state">No Jumu\'ah schedules</div>'; return; }
-        list.innerHTML = '<ul class="message-list">' + items.map(j => {
-          const status = j.active ? '' : ' (inactive)';
-          const speaker = j.speaker ? '<br>Speaker: ' + escHtml(j.speaker) : '';
-          const topic = j.topic ? '<br>Topic: ' + escHtml(j.topic) : '';
-          return '<li class="message-item">' +
-            '<span class="message-badge badge-event">' + escHtml(j.khutbah_time) + '</span>' +
-            '<div class="message-text">' + escHtml(j.masjid) + status + speaker + topic +
-            '<div class="message-meta">Iqama: ' + escHtml(j.iqama_time) + '</div></div>' +
-            '<div class="message-actions" style="gap:6px;display:flex;">' +
-            '<button class="btn btn-sm" style="background:#2A2318;color:#D4A843;" onclick="toggleJumuah(' + j.id + ',' + !j.active + ')">' + (j.active ? 'Disable' : 'Enable') + '</button>' +
-            '<button class="btn btn-danger btn-sm" onclick="deleteJumuah(' + j.id + ')">Delete</button>' +
-            '</div></li>';
-        }).join('') + '</ul>';
-      } catch { showToast('Failed to load Jumu\'ah schedules', true); }
+    var allJumuahItems = [];
+    var currentJumuahMetroFilter = null;
+
+    function toggleJumuahSection() {
+      var body = document.getElementById('jumuahSectionBody');
+      var icon = document.getElementById('jumuahToggleIcon');
+      if (body.style.display === 'none') {
+        body.style.display = 'block';
+        icon.textContent = '▲ Hide';
+        loadJumuah();
+      } else {
+        body.style.display = 'none';
+        icon.textContent = '▼ Show';
+      }
     }
 
-    async function addJumuah() {
-      const masjid = document.getElementById('jumuahMasjid').value.trim();
-      const khutbah_time = document.getElementById('jumuahKhutbah').value.trim();
-      const iqama_time = document.getElementById('jumuahIqama').value.trim();
-      const speaker = document.getElementById('jumuahSpeaker').value.trim();
-      const topic = document.getElementById('jumuahTopic').value.trim();
-      if (!masjid || !khutbah_time || !iqama_time) { showToast('Masjid, khutbah time, and iqama time are required', true); return; }
+    function showJumuahForm() {
+      document.getElementById('jumuahEditId').value = '';
+      document.getElementById('jumuahFormTitle').textContent = "New Jumu'ah Schedule";
+      document.getElementById('addJumuahBtn').textContent = 'Save Schedule';
+      document.getElementById('jumuahAddForm').style.display = 'block';
+    }
+    function hideJumuahForm() {
+      document.getElementById('jumuahAddForm').style.display = 'none';
+      document.getElementById('jumuahMasjid').value = '';
+      document.getElementById('jumuahEditId').value = '';
+      resetJumuahSlots();
+    }
+
+    function editJumuah(id) {
+      var item = allJumuahItems.find(function(j) { return j.id === id; });
+      if (!item) return;
+      document.getElementById('jumuahEditId').value = id;
+      document.getElementById('jumuahFormTitle').textContent = "Edit Jumu'ah Schedule";
+      document.getElementById('addJumuahBtn').textContent = 'Update Schedule';
+      document.getElementById('jumuahMasjid').value = item.masjid || '';
+      var metroSel = document.getElementById('jumuahMetro');
+      var metroVal = item.metro || '';
+      var metroOpt = Array.from(metroSel.options).find(function(o) { return o.value === metroVal; });
+      if (!metroOpt) {
+        var opt = document.createElement('option');
+        opt.value = metroVal; opt.textContent = metroVal;
+        metroSel.appendChild(opt);
+      }
+      metroSel.value = metroVal;
+      var tzSel = document.getElementById('jumuahTimezone');
+      tzSel.value = item.timezone || 'America/New_York';
+      var slots = (item.khutbahs && Array.isArray(item.khutbahs) && item.khutbahs.length > 0) ? item.khutbahs
+        : [{ khutbah_time: item.khutbah_time || '', iqama_time: item.iqama_time || '' }];
+      var container = document.getElementById('jumuahSlots');
+      container.innerHTML = '';
+      slots.forEach(function(slot, idx) {
+        var div = document.createElement('div');
+        div.className = 'jumuah-slot';
+        div.style.cssText = 'border:1px solid #2A2A2A;border-radius:8px;padding:12px;margin-bottom:10px;';
+        var removeBtn = idx > 0 ? '<button onclick="this.closest(\'.jumuah-slot\').remove()" style="background:none;border:none;color:#EF4444;cursor:pointer;font-size:13px;">✕ Remove</button>' : '';
+        div.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+          + '<span style="font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;">Slot ' + (idx + 1) + '</span>' + removeBtn
+          + '</div><div class="row"><div><label>Khutbah Time</label><input type="text" class="slot-khutbah" placeholder="1:00 PM" value="' + escHtml(slot.khutbah_time || '') + '"></div>'
+          + '<div><label>Iqama Time</label><input type="text" class="slot-iqama" placeholder="1:30 PM" value="' + escHtml(slot.iqama_time || '') + '"></div></div>'
+          + '<div class="row"><div><label>Speaker (optional)</label><input type="text" class="slot-speaker" placeholder="Sheikh name" value="' + escHtml(slot.speaker || '') + '"></div>'
+          + '<div><label>Topic (optional)</label><input type="text" class="slot-topic" placeholder="Khutbah topic" value="' + escHtml(slot.topic || '') + '"></div></div>';
+        container.appendChild(div);
+      });
+      document.getElementById('jumuahAddForm').style.display = 'block';
+      document.getElementById('jumuahAddForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function resetJumuahSlots() {
+      var container = document.getElementById('jumuahSlots');
+      container.innerHTML = '<div class="jumuah-slot" style="border:1px solid #2A2A2A;border-radius:8px;padding:12px;margin-bottom:10px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><span style="font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;">Slot 1</span></div>' +
+        '<div class="row"><div><label>Khutbah Time</label><input type="text" class="slot-khutbah" placeholder="1:00 PM"></div><div><label>Iqama Time</label><input type="text" class="slot-iqama" placeholder="1:30 PM"></div></div>' +
+        '<div class="row"><div><label>Speaker (optional)</label><input type="text" class="slot-speaker" placeholder="Sheikh name"></div><div><label>Topic (optional)</label><input type="text" class="slot-topic" placeholder="Khutbah topic"></div></div>' +
+        '</div>';
+    }
+
+    function addJumuahSlot() {
+      var container = document.getElementById('jumuahSlots');
+      var slotNum = container.querySelectorAll('.jumuah-slot').length + 1;
+      var div = document.createElement('div');
+      div.className = 'jumuah-slot';
+      div.style.cssText = 'border:1px solid #2A2A2A;border-radius:8px;padding:12px;margin-bottom:10px;';
+      div.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+        '<span style="font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;">Slot ' + slotNum + '</span>' +
+        '<button onclick="this.closest(\'.jumuah-slot\').remove()" style="background:none;border:none;color:#EF4444;cursor:pointer;font-size:13px;">✕ Remove</button>' +
+        '</div>' +
+        '<div class="row"><div><label>Khutbah Time</label><input type="text" class="slot-khutbah" placeholder="1:00 PM"></div><div><label>Iqama Time</label><input type="text" class="slot-iqama" placeholder="1:30 PM"></div></div>' +
+        '<div class="row"><div><label>Speaker (optional)</label><input type="text" class="slot-speaker" placeholder="Sheikh name"></div><div><label>Topic (optional)</label><input type="text" class="slot-topic" placeholder="Khutbah topic"></div></div>';
+      container.appendChild(div);
+    }
+
+    function collectJumuahSlots() {
+      var slotEls = document.querySelectorAll('#jumuahSlots .jumuah-slot');
+      var slots = [];
+      slotEls.forEach(function(el) {
+        var kt = el.querySelector('.slot-khutbah').value.trim();
+        var it = el.querySelector('.slot-iqama').value.trim();
+        if (!kt || !it) return;
+        var slot = { khutbah_time: kt, iqama_time: it };
+        var sp = el.querySelector('.slot-speaker').value.trim();
+        var tp = el.querySelector('.slot-topic').value.trim();
+        if (sp) slot.speaker = sp;
+        if (tp) slot.topic = tp;
+        slots.push(slot);
+      });
+      return slots;
+    }
+
+    async function submitJumuahForm() {
+      var editId = document.getElementById('jumuahEditId').value;
+      var masjid = document.getElementById('jumuahMasjid').value.trim();
+      var metro = document.getElementById('jumuahMetro').value;
+      var timezone = document.getElementById('jumuahTimezone').value;
+      var slots = collectJumuahSlots();
+      if (!masjid) { showToast('Masjid name is required', true); return; }
+      if (slots.length === 0) { showToast('At least one slot with khutbah and iqama time is required', true); return; }
+      var btn = document.getElementById('addJumuahBtn');
+      var originalText = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Saving...';
       try {
-        const res = await fetch('/api/admin/jumuah', {
-          method: 'POST',
+        var url = editId ? '/api/admin/jumuah/' + editId : '/api/admin/jumuah';
+        var method = editId ? 'PATCH' : 'POST';
+        var res = await fetch(url, {
+          method: method,
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
-          body: JSON.stringify({ masjid, khutbah_time, iqama_time, speaker: speaker || null, topic: topic || null }),
+          body: JSON.stringify({ masjid: masjid, metro: metro || null, timezone: timezone || null, khutbahs: slots }),
         });
         if (res.ok) {
-          showToast('Schedule added');
-          document.getElementById('jumuahMasjid').value = '';
-          document.getElementById('jumuahKhutbah').value = '';
-          document.getElementById('jumuahIqama').value = '';
-          document.getElementById('jumuahSpeaker').value = '';
-          document.getElementById('jumuahTopic').value = '';
+          showToast(editId ? 'Schedule updated' : 'Schedule added');
+          hideJumuahForm();
           loadJumuah();
-        } else { showToast('Failed to add schedule', true); }
+        } else { var d = await res.json(); showToast(d.error || 'Failed to save schedule', true); }
       } catch { showToast('Connection error', true); }
+      btn.disabled = false; btn.textContent = originalText;
+    }
+
+    function filterJumuahByMetro(metro, btn) {
+      currentJumuahMetroFilter = metro;
+      document.querySelectorAll('.jumuah-filter-btn').forEach(function(b) {
+        b.classList.remove('active-filter');
+        b.style.background = '#252525'; b.style.color = '#9CA3AF';
+      });
+      btn.classList.add('active-filter');
+      btn.style.background = '#1B3A2E'; btn.style.color = '#4ADE80';
+      renderJumuahList(allJumuahItems);
+    }
+
+    function renderJumuahList(items) {
+      var filtered = currentJumuahMetroFilter ? items.filter(function(j) { return j.metro === currentJumuahMetroFilter; }) : items;
+      var list = document.getElementById('jumuahList');
+      if (!filtered.length) { list.innerHTML = '<div class="empty-state">No Jumu\'ah schedules' + (currentJumuahMetroFilter ? ' for ' + currentJumuahMetroFilter : '') + '</div>'; return; }
+      list.innerHTML = '<ul class="message-list">' + filtered.map(function(j) {
+        var status = j.active ? '' : ' <span style="color:#EF4444;font-size:11px;">(inactive)</span>';
+        var metro = j.metro ? '<div style="font-size:11px;color:#6B7280;margin-top:2px;">' + escHtml(j.metro) + '</div>' : '';
+        var slotsHtml = '';
+        var khutbahs = j.khutbahs;
+        if (khutbahs && Array.isArray(khutbahs) && khutbahs.length > 0) {
+          slotsHtml = khutbahs.map(function(s, i) {
+            var line = '<div style="font-size:12px;color:#9CA3AF;margin-top:4px;">Slot ' + (i+1) + ': <b style="color:#F5F5F5;">' + escHtml(s.khutbah_time) + '</b> khutbah → <b style="color:#F5F5F5;">' + escHtml(s.iqama_time) + '</b> iqama';
+            if (s.speaker) line += ' · ' + escHtml(s.speaker);
+            if (s.topic) line += ' · "' + escHtml(s.topic) + '"';
+            line += '</div>';
+            return line;
+          }).join('');
+        } else {
+          slotsHtml = '<div style="font-size:12px;color:#9CA3AF;margin-top:4px;"><b style="color:#F5F5F5;">' + escHtml(j.khutbah_time) + '</b> khutbah → <b style="color:#F5F5F5;">' + escHtml(j.iqama_time) + '</b> iqama</div>';
+        }
+        return '<li class="message-item">' +
+          '<div class="message-text" style="flex:1;">' +
+            '<div style="font-weight:600;color:#F5F5F5;">' + escHtml(j.masjid) + status + '</div>' +
+            metro + slotsHtml +
+          '</div>' +
+          '<div class="message-actions" style="gap:6px;display:flex;flex-shrink:0;">' +
+          '<button class="btn btn-sm" style="background:#1E2A3A;color:#60A5FA;" onclick="editJumuah(' + j.id + ')">Edit</button>' +
+          '<button class="btn btn-sm" style="background:#2A2318;color:#D4A843;" onclick="toggleJumuah(' + j.id + ',' + !j.active + ')">' + (j.active ? 'Disable' : 'Enable') + '</button>' +
+          '<button class="btn btn-danger btn-sm" onclick="deleteJumuah(' + j.id + ')">Delete</button>' +
+          '</div></li>';
+      }).join('') + '</ul>';
+    }
+
+    async function loadJumuah() {
+      try {
+        var res = await fetch('/api/admin/jumuah', { headers: { 'Authorization': 'Bearer ' + adminToken } });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        allJumuahItems = await res.json();
+        renderJumuahList(allJumuahItems);
+      } catch { showToast('Failed to load Jumu\'ah schedules', true); }
     }
 
     async function toggleJumuah(id, active) {
       try {
-        const res = await fetch('/api/admin/jumuah/' + id, {
+        var res = await fetch('/api/admin/jumuah/' + id, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
-          body: JSON.stringify({ active }),
+          body: JSON.stringify({ active: active }),
         });
         if (res.ok) { showToast(active ? 'Enabled' : 'Disabled'); loadJumuah(); }
         else { showToast('Failed to update', true); }
@@ -2528,7 +2727,7 @@
     async function deleteJumuah(id) {
       if (!confirm('Delete this Jumu\'ah schedule?')) return;
       try {
-        const res = await fetch('/api/admin/jumuah/' + id, {
+        var res = await fetch('/api/admin/jumuah/' + id, {
           method: 'DELETE',
           headers: { 'Authorization': 'Bearer ' + adminToken },
         });

@@ -684,21 +684,110 @@ async function ensureJumuahTable(pool: pg.Pool) {
       updated_at TIMESTAMP DEFAULT NOW()
     );
   `);
+
+  // Add metro, timezone, khutbahs columns if they don't exist
+  await pool.query(`ALTER TABLE jumuah_schedules ADD COLUMN IF NOT EXISTS metro VARCHAR(255);`);
+  await pool.query(`ALTER TABLE jumuah_schedules ADD COLUMN IF NOT EXISTS timezone VARCHAR(100);`);
+  await pool.query(`ALTER TABLE jumuah_schedules ADD COLUMN IF NOT EXISTS khutbahs JSONB;`);
+  // Clean up legacy abbreviated names that conflict with proper full names
+  await pool.query(`DELETE FROM jumuah_schedules WHERE masjid IN ('SRVIC', 'MCA', 'Muslim Community Center of the East Bay (MCC)', 'Islamic Society of Greater Indianapolis (ISOG)', 'Al-Huda Foundation (IAT)');`);
+  // Deduplicate masjid names — keep row with highest id (most recent seed)
+  await pool.query(`
+    DELETE FROM jumuah_schedules a
+    USING jumuah_schedules b
+    WHERE a.masjid = b.masjid AND a.id < b.id;
+  `);
+  // Add unique index on masjid for upsert support
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS jumuah_schedules_masjid_unique ON jumuah_schedules (masjid);`);
+
+  // Backfill existing NC rows
+  await pool.query(`
+    UPDATE jumuah_schedules
+    SET metro = 'Raleigh-Durham NC', timezone = 'America/New_York'
+    WHERE metro IS NULL;
+  `);
+
+  // Migrate comma-separated times to khutbahs JSONB for rows that don't have it yet
+  const { rows: toMigrate } = await pool.query(`
+    SELECT id, khutbah_time, iqama_time, speaker, topic FROM jumuah_schedules WHERE khutbahs IS NULL;
+  `);
+  for (const row of toMigrate) {
+    const khutbahTimes = (row.khutbah_time as string).split(",").map((t: string) => t.trim()).filter(Boolean);
+    const iqamaTimes = (row.iqama_time as string).split(",").map((t: string) => t.trim()).filter(Boolean);
+    const slots = khutbahTimes.map((kt: string, i: number) => {
+      const slot: any = { khutbah_time: kt, iqama_time: iqamaTimes[i] || iqamaTimes[0] || "" };
+      if (row.speaker) slot.speaker = row.speaker;
+      if (row.topic) slot.topic = row.topic;
+      return slot;
+    });
+    await pool.query(`UPDATE jumuah_schedules SET khutbahs = $1 WHERE id = $2`, [JSON.stringify(slots), row.id]);
+  }
+
   const { rows } = await pool.query("SELECT COUNT(*) as count FROM jumuah_schedules");
   if (parseInt(rows[0].count) === 0) {
-    await pool.query(`
-      INSERT INTO jumuah_schedules (masjid, khutbah_time, iqama_time, sort_order) VALUES
-        ('IAR (Atwater)', '1:00 PM', '1:30 PM', 1),
-        ('IAR (Page Rd)', '1:00 PM', '1:30 PM', 2),
-        ('Islamic Center of Morrisville', '12:30 PM', '1:00 PM', 3),
-        ('Islamic Center of Cary', '1:00 PM', '1:30 PM', 4),
-        ('As-Salaam Islamic Center', '1:15 PM', '1:45 PM', 5),
-        ('Chapel Hill Islamic Society', '1:00 PM', '1:30 PM', 6),
-        ('Ar-Razzaq Islamic Center', '1:15 PM', '1:45 PM', 7),
-        ('Jamaat Ibad Ar-Rahman (Fayetteville)', '1:00 PM', '1:30 PM', 8),
-        ('Jamaat Ibad Ar-Rahman (Parkwood)', '12:10 PM, 1:10 PM, 2:10 PM', '12:40 PM, 1:40 PM, 2:40 PM', 9);
-    `);
+    const ncRows = [
+      { masjid: 'IAR (Atwater)', khutbah_time: '1:00 PM', iqama_time: '1:30 PM', metro: 'Raleigh-Durham NC', timezone: 'America/New_York', sort_order: 1 },
+      { masjid: 'IAR (Page Rd)', khutbah_time: '1:00 PM', iqama_time: '1:30 PM', metro: 'Raleigh-Durham NC', timezone: 'America/New_York', sort_order: 2 },
+      { masjid: 'Islamic Center of Morrisville', khutbah_time: '12:30 PM', iqama_time: '1:00 PM', metro: 'Raleigh-Durham NC', timezone: 'America/New_York', sort_order: 3 },
+      { masjid: 'Islamic Center of Cary', khutbah_time: '1:00 PM', iqama_time: '1:30 PM', metro: 'Raleigh-Durham NC', timezone: 'America/New_York', sort_order: 4 },
+      { masjid: 'As-Salaam Islamic Center', khutbah_time: '1:15 PM', iqama_time: '1:45 PM', metro: 'Raleigh-Durham NC', timezone: 'America/New_York', sort_order: 5 },
+      { masjid: 'Chapel Hill Islamic Society', khutbah_time: '1:00 PM', iqama_time: '1:30 PM', metro: 'Raleigh-Durham NC', timezone: 'America/New_York', sort_order: 6 },
+      { masjid: 'Ar-Razzaq Islamic Center', khutbah_time: '1:15 PM', iqama_time: '1:45 PM', metro: 'Raleigh-Durham NC', timezone: 'America/New_York', sort_order: 7 },
+      { masjid: 'Jamaat Ibad Ar-Rahman (Fayetteville)', khutbah_time: '1:00 PM', iqama_time: '1:30 PM', metro: 'Raleigh-Durham NC', timezone: 'America/New_York', sort_order: 8 },
+    ];
+    for (const r of ncRows) {
+      const slots = [{ khutbah_time: r.khutbah_time, iqama_time: r.iqama_time }];
+      await pool.query(
+        `INSERT INTO jumuah_schedules (masjid, khutbah_time, iqama_time, metro, timezone, khutbahs, sort_order) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+        [r.masjid, r.khutbah_time, r.iqama_time, r.metro, r.timezone, JSON.stringify(slots), r.sort_order]
+      );
+    }
+    // Parkwood - multi-slot
+    const parkwoodSlots = [
+      { khutbah_time: '12:10 PM', iqama_time: '12:40 PM' },
+      { khutbah_time: '1:10 PM', iqama_time: '1:40 PM' },
+      { khutbah_time: '2:10 PM', iqama_time: '2:40 PM' },
+    ];
+    await pool.query(
+      `INSERT INTO jumuah_schedules (masjid, khutbah_time, iqama_time, metro, timezone, khutbahs, sort_order) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      ['Jamaat Ibad Ar-Rahman (Parkwood)', '12:10 PM, 1:10 PM, 2:10 PM', '12:40 PM, 1:40 PM, 2:40 PM', 'Raleigh-Durham NC', 'America/New_York', JSON.stringify(parkwoodSlots), 9]
+    );
     console.log("[DB] Seeded default Jumuah schedules");
+  }
+
+  // Seed new metros if not already present
+  await seedJumuahMetros(pool);
+}
+
+async function seedJumuahMetros(pool: pg.Pool) {
+  // Bay Area CA
+  const bayAreaMasjids = [
+    { masjid: 'Muslim Community Association (MCA)', khutbah_time: '1:15 PM', iqama_time: '1:30 PM', metro: 'Bay Area CA', timezone: 'America/Los_Angeles', sort_order: 100 },
+    { masjid: 'Islamic Center of Fremont (ICF)', khutbah_time: '1:00 PM', iqama_time: '1:15 PM', metro: 'Bay Area CA', timezone: 'America/Los_Angeles', sort_order: 101 },
+    { masjid: 'South Bay Islamic Association (SBIA)', khutbah_time: '1:15 PM', iqama_time: '1:30 PM', metro: 'Bay Area CA', timezone: 'America/Los_Angeles', sort_order: 102 },
+    { masjid: 'San Ramon Valley Islamic Center (SRVIC)', khutbah_time: '1:15 PM', iqama_time: '1:30 PM', metro: 'Bay Area CA', timezone: 'America/Los_Angeles', sort_order: 103 },
+    { masjid: 'Berkeley Masjid', khutbah_time: '1:15 PM', iqama_time: '1:30 PM', metro: 'Bay Area CA', timezone: 'America/Los_Angeles', sort_order: 104 },
+  ];
+  // Indianapolis IN
+  const indiMasjids = [
+    { masjid: 'Islamic Society of Greater Indianapolis (ISOC)', khutbah_time: '1:15 PM', iqama_time: '1:30 PM', metro: 'Indianapolis IN', timezone: 'America/Indiana/Indianapolis', sort_order: 200 },
+    { masjid: 'Islamic Alliance of Indianapolis (IAT)', khutbah_time: '1:00 PM', iqama_time: '1:15 PM', metro: 'Indianapolis IN', timezone: 'America/Indiana/Indianapolis', sort_order: 201 },
+  ];
+  // Las Vegas NV
+  const lasMasjids = [
+    { masjid: 'Las Vegas Islamic Center (LVIC)', khutbah_time: '1:30 PM', iqama_time: '1:45 PM', metro: 'Las Vegas NV', timezone: 'America/Los_Angeles', sort_order: 300 },
+    { masjid: 'Southern Nevada Muslim Community Center (SNVMC)', khutbah_time: '1:30 PM', iqama_time: '1:45 PM', metro: 'Las Vegas NV', timezone: 'America/Los_Angeles', sort_order: 301 },
+  ];
+  const allNew = [...bayAreaMasjids, ...indiMasjids, ...lasMasjids];
+  // Remove incorrectly-named rows from previous seeds
+  await pool.query(`DELETE FROM jumuah_schedules WHERE masjid IN ('Muslim Community Center of the East Bay (MCC)', 'Islamic Society of Greater Indianapolis (ISOG)', 'Al-Huda Foundation (IAT)')`);
+  for (const r of allNew) {
+    const slots = [{ khutbah_time: r.khutbah_time, iqama_time: r.iqama_time }];
+    await pool.query(
+      `INSERT INTO jumuah_schedules (masjid, khutbah_time, iqama_time, metro, timezone, khutbahs, sort_order) VALUES ($1,$2,$3,$4,$5,$6,$7)
+       ON CONFLICT (masjid) DO UPDATE SET metro=EXCLUDED.metro, timezone=EXCLUDED.timezone, khutbahs=EXCLUDED.khutbahs, sort_order=EXCLUDED.sort_order`,
+      [r.masjid, r.khutbah_time, r.iqama_time, r.metro, r.timezone, JSON.stringify(slots), r.sort_order]
+    );
   }
 }
 
@@ -5383,11 +5472,17 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     }
   });
 
-  app.get("/api/jumuah-schedules", async (_req, res) => {
+  app.get("/api/jumuah-schedules", async (req, res) => {
     try {
-      const result = await pool.query(
-        "SELECT id, masjid, khutbah_time, iqama_time, speaker, topic FROM jumuah_schedules WHERE active = true ORDER BY sort_order ASC"
-      );
+      const metro = req.query.metro as string | undefined;
+      let query = "SELECT id, masjid, khutbah_time, iqama_time, speaker, topic, metro, timezone, khutbahs FROM jumuah_schedules WHERE active = true";
+      const params: any[] = [];
+      if (metro) {
+        query += ` AND metro = $1`;
+        params.push(metro);
+      }
+      query += " ORDER BY sort_order ASC";
+      const result = await pool.query(query, params);
       res.json(result.rows);
     } catch (error: any) {
       console.error("Error fetching jumuah schedules:", error.message);
@@ -5399,7 +5494,7 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     const token = req.headers.authorization?.replace("Bearer ", "");
     if (!token || !adminSessions.has(token)) return res.status(401).json({ error: "Unauthorized" });
     try {
-      const result = await pool.query("SELECT * FROM jumuah_schedules ORDER BY sort_order ASC");
+      const result = await pool.query("SELECT * FROM jumuah_schedules ORDER BY sort_order ASC, id ASC");
       res.json(result.rows);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -5410,13 +5505,29 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     const token = req.headers.authorization?.replace("Bearer ", "");
     if (!token || !adminSessions.has(token)) return res.status(401).json({ error: "Unauthorized" });
     try {
-      const { masjid, khutbah_time, iqama_time, speaker, topic, sort_order } = req.body;
-      if (!masjid || !khutbah_time || !iqama_time) {
-        return res.status(400).json({ error: "masjid, khutbah_time, and iqama_time are required" });
+      const { masjid, khutbah_time, iqama_time, speaker, topic, sort_order, metro, timezone, khutbahs } = req.body;
+      if (!masjid) {
+        return res.status(400).json({ error: "masjid is required" });
       }
+      // Build khutbahs JSONB from slots if provided, otherwise from legacy fields
+      let khutbahsJson: any[] | null = null;
+      if (khutbahs && Array.isArray(khutbahs)) {
+        khutbahsJson = khutbahs;
+      } else if (khutbah_time && iqama_time) {
+        const kTimes = (khutbah_time as string).split(",").map((t: string) => t.trim()).filter(Boolean);
+        const iTimes = (iqama_time as string).split(",").map((t: string) => t.trim()).filter(Boolean);
+        khutbahsJson = kTimes.map((kt: string, i: number) => {
+          const slot: any = { khutbah_time: kt, iqama_time: iTimes[i] || iTimes[0] || "" };
+          if (speaker) slot.speaker = speaker;
+          if (topic) slot.topic = topic;
+          return slot;
+        });
+      }
+      const legacyKhutbah = khutbahsJson ? khutbahsJson.map((s: any) => s.khutbah_time).join(", ") : (khutbah_time || "");
+      const legacyIqama = khutbahsJson ? khutbahsJson.map((s: any) => s.iqama_time).join(", ") : (iqama_time || "");
       const result = await pool.query(
-        "INSERT INTO jumuah_schedules (masjid, khutbah_time, iqama_time, speaker, topic, sort_order) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
-        [masjid, khutbah_time, iqama_time, speaker || null, topic || null, sort_order || 0]
+        "INSERT INTO jumuah_schedules (masjid, khutbah_time, iqama_time, speaker, topic, sort_order, metro, timezone, khutbahs) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *",
+        [masjid, legacyKhutbah, legacyIqama, speaker || null, topic || null, sort_order || 0, metro || null, timezone || null, khutbahsJson ? JSON.stringify(khutbahsJson) : null]
       );
       res.json(result.rows[0]);
     } catch (error: any) {
@@ -5429,7 +5540,7 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     if (!token || !adminSessions.has(token)) return res.status(401).json({ error: "Unauthorized" });
     try {
       const { id } = req.params;
-      const { masjid, khutbah_time, iqama_time, speaker, topic, active, sort_order } = req.body;
+      const { masjid, khutbah_time, iqama_time, speaker, topic, active, sort_order, metro, timezone, khutbahs } = req.body;
       const setClauses: string[] = ["updated_at = NOW()"];
       const params: any[] = [];
       let paramIdx = 1;
@@ -5440,6 +5551,23 @@ Return ONLY the JSON object, no markdown, no explanation.`,
       if (topic !== undefined) { setClauses.push(`topic = $${paramIdx++}`); params.push(topic); }
       if (active !== undefined) { setClauses.push(`active = $${paramIdx++}`); params.push(active); }
       if (sort_order !== undefined) { setClauses.push(`sort_order = $${paramIdx++}`); params.push(sort_order); }
+      if (metro !== undefined) { setClauses.push(`metro = $${paramIdx++}`); params.push(metro); }
+      if (timezone !== undefined) { setClauses.push(`timezone = $${paramIdx++}`); params.push(timezone); }
+      if (khutbahs !== undefined) {
+        setClauses.push(`khutbahs = $${paramIdx++}`);
+        params.push(JSON.stringify(khutbahs));
+        // Keep legacy fields in sync: derive from first slot, or join all
+        if (Array.isArray(khutbahs) && khutbahs.length > 0) {
+          const legacyKt = khutbahs.map((s: any) => s.khutbah_time).join(", ");
+          const legacyIt = khutbahs.map((s: any) => s.iqama_time).join(", ");
+          const firstSpeaker = khutbahs.find((s: any) => s.speaker)?.speaker || null;
+          const firstTopic = khutbahs.find((s: any) => s.topic)?.topic || null;
+          setClauses.push(`khutbah_time = $${paramIdx++}`); params.push(legacyKt);
+          setClauses.push(`iqama_time = $${paramIdx++}`); params.push(legacyIt);
+          setClauses.push(`speaker = $${paramIdx++}`); params.push(firstSpeaker);
+          setClauses.push(`topic = $${paramIdx++}`); params.push(firstTopic);
+        }
+      }
       params.push(id);
       const result = await pool.query(
         `UPDATE jumuah_schedules SET ${setClauses.join(", ")} WHERE id = $${paramIdx} RETURNING *`,
@@ -5729,12 +5857,40 @@ Return ONLY the JSON object, no markdown, no explanation.`,
           required: ["days"],
         },
       },
+      {
+        name: "save_jumuah_times",
+        description: "Saves extracted Jumuah (Friday prayer) times and optional khateeb/topic to the database. Use this when you find Jumuah schedule information on the masjid's website. Times must be in 12-hour format like '1:00 PM'. Extract speaker/khateeb name and topic if visible on the page.",
+        input_schema: {
+          type: "object" as const,
+          properties: {
+            masjid: { type: "string", description: "The masjid name" },
+            metro: { type: "string", description: "Metro area identifier, e.g. 'Raleigh-Durham NC', 'Bay Area CA', 'Indianapolis IN', 'Las Vegas NV'" },
+            timezone: { type: "string", description: "IANA timezone, e.g. 'America/New_York', 'America/Los_Angeles'" },
+            slots: {
+              type: "array",
+              description: "One or more Jumuah time slots (some masjids have multiple Jumuah prayers)",
+              items: {
+                type: "object",
+                properties: {
+                  khutbah_time: { type: "string", description: "Khutbah start time, e.g. '1:00 PM'" },
+                  iqama_time: { type: "string", description: "Iqama (congregation prayer start) time, e.g. '1:30 PM'" },
+                  speaker: { type: "string", description: "Khateeb/speaker name if shown" },
+                  topic: { type: "string", description: "Khutbah topic if shown" },
+                },
+                required: ["khutbah_time", "iqama_time"],
+              },
+            },
+          },
+          required: ["masjid", "slots"],
+        },
+      },
     ];
 
     const systemPrompt = `You are a prayer times extraction agent for a Muslim community app. Your job is to:
 1. Visit a masjid's website and find their iqama (congregation prayer) times — NOT adhan times.
 2. Extract the times for as many dates as possible (ideally the current and next month).
 3. Save them using the save_iqama_times tool.
+4. If you find Jumuah (Friday prayer) schedule info (khutbah time, iqama time, speaker/khateeb, topic), also save it using save_jumuah_times.
 
 Important notes:
 - Iqama times are when the congregation prayer begins, typically 10-20 minutes after adhan.
@@ -5745,7 +5901,8 @@ Important notes:
 - Today is ${new Date().toISOString().split("T")[0]}. Extract data for current month onward.
 - The masjid's timezone is ${timezone}.
 - Always fetch the main URL first, then follow links to prayer schedule pages.
-- Limit yourself to fetching at most 4 pages. Stop once you have the times.`;
+- Limit yourself to fetching at most 4 pages. Stop once you have the times.
+- For Jumuah: extract khateeb/speaker and topic if shown on the page. Some masjids have multiple Jumuah times — extract all slots.`;
 
     const messages: Anthropic.MessageParam[] = [
       {
@@ -5833,6 +5990,43 @@ Important notes:
             totalSaved += saved;
             jobLog(job, "success", `  ✓ Saved ${saved} days (${totalSaved} total)`);
             toolResults.push({ type: "tool_result", tool_use_id: toolUse.id, content: `Successfully saved ${saved} days of iqama times for ${masjidName}.` });
+          } else if (toolUse.name === "save_jumuah_times") {
+            const { masjid: jMasjid, metro: jMetro, timezone: jTimezone, slots } = toolUse.input as {
+              masjid: string;
+              metro?: string;
+              timezone?: string;
+              slots: Array<{ khutbah_time: string; iqama_time: string; speaker?: string; topic?: string }>;
+            };
+            if (!jMasjid || !slots || slots.length === 0) {
+              toolResults.push({ type: "tool_result", tool_use_id: toolUse.id, content: "Error: masjid and slots are required.", is_error: true });
+              continue;
+            }
+            jobLog(job, "info", `Saving Jumuah schedule for ${jMasjid} (${slots.length} slot(s))...`);
+            try {
+              const legacyKhutbah = slots.map(s => s.khutbah_time).join(", ");
+              const legacyIqama = slots.map(s => s.iqama_time).join(", ");
+              const firstSpeaker = slots.find(s => s.speaker)?.speaker || null;
+              const firstTopic = slots.find(s => s.topic)?.topic || null;
+              await db.query(
+                `INSERT INTO jumuah_schedules (masjid, khutbah_time, iqama_time, speaker, topic, metro, timezone, khutbahs, sort_order)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0)
+                 ON CONFLICT (masjid) DO UPDATE SET
+                   khutbah_time = EXCLUDED.khutbah_time,
+                   iqama_time = EXCLUDED.iqama_time,
+                   speaker = EXCLUDED.speaker,
+                   topic = EXCLUDED.topic,
+                   metro = COALESCE(EXCLUDED.metro, jumuah_schedules.metro),
+                   timezone = COALESCE(EXCLUDED.timezone, jumuah_schedules.timezone),
+                   khutbahs = EXCLUDED.khutbahs,
+                   updated_at = NOW()`,
+                [jMasjid, legacyKhutbah, legacyIqama, firstSpeaker, firstTopic, jMetro || null, jTimezone || timezone, JSON.stringify(slots)]
+              );
+              jobLog(job, "success", `  ✓ Saved Jumuah schedule for ${jMasjid}`);
+              toolResults.push({ type: "tool_result", tool_use_id: toolUse.id, content: `Successfully saved Jumuah schedule for ${jMasjid}.` });
+            } catch (err: any) {
+              jobLog(job, "warn", `  Failed to save Jumuah: ${err.message}`);
+              toolResults.push({ type: "tool_result", tool_use_id: toolUse.id, content: `Error: ${err.message}`, is_error: true });
+            }
           }
         }
 

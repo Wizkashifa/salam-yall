@@ -444,6 +444,76 @@ function CountdownRing({ colors, isDark, progress, qiblaBearing, hasRealLocation
   );
 }
 
+function JumuahSlotRow({ slot, isDark, colors }: { slot: { khutbah_time: string; iqama_time: string; speaker?: string; topic?: string }; isDark: boolean; colors: any }) {
+  return (
+    <View style={{ paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)" }}>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+        <View style={{ flexDirection: "row", gap: 16 }}>
+          <View style={{ alignItems: "center" }}>
+            <Text style={{ fontSize: 9, fontFamily: "Inter_600SemiBold", color: colors.textTertiary, textTransform: "uppercase" as const, letterSpacing: 0.4, marginBottom: 2 }}>KHUTBAH</Text>
+            <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.text }}>{slot.khutbah_time}</Text>
+          </View>
+          <View style={{ alignItems: "center" }}>
+            <Text style={{ fontSize: 9, fontFamily: "Inter_600SemiBold", color: colors.textTertiary, textTransform: "uppercase" as const, letterSpacing: 0.4, marginBottom: 2 }}>IQAMA</Text>
+            <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.gold }}>{slot.iqama_time}</Text>
+          </View>
+        </View>
+        {slot.speaker ? (
+          <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: colors.textSecondary, flex: 1, textAlign: "right" as const, marginLeft: 12 }} numberOfLines={1}>{slot.speaker}</Text>
+        ) : null}
+      </View>
+      {slot.topic ? (
+        <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.textSecondary, marginTop: 4, fontStyle: "italic" as const }} numberOfLines={2}>{slot.topic}</Text>
+      ) : null}
+    </View>
+  );
+}
+
+function JumuahCard({ jumuah, colors, glassCardBg, glassCardBorder, isDark, onOpenModal }: {
+  jumuah: { masjid: string; khutbah_time: string; iqama_time: string; speaker: string | null; topic: string | null; khutbahs: Array<{ khutbah_time: string; iqama_time: string; speaker?: string; topic?: string }> | null };
+  colors: any;
+  glassCardBg: string;
+  glassCardBorder: string;
+  isDark: boolean;
+  onOpenModal: () => void;
+}) {
+  const slots = jumuah.khutbahs && jumuah.khutbahs.length > 0
+    ? jumuah.khutbahs
+    : [{ khutbah_time: jumuah.khutbah_time, iqama_time: jumuah.iqama_time, speaker: jumuah.speaker || undefined, topic: jumuah.topic || undefined }];
+
+  return (
+    <View style={[{ borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" as const, marginBottom: 12 }, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+          <MaterialCommunityIcons name="mosque" size={16} color={colors.gold} />
+          <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.gold, textTransform: "uppercase" as const, letterSpacing: 0.8 }}>JUMUAH · FRIDAY</Text>
+        </View>
+        <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: colors.textSecondary }} numberOfLines={1}>{jumuah.masjid.replace(/\s*\(.*\)/, "")}</Text>
+      </View>
+      <View style={{ paddingHorizontal: 16, paddingBottom: 4 }}>
+        {slots.map((slot, idx) => (
+          <JumuahSlotRow key={idx} slot={slot} isDark={isDark} colors={colors} />
+        ))}
+      </View>
+      <Pressable
+        onPress={onOpenModal}
+        style={({ pressed }) => [{
+          flexDirection: "row" as const,
+          alignItems: "center" as const,
+          justifyContent: "center" as const,
+          paddingVertical: 12,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
+          opacity: pressed ? 0.7 : 1,
+        }]}
+      >
+        <Text style={{ fontSize: 13, fontFamily: "Inter_500Medium", color: colors.emerald, marginRight: 4 }}>All Jumuah schedules</Text>
+        <Ionicons name="chevron-forward" size={14} color={colors.emerald} />
+      </Pressable>
+    </View>
+  );
+}
+
 export default function PrayerScreen() {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
@@ -961,7 +1031,14 @@ export default function PrayerScreen() {
     Share.share({ message: msg });
   }, [dailyVerse]);
 
-  const fridayMode = useMemo(() => isFriday(), []);
+  const fridayMode = useMemo(() => isFriday(), [clockTick]);
+
+  interface JumuahSlot {
+    khutbah_time: string;
+    iqama_time: string;
+    speaker?: string;
+    topic?: string;
+  }
 
   interface JumuahSchedule {
     id: number;
@@ -970,13 +1047,83 @@ export default function PrayerScreen() {
     iqama_time: string;
     speaker: string | null;
     topic: string | null;
+    metro: string | null;
+    timezone: string | null;
+    khutbahs: JumuahSlot[] | null;
   }
+
+  const isFridayOrThursday = useMemo(() => {
+    const d = new Date().getDay();
+    return d === 4 || d === 5; // Thu or Fri — fetch ahead for notification scheduling
+  }, [clockTick]);
 
   const { data: jumuahSchedules = [] } = useQuery<JumuahSchedule[]>({
     queryKey: ["/api/jumuah-schedules"],
-    enabled: fridayMode,
-    staleTime: 60 * 60 * 1000,
+    enabled: isFridayOrThursday,
+    staleTime: 6 * 60 * 60 * 1000,
   });
+
+  const [showJumuahModal, setShowJumuahModal] = useState(false);
+
+  const isJumuahWindow = useMemo(() => {
+    if (!fridayMode || prayers.length === 0) return false;
+    const now = new Date();
+    const sunrisePrayer = prayers.find(p => p.name === "sunrise");
+    const asrPrayer = prayers.find(p => p.name === "asr");
+    if (!sunrisePrayer || !asrPrayer) return false;
+    return now >= sunrisePrayer.time && now < asrPrayer.time;
+  }, [fridayMode, prayers, clockTick]);
+
+  const allAnnotatedJumuah = useMemo((): Array<JumuahSchedule & { distanceMiles?: number }> => {
+    if (!jumuahSchedules || jumuahSchedules.length === 0) return [];
+    return jumuahSchedules
+      .map(j => {
+        const matchedMasjid = masjidList.find(m => {
+          const n = m.name.toLowerCase();
+          const jn = j.masjid.toLowerCase();
+          return n === jn || n.includes(jn.split(/[\s,(]/)[0]) || jn.includes(n.split(/[\s,(]/)[0]);
+        });
+        const distanceMiles = matchedMasjid
+          ? kmToMiles(getDistanceKm(userCoords.lat, userCoords.lon, matchedMasjid.latitude, matchedMasjid.longitude))
+          : undefined;
+        return { ...j, distanceMiles };
+      })
+      .sort((a, b) => {
+        if (a.distanceMiles === undefined && b.distanceMiles === undefined) return 0;
+        if (a.distanceMiles === undefined) return 1;
+        if (b.distanceMiles === undefined) return -1;
+        return a.distanceMiles - b.distanceMiles;
+      });
+  }, [jumuahSchedules, masjidList, userCoords]);
+
+  const userJumuahMetro = useMemo((): string | null => {
+    if (preferredMasjid && allAnnotatedJumuah.length > 0) {
+      const pref = preferredMasjid.toLowerCase();
+      const match = allAnnotatedJumuah.find(j => j.masjid.toLowerCase() === pref)
+        || allAnnotatedJumuah.find(j => pref.includes(j.masjid.toLowerCase()) || j.masjid.toLowerCase().includes(pref.split(/[\s,(]/)[0]));
+      if (match?.metro) return match.metro;
+    }
+    const nearest = allAnnotatedJumuah.find(j => j.distanceMiles !== undefined);
+    return nearest?.metro || (allAnnotatedJumuah[0]?.metro ?? null);
+  }, [allAnnotatedJumuah, preferredMasjid]);
+
+  const metroJumuahSchedules = useMemo((): Array<JumuahSchedule & { distanceMiles?: number }> => {
+    if (allAnnotatedJumuah.length === 0) return [];
+    const metro = userJumuahMetro;
+    const filtered = metro ? allAnnotatedJumuah.filter(j => j.metro === metro) : allAnnotatedJumuah;
+    return filtered;
+  }, [allAnnotatedJumuah, userJumuahMetro]);
+
+  const preferredJumuah = useMemo((): JumuahSchedule | null => {
+    if (!jumuahSchedules || jumuahSchedules.length === 0) return null;
+    if (preferredMasjid) {
+      const pref = preferredMasjid.toLowerCase();
+      const match = metroJumuahSchedules.find(j => j.masjid.toLowerCase() === pref)
+        || metroJumuahSchedules.find(j => pref.includes(j.masjid.toLowerCase()) || j.masjid.toLowerCase().includes(pref.split(/[\s,(]/)[0]));
+      if (match) return match;
+    }
+    return metroJumuahSchedules[0] || allAnnotatedJumuah[0] || null;
+  }, [jumuahSchedules, preferredMasjid, metroJumuahSchedules, allAnnotatedJumuah]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -1002,11 +1149,24 @@ export default function PrayerScreen() {
     try {
       await Notifications.cancelAllScheduledNotificationsAsync();
       const now = new Date();
-      const todayPrayers = prayerList.filter(p => p.name !== "sunrise" && p.time > now);
+      const isTodayFriday = now.getDay() === 5;
+      const todayPrayers = prayerList.filter(p => {
+        if (p.name === "sunrise") return false;
+        if (p.time <= now) return false;
+        // Always suppress Dhuhr adhan on Fridays — Jumuah replaces it
+        if (isTodayFriday && p.name === "dhuhr") return false;
+        return true;
+      });
 
       const tomorrow = new Date(now);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      const tomorrowPrayers = getPrayerTimes(lat, lon, tomorrow, calcMethod, asrCalc === "hanafi").filter(p => p.name !== "sunrise");
+      const isTomorrowFriday = tomorrow.getDay() === 5;
+      const tomorrowPrayers = getPrayerTimes(lat, lon, tomorrow, calcMethod, asrCalc === "hanafi").filter(p => {
+        if (p.name === "sunrise") return false;
+        // Always suppress Dhuhr adhan on Fridays — Jumuah replaces it
+        if (isTomorrowFriday && p.name === "dhuhr") return false;
+        return true;
+      });
 
       const allPrayers = [...todayPrayers, ...tomorrowPrayers];
 
@@ -1024,11 +1184,47 @@ export default function PrayerScreen() {
             },
           });
         }
+        // Schedule Jumuah notification: today if Friday, or tomorrow if tomorrow is Friday
+        const jumuahDate = isTodayFriday ? now : (isTomorrowFriday ? tomorrow : null);
+        if (jumuahDate && preferredJumuah) {
+          const slots = preferredJumuah.khutbahs && preferredJumuah.khutbahs.length > 0
+            ? preferredJumuah.khutbahs
+            : [{ khutbah_time: preferredJumuah.khutbah_time, iqama_time: preferredJumuah.iqama_time }];
+          const firstSlot = slots[0];
+          if (firstSlot?.khutbah_time) {
+            const trimmed = firstSlot.khutbah_time.trim();
+            const isPM = /pm/i.test(trimmed);
+            const isAM = /am/i.test(trimmed);
+            const timePart = trimmed.replace(/\s*(am|pm)\s*/i, "");
+            const parts = timePart.split(":").map(Number);
+            if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+              let h = parts[0];
+              const m = parts[1];
+              if (isPM && h < 12) h += 12;
+              if (isAM && h === 12) h = 0;
+              const khutbahDate = new Date(jumuahDate);
+              khutbahDate.setHours(h, m, 0, 0);
+              if (khutbahDate > now) {
+                await Notifications.scheduleNotificationAsync({
+                  content: {
+                    title: "Jumuah Khutbah",
+                    body: `Jumuah khutbah at ${trimmed} at ${preferredJumuah.masjid}`,
+                    sound: true,
+                  },
+                  trigger: {
+                    type: Notifications.SchedulableTriggerInputTypes.DATE,
+                    date: khutbahDate,
+                  },
+                });
+              }
+            }
+          }
+        }
       }
 
       if (iqamaAlertsEnabled && activeIqama?.iqama && preferredMasjid) {
         const iqamaPrayers: Array<{ name: string; label: string }> = [
-          { name: "dhuhr", label: "Dhuhr" },
+          ...(isTodayFriday ? [] : [{ name: "dhuhr", label: "Dhuhr" }]),
           { name: "asr", label: "Asr" },
           { name: "isha", label: "Isha" },
         ];
@@ -1067,7 +1263,7 @@ export default function PrayerScreen() {
     } catch (err) {
       console.error("Error scheduling notifications:", err);
     }
-  }, [calcMethod, asrCalc, notificationsEnabled, iqamaAlertsEnabled, activeIqama, preferredMasjid]);
+  }, [calcMethod, asrCalc, notificationsEnabled, iqamaAlertsEnabled, activeIqama, preferredMasjid, preferredJumuah]);
 
   useEffect(() => {
     if ((notificationsEnabled || iqamaAlertsEnabled) && prayers.length > 0) {
@@ -1435,7 +1631,28 @@ export default function PrayerScreen() {
           </View>
         </View>
 
-        {preferredMasjid && activeIqama ? (
+        {isJumuahWindow && preferredJumuah ? (
+          <JumuahCard
+            jumuah={preferredJumuah}
+            colors={colors}
+            glassCardBg={glassCardBg}
+            glassCardBorder={glassCardBorder}
+            isDark={isDark}
+            onOpenModal={() => { setShowJumuahModal(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+          />
+        ) : isJumuahWindow && !preferredJumuah ? (
+          <View style={[styles.glassCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <MaterialCommunityIcons name="mosque" size={18} color={colors.gold} />
+              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 15, color: colors.text }}>Jumu'ah Mubarak</Text>
+            </View>
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: colors.textSecondary, marginTop: 6 }}>
+              Jumuah schedule not available. Check with your local masjid.
+            </Text>
+          </View>
+        ) : null}
+
+        {!isJumuahWindow && preferredMasjid && activeIqama ? (
           <View style={[styles.glassCard, styles.prayerCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
             <View style={styles.iqamaCardHeader}>
               <View style={styles.iqamaCardHeaderLeft}>
@@ -1672,28 +1889,30 @@ export default function PrayerScreen() {
           </View>
         ) : null}
 
-        <Pressable
-            onPress={openVerseModal}
-            style={({ pressed }) => [styles.glassCard, styles.prayerCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder, opacity: pressed ? 0.85 : 1 }]}
-          >
-            <View style={styles.iqamaCardHeader}>
-              <View style={styles.iqamaCardHeaderLeft}>
-                <Ionicons name="book" size={16} color={colors.gold} />
-                <Text style={[styles.iqamaCardLabel, { color: colors.gold }]}>DAILY VERSE</Text>
+        {!isJumuahWindow ? (
+          <Pressable
+              onPress={openVerseModal}
+              style={({ pressed }) => [styles.glassCard, styles.prayerCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder, opacity: pressed ? 0.85 : 1 }]}
+            >
+              <View style={styles.iqamaCardHeader}>
+                <View style={styles.iqamaCardHeaderLeft}>
+                  <Ionicons name="book" size={16} color={colors.gold} />
+                  <Text style={[styles.iqamaCardLabel, { color: colors.gold }]}>DAILY VERSE</Text>
+                </View>
               </View>
-            </View>
-            <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
-              <Text style={{ fontFamily: "Inter_400Regular", fontSize: 22, color: colors.text, textAlign: "right" as const, lineHeight: 38, marginBottom: 12, writingDirection: "rtl" as const }}>
-                {dailyVerse.arabic}
-              </Text>
-              <Text style={[styles.dailyContentText, { color: colors.text }]}>
-                "{dailyVerse.translation}"
-              </Text>
-              <Text style={[styles.dailyContentSource, { color: colors.textTertiary }]}>
-                — {dailyVerse.source} · Dr. Mustafa Khattab
-              </Text>
-            </View>
-        </Pressable>
+              <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
+                <Text style={{ fontFamily: "Inter_400Regular", fontSize: 22, color: colors.text, textAlign: "right" as const, lineHeight: 38, marginBottom: 12, writingDirection: "rtl" as const }}>
+                  {dailyVerse.arabic}
+                </Text>
+                <Text style={[styles.dailyContentText, { color: colors.text }]}>
+                  "{dailyVerse.translation}"
+                </Text>
+                <Text style={[styles.dailyContentSource, { color: colors.textTertiary }]}>
+                  — {dailyVerse.source} · Dr. Mustafa Khattab
+                </Text>
+              </View>
+          </Pressable>
+        ) : null}
 
         <View style={[styles.glassCard, styles.prayerCard, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
           <View style={styles.iqamaCardHeader}>
@@ -1983,6 +2202,71 @@ export default function PrayerScreen() {
                   </View>
                 ) : null}
               </View>
+            </ScrollView>
+          </GlassModalContainer>
+        </View>
+      </Modal>
+
+      <Modal visible={showJumuahModal} transparent animationType="slide" onRequestClose={() => setShowJumuahModal(false)}>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}>
+          <GlassModalContainer style={{ borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "85%", paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 16, flex: 0 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: 20, paddingBottom: 12 }}>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 7, marginBottom: 2 }}>
+                  <MaterialCommunityIcons name="mosque" size={18} color={colors.gold} />
+                  <Text style={{ fontFamily: "Inter_700Bold", fontSize: 18, color: colors.text }}>Jumuah Schedules</Text>
+                </View>
+                {preferredJumuah?.metro ? (
+                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textTertiary }}>{preferredJumuah.metro}</Text>
+                ) : null}
+              </View>
+              <Pressable onPress={() => setShowJumuahModal(false)} hitSlop={8}>
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              </Pressable>
+            </View>
+            <ScrollView style={{ paddingHorizontal: 20 }} showsVerticalScrollIndicator={false}>
+              {metroJumuahSchedules.length === 0 ? (
+                <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: colors.textTertiary, textAlign: "center" as const, marginTop: 20 }}>No Jumuah schedules available for your area.</Text>
+              ) : (
+                metroJumuahSchedules.map((j, _idx) => {
+                  const slots = j.khutbahs && j.khutbahs.length > 0
+                    ? j.khutbahs
+                    : [{ khutbah_time: j.khutbah_time, iqama_time: j.iqama_time, speaker: j.speaker || undefined, topic: j.topic || undefined }];
+                  return (
+                    <View key={j.id} style={{ marginBottom: 16, backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)", borderRadius: 14, padding: 14, borderWidth: StyleSheet.hairlineWidth, borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)" }}>
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                        <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 15, color: colors.text, flex: 1 }} numberOfLines={1}>{j.masjid}</Text>
+                        {j.distanceMiles !== undefined ? (
+                          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textTertiary, marginLeft: 8 }}>{j.distanceMiles < 10 ? j.distanceMiles.toFixed(1) : Math.round(j.distanceMiles)} mi</Text>
+                        ) : null}
+                      </View>
+                      {slots.map((slot, si) => (
+                        <View key={si} style={{ paddingTop: si > 0 ? 8 : 0, borderTopWidth: si > 0 ? StyleSheet.hairlineWidth : 0, borderTopColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)" }}>
+                          <View style={{ flexDirection: "row", gap: 14, marginBottom: slot.speaker || slot.topic ? 4 : 0 }}>
+                            <View>
+                              <Text style={{ fontSize: 9, fontFamily: "Inter_600SemiBold", color: colors.textTertiary, textTransform: "uppercase" as const, letterSpacing: 0.4, marginBottom: 1 }}>Khutbah</Text>
+                              <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.text }}>{slot.khutbah_time}</Text>
+                            </View>
+                            <View>
+                              <Text style={{ fontSize: 9, fontFamily: "Inter_600SemiBold", color: colors.textTertiary, textTransform: "uppercase" as const, letterSpacing: 0.4, marginBottom: 1 }}>Iqama</Text>
+                              <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.gold }}>{slot.iqama_time}</Text>
+                            </View>
+                            {slot.speaker ? (
+                              <View style={{ flex: 1, justifyContent: "flex-end" as const }}>
+                                <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: colors.textSecondary, textAlign: "right" as const }} numberOfLines={1}>{slot.speaker}</Text>
+                              </View>
+                            ) : null}
+                          </View>
+                          {slot.topic ? (
+                            <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.textSecondary, fontStyle: "italic" as const }} numberOfLines={2}>{slot.topic}</Text>
+                          ) : null}
+                        </View>
+                      ))}
+                    </View>
+                  );
+                })
+              )}
+              <View style={{ height: 20 }} />
             </ScrollView>
           </GlassModalContainer>
         </View>
