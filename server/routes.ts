@@ -5414,14 +5414,14 @@ Return ONLY the JSON object, no markdown, no explanation.`,
   app.post("/api/admin/masjids", async (req, res) => {
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {
-      const { name, latitude, longitude, address, website, match_terms, has_iqama, sort_order } = req.body;
+      const { name, latitude, longitude, address, website, match_terms, has_iqama, iqama_source } = req.body;
       if (!name || !latitude || !longitude || !address) {
         return res.status(400).json({ error: "name, latitude, longitude, and address are required" });
       }
       const { rows } = await pool.query(
-        `INSERT INTO masjids (name, latitude, longitude, address, website, match_terms, has_iqama, sort_order)
+        `INSERT INTO masjids (name, latitude, longitude, address, website, match_terms, has_iqama, iqama_source)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-        [name, latitude, longitude, address, website || null, match_terms || [], has_iqama || false, sort_order || 0]
+        [name, latitude, longitude, address, website || null, match_terms || [], has_iqama ?? true, iqama_source || null]
       );
       res.status(201).json(rows[0]);
     } catch (error: any) {
@@ -5433,13 +5433,14 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {
       const { id } = req.params;
-      const { name, latitude, longitude, address, website, match_terms, has_iqama, active, sort_order } = req.body;
+      const { name, latitude, longitude, address, website, match_terms, has_iqama, iqama_source, active } = req.body;
       const { rows } = await pool.query(
         `UPDATE masjids SET name = COALESCE($1, name), latitude = COALESCE($2, latitude), longitude = COALESCE($3, longitude),
          address = COALESCE($4, address), website = CASE WHEN $5::boolean THEN $6 ELSE website END, match_terms = COALESCE($7, match_terms),
-         has_iqama = COALESCE($8, has_iqama), active = COALESCE($9, active), sort_order = COALESCE($10, sort_order),
-         updated_at = NOW() WHERE id = $11 RETURNING *`,
-        [name, latitude, longitude, address, website !== undefined, website !== undefined ? (website || null) : null, match_terms, has_iqama, active, sort_order, id]
+         has_iqama = COALESCE($8, has_iqama), iqama_source = CASE WHEN $9::boolean THEN $10 ELSE iqama_source END,
+         active = COALESCE($11, active),
+         updated_at = NOW() WHERE id = $12 RETURNING *`,
+        [name, latitude, longitude, address, website !== undefined, website !== undefined ? (website || null) : null, match_terms, has_iqama, iqama_source !== undefined, iqama_source !== undefined ? (iqama_source || null) : null, active, id]
       );
       if (rows.length === 0) return res.status(404).json({ error: "Masjid not found" });
       res.json(rows[0]);

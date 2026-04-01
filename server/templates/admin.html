@@ -976,10 +976,27 @@
         </div>
         <div><label>Website (optional)</label><input type="text" id="masjidWebsite" placeholder="https://"></div>
         <div><label>Match Terms (comma separated, optional)</label><input type="text" id="masjidMatchTerms" placeholder="IAR, Islamic Association"></div>
-        <div class="row" style="align-items:center;margin:12px 0;">
-          <label style="margin:0;flex:none;">Has Iqama Times</label>
-          <input type="checkbox" id="masjidHasIqama" style="width:auto;margin-left:8px;">
-          <label style="margin:0 0 0 16px;flex:none;">Active</label>
+        <div style="background:rgba(212,168,67,0.07);border:1px solid rgba(212,168,67,0.25);border-radius:10px;padding:12px;margin:12px 0;">
+          <div style="font-size:11px;font-weight:700;color:#D4A843;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;">Iqama Times Source</div>
+          <div class="row" style="gap:8px;">
+            <div style="flex:1;">
+              <label style="font-size:11px;">Source Type</label>
+              <select id="masjidIqamaType" style="width:100%;background:#1a1a1a;color:#e5e7eb;border:1px solid #333;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;">
+                <option value="url">Website (URL)</option>
+                <option value="pdf">PDF</option>
+                <option value="embedded">Embedded Widget</option>
+                <option value="other">Other / Manual</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:8px;">
+            <label style="font-size:11px;">URL or Notes</label>
+            <input type="text" id="masjidIqamaUrl" placeholder="https://masjid.org/prayer-times  or describe how to get the data">
+          </div>
+          <div style="font-size:11px;color:#6B7280;margin-top:6px;">All masjids must have a known iqama data source.</div>
+        </div>
+        <div class="row" style="align-items:center;margin:8px 0 0;">
+          <label style="margin:0;flex:none;">Active</label>
           <input type="checkbox" id="masjidActive" checked style="width:auto;margin-left:8px;">
         </div>
         <div style="display:flex;gap:8px;margin-top:16px;">
@@ -4172,12 +4189,19 @@
           var iqamaBadge = m.has_iqama
             ? '<span style="background:var(--emerald);color:#fff;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:600;margin-left:6px;">IQAMA</span>'
             : '';
+          var iqamaSrc = m.iqama_source || '';
+          var srcLabel = '', srcColor = '#6B7280';
+          if (iqamaSrc.startsWith('url|')) { srcLabel = '🌐 ' + iqamaSrc.slice(4); srcColor = '#60A5FA'; }
+          else if (iqamaSrc.startsWith('pdf|')) { srcLabel = '📄 ' + iqamaSrc.slice(4); srcColor = '#F97316'; }
+          else if (iqamaSrc.startsWith('embedded|')) { srcLabel = '🔧 ' + iqamaSrc.slice(9); srcColor = '#A78BFA'; }
+          else if (iqamaSrc) { srcLabel = iqamaSrc; }
           return '<div class="message-card" style="cursor:pointer;" onclick="editMasjid(' + m.id + ')">' +
             '<div style="display:flex;justify-content:space-between;align-items:center;">' +
-              '<div>' +
+              '<div style="min-width:0;">' +
                 '<div class="text-primary" style="font-weight:700;font-size:14px;">' + escHtml(m.name) + iqamaBadge + '</div>' +
                 '<div class="text-secondary" style="font-size:12px;margin-top:2px;">' + escHtml(m.address) + '</div>' +
                 '<div class="text-tertiary" style="font-size:11px;margin-top:2px;">' + m.latitude.toFixed(4) + ', ' + m.longitude.toFixed(4) + '</div>' +
+                (srcLabel ? '<div style="font-size:11px;margin-top:3px;color:' + srcColor + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:360px;">' + escHtml(srcLabel) + '</div>' : '<div style="font-size:11px;margin-top:3px;color:#EF4444;">⚠ No iqama source set</div>') +
               '</div>' +
               '<div style="display:flex;align-items:center;gap:8px;">' +
                 statusBadge +
@@ -4202,7 +4226,8 @@
       if (coordsEl) { coordsEl.textContent = ''; coordsEl.style.display = 'none'; }
       document.getElementById('masjidWebsite').value = '';
       document.getElementById('masjidMatchTerms').value = '';
-      document.getElementById('masjidHasIqama').checked = false;
+      document.getElementById('masjidIqamaType').value = 'url';
+      document.getElementById('masjidIqamaUrl').value = '';
       document.getElementById('masjidActive').checked = true;
       document.getElementById('editMasjidModal').style.display = 'block';
     }
@@ -4227,7 +4252,13 @@
         } else if (coordsEl) { coordsEl.style.display = 'none'; }
         document.getElementById('masjidWebsite').value = m.website || '';
         document.getElementById('masjidMatchTerms').value = (m.match_terms || []).join(', ');
-        document.getElementById('masjidHasIqama').checked = !!m.has_iqama;
+        var iqamaSrc = m.iqama_source || '';
+        var iqamaType = 'other', iqamaUrl = iqamaSrc;
+        if (iqamaSrc.startsWith('url|')) { iqamaType = 'url'; iqamaUrl = iqamaSrc.slice(4); }
+        else if (iqamaSrc.startsWith('pdf|')) { iqamaType = 'pdf'; iqamaUrl = iqamaSrc.slice(4); }
+        else if (iqamaSrc.startsWith('embedded|')) { iqamaType = 'embedded'; iqamaUrl = iqamaSrc.slice(9); }
+        document.getElementById('masjidIqamaType').value = iqamaType;
+        document.getElementById('masjidIqamaUrl').value = iqamaUrl;
         document.getElementById('masjidActive').checked = m.active !== false;
         document.getElementById('editMasjidModal').style.display = 'block';
       } catch(e) {
@@ -4247,14 +4278,20 @@
       var lon = document.getElementById('masjidLon').value.trim();
       var website = document.getElementById('masjidWebsite').value.trim();
       var matchTermsStr = document.getElementById('masjidMatchTerms').value.trim();
-      var hasIqama = document.getElementById('masjidHasIqama').checked;
       var active = document.getElementById('masjidActive').checked;
+      var iqamaType = document.getElementById('masjidIqamaType').value;
+      var iqamaUrl = document.getElementById('masjidIqamaUrl').value.trim();
 
       if (!name || !address || !lat || !lon) {
         showToast('Name, address, latitude, and longitude are required', true);
         return;
       }
+      if (!iqamaUrl) {
+        showToast('Iqama source URL or notes are required', true);
+        return;
+      }
 
+      var iqamaSource = iqamaType + '|' + iqamaUrl;
       var matchTerms = matchTermsStr ? matchTermsStr.split(',').map(function(t) { return t.trim(); }).filter(Boolean) : [];
       var body = {
         name: name,
@@ -4263,7 +4300,8 @@
         longitude: parseFloat(lon),
         website: website || null,
         match_terms: matchTerms,
-        has_iqama: hasIqama,
+        has_iqama: true,
+        iqama_source: iqamaSource,
         active: active
       };
 
