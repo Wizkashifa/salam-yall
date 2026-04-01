@@ -425,6 +425,17 @@
     }
     .business-address { font-size: 13px; color: var(--text-tertiary); margin-bottom: 4px; }
     .business-links { display: flex; gap: 6px; margin-top: auto; flex-wrap: wrap; }
+    /* Business card enrichments */
+    .business-card.featured { border-color: rgba(212,168,67,0.45) !important; box-shadow: 0 0 0 1px rgba(212,168,67,0.12) inset; }
+    .biz-meta-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 7px; }
+    .biz-location-badge { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; padding: 2px 7px; border-radius: 4px; white-space: nowrap; }
+    .biz-location-badge.service-area { background: rgba(37,99,235,0.14); color: #60A5FA; }
+    .biz-location-badge.virtual     { background: rgba(139,92,246,0.14); color: #A78BFA; }
+    .biz-location-badge.popup       { background: rgba(245,158,11,0.12); color: #FCD34D; }
+    .biz-featured-badge             { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; padding: 2px 7px; border-radius: 4px; background: rgba(212,168,67,0.14); color: var(--gold); white-space: nowrap; }
+    .biz-affiliation                { font-size: 11px; color: var(--emerald-light,#4ADE80); margin-bottom: 7px; }
+    .biz-tags                       { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+    .biz-tag                        { font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 10px; background: rgba(255,255,255,0.04); border: 1px solid var(--card-border); color: var(--text-secondary); }
 
     /* LOCATION BANNER */
     .location-banner {
@@ -971,6 +982,11 @@
           <h2>Local <span>Directory</span></h2>
           <p>Muslim-owned and community-recommended businesses</p>
         </div>
+      </div>
+      <div id="directory-location-banner" class="location-banner" style="display:none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <span class="loc-text">Select your metro to see service-area and pop-up businesses near you</span>
+        <button onclick="openMetroSelector()">Set Location</button>
       </div>
       <div class="filter-bar">
         <input type="text" class="search-input" id="directory-search" placeholder="Search businesses..." />
@@ -1645,6 +1661,16 @@
       return card;
     }
 
+    function haversineDistance(lat1, lng1, lat2, lng2) {
+      var R = 3959;
+      var dLat = (lat2 - lat1) * Math.PI / 180;
+      var dLng = (lng2 - lng1) * Math.PI / 180;
+      var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLng/2) * Math.sin(dLng/2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
     async function fetchBusinesses() {
       try {
         const res = await fetch('/api/businesses', { headers: { 'X-Community-Token': window.__st || '' } });
@@ -1656,6 +1682,10 @@
         refreshCustomDropdown(sel);
         dataLoaded.directory = true;
         document.getElementById('directory-loading').style.display = 'none';
+        // Show location banner if there are service-area/popup businesses and no metro selected
+        const hasLocBiz = allBusinesses.some(b => b.location_type === 'service_area' || b.location_type === 'popup');
+        const banner = document.getElementById('directory-location-banner');
+        if (banner) banner.style.display = (hasLocBiz && !userLat) ? 'flex' : 'none';
         renderBusinesses();
       } catch { document.getElementById('directory-loading').innerHTML = 'Failed to load businesses.'; }
     }
@@ -1665,8 +1695,16 @@
       const cat = document.getElementById('directory-category').value;
       return allBusinesses.filter(b => {
         if (cat && b.category !== cat) return false;
+        // Mirror the app's location logic:
+        // service_area and popup businesses only show within 50 miles of selected metro
+        if (b.location_type === 'service_area' || b.location_type === 'popup') {
+          if (!userLat || !userLng || !b.lat || !b.lng) return false;
+          if (haversineDistance(userLat, userLng, b.lat, b.lng) > 50) return false;
+        }
+        // virtual businesses always shown; physical businesses always shown (no distance slider on web)
         if (q) {
-          const text = (b.name + ' ' + (b.category||'') + ' ' + (b.description||'') + ' ' + (b.subcategory||'') + ' ' + (b.address||'')).toLowerCase();
+          const text = [b.name, b.category, b.description, b.subcategory, b.address, b.affiliation,
+            ...(Array.isArray(b.filter_tags) ? b.filter_tags : [])].filter(Boolean).join(' ').toLowerCase();
           return text.includes(q);
         }
         return true;
@@ -1684,25 +1722,51 @@
 
     function createBusinessCard(b) {
       const card = document.createElement('div');
-      card.className = 'business-card';
+      card.className = 'business-card' + (b.featured ? ' featured' : '');
       card.addEventListener('click', function(ev) { if (!ev.target.closest('a')) openBusinessModal(b); });
-      let ratingHtml = b.rating ? `<span class="rating-badge">★ ${b.rating}${b.user_ratings_total ? ` (${b.user_ratings_total})` : ''}</span>` : '';
+
+      // Location-type badge
+      const locBadgeMap = { service_area: 'Service Area', virtual: 'Virtual', popup: 'Pop-up' };
+      const locClass = b.location_type === 'service_area' ? 'service-area' : (b.location_type || '');
+      const locBadge = locBadgeMap[b.location_type]
+        ? `<span class="biz-location-badge ${locClass}">${locBadgeMap[b.location_type]}</span>` : '';
+      const featBadge = b.featured ? `<span class="biz-featured-badge">★ Featured</span>` : '';
+
+      const ratingHtml = b.rating
+        ? `<span class="rating-badge">★ ${b.rating}${b.user_ratings_total ? ` (${b.user_ratings_total})` : ''}</span>` : '';
+
+      // Address/location line
+      let locationLine = '';
+      if (b.location_type === 'virtual') locationLine = '<div class="business-address">Online / Virtual</div>';
+      else if (b.location_type === 'service_area' && b.service_area_description) locationLine = `<div class="business-address">Service area: ${esc(b.service_area_description)}</div>`;
+      else if (b.location_type === 'popup' && b.service_area_description) locationLine = `<div class="business-address">Pop-up · ${esc(b.service_area_description)}</div>`;
+      else if (b.address) locationLine = `<div class="business-address">${esc(b.address)}</div>`;
+
+      // Tags
+      const tags = Array.isArray(b.filter_tags) ? b.filter_tags : [];
+      const tagsHtml = tags.length ? `<div class="biz-tags">${tags.map(t => `<span class="biz-tag">${esc(t)}</span>`).join('')}</div>` : '';
+
       let links = '';
       if (b.website) links += `<a href="${b.website}" target="_blank" rel="noopener" class="link-maps" onclick="event.stopPropagation()">Website</a>`;
       if (b.phone) links += `<a href="tel:${b.phone}" class="link-call" onclick="event.stopPropagation()">${esc(b.phone)}</a>`;
       if (b.booking_url) links += `<a href="${b.booking_url}" target="_blank" rel="noopener" class="link-website" onclick="event.stopPropagation()">Book</a>`;
+      if (b.instagram_url) links += `<a href="${b.instagram_url}" target="_blank" rel="noopener" class="link-website" onclick="event.stopPropagation()">Instagram</a>`;
+
       card.innerHTML = `
         <div class="business-card-body">
           <div class="business-category">${esc(b.category || 'Business')}</div>
           <h3>${esc(b.name)}</h3>
-          <div class="restaurant-meta" style="margin-bottom:6px;font-size:13px;gap:6px">
-            <span style="color:var(--gold);font-weight:600">${esc(b.category)}</span>
-            ${b.subcategory ? `<span style="color:rgba(255,255,255,0.4)">·</span><span style="color:rgba(255,255,255,0.5)">${esc(b.subcategory)}</span>` : ''}
+          <div class="biz-meta-row">
+            <span style="color:var(--gold);font-weight:600;font-size:13px">${esc(b.category)}</span>
+            ${b.subcategory ? `<span style="color:rgba(255,255,255,0.4)">·</span><span style="color:rgba(255,255,255,0.5);font-size:13px">${esc(b.subcategory)}</span>` : ''}
+            ${locBadge}${featBadge}
           </div>
           ${ratingHtml ? `<div class="restaurant-meta" style="margin-bottom:8px">${ratingHtml}</div>` : ''}
+          ${b.affiliation ? `<div class="biz-affiliation">🏥 ${esc(b.affiliation)}</div>` : ''}
           ${b.description ? `<div class="business-desc">${esc(b.description)}</div>` : ''}
-          ${b.address ? `<div class="business-address">${esc(b.address)}</div>` : ''}
-          <div class="business-links">${links}</div>
+          ${locationLine}
+          ${tagsHtml}
+          <div class="business-links" style="margin-top:10px">${links}</div>
         </div>`;
       return card;
     }
@@ -1919,8 +1983,9 @@
     }
 
     function openBusinessModal(b) {
-      let imgHtml = b.photo_reference
-        ? `<img class="modal-image" src="/api/businesses/${b.id}/photo" alt="${esc(b.name)}" onerror="this.outerHTML='<div class=\\'modal-image-placeholder\\'>🏢</div>'" />`
+      const hasPhoto = b.photo_reference || b.photo_url;
+      let imgHtml = hasPhoto
+        ? `<img class="modal-image" src="${b.photo_url || '/api/businesses/' + b.id + '/photo'}" alt="${esc(b.name)}" onerror="this.outerHTML='<div class=\\'modal-image-placeholder\\'>🏢</div>'" />`
         : '<div class="modal-image-placeholder">🏢</div>';
       let ratingHtml = b.rating ? `<div class="modal-meta-item gold"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>★ ${b.rating}${b.user_ratings_total ? ' (' + b.user_ratings_total + ' reviews)' : ''}</div>` : '';
       let hoursHtml = '';
@@ -1932,25 +1997,49 @@
           }
         } catch(e) {}
       }
+
+      // Location section
+      let locationHtml = '';
+      if (b.location_type === 'virtual') {
+        locationHtml = '<div class="modal-section"><div class="modal-section-label">Location</div><div class="modal-section-content">Online / Virtual</div></div>';
+      } else if ((b.location_type === 'service_area' || b.location_type === 'popup') && b.service_area_description) {
+        const label = b.location_type === 'popup' ? 'Pop-up Area' : 'Service Area';
+        locationHtml = `<div class="modal-section"><div class="modal-section-label">${label}</div><div class="modal-section-content">${esc(b.service_area_description)}</div></div>`;
+      } else if (b.address) {
+        locationHtml = `<div class="modal-section"><div class="modal-section-label">Address</div><div class="modal-section-content"><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.address)}" target="_blank" rel="noopener" style="color:var(--emerald-light,#4ADE80);text-decoration:none">${esc(b.address)}</a></div></div>`;
+      }
+
+      // Tags
+      const tags = Array.isArray(b.filter_tags) ? b.filter_tags : [];
+      const tagsHtml = tags.length ? '<div class="modal-section"><div class="modal-section-label">Tags</div><div class="modal-section-content"><div class="biz-tags" style="margin-top:4px">' + tags.map(t => `<span class="biz-tag">${esc(t)}</span>`).join('') + '</div></div></div>' : '';
+
       let actions = '';
       if (b.website) actions += `<a href="${b.website}" target="_blank" rel="noopener" class="modal-btn modal-btn-primary">Website</a>`;
       if (b.phone) actions += `<a href="tel:${b.phone}" class="modal-btn modal-btn-gold">${esc(b.phone)}</a>`;
       if (b.booking_url) actions += `<a href="${b.booking_url}" target="_blank" rel="noopener" class="modal-btn modal-btn-secondary">Book Now</a>`;
       if (b.instagram_url) actions += `<a href="${b.instagram_url}" target="_blank" rel="noopener" class="modal-btn modal-btn-secondary">Instagram</a>`;
+      if (b.google_url) actions += `<a href="${b.google_url}" target="_blank" rel="noopener" class="modal-btn modal-btn-secondary">Google</a>`;
+
+      const locBadgeMap = { service_area: 'Service Area', virtual: 'Virtual', popup: 'Pop-up' };
+      const locClass = b.location_type === 'service_area' ? 'service-area' : (b.location_type || '');
+      const locBadge = locBadgeMap[b.location_type] ? `<span class="biz-location-badge ${locClass}" style="margin-left:6px">${locBadgeMap[b.location_type]}</span>` : '';
+      const featBadge = b.featured ? `<span class="biz-featured-badge" style="margin-left:6px">★ Featured</span>` : '';
+
       openModal(`
         <button class="modal-close" onclick="closeModal()">✕</button>
         ${imgHtml}
         <div class="modal-body">
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--gold);margin-bottom:8px;opacity:0.85">${esc(b.category || 'Business')}</div>
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--gold);margin-bottom:8px;opacity:0.85">${esc(b.category || 'Business')}${locBadge}${featBadge}</div>
           <h2>${esc(b.name)}</h2>
           <div class="modal-meta">
             ${ratingHtml}
           </div>
           <div class="modal-section"><div class="modal-section-label">Category</div><div class="modal-section-content" style="color:var(--gold)">${esc(b.category)}${b.subcategory ? ' · ' + esc(b.subcategory) : ''}</div></div>
           ${b.description ? '<div class="modal-section"><div class="modal-section-label">About</div><div class="modal-section-content">' + esc(b.description) + '</div></div>' : ''}
-          ${b.address ? '<div class="modal-section"><div class="modal-section-label">Address</div><div class="modal-section-content">' + esc(b.address) + '</div></div>' : ''}
           ${b.affiliation ? '<div class="modal-section"><div class="modal-section-label">Affiliation</div><div class="modal-section-content">' + esc(b.affiliation) + '</div></div>' : ''}
+          ${locationHtml}
           ${hoursHtml}
+          ${tagsHtml}
           <div class="modal-actions">${actions}</div>
         </div>`);
     }
