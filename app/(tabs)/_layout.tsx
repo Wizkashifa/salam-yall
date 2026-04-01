@@ -1,27 +1,46 @@
 import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
-import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
+import { NativeTabs, Icon, Label, Badge } from "expo-router/unstable-native-tabs";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { Platform, StyleSheet, View, Text } from "react-native";
 import React, { useState, useEffect } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/lib/theme-context";
 import { getMissedPrayerCount } from "@/lib/prayer-tracker";
 import { useSettings } from "@/lib/settings-context";
 import { useLocationOverride } from "@/lib/location-override-context";
 
 function NativeTabLayout() {
+  const { colors } = useTheme();
+  const { notificationsEnabled } = useSettings();
+  const [missedCount, setMissedCount] = useState(0);
+
+  useEffect(() => {
+    getMissedPrayerCount().then(setMissedCount);
+    const interval = setInterval(() => {
+      getMissedPrayerCount().then(setMissedCount);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const worshipBadge = missedCount > 0 ? String(missedCount) : (!notificationsEnabled ? "!" : undefined);
+
   return (
     <>
     <LocationOverrideBanner />
-    <NativeTabs>
+    <NativeTabs
+      tintColor={colors.tint}
+      minimizeBehavior="automatic"
+    >
       <NativeTabs.Trigger name="halal">
+        {/* fork.knife has no .fill variant — stroke weight change handles active state */}
         <Icon sf={{ default: "fork.knife", selected: "fork.knife" }} />
         <Label>HalalEats</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="events">
-        <Icon sf={{ default: "calendar", selected: "calendar" }} />
+        <Icon sf={{ default: "calendar", selected: "calendar.fill" }} />
         <Label>Events</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="index">
@@ -34,6 +53,7 @@ function NativeTabLayout() {
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="settings">
         <Icon sf={{ default: "moon.stars", selected: "moon.stars.fill" }} />
+        <Badge hidden={!worshipBadge}>{worshipBadge}</Badge>
         <Label>Worship</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
@@ -44,6 +64,7 @@ function NativeTabLayout() {
 function LocationOverrideBanner() {
   const { overrideMetro, isOverrideActive } = useLocationOverride();
   const { colors } = useTheme();
+  const { top } = useSafeAreaInsets();
   const isWeb = Platform.OS === "web";
 
   if (!isOverrideActive || !overrideMetro) return null;
@@ -51,11 +72,11 @@ function LocationOverrideBanner() {
   return (
     <View style={{
       position: "absolute",
-      top: isWeb ? 67 : 50,
+      top: isWeb ? 67 : top,
       left: 0,
       right: 0,
       zIndex: 999,
-      backgroundColor: "#D4A843",
+      backgroundColor: colors.gold,
       paddingVertical: 4,
       paddingHorizontal: 16,
       flexDirection: "row",
@@ -63,8 +84,8 @@ function LocationOverrideBanner() {
       justifyContent: "center",
       gap: 6,
     }}>
-      <Ionicons name="location" size={12} color="#1A1A1A" />
-      <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: "#1A1A1A", letterSpacing: 0.3 }}>
+      <Ionicons name="location" size={12} color={colors.text} />
+      <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.text, letterSpacing: 0.3 }}>
         Location Override: {overrideMetro.name}
       </Text>
     </View>
@@ -174,11 +195,12 @@ function ClassicTabLayout() {
         name="settings"
         options={{
           title: "Worship",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="mosque" size={size - 2} color={color} />
+          tabBarIcon: ({ color, size, focused }) => (
+            // moon-outline/moon matches NativeTabs' moon.stars SF Symbol intent
+            <Ionicons name={focused ? "moon" : "moon-outline"} size={size - 2} color={color} />
           ),
           tabBarBadge: worshipBadge,
-          tabBarBadgeStyle: { backgroundColor: "#EF4444", fontSize: 10, fontFamily: "Inter_700Bold" },
+          tabBarBadgeStyle: { backgroundColor: colors.error, fontSize: 10, fontFamily: "Inter_700Bold" },
         }}
       />
     </Tabs>

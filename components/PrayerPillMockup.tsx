@@ -1,9 +1,10 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
+import { EMERALD, RICH_GOLD } from "@/constants/colors";
 
-const emerald = "#1B6B4A";
-const richGold = "#D4A843";
-const excusedRed = "#EF4444";
+// excusedRed is fixed regardless of theme — the onboarding screen is always
+// dark-background, so this value is correct in both light and dark contexts.
+const EXCUSED_RED = "#EF4444";
 
 interface PrayerPillMockupProps {
   variant?: "onboarding" | "modal";
@@ -29,15 +30,15 @@ const EXAMPLE_PILLS = [
 function getPillBg(status: number, variant: "onboarding" | "modal", themeColors?: PrayerPillMockupProps["colors"]) {
   if (variant === "onboarding") {
     switch (status) {
-      case 1: return emerald + "35";
-      case 2: return richGold + "30";
-      case 3: return emerald + "18";
+      case 1: return EMERALD + "35";
+      case 2: return RICH_GOLD + "30";
+      case 3: return EMERALD + "18";
       case 0: return "rgba(239,68,68,0.2)";
       default: return "rgba(255,255,255,0.08)";
     }
   }
-  const g = themeColors?.gold ?? richGold;
-  const e = themeColors?.emerald ?? emerald;
+  const g = themeColors?.gold ?? RICH_GOLD;
+  const e = themeColors?.emerald ?? EMERALD;
   switch (status) {
     case 1: return e + "25";
     case 2: return g + "20";
@@ -48,10 +49,10 @@ function getPillBg(status: number, variant: "onboarding" | "modal", themeColors?
 }
 
 function getNameColor(status: number, variant: "onboarding" | "modal", themeColors?: PrayerPillMockupProps["colors"]) {
-  if (status === 1) return themeColors?.emerald ?? emerald;
-  if (status === 2) return themeColors?.gold ?? richGold;
-  if (status === 3) return (themeColors?.emerald ?? emerald) + "80";
-  if (status === 0) return excusedRed;
+  if (status === 1) return themeColors?.emerald ?? EMERALD;
+  if (status === 2) return themeColors?.gold ?? RICH_GOLD;
+  if (status === 3) return (themeColors?.emerald ?? EMERALD) + "80";
+  if (status === 0) return EXCUSED_RED;
   if (variant === "onboarding") {
     return "rgba(255,255,255,0.7)";
   }
@@ -61,10 +62,10 @@ function getNameColor(status: number, variant: "onboarding" | "modal", themeColo
 }
 
 function getTimeColor(status: number, variant: "onboarding" | "modal", themeColors?: PrayerPillMockupProps["colors"]) {
-  if (status === 1) return themeColors?.emerald ?? emerald;
-  if (status === 2) return themeColors?.gold ?? richGold;
-  if (status === 3) return (themeColors?.emerald ?? emerald) + "80";
-  if (status === 0) return excusedRed;
+  if (status === 1) return themeColors?.emerald ?? EMERALD;
+  if (status === 2) return themeColors?.gold ?? RICH_GOLD;
+  if (status === 3) return (themeColors?.emerald ?? EMERALD) + "80";
+  if (status === 0) return EXCUSED_RED;
   if (variant === "onboarding") {
     return "rgba(255,255,255,0.9)";
   }
@@ -102,13 +103,17 @@ export default function PrayerPillMockup({ variant = "onboarding", colors: theme
             >
               <Text
                 style={[styles.pillName, { color: getNameColor(pill.status, variant, themeColors) }]}
-                allowFontScaling={false}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
+                numberOfLines={1}
               >
                 {pill.name}
               </Text>
               <Text
                 style={[styles.pillTime, { color: getTimeColor(pill.status, variant, themeColors) }]}
-                allowFontScaling={false}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
+                numberOfLines={1}
               >
                 {pill.time}
               </Text>

@@ -16,9 +16,12 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { useTheme } from "@/lib/theme-context";
 import { useSettings } from "@/lib/settings-context";
-import { useLocationOverride } from "@/lib/location-override-context";
+import { useLocationOverride, METRO_AREAS } from "@/lib/location-override-context";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const DRAWER_WIDTH = Math.min(SCREEN_WIDTH * 0.85, 340);
@@ -30,7 +33,7 @@ export function AppDrawer() {
   const insets = useSafeAreaInsets();
   const { colors, isDark, themeMode, setThemeMode, ramadanMode, setRamadanMode } = useTheme();
   const { menuOpen, closeMenu, consumePendingDrawerSection } = useSettings();
-  const { overrideMetro, setOverrideMetro, isOverrideActive, metroAreas } = useLocationOverride();
+  const { overrideMetro, setOverrideMetro, isOverrideActive } = useLocationOverride();
   const [section, setSection] = useState<DrawerSection>("main");
   const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
@@ -229,7 +232,7 @@ export function AppDrawer() {
 
       <Text style={[styles.sectionLabel, { color: colors.textSecondary, marginTop: 16 }]}>METRO AREAS</Text>
 
-      {metroAreas.map((metro) => {
+      {METRO_AREAS.map((metro) => {
         const isActive = overrideMetro?.name === metro.name;
         return (
           <Pressable
@@ -319,9 +322,37 @@ export function AppDrawer() {
         <Animated.View
           style={[
             styles.drawer,
-            { backgroundColor: colors.background, transform: [{ translateX: slideAnim }] },
+            { transform: [{ translateX: slideAnim }] },
           ]}
         >
+          {/* Glass background — native Liquid Glass on iOS 26+, BlurView + gradient fallback */}
+          {Platform.OS === "ios" && isLiquidGlassAvailable() ? (
+            <GlassView
+              style={StyleSheet.absoluteFill}
+              glassEffectStyle="regular"
+              colorScheme={isDark ? "dark" : "light"}
+              tintColor={isDark ? colors.deepGreen : colors.pageBgStart}
+            />
+          ) : Platform.OS === "ios" ? (
+            <>
+              <BlurView
+                intensity={isDark ? 120 : 80}
+                tint={isDark ? "systemChromeMaterialDark" : "light"}
+                style={StyleSheet.absoluteFill}
+              />
+              <LinearGradient
+                colors={[
+                  isDark ? colors.background + "B3" : colors.pageBgStart + "B3",
+                  isDark ? colors.deepGreen + "80"  : colors.emerald + "1A",
+                ]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+            </>
+          ) : (
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]} />
+          )}
           <View style={{ paddingTop: Platform.OS === "web" ? 67 : insets.top + 12 }}>
             <Pressable style={styles.closeBtn} onPress={closeMenu} hitSlop={8}>
               <Ionicons name="close" size={24} color={colors.textSecondary} />

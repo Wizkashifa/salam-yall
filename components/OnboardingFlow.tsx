@@ -23,12 +23,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import PrayerPillMockup from "@/components/PrayerPillMockup";
 import { useLocationOverride } from "@/lib/location-override-context";
+import { EMERALD as emerald, RICH_GOLD as richGold, DEEP_GREEN as deepGreen } from "@/constants/colors";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-
-const emerald = "#1B6B4A";
-const deepGreen = "#0F3D2B";
-const richGold = "#D4A843";
 
 interface OnboardingFlowProps {
   onComplete: () => void;

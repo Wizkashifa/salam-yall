@@ -1,7 +1,14 @@
-const emerald = "#1B6B4A";
-const deepGreen = "#0F3D2B";
+// Named raw constants — use colors.emerald (theme-aware) in components,
+// import these only when a fixed value is required (e.g. onboarding screens
+// that are always dark regardless of user theme preference).
+export const EMERALD    = "#1B6B4A";
+export const RICH_GOLD  = "#D4A843";
+export const DEEP_GREEN = "#0F3D2B";
+
+const emerald = EMERALD;
+const deepGreen = DEEP_GREEN;
 const forestGreen = "#14523A";
-const richGold = "#D4A843";
+const richGold = RICH_GOLD;
 const darkGold = "#B8922E";
 const lightGold = "#F0DDA0";
 const warmCream = "#F9F4EB";
@@ -38,6 +45,16 @@ const baseLight = {
   tickerText: "#92400E",
   tickerUrgentText: "#991B1B",
   sectionDivider: "rgba(255,255,255,0.6)",
+  // Semantic tokens
+  error:             "#EF4444",
+  errorBackground:   "#FEE2E2",
+  errorText:         "#991B1B",
+  success:           "#22C55E",
+  successBackground: "#DCFCE7",
+  successText:       "#166534",
+  warning:           "#D97706",
+  warningBackground: "#FEF3C7",
+  warningText:       "#92400E",
 };
 
 const baseDark = {
@@ -45,15 +62,16 @@ const baseDark = {
   textSecondary: "#9CA3AF",
   textTertiary: "#6B7280",
   background: "#0A1A12",
-  surface: "rgba(22,22,22,0.9)",
-  surfaceElevated: "rgba(30,30,30,0.9)",
-  surfaceSecondary: "rgba(18,18,18,0.9)",
+  // Subtly green-tinted surfaces — matches the widget's dark emerald palette
+  surface: "rgba(12,22,16,0.9)",
+  surfaceElevated: "rgba(18,30,22,0.9)",
+  surfaceSecondary: "rgba(10,18,13,0.9)",
   accent: richGold,
   accentMuted: "#3D3323",
   tabIconDefault: "#6B7280",
   border: "rgba(255,255,255,0.06)",
   borderLight: "rgba(255,255,255,0.04)",
-  card: "rgba(22,22,22,0.9)",
+  card: "rgba(12,22,16,0.9)",
   cardShadow: "rgba(0, 0, 0, 0.3)",
   gold: richGold,
   goldLight: "#2A2318",
@@ -67,6 +85,16 @@ const baseDark = {
   tickerText: "#D4A843",
   tickerUrgentText: "#F87171",
   sectionDivider: "#152A1F",
+  // Semantic tokens — aligned with existing ticker urgent colors
+  error:             "#F87171",
+  errorBackground:   "#2A1818",
+  errorText:         "#FCA5A5",
+  success:           "#22C55E",
+  successBackground: "#1A2E22",
+  successText:       "#86EFAC",
+  warning:           "#FBBF24",
+  warningBackground: "#3D3323",
+  warningText:       "#FCD34D",
 };
 
 export default {
@@ -124,6 +152,7 @@ export default {
   darkRamadan: {
     ...baseDark,
     background: "#140B24",
+    // Ramadan dark keeps neutral surfaces — green tint would clash with purple theme
     surface: "rgba(22,22,22,0.9)",
     surfaceElevated: "rgba(30,30,30,0.9)",
     surfaceSecondary: "rgba(18,18,18,0.9)",

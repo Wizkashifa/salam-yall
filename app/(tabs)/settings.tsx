@@ -560,7 +560,7 @@ export default function SettingsScreen() {
         <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
           <Ionicons name="calendar" size={20} color={colors.emerald} />
           {missedPrayerCount > 0 && (
-            <View style={{ position: "absolute", top: -4, right: -4, backgroundColor: "#EF4444", borderRadius: 8, minWidth: 16, height: 16, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 }}>
+            <View style={{ position: "absolute", top: -4, right: -4, backgroundColor: colors.error, borderRadius: 8, minWidth: 16, height: 16, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 }}>
               <Text style={{ fontFamily: "Inter_700Bold", fontSize: 9, color: "#fff" }}>{missedPrayerCount}</Text>
             </View>
           )}
@@ -621,7 +621,7 @@ export default function SettingsScreen() {
         <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
           <Ionicons name="notifications-outline" size={20} color={colors.emerald} />
           {!notificationsEnabled && (
-            <View style={{ position: "absolute", top: -4, right: -4, backgroundColor: "#EF4444", borderRadius: 8, minWidth: 16, height: 16, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 }}>
+            <View style={{ position: "absolute", top: -4, right: -4, backgroundColor: colors.error, borderRadius: 8, minWidth: 16, height: 16, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 }}>
               <Text style={{ fontFamily: "Inter_700Bold", fontSize: 9, color: "#fff" }}>!</Text>
             </View>
           )}
@@ -1507,7 +1507,7 @@ export default function SettingsScreen() {
                           else if (status === 3) dotColor = colors.emerald + "80";
                           else if (status === 4) dotColor = colors.surfaceSecondary;
                           else if (status === -1) dotColor = colors.surfaceSecondary; // upcoming, not yet
-                          else if (status === 0) dotColor = "#EF4444"; // expired & untracked = missed
+                          else if (status === 0) dotColor = colors.error; // expired & untracked = missed
                           return (
                             <View
                               key={di}
@@ -1532,7 +1532,7 @@ export default function SettingsScreen() {
                     { color: colors.gold, label: "Masjid" },
                     { color: colors.emerald + "80", label: "Made up" },
                     { color: colors.surfaceSecondary, label: "Excused" },
-                    { color: "#EF4444", label: "Missed" },
+                    { color: colors.error, label: "Missed" },
                   ].map(l => (
                     <View key={l.label} style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
                       <View style={{ width: 6, height: 6, borderRadius: 1.5, backgroundColor: l.color }} />
@@ -1593,8 +1593,8 @@ export default function SettingsScreen() {
                           pressed && { opacity: 0.7 },
                         ]}
                       >
-                        <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#EF4444" }}>{prayerLabels[p]}</Text>
-                        <View style={{ backgroundColor: "#EF4444", borderRadius: 10, minWidth: 20, height: 20, alignItems: "center", justifyContent: "center", paddingHorizontal: 5 }}>
+                        <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: colors.error }}>{prayerLabels[p]}</Text>
+                        <View style={{ backgroundColor: colors.error, borderRadius: 10, minWidth: 20, height: 20, alignItems: "center", justifyContent: "center", paddingHorizontal: 5 }}>
                           <Text style={{ fontFamily: "Inter_700Bold", fontSize: 11, color: "#fff" }}>{missedByType[p]}</Text>
                         </View>
                       </Pressable>
@@ -1658,19 +1658,19 @@ export default function SettingsScreen() {
                     }}
                     delayLongPress={400}
                   >
-                    <Text style={[styles.calDayText, { color: isSelected ? "#fff" : isMissedFast ? "#EF4444" : isToday ? colors.emerald : colors.text }]}>{day}</Text>
+                    <Text style={[styles.calDayText, { color: isSelected ? "#fff" : isMissedFast ? colors.error : isToday ? colors.emerald : colors.text }]}>{day}</Text>
                     <View style={styles.calDots}>
                       {log ? PRAYER_NAMES.map(p => {
                         const s = log[p];
                         if (s === 0) {
                           const dayDate = new Date(trackerYear, trackerMonth - 1, day);
                           const expired = isPrayerExpired(p, dayDate, dateKey === todayKey ? cachedTimesRef.current : undefined);
-                          return <View key={p} style={[styles.calDot, { backgroundColor: expired ? "#EF4444" : colors.surfaceSecondary }]} />;
+                          return <View key={p} style={[styles.calDot, { backgroundColor: expired ? colors.error : colors.surfaceSecondary }]} />;
                         }
                         if (s === 4) return <View key={p} style={[styles.calDot, { backgroundColor: "transparent" }]} />;
                         return <View key={p} style={[styles.calDot, { backgroundColor: s === 1 ? colors.emerald : s === 3 ? colors.emerald + "80" : colors.gold }]} />;
                       }) : isMissedFast ? (
-                        <View style={[styles.calDot, { backgroundColor: "#EF4444", width: 5, height: 5, borderRadius: 2.5 }]} />
+                        <View style={[styles.calDot, { backgroundColor: colors.error, width: 5, height: 5, borderRadius: 2.5 }]} />
                       ) : <View style={{ height: 5 }} />}
                     </View>
                   </Pressable>
@@ -1690,7 +1690,7 @@ export default function SettingsScreen() {
                   const selDate = new Date(parseInt(selParts[0]), parseInt(selParts[1]) - 1, parseInt(selParts[2]));
                   const isExpired = status === 0 ? isPrayerExpired(p, selDate, selectedDay === todayKey ? cachedTimesRef.current : undefined) : false;
                   const statusLabel = status === 0 ? (isExpired ? "Missed" : "Upcoming") : status === 1 ? "On time" : status === 2 ? "At masjid" : status === 3 ? "Made up" : "Excused";
-                  const statusColor = status === 0 ? (isExpired ? "#EF4444" : colors.textTertiary) : status === 1 ? colors.emerald : status === 2 ? colors.gold : status === 3 ? colors.emerald + "80" : colors.textTertiary;
+                  const statusColor = status === 0 ? (isExpired ? colors.error : colors.textTertiary) : status === 1 ? colors.emerald : status === 2 ? colors.gold : status === 3 ? colors.emerald + "80" : colors.textTertiary;
                   return (
                     <Pressable
                       key={p}
@@ -2421,7 +2421,7 @@ export default function SettingsScreen() {
                             else if (status === 3) dotColor = colors.emerald + "80";
                             else if (status === 4) dotColor = colors.surfaceSecondary;
                             else if (status === -1) dotColor = colors.surfaceSecondary;
-                            else if (status === 0) dotColor = "#EF4444";
+                            else if (status === 0) dotColor = colors.error;
                             return <View key={di} style={{ flex: 1, aspectRatio: 1, maxWidth: clampedDot2, maxHeight: clampedDot2, borderRadius: 1.5, backgroundColor: dotColor }} />;
                           })}
                         </View>
@@ -2441,7 +2441,7 @@ export default function SettingsScreen() {
                         { color: colors.gold, label: "Masjid / Quran" },
                         { color: colors.emerald + "80", label: "Made up" },
                         { color: colors.surfaceSecondary, label: "Excused" },
-                        { color: "#EF4444", label: "Missed" },
+                        { color: colors.error, label: "Missed" },
                       ].map(l => (
                         <View key={l.label} style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
                           <View style={{ width: 6, height: 6, borderRadius: 1.5, backgroundColor: l.color }} />
