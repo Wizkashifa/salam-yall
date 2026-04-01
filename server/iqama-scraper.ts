@@ -244,7 +244,7 @@ export async function seedAdamsCenterIqama(pool: pg.Pool) {
   );
   if (parseInt(countRows[0].count) >= 300) return;
 
-  const csvPath = path.join(process.cwd(), "attached_assets", "Pasted-date-hijri-day-fajr-fajr-iqamah-sunrise-dhuhr-dhuhr-iqa_1775064801440.txt");
+  const csvPath = path.join(process.cwd(), "server", "data", "adams-center-iqama-2026.csv");
   let csvText: string;
   try {
     csvText = fs.readFileSync(csvPath, "utf-8");

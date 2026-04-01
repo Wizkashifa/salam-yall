@@ -115,6 +115,12 @@ const NAME_MATCHES: [string, string][] = [
   ["adams leesburg", "ADAMS Leesburg"],
   ["qahwah cafe", "Qahwah Cafe"],
   ["qahwah coffee", "Qahwah Cafe"],
+  ["qahwah", "Qahwah Cafe"],
+  ["qahwa cafe", "Qahwah Cafe"],
+  ["all dulles area muslim society", "ADAMS Sterling"],
+  ["all dulles area", "ADAMS Sterling"],
+  ["adams center", "ADAMS Sterling"],
+  ["adams masjid", "ADAMS Sterling"],
 ];
 
 const STREET_MATCHES: [string, string][] = [
@@ -816,6 +822,8 @@ async function seedJumuahMetros(pool: pg.Pool) {
     { masjid: 'ADAMS Gainesville', khutbah_time: '1:15 PM', iqama_time: '1:30 PM', metro: 'DMV', timezone: 'America/New_York', sort_order: 403, slots: [{ khutbah_time: '1:15 PM', iqama_time: '1:30 PM' }] },
     { masjid: 'ADAMS Leesburg', khutbah_time: '1:15 PM', iqama_time: '1:30 PM', metro: 'DMV', timezone: 'America/New_York', sort_order: 405, slots: [{ khutbah_time: '1:15 PM', iqama_time: '1:30 PM' }] },
     { masjid: 'ADAMS Sully', khutbah_time: '1:15 PM', iqama_time: '1:30 PM', metro: 'DMV', timezone: 'America/New_York', sort_order: 404, slots: [{ khutbah_time: '1:15 PM', iqama_time: '1:30 PM' }] },
+    { masjid: 'ADAMS Reston (NVHC)', khutbah_time: '1:15 PM', iqama_time: '1:30 PM', metro: 'DMV', timezone: 'America/New_York', sort_order: 407, slots: [{ khutbah_time: '1:15 PM', iqama_time: '1:30 PM' }] },
+    { masjid: 'Home2 Suites Chantilly (ADAMS)', khutbah_time: '1:15 PM', iqama_time: '1:30 PM', metro: 'DMV', timezone: 'America/New_York', sort_order: 406, slots: [{ khutbah_time: '1:15 PM', iqama_time: '1:30 PM' }] },
   ];
   for (const r of dmvMasjids) {
     await pool.query(
@@ -862,10 +870,12 @@ async function scrapeAdamsCenterJumuah(pool: pg.Pool): Promise<void> {
     const ADAMS_VENUES: { label: RegExp; masjid: string; location: string; sort: number }[] = [
       { label: /sterling/i, masjid: "ADAMS Sterling", location: "46903 Sugarland Rd, Sterling, VA 20164", sort: 400 },
       { label: /fairfax/i, masjid: "ADAMS Fairfax", location: "11216 Waples Mill Rd Unit 107, Fairfax, VA 22030", sort: 401 },
-      { label: /ashburn\s*village|ashburn/i, masjid: "ADAMS Ashburn", location: "21740 Beaumeade Circle Unit 120, Ashburn, VA 20147", sort: 402 },
-      { label: /gainesville/i, masjid: "ADAMS Gainesville", location: "12655 Vint Hill Rd, Nokesville, VA 20181", sort: 403 },
+      { label: /ashburn\s*village/i, masjid: "ADAMS Ashburn", location: "21740 Beaumeade Circle Unit 120, Ashburn, VA 20147", sort: 402 },
+      { label: /\bashburn\b(?!\s*village)/i, masjid: "ADAMS Ashburn", location: "21740 Beaumeade Circle Unit 120, Ashburn, VA 20147", sort: 402 },
+      { label: /gainesville|wyndham\s*gardens\s*manassas/i, masjid: "ADAMS Gainesville", location: "12655 Vint Hill Rd, Nokesville, VA 20181", sort: 403 },
       { label: /sully|chantilly/i, masjid: "ADAMS Sully", location: "4431 Brookfield Corporate Dr Suite F, Chantilly, VA 20151", sort: 404 },
-      { label: /leesburg/i, masjid: "ADAMS Leesburg", location: "19838 Sycolin Rd, Leesburg, VA 20175", sort: 405 },
+      { label: /leesburg|clarion\s*inn\s*leesburg/i, masjid: "ADAMS Leesburg", location: "19838 Sycolin Rd, Leesburg, VA 20175", sort: 405 },
+      { label: /nvhc|northern\s*virginia\s*h[a-z]*\s*c[a-z]*|reston/i, masjid: "ADAMS Reston (NVHC)", location: "12301 Bladensburg Rd, Reston, VA 20191", sort: 407 },
       { label: /home2\s*suite|home2/i, masjid: "Home2 Suites Chantilly (ADAMS)", location: "4335 Chantilly Shopping Center, Chantilly, VA 20151", sort: 406 },
     ];
 
@@ -877,17 +887,20 @@ async function scrapeAdamsCenterJumuah(pool: pg.Pool): Promise<void> {
     for (const venue of ADAMS_VENUES) {
       const match = venue.label.exec(text);
       if (match) {
-        sections.push({ masjid: venue.masjid, location: venue.location, sort: venue.sort, times: [], start: match.index, end: match.index + match[0].length });
+        // De-duplicate: skip if this masjid is already added
+        if (!sections.find(s => s.masjid === venue.masjid)) {
+          sections.push({ masjid: venue.masjid, location: venue.location, sort: venue.sort, times: [], start: match.index, end: match.index + match[0].length });
+        }
       }
     }
 
     sections.sort((a, b) => a.start - b.start);
 
-    // For each section, extract times from the text between this section start and next section start
+    // For each section, extract times + speaker names from the text between this and next section
     for (let i = 0; i < sections.length; i++) {
       const sec = sections[i];
-      const nextStart = sections[i + 1]?.start ?? sec.start + 500;
-      const chunk = text.slice(sec.start, Math.min(nextStart, sec.start + 800));
+      const nextStart = sections[i + 1]?.start ?? sec.start + 800;
+      const chunk = text.slice(sec.start, Math.min(nextStart, sec.start + 1000));
       let tm;
       const times: string[] = [];
       const re = /\b(\d{1,2}:\d{2}\s*[AP]M)\b/gi;
@@ -896,6 +909,15 @@ async function scrapeAdamsCenterJumuah(pool: pg.Pool): Promise<void> {
         if (!times.includes(t)) times.push(t);
       }
       sec.times = times;
+      // Extract speaker names: look for "Sheikh/Imam/Dr/Brother/Sister <Name>" patterns
+      const speakerRe = /\b(?:Sheikh|Shaykh|Imam|Dr\.?|Brother|Sister|Br\.?|Sr\.?)\s+([A-Z][a-zA-Z'-]+(?:\s+[A-Z][a-zA-Z'-]+){0,3})/g;
+      const speakers: string[] = [];
+      let sm;
+      while ((sm = speakerRe.exec(chunk)) !== null) {
+        const sp = sm[0].trim();
+        if (!speakers.includes(sp)) speakers.push(sp);
+      }
+      (sec as any).speakers = speakers;
     }
 
     const validSections = sections.filter(s => s.times.length >= 1);
@@ -906,22 +928,25 @@ async function scrapeAdamsCenterJumuah(pool: pg.Pool): Promise<void> {
     }
 
     for (const sec of validSections) {
-      // Build khutbahs array: assume alternating khutbah+iqama, or just use times as iqama times
-      let slots: { khutbah_time?: string; iqama_time: string }[] = [];
+      const speakers: string[] = (sec as any).speakers || [];
+      // Build khutbahs array: store {khutbah_time, iqama_time, speaker}
+      let slots: { khutbah_time: string; iqama_time: string; speaker?: string }[] = [];
       if (sec.times.length >= 2) {
         // Pair up: first is khutbah, second is iqama for each slot
         for (let i = 0; i + 1 < sec.times.length; i += 2) {
-          slots.push({ khutbah_time: sec.times[i], iqama_time: sec.times[i + 1] });
+          const slotIdx = Math.floor(i / 2);
+          slots.push({ khutbah_time: sec.times[i], iqama_time: sec.times[i + 1], speaker: speakers[slotIdx] || undefined });
         }
-        // If odd number: last time is an extra iqama slot
+        // Odd remaining time treated as another khutbah slot
         if (sec.times.length % 2 === 1) {
-          slots.push({ iqama_time: sec.times[sec.times.length - 1] });
+          const lastIdx = Math.floor((sec.times.length - 1) / 2);
+          slots.push({ khutbah_time: sec.times[sec.times.length - 1], iqama_time: sec.times[sec.times.length - 1], speaker: speakers[lastIdx] || undefined });
         }
       } else {
-        slots = [{ iqama_time: sec.times[0] }];
+        slots = [{ khutbah_time: sec.times[0], iqama_time: sec.times[0], speaker: speakers[0] || undefined }];
       }
 
-      const legacyKhutbah = slots.map(s => s.khutbah_time || s.iqama_time).join(", ");
+      const legacyKhutbah = slots.map(s => s.khutbah_time).join(", ");
       const legacyIqama = slots.map(s => s.iqama_time).join(", ");
 
       await pool.query(
@@ -2264,12 +2289,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       cachedQahwahEvents = events;
       qahwahLastFetch = Date.now();
       if (events.length > 0) console.log(`[Qahwah] Fetched ${events.length} events`);
+      // Upsert into community_events for persistence
+      await upsertQahwahToDB(events);
       return events.filter(e => new Date(e.end || e.start) >= new Date());
     } catch (err: any) {
       console.error("[Qahwah] Events fetch error:", err.message);
       return cachedQahwahEvents.filter(e => new Date(e.end || e.start) >= new Date());
     }
   }
+
+  async function upsertQahwahToDB(events: CachedEvent[]): Promise<void> {
+    for (const ev of events) {
+      try {
+        const start = new Date(ev.start);
+        const end = new Date(ev.end || ev.start);
+        if (isNaN(start.getTime())) continue;
+        const { rows: existing } = await pool.query(
+          "SELECT id FROM community_events WHERE organizer = 'Qahwah Cafe' AND title = $1 AND start_time = $2",
+          [ev.title, start]
+        );
+        if (existing.length > 0) {
+          await pool.query(
+            `UPDATE community_events SET description=$1, location=$2, end_time=$3, registration_url=$4, lat=$5, lng=$6, status='approved' WHERE id=$7`,
+            [ev.description || null, ev.location || null, end, ev.registrationUrl || null, ev.latitude || null, ev.longitude || null, existing[0].id]
+          );
+        } else {
+          await pool.query(
+            `INSERT INTO community_events (title, description, location, start_time, end_time, organizer, registration_url, is_virtual, is_featured, status, lat, lng)
+             VALUES ($1,$2,$3,$4,$5,'Qahwah Cafe',$6,false,false,'approved',$7,$8)`,
+            [ev.title, ev.description || null, ev.location || null, start, end, ev.registrationUrl || null, ev.latitude || null, ev.longitude || null]
+          );
+        }
+      } catch {}
+    }
+    if (events.length > 0) console.log(`[Qahwah] Upserted ${events.length} events into community_events`);
+  }
+
+  // Schedule weekly Qahwah refresh (every Monday at 6 AM ET)
+  function scheduleQahwahEvents(): void {
+    fetchQahwahEvents().catch(() => {});
+    setInterval(() => {
+      const nowET = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
+      if (nowET.getDay() === 1) {
+        fetchQahwahEvents().catch(() => {});
+      }
+    }, 24 * 60 * 60 * 1000);
+  }
+  scheduleQahwahEvents();
 
   const MCA_CALENDAR_ID = "c_0f12fe7cae6832644dd87c48e910a7e82060b70a81d12cd9def13d6764be61bf@group.calendar.google.com";
   let cachedMCAEvents: CachedEvent[] = [];
