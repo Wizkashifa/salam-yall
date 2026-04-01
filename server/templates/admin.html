@@ -310,8 +310,8 @@
 
         <div id="jzUploadArea" style="border:2px dashed var(--card-border);border-radius:12px;padding:30px;text-align:center;cursor:pointer;margin-bottom:14px;transition:border-color 0.2s;" ondragover="event.preventDefault();this.style.borderColor='var(--gold)';" ondragleave="this.style.borderColor='var(--card-border)';" ondrop="handleJzDrop(event)" onclick="document.getElementById('jzFileInput').click()">
           <div style="font-size:28px;margin-bottom:8px;">🕊️</div>
-          <div style="font-size:14px;color:var(--text-secondary);">Drop a janaza announcement image here or click to upload</div>
-          <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px;">JPG, PNG, or WebP</div>
+          <div style="font-size:14px;color:var(--text-secondary);">Drop, paste, or click to upload a janaza announcement image</div>
+          <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px;">JPG, PNG, WebP · or Ctrl+V / ⌘V to paste from clipboard</div>
           <input type="file" id="jzFileInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleJzSelect(event)">
         </div>
 
