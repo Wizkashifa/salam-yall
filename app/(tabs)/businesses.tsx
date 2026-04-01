@@ -110,8 +110,11 @@ const SUBCATEGORIES: Record<string, string[]> = {
     "Mechanic / Repair", "Dealership", "Car Rental", "Auto Body", "Tires", "Detailing", "Other",
   ],
   Services: [
-    "Legal", "Financial", "Insurance", "Tax", "Moving", "Cleaning",
-    "IT / Tech", "Marketing", "Tutoring", "Translation", "Other",
+    "HVAC", "Plumbing", "Electrical", "Roofing", "Landscaping",
+    "Painting", "Handyman", "Pest Control",
+    "Legal", "Financial", "Insurance", "Tax",
+    "Moving", "Cleaning", "IT / Tech", "Marketing",
+    "Tutoring", "Translation", "Other",
   ],
   Events: [
     "Venue", "Caterer", "Photography", "Videography",
@@ -124,12 +127,6 @@ const SUBCATEGORIES: Record<string, string[]> = {
   ],
 };
 
-const SERVICE_AREA_OPTIONS = [
-  "Local Area",
-  "Metro Area",
-  "Statewide",
-  "Nationwide / Remote",
-];
 
 const UNIVERSAL_TAGS = [
   "Women-owned", "Arabic-speaking", "Urdu-speaking", "Spanish-speaking",
@@ -157,6 +154,11 @@ const BUSINESS_KEYWORDS: Record<string, string[]> = {
     ...UNIVERSAL_TAGS,
   ],
   Creator: [
+    ...UNIVERSAL_TAGS,
+  ],
+  Services: [
+    "Licensed & insured", "Emergency service",
+    "Residential", "Commercial", "By appointment only",
     ...UNIVERSAL_TAGS,
   ],
   _default: [
@@ -559,6 +561,7 @@ function BusinessDetailModal({ business, visible, onClose, colors, isDark }: { b
 
 function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: boolean; onClose: () => void; colors: any; isDark: boolean }) {
   const insets = useSafeAreaInsets();
+  const { metroAreas } = useLocationOverride();
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
@@ -609,9 +612,17 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
 
   const submitMutation = useMutation({
     mutationFn: async () => {
+      const needsMetro = locationType === "service_area" || locationType === "popup";
+      const selectedMetro = needsMetro
+        ? metroAreas.find(m => m.name === serviceAreaDescription)
+        : null;
+      if (needsMetro && !selectedMetro) {
+        throw new Error("Please select a metro area for your service area or pop-up business.");
+      }
       const res = await apiRequest("POST", "/api/businesses/submit", {
         name, category, subcategory, description, address, phone, website, google_url: googleUrl,
         filter_tags: selectedKeywords, photo_url: photoUrl, booking_url: bookingUrl, instagram_url: instagramUrl, affiliation, location_type: locationType, service_area_description: serviceAreaDescription,
+        ...(selectedMetro ? { lat: selectedMetro.lat, lng: selectedMetro.lng } : {}),
       });
       return res.json();
     },
@@ -882,29 +893,36 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
 
             {(locationType === "service_area" || locationType === "popup") ? (
               <>
-                <Text style={[styles.fieldLabel, { color: colors.text }]}>Service Area</Text>
-                <View style={styles.categoryGrid}>
-                  {SERVICE_AREA_OPTIONS.map((sa) => {
-                    const isSelected = serviceAreaDescription === sa;
-                    return (
-                      <Pressable
-                        key={sa}
-                        style={[
-                          styles.categoryOption,
-                          { backgroundColor: colors.surface, borderColor: isSelected ? colors.emerald : colors.border },
-                          isSelected && { borderWidth: 2 },
-                        ]}
-                        onPress={() => {
-                          setServiceAreaDescription(isSelected ? "" : sa);
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        }}
-                      >
-                        <Text style={[styles.categoryOptionText, { color: isSelected ? colors.emerald : colors.text }]}>
-                          {sa}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
+                <Text style={[styles.fieldLabel, { color: colors.text }]}>Metro Area *</Text>
+                <View style={{ borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, maxHeight: 220, overflow: "hidden" }}>
+                  <ScrollView nestedScrollEnabled>
+                    {metroAreas.map((metro) => {
+                      const isSelected = serviceAreaDescription === metro.name;
+                      return (
+                        <Pressable
+                          key={metro.name}
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            paddingVertical: 12,
+                            paddingHorizontal: 16,
+                            borderBottomWidth: 1,
+                            borderBottomColor: colors.border,
+                            backgroundColor: isSelected ? `${colors.emerald}18` : "transparent",
+                          }}
+                          onPress={() => {
+                            setServiceAreaDescription(isSelected ? "" : metro.name);
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          }}
+                        >
+                          <Ionicons name={isSelected ? "checkmark-circle" : "ellipse-outline"} size={18} color={isSelected ? colors.emerald : colors.textSecondary} style={{ marginRight: 10 }} />
+                          <Text style={{ fontSize: 15, color: isSelected ? colors.emerald : colors.text, fontWeight: isSelected ? "600" : "400" }}>
+                            {metro.name}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
                 </View>
               </>
             ) : null}
@@ -1188,37 +1206,41 @@ export default function BusinessesScreen() {
     setUserLocation(null);
   }, [isOverrideActive, getEffectiveLocation]);
 
+  const { data: businesses, isLoading } = useQuery<Business[]>({
+    queryKey: ["/api/businesses"],
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const hasServiceAreaBusinesses = !!businesses?.some(b => b.location_type === "service_area" || b.location_type === "popup");
+
   useEffect(() => {
     if (isOverrideActive) return;
-    if (distanceFilter > 0 && !userLocation) {
+    if ((distanceFilter > 0 || hasServiceAreaBusinesses) && !userLocation) {
       (async () => {
         try {
           if (Platform.OS === "web") {
             navigator.geolocation?.getCurrentPosition(
               (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-              () => { Alert.alert("Location unavailable", "Enable location to filter by distance."); setDistanceFilter(0); }
+              () => { if (distanceFilter > 0) { Alert.alert("Location unavailable", "Enable location to filter by distance."); setDistanceFilter(0); } }
             );
           } else {
             const { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== "granted") {
-              Alert.alert("Permission needed", "Enable location access to filter businesses by distance.");
-              setDistanceFilter(0);
+              if (distanceFilter > 0) {
+                Alert.alert("Permission needed", "Enable location access to filter businesses by distance.");
+                setDistanceFilter(0);
+              }
               return;
             }
             const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
             setUserLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
           }
         } catch {
-          setDistanceFilter(0);
+          if (distanceFilter > 0) setDistanceFilter(0);
         }
       })();
     }
-  }, [distanceFilter, userLocation, isOverrideActive]);
-
-  const { data: businesses, isLoading } = useQuery<Business[]>({
-    queryKey: ["/api/businesses"],
-    staleTime: 10 * 60 * 1000,
-  });
+  }, [distanceFilter, userLocation, isOverrideActive, hasServiceAreaBusinesses]);
 
   useEffect(() => {
     if (!businesses || businesses.length === 0) return;
@@ -1247,10 +1269,13 @@ export default function BusinessesScreen() {
         const matchesCategory = selectedCategory === "All" || b.category === selectedCategory;
         if (!matchesCategory) return false;
         if (selectedSubcategory && b.subcategory !== selectedSubcategory) return false;
-        if (distanceFilter > 0 && userLocation) {
-          if (b.location_type === "virtual" || b.location_type === "service_area" || b.location_type === "popup") {
-            // pass through
-          } else if (b.lat && b.lng) {
+        if (b.location_type === "service_area" || b.location_type === "popup") {
+          if (!userLocation || !b.lat || !b.lng) return false;
+          const dist = haversineDistance(userLocation.lat, userLocation.lng, b.lat, b.lng);
+          if (dist > 50) return false;
+        } else if (b.location_type === "virtual") {
+        } else if (distanceFilter > 0 && userLocation) {
+          if (b.lat && b.lng) {
             const dist = haversineDistance(userLocation.lat, userLocation.lng, b.lat, b.lng);
             if (dist > distanceFilter) return false;
           } else {

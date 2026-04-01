@@ -28,7 +28,7 @@ export function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
     backgroundSecondary: isDark ? "#1C1C1E" : "#F2F2F7",
     text: isDark ? "#FFFFFF" : "#000000",
     textSecondary: isDark ? "rgba(255, 255, 255, 0.7)" : "rgba(0, 0, 0, 0.7)",
-    link: "#007AFF", // iOS system blue — intentional, this is a crash recovery screen, not a branded surface
+    link: "#007AFF",
     buttonText: "#FFFFFF",
   };
 
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     right: 16,
     width: 44,
     height: 44,
-    borderRadius: 10,
+    borderRadius: 8,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   },
   button: {
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 8,
     paddingHorizontal: 24,
     minWidth: 200,
     shadowColor: "#000",

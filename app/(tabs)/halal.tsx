@@ -24,7 +24,6 @@ import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
 import { BlurView } from "expo-blur";
 import { useTheme } from "@/lib/theme-context";
-import { RICH_GOLD } from "@/constants/colors";
 import { TickerBanner } from "@/components/TickerBanner";
 import { GlassHeader } from "@/components/GlassHeader";
 import { GlassModalContainer } from "@/components/GlassModal";
@@ -103,16 +102,16 @@ function formatCuisine(cuisine: string): string {
     .join(" ");
 }
 
-function getHalalBadge(status: string, colors: any): { label: string; color: string; bg: string } {
+function getHalalBadge(status: string): { label: string; color: string; bg: string } {
   switch (status) {
     case "IS_HALAL":
-      return { label: "Halal", color: colors.successText, bg: colors.successBackground };
+      return { label: "Halal", color: "#166534", bg: "#DCFCE7" };
     case "PARTIALLY_HALAL":
-      return { label: "Partially Halal", color: colors.warningText, bg: colors.warningBackground };
+      return { label: "Partially Halal", color: "#92400E", bg: "#FEF3C7" };
     case "NOT_HALAL":
-      return { label: "Not Halal", color: colors.errorText, bg: colors.errorBackground };
+      return { label: "Not Halal", color: "#991B1B", bg: "#FEE2E2" };
     default:
-      return { label: "Unknown", color: colors.textSecondary, bg: colors.surfaceSecondary };
+      return { label: "Unknown", color: "#6B7280", bg: "#F3F4F6" };
   }
 }
 
@@ -273,7 +272,7 @@ function formatTimings(openingHours: HalalRestaurant["opening_hours"]): string[]
   });
 }
 
-function StarRatingInput({ value, onChange, size = 28, color = RICH_GOLD }: {
+function StarRatingInput({ value, onChange, size = 28, color = "#F59E0B" }: {
   value: number; onChange: (v: number) => void; size?: number; color?: string;
 }) {
   return (
@@ -415,7 +414,7 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
 
   if (!restaurant) return null;
 
-  const badge = getHalalBadge(restaurant.is_halal, colors);
+  const badge = getHalalBadge(restaurant.is_halal);
   const openStatus = isCurrentlyOpen(restaurant.opening_hours);
   const cuisines = restaurant.cuisine_types ? restaurant.cuisine_types.map(formatCuisine).join(" · ") : "";
   const hasPhoto = !!restaurant.photo_reference;
@@ -466,9 +465,9 @@ function RestaurantDetailModal({ restaurant, visible, onClose, colors, isDark }:
                 <Text style={[styles.halalPillText, { color: badge.color }]}>{badge.label}</Text>
               </View>
               {openStatus !== null && (
-                <View style={[styles.halalPill, { backgroundColor: openStatus ? colors.successBackground : colors.errorBackground }]}>
-                  <View style={[styles.openDot, { backgroundColor: openStatus ? colors.success : colors.error }]} />
-                  <Text style={[styles.halalPillText, { color: openStatus ? colors.successText : colors.errorText }]}>
+                <View style={[styles.halalPill, { backgroundColor: openStatus ? "#DCFCE7" : "#FEE2E2" }]}>
+                  <View style={[styles.openDot, { backgroundColor: openStatus ? "#22C55E" : "#EF4444" }]} />
+                  <Text style={[styles.halalPillText, { color: openStatus ? "#166534" : "#991B1B" }]}>
                     {openStatus ? "Open" : "Closed"}
                   </Text>
                 </View>
@@ -1240,7 +1239,7 @@ export default function HalalScreen() {
 
   const renderRestaurant = useCallback(
     ({ item }: { item: HalalRestaurant }) => {
-      const badge = getHalalBadge(item.is_halal, colors);
+      const badge = getHalalBadge(item.is_halal);
       const openStatus = isCurrentlyOpen(item.opening_hours);
       const cuisines = item.cuisine_types
         ? item.cuisine_types.map(formatCuisine).join(" · ")
@@ -1283,9 +1282,9 @@ export default function HalalScreen() {
                   <Text style={[styles.smallBadgeText, { color: badge.color }]}>{badge.label}</Text>
                 </View>
                 {openStatus !== null && (
-                  <View style={[styles.smallBadge, { backgroundColor: openStatus ? colors.successBackground : colors.errorBackground }]}>
-                    <View style={[styles.openDot, { backgroundColor: openStatus ? colors.success : colors.error }]} />
-                    <Text style={[styles.smallBadgeText, { color: openStatus ? colors.successText : colors.errorText }]}>
+                  <View style={[styles.smallBadge, { backgroundColor: openStatus ? "#DCFCE7" : "#FEE2E2" }]}>
+                    <View style={[styles.openDot, { backgroundColor: openStatus ? "#22C55E" : "#EF4444" }]} />
+                    <Text style={[styles.smallBadgeText, { color: openStatus ? "#166534" : "#991B1B" }]}>
                       {openStatus ? "Open" : "Closed"}
                     </Text>
                   </View>
@@ -1310,7 +1309,7 @@ export default function HalalScreen() {
                   </>
                 ) : item.rating && Number(item.rating) > 0 ? (
                   <>
-                    <Ionicons name="star" size={12} color={colors.gold} />
+                    <Ionicons name="star" size={12} color="#F59E0B" />
                     <Text style={[styles.ratingScore, { color: colors.text }]}>
                       {Number(item.rating).toFixed(1)}
                     </Text>
@@ -1355,7 +1354,7 @@ export default function HalalScreen() {
           >
             <Ionicons name="add" size={20} color="#fff" />
             {pendingCount > 0 && (
-              <View style={{ position: "absolute", top: -4, right: -4, backgroundColor: colors.error, borderRadius: 9, minWidth: 18, height: 18, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 }}>
+              <View style={{ position: "absolute", top: -4, right: -4, backgroundColor: "#EF4444", borderRadius: 9, minWidth: 18, height: 18, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 }}>
                 <Text style={{ fontFamily: "Inter_700Bold", fontSize: 10, color: "#fff" }}>{pendingCount}</Text>
               </View>
             )}
@@ -1539,7 +1538,7 @@ export default function HalalScreen() {
         onRequestClose={() => setShowLocationPrompt(false)}
       >
         <View style={styles.locationPromptOverlay}>
-          <GlassModalContainer style={[styles.locationPromptCard, { borderColor: colors.border, flex: 0 }]}>
+          <View style={[styles.locationPromptCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={[styles.locationPromptIconWrap, { backgroundColor: isDark ? "rgba(27,107,74,0.15)" : "rgba(27,107,74,0.1)" }]}>
               <Ionicons name="location" size={32} color={colors.emerald} />
             </View>
@@ -1578,7 +1577,7 @@ export default function HalalScreen() {
             >
               <Text style={[styles.locationPromptSkipText, { color: colors.textTertiary }]}>Maybe Later</Text>
             </Pressable>
-          </GlassModalContainer>
+          </View>
         </View>
       </Modal>
     </View>
@@ -1883,7 +1882,7 @@ const styles = StyleSheet.create({
   },
   detailStars: {
     fontSize: 14,
-    color: RICH_GOLD,
+    color: "#F59E0B",
   },
   detailRatingCount: {
     fontSize: 13,
@@ -1983,7 +1982,7 @@ const styles = StyleSheet.create({
   },
   communityStars: {
     fontSize: 14,
-    color: RICH_GOLD,
+    color: "#F59E0B",
   },
   communityCount: {
     fontSize: 13,

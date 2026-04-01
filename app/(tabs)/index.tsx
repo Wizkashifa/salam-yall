@@ -1242,14 +1242,14 @@ export default function PrayerScreen() {
         showsVerticalScrollIndicator={false}
       >
         {nearMosque && !silenceAlertDismissed ? (
-          <View style={[styles.silenceAlert, { backgroundColor: colors.errorBackground, borderColor: isDark ? "#3D2323" : "#FECACA" }]}>
+          <View style={[styles.silenceAlert, { backgroundColor: isDark ? "#2A1818" : "#FEF2F2", borderColor: isDark ? "#3D2323" : "#FECACA" }]}>
             <View style={styles.silenceAlertContent}>
-              <MaterialCommunityIcons name="volume-off" size={16} color={colors.error} />
-              <Text style={[styles.silenceAlertText, { color: colors.error }]}>
+              <MaterialCommunityIcons name="volume-off" size={16} color={isDark ? "#F87171" : "#DC2626"} />
+              <Text style={[styles.silenceAlertText, { color: isDark ? "#F87171" : "#DC2626" }]}>
                 Salams, you're near {nearMosque.name}. Please silence your phone.
               </Text>
               <Pressable onPress={dismissSilenceAlert} hitSlop={8}>
-                <Ionicons name="close" size={16} color={colors.errorText} />
+                <Ionicons name="close" size={16} color={isDark ? "#FCA5A5" : "#991B1B"} />
               </Pressable>
             </View>
           </View>
@@ -1294,8 +1294,8 @@ export default function PrayerScreen() {
                     onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setPendingSettingsSection("prayerTracker"); router.push("/(tabs)/settings"); }}
                     style={{ flexDirection: "row", alignItems: "center", gap: 3 }}
                   >
-                    <Ionicons name="alert-circle" size={16} color={colors.error} />
-                    <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.error }}>{missedPrayerCount}</Text>
+                    <Ionicons name="alert-circle" size={16} color={isDark ? "#EF4444" : "#DC2626"} />
+                    <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: isDark ? "#EF4444" : "#DC2626" }}>{missedPrayerCount}</Text>
                   </Pressable>
                   <Pressable
                     onPress={() => {
@@ -1318,8 +1318,8 @@ export default function PrayerScreen() {
                     }}
                     style={{ flexDirection: "row", alignItems: "center", gap: 3 }}
                   >
-                    <MaterialCommunityIcons name="food-off" size={16} color={colors.error} />
-                    <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.error }}>{missedFastCount}</Text>
+                    <MaterialCommunityIcons name="food-off" size={16} color="#EF4444" />
+                    <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: "#EF4444" }}>{missedFastCount}</Text>
                   </Pressable>
                 </View>
               ) : missedPrayerCount > 0 ? (
@@ -1328,9 +1328,9 @@ export default function PrayerScreen() {
                   style={{ alignItems: "center" }}
                 >
                   <View style={{ height: 30, alignItems: "center", justifyContent: "center" }}>
-                    <Ionicons name="alert-circle" size={26} color={colors.error} />
+                    <Ionicons name="alert-circle" size={26} color={isDark ? "#EF4444" : "#DC2626"} />
                   </View>
-                  <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.error, marginTop: 2 }}>{missedPrayerCount}</Text>
+                  <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: isDark ? "#EF4444" : "#DC2626", marginTop: 2 }}>{missedPrayerCount}</Text>
                 </Pressable>
               ) : missedFastCount > 0 ? (
                 <Pressable
@@ -1355,9 +1355,9 @@ export default function PrayerScreen() {
                   style={{ alignItems: "center" }}
                 >
                   <View style={{ height: 30, alignItems: "center", justifyContent: "center" }}>
-                    <MaterialCommunityIcons name="food-off" size={26} color={colors.error} />
+                    <MaterialCommunityIcons name="food-off" size={26} color="#EF4444" />
                   </View>
-                  <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.error, marginTop: 2 }}>{missedFastCount}</Text>
+                  <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#EF4444", marginTop: 2 }}>{missedFastCount}</Text>
                 </Pressable>
               ) : (
                 <Pressable
@@ -1399,13 +1399,13 @@ export default function PrayerScreen() {
                 : status === 2 ? colors.gold
                 : isMadeUp ? colors.emerald + "80"
                 : isExcused ? colors.textTertiary
-                : isMissedPast ? colors.error
+                : isMissedPast ? "#EF4444"
                 : isPast ? colors.textTertiary : colors.textSecondary;
               const timeColor = status === 1 ? colors.emerald
                 : status === 2 ? colors.gold
                 : isMadeUp ? colors.emerald + "80"
                 : isExcused ? colors.textTertiary
-                : isMissedPast ? colors.error
+                : isMissedPast ? "#EF4444"
                 : isPast ? colors.textTertiary : colors.text;
               return (
                 <Pressable
@@ -1470,13 +1470,13 @@ export default function PrayerScreen() {
                   : status === 2 ? colors.gold
                   : isMadeUp ? colors.emerald + "80"
                   : isExcused ? colors.textTertiary
-                  : isMissedPast ? colors.error
+                  : isMissedPast ? "#EF4444"
                   : isPast ? colors.textTertiary : colors.textSecondary;
                 const timeColor = status === 1 ? colors.emerald
                   : status === 2 ? colors.gold
                   : isMadeUp ? colors.emerald + "80"
                   : isExcused ? colors.textTertiary
-                  : isMissedPast ? colors.error
+                  : isMissedPast ? "#EF4444"
                   : isPast ? colors.textTertiary : colors.text;
                 const iqamaTime = activeIqama?.iqama?.[prayer.name as keyof typeof activeIqama.iqama];
                 return (
@@ -1603,6 +1603,7 @@ export default function PrayerScreen() {
                   onPress={onPress}
                   style={({ pressed }) => [
                     styles.eventRow,
+                    { paddingHorizontal: 16 },
                     idx < communityEvents.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight },
                     pressed && { opacity: 0.7 },
                   ]}
@@ -1649,6 +1650,7 @@ export default function PrayerScreen() {
                   }}
                   style={({ pressed }) => [
                     styles.eventRow,
+                    { paddingHorizontal: 16 },
                     idx < followedOrgEvents.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight },
                     pressed && { opacity: 0.7 },
                   ]}
@@ -2190,12 +2192,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-
   masjidRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 12,
-    paddingHorizontal: 16,
     gap: 12,
   },
   masjidIcon: {
@@ -2218,7 +2218,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 11,
-    paddingHorizontal: 16,
     gap: 12,
   },
   eventIcon: {

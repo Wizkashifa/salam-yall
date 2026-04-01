@@ -2,7 +2,6 @@ import React, { ReactNode } from "react";
 import { View, StyleSheet, Platform, ViewStyle, LayoutChangeEvent } from "react-native";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
-import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/lib/theme-context";
 
@@ -35,25 +34,6 @@ export function GlassHeader({ children, style, onHeaderHeight }: GlassHeaderProp
     ...style,
   };
 
-  // iOS 26+ — true native Liquid Glass with deep green brand tint.
-  // backgroundColor is a solid fallback in case GlassView hasn't painted yet.
-  if (isIOS && isLiquidGlassAvailable()) {
-    return (
-      <View style={[containerStyle, { backgroundColor: isDark ? colors.deepGreen : colors.emerald }]} onLayout={handleLayout}>
-        <GlassView
-          style={StyleSheet.absoluteFill}
-          glassEffectStyle="regular"
-          colorScheme={isDark ? "dark" : "light"}
-          tintColor={isDark ? colors.deepGreen : colors.emerald}
-        />
-        {children}
-      </View>
-    );
-  }
-
-  // iOS < 26 — BlurView + diagonal gradient matching the widget's visual recipe:
-  // Dark:  #0A1A12 → #0F3D2B at 75% opacity, top-left to bottom-right
-  // Light: pageBgStart → emerald at 9% opacity, same direction
   if (isIOS) {
     return (
       <View style={containerStyle} onLayout={handleLayout}>
@@ -64,11 +44,9 @@ export function GlassHeader({ children, style, onHeaderHeight }: GlassHeaderProp
         />
         <LinearGradient
           colors={[
-            isDark ? colors.background + "99" : colors.pageBgStart + "66",
-            isDark ? colors.deepGreen + "99"  : colors.emerald + "26",
+            colors.gradientStart + (isDark ? "80" : "E6"),
+            colors.gradientEnd + (isDark ? "66" : "CC"),
           ]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
         {children}
