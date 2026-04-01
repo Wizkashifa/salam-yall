@@ -86,6 +86,12 @@
     .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1B6B4A; color: #fff; padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 600; display: none; z-index: 100; }
     .toast.error { background: #7F1D1D; color: #FCA5A5; }
     .loading { text-align: center; padding: 16px; color: #6B7280; font-size: 13px; }
+    .addr-wrap { position: relative; }
+    .addr-suggestions { position: absolute; top: 100%; left: 0; right: 0; background: #1E1E1E; border: 1px solid #333; border-radius: 10px; z-index: 200; max-height: 220px; overflow-y: auto; margin-top: 2px; box-shadow: 0 6px 20px rgba(0,0,0,0.5); }
+    .addr-suggestions div { padding: 10px 14px; font-size: 13px; cursor: pointer; color: #E5E5E5; border-bottom: 1px solid #252525; line-height: 1.4; }
+    .addr-suggestions div:last-child { border-bottom: none; }
+    .addr-suggestions div:hover, .addr-suggestions div.addr-active { background: #2A2A2A; color: #D4A843; }
+    .addr-coords { font-size: 11px; color: #4ADE80; margin-top: 4px; display: none; padding: 4px 8px; background: #0F2A1A; border-radius: 6px; }
   </style>
 </head>
 <body>
@@ -689,6 +695,14 @@
         <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Give the agent a masjid website and it will browse to find iqama times, extract them, and save them — automatically. Streams progress live below.</p>
         <label>Masjid Name</label>
         <input type="text" id="ingestMasjidName" placeholder="e.g. Masjid Al-Noor" style="margin-bottom:10px;">
+        <label>Address <span style="color:#6B7280;font-weight:400;font-size:11px;">(optional — auto-locates the masjid)</span></label>
+        <div class="addr-wrap" id="ingestAddrWrap" style="margin-bottom:4px;">
+          <input type="text" id="ingestMasjidAddress" placeholder="Start typing an address..." autocomplete="off" oninput="addrInput(this,'ingestAddrWrap','ingestMasjidLat','ingestMasjidLon','ingestAddrCoords')" onkeydown="addrKey(event,'ingestAddrWrap')">
+          <div class="addr-suggestions" id="ingestAddrWrap-list" style="display:none;"></div>
+        </div>
+        <div class="addr-coords" id="ingestAddrCoords" style="margin-bottom:10px;"></div>
+        <input type="hidden" id="ingestMasjidLat">
+        <input type="hidden" id="ingestMasjidLon">
         <label>Website URL</label>
         <input type="text" id="ingestWebsiteUrl" placeholder="https://masjidalnoor.org" style="margin-bottom:10px;">
         <label>Timezone</label>
@@ -722,10 +736,15 @@
           <div style="flex:2"><label>Name</label><input type="text" id="masjidName" placeholder="Masjid name"></div>
           <div style="flex:1"><label>Sort Order</label><input type="number" id="masjidSortOrder" value="0"></div>
         </div>
-        <div><label>Address</label><input type="text" id="masjidAddress" placeholder="Full address"></div>
-        <div class="row">
-          <div><label>Latitude</label><input type="text" id="masjidLat" placeholder="35.7796"></div>
-          <div><label>Longitude</label><input type="text" id="masjidLon" placeholder="-78.6382"></div>
+        <div>
+          <label>Address</label>
+          <div class="addr-wrap" id="masjidAddrWrap">
+            <input type="text" id="masjidAddress" placeholder="Start typing an address..." autocomplete="off" oninput="addrInput(this,'masjidAddrWrap','masjidLat','masjidLon','masjidAddrCoords')" onkeydown="addrKey(event,'masjidAddrWrap')">
+            <div class="addr-suggestions" id="masjidAddrWrap-list" style="display:none;"></div>
+          </div>
+          <div class="addr-coords" id="masjidAddrCoords"></div>
+          <input type="hidden" id="masjidLat">
+          <input type="hidden" id="masjidLon">
         </div>
         <div><label>Website (optional)</label><input type="text" id="masjidWebsite" placeholder="https://"></div>
         <div><label>Match Terms (comma separated, optional)</label><input type="text" id="masjidMatchTerms" placeholder="IAR, Islamic Association"></div>
@@ -3340,6 +3359,75 @@
         .catch(() => handleUnauthorized());
     }
 
+    // ── Address Autocomplete ─────────────────────────────────────────────
+    var addrTimers = {};
+    var addrCache = {};
+
+    function addrInput(inputEl, wrapId, latId, lonId, coordsId) {
+      clearTimeout(addrTimers[wrapId]);
+      var q = inputEl.value.trim();
+      var list = document.getElementById(wrapId + '-list');
+      if (q.length < 2) { list.style.display = 'none'; return; }
+      addrTimers[wrapId] = setTimeout(async function() {
+        try {
+          var res = await fetch('/api/admin/places/autocomplete?q=' + encodeURIComponent(q), { headers: { 'Authorization': 'Bearer ' + adminToken } });
+          var data = await res.json();
+          var suggestions = data.suggestions || [];
+          list.innerHTML = '';
+          if (!suggestions.length) { list.style.display = 'none'; return; }
+          suggestions.forEach(function(s, i) {
+            var d = document.createElement('div');
+            d.textContent = s.description;
+            d.dataset.placeId = s.placeId;
+            d.tabIndex = 0;
+            d.addEventListener('mousedown', function(e) {
+              e.preventDefault();
+              addrSelect(inputEl, wrapId, latId, lonId, coordsId, s.description, s.placeId);
+            });
+            list.appendChild(d);
+          });
+          list.style.display = 'block';
+        } catch(e) {}
+      }, 300);
+      // Hide on blur
+      inputEl.onblur = function() { setTimeout(function() { if (list) list.style.display = 'none'; }, 200); };
+    }
+
+    async function addrSelect(inputEl, wrapId, latId, lonId, coordsId, description, placeId) {
+      inputEl.value = description;
+      var list = document.getElementById(wrapId + '-list');
+      if (list) list.style.display = 'none';
+      var coordsEl = document.getElementById(coordsId);
+      if (coordsEl) { coordsEl.textContent = 'Resolving location...'; coordsEl.style.display = 'block'; }
+      try {
+        var res = await fetch('/api/admin/places/details?placeId=' + encodeURIComponent(placeId), { headers: { 'Authorization': 'Bearer ' + adminToken } });
+        var data = await res.json();
+        if (data.lat && data.lng) {
+          document.getElementById(latId).value = data.lat;
+          document.getElementById(lonId).value = data.lng;
+          if (coordsEl) { coordsEl.textContent = '📍 ' + data.lat.toFixed(5) + ', ' + data.lng.toFixed(5); coordsEl.style.display = 'block'; }
+        } else {
+          if (coordsEl) { coordsEl.textContent = 'Could not resolve coordinates.'; coordsEl.style.display = 'block'; }
+        }
+      } catch(e) {
+        if (coordsEl) { coordsEl.textContent = 'Error resolving location.'; coordsEl.style.display = 'block'; }
+      }
+    }
+
+    function addrKey(e, wrapId) {
+      var list = document.getElementById(wrapId + '-list');
+      if (!list || list.style.display === 'none') return;
+      var items = list.querySelectorAll('div');
+      var active = list.querySelector('.addr-active');
+      var idx = -1;
+      items.forEach(function(item, i) { if (item === active) idx = i; });
+      if (e.key === 'ArrowDown') { e.preventDefault(); if (idx < items.length - 1) { if (active) active.classList.remove('addr-active'); items[idx + 1].classList.add('addr-active'); } }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); if (idx > 0) { active.classList.remove('addr-active'); items[idx - 1].classList.add('addr-active'); } }
+      else if (e.key === 'Enter') { if (active) { e.preventDefault(); active.dispatchEvent(new MouseEvent('mousedown')); } }
+      else if (e.key === 'Escape') { list.style.display = 'none'; }
+    }
+    // ── End Address Autocomplete ─────────────────────────────────────────
+
     var activeIngestSource = null;
 
     function ingestLogLine(level, msg) {
@@ -3476,6 +3564,8 @@
       document.getElementById('masjidAddress').value = '';
       document.getElementById('masjidLat').value = '';
       document.getElementById('masjidLon').value = '';
+      var coordsEl = document.getElementById('masjidAddrCoords');
+      if (coordsEl) { coordsEl.textContent = ''; coordsEl.style.display = 'none'; }
       document.getElementById('masjidWebsite').value = '';
       document.getElementById('masjidMatchTerms').value = '';
       document.getElementById('masjidHasIqama').checked = false;
@@ -3497,6 +3587,11 @@
         document.getElementById('masjidAddress').value = m.address;
         document.getElementById('masjidLat').value = m.latitude;
         document.getElementById('masjidLon').value = m.longitude;
+        var coordsEl = document.getElementById('masjidAddrCoords');
+        if (coordsEl && m.latitude && m.longitude) {
+          coordsEl.textContent = '📍 ' + parseFloat(m.latitude).toFixed(5) + ', ' + parseFloat(m.longitude).toFixed(5);
+          coordsEl.style.display = 'block';
+        } else if (coordsEl) { coordsEl.style.display = 'none'; }
         document.getElementById('masjidWebsite').value = m.website || '';
         document.getElementById('masjidMatchTerms').value = (m.match_terms || []).join(', ');
         document.getElementById('masjidHasIqama').checked = !!m.has_iqama;

@@ -5455,6 +5455,46 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     }
   });
 
+  // Address autocomplete proxy (keeps API key server-side)
+  app.get("/api/admin/places/autocomplete", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    const q = (req.query.q as string || "").trim();
+    if (!q || q.length < 2) return res.json({ suggestions: [] });
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: "Google Places API key not configured" });
+    try {
+      const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(q)}&types=establishment|geocode&key=${apiKey}`;
+      const r = await fetch(url);
+      const data = await r.json();
+      const suggestions = (data.predictions || []).map((p: any) => ({
+        description: p.description,
+        placeId: p.place_id,
+      }));
+      res.json({ suggestions });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Resolve a place ID to lat/lng + formatted address
+  app.get("/api/admin/places/details", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    const placeId = (req.query.placeId as string || "").trim();
+    if (!placeId) return res.status(400).json({ error: "placeId required" });
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: "Google Places API key not configured" });
+    try {
+      const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(placeId)}&fields=geometry,formatted_address&key=${apiKey}`;
+      const r = await fetch(url);
+      const data = await r.json();
+      const loc = data.result?.geometry?.location;
+      if (!loc) return res.status(404).json({ error: "Place not found" });
+      res.json({ lat: loc.lat, lng: loc.lng, address: data.result?.formatted_address || "" });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   app.get("/api/admin/iqama", async (req, res) => {
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {
