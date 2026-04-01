@@ -5631,6 +5631,27 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     }
   });
 
+  // Resolve a Google Maps short URL (maps.app.goo.gl) to extract the Place ID
+  app.get("/api/admin/places/resolve-url", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    const rawUrl = (req.query.url as string || "").trim();
+    if (!rawUrl) return res.status(400).json({ error: "url required" });
+    try {
+      const r = await fetch(rawUrl, { redirect: "follow" });
+      const finalUrl = r.url;
+      // Try !1sChIJ... pattern (desktop share links)
+      let m = finalUrl.match(/!1s(ChIJ[^!%]+)/);
+      if (m) return res.json({ place_id: m[1], final_url: finalUrl });
+      // Try ?place_id=... query param
+      const u = new URL(finalUrl);
+      const pid = u.searchParams.get("place_id");
+      if (pid && pid.startsWith("ChIJ")) return res.json({ place_id: pid, final_url: finalUrl });
+      return res.status(404).json({ error: "Could not extract Place ID from that link. Try copying the URL from maps.google.com instead." });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   app.get("/api/admin/iqama", async (req, res) => {
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {

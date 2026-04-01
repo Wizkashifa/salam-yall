@@ -55,7 +55,7 @@
     @media (min-width: 768px) { .top-bar-inner { max-width: 90%; margin: 0 auto; } }
     .top-bar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
     .top-bar h1 { font-family: 'Playfair Display', serif; font-size: 16px; color: var(--gold); }
-    .top-bar button.sign-out { background: none; border: 1px solid var(--card-border); color: var(--text-secondary); padding: 6px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; font-family: inherit; }
+    .top-bar button.sign-out { background: none; border: 1px solid var(--card-border); color: var(--text-secondary); padding: 6px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; font-family: inherit; }
     .top-bar button.sign-out:hover { color: var(--text); border-color: var(--card-border-hover); }
 
     .hamburger { display: none; background: none; border: none; color: var(--text-secondary); font-size: 20px; cursor: pointer; padding: 4px 0; }
@@ -69,14 +69,14 @@
         background: rgba(7,15,11,0.97); border-bottom: 1px solid var(--divider); flex-direction: column; }
     }
     @media (max-width: 767px) { .tab-bar.mobile-open { display: flex; max-height: 500px; } }
-    .tab-btn { flex: 1; padding: 10px 4px; font-size: 12px; font-weight: 600; color: var(--text-tertiary); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.2s; font-family: inherit; position: relative; white-space: nowrap; }
+    .tab-btn { flex: 1; padding: 10px 4px; font-size: 13px; font-weight: 600; color: var(--text-tertiary); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.2s; font-family: inherit; position: relative; white-space: nowrap; }
     @media (max-width: 767px) { .tab-btn { flex: none; width: 100%; padding: 12px 20px; border-bottom: 1px solid var(--divider); border-right: 3px solid transparent; font-size: 14px; } }
     @media (max-width: 767px) { .tab-btn.active { border-right-color: var(--gold); border-bottom-color: var(--divider); color: var(--gold); } }
     .tab-btn:hover { color: var(--text-secondary); }
     .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
 
     /* TAB BADGE */
-    .tab-badge { display: inline-flex; align-items: center; justify-content: center; background: #DC2626; color: #fff; font-size: 9px; font-weight: 700; border-radius: 10px; padding: 1px 5px; min-width: 16px; height: 16px; margin-left: 4px; line-height: 1; vertical-align: middle; }
+    .tab-badge { display: inline-flex; align-items: center; justify-content: center; background: #DC2626; color: #fff; font-size: 10px; font-weight: 700; border-radius: 10px; padding: 1px 5px; min-width: 16px; height: 16px; margin-left: 4px; line-height: 1; vertical-align: middle; }
 
     /* TAB CONTENT */
     .tab-content { display: none; }
@@ -88,10 +88,10 @@
     .section-title .icon { font-size: 16px; }
 
     /* FORM ELEMENTS */
-    label { display: block; font-size: 11px; color: var(--text-tertiary); margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    label { display: block; font-size: 12px; color: var(--text-tertiary); margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
     textarea, input[type="text"], input[type="url"], input[type="number"], input[type="date"], input[type="password"], input[type="datetime-local"], select {
       width: 100%; padding: 10px 14px; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 10px;
-      color: var(--text); font-size: 14px; font-family: inherit; outline: none; margin-bottom: 14px;
+      color: var(--text); font-size: 15px; font-family: inherit; outline: none; margin-bottom: 14px;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
     select { background-color: #0E1A13; }
@@ -102,42 +102,42 @@
     .row > * { flex: 1; }
 
     /* BUTTONS */
-    .btn { padding: 10px 20px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-family: inherit; transition: all 0.2s; }
+    .btn { padding: 10px 20px; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-family: inherit; transition: all 0.2s; }
     .btn-primary { background: var(--emerald); color: #fff; }
     .btn-primary:hover { background: var(--emerald-light); }
     .btn-gold { background: var(--gold); color: #0C0C0C; }
     .btn-gold:hover { background: #B8922E; }
     .btn-danger { background: rgba(127,29,29,0.8); color: #FCA5A5; }
     .btn-danger:hover { background: #991B1B; }
-    .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+    .btn-sm { padding: 6px 12px; font-size: 13px; border-radius: 8px; }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
     /* LISTS */
     .message-list { list-style: none; }
     .message-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--divider); }
     .message-item:last-child { border-bottom: none; }
-    .message-badge { font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 3px 8px; border-radius: 6px; letter-spacing: 0.5px; white-space: nowrap; margin-top: 2px; }
+    .message-badge { font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 3px 8px; border-radius: 6px; letter-spacing: 0.5px; white-space: nowrap; margin-top: 2px; }
     .badge-info { background: rgba(212,168,67,0.12); color: var(--gold); }
     .badge-urgent { background: rgba(248,113,113,0.12); color: #F87171; }
     .badge-event { background: rgba(110,231,183,0.1); color: #6EE7B7; }
     .badge-reminder { background: rgba(165,180,252,0.1); color: #A5B4FC; }
-    .message-text { flex: 1; font-size: 13px; line-height: 1.5; color: var(--text-secondary); }
-    .message-meta { font-size: 11px; color: var(--text-tertiary); margin-top: 4px; }
+    .message-text { flex: 1; font-size: 14px; line-height: 1.5; color: var(--text-secondary); }
+    .message-meta { font-size: 12px; color: var(--text-tertiary); margin-top: 4px; }
     .message-actions { display: flex; align-items: flex-start; }
 
     /* UTILITIES */
-    .empty-state { text-align: center; padding: 20px; color: var(--text-tertiary); font-size: 13px; }
-    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--emerald); color: #fff; padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 600; display: none; z-index: 9999; }
+    .empty-state { text-align: center; padding: 20px; color: var(--text-tertiary); font-size: 14px; }
+    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--emerald); color: #fff; padding: 10px 20px; border-radius: 10px; font-size: 14px; font-weight: 600; display: none; z-index: 9999; }
     .toast.error { background: #7F1D1D; color: #FCA5A5; }
-    .loading { text-align: center; padding: 16px; color: var(--text-tertiary); font-size: 13px; }
+    .loading { text-align: center; padding: 16px; color: var(--text-tertiary); font-size: 14px; }
 
     /* ADDRESS AUTOCOMPLETE — solid bg to stay readable */
     .addr-wrap { position: relative; }
     .addr-suggestions { position: absolute; top: 100%; left: 0; right: 0; background: #152019; border: 1px solid var(--card-border); border-radius: 10px; z-index: 200; max-height: 220px; overflow-y: auto; margin-top: 2px; box-shadow: 0 6px 20px rgba(0,0,0,0.5); }
-    .addr-suggestions div { padding: 10px 14px; font-size: 13px; cursor: pointer; color: var(--text-secondary); border-bottom: 1px solid var(--divider); line-height: 1.4; }
+    .addr-suggestions div { padding: 10px 14px; font-size: 14px; cursor: pointer; color: var(--text-secondary); border-bottom: 1px solid var(--divider); line-height: 1.4; }
     .addr-suggestions div:last-child { border-bottom: none; }
     .addr-suggestions div:hover, .addr-suggestions div.addr-active { background: rgba(27,107,74,0.12); color: var(--text); }
-    .addr-coords { font-size: 11px; color: #4ADE80; margin-top: 4px; display: none; padding: 4px 8px; background: rgba(15,42,26,0.8); border-radius: 6px; }
+    .addr-coords { font-size: 12px; color: #4ADE80; margin-top: 4px; display: none; padding: 4px 8px; background: rgba(15,42,26,0.8); border-radius: 6px; }
 
     /* DASHBOARD CARDS */
     .dash-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px; }
@@ -145,8 +145,8 @@
     .dash-card:hover { background: var(--card-bg-hover, rgba(255,255,255,0.07)); border-color: var(--card-border-hover); }
     .dash-card-num { font-size: 36px; font-weight: 700; color: var(--gold); margin-bottom: 6px; letter-spacing: -0.5px; }
     .dash-card-num.zero { color: var(--text-tertiary); }
-    .dash-card-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; }
-    .dash-card-link { display: inline-block; font-size: 12px; font-weight: 600; color: var(--emerald-light); text-decoration: none; padding: 5px 12px; border: 1px solid rgba(27,107,74,0.3); border-radius: 8px; cursor: pointer; background: none; font-family: inherit; transition: all 0.2s; }
+    .dash-card-label { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; }
+    .dash-card-link { display: inline-block; font-size: 13px; font-weight: 600; color: var(--emerald-light); text-decoration: none; padding: 5px 12px; border: 1px solid rgba(27,107,74,0.3); border-radius: 8px; cursor: pointer; background: none; font-family: inherit; transition: all 0.2s; }
     .dash-card-link:hover { background: rgba(27,107,74,0.12); border-color: rgba(27,107,74,0.5); }
 
     /* QUICK-ADD ACCORDION */
@@ -180,7 +180,7 @@
     .text-danger { color: #F87171 !important; }
     .btn-feature-on { background: rgba(212,168,67,0.12) !important; color: var(--gold) !important; }
     .btn-feature-off { background: var(--card-bg) !important; color: var(--text-tertiary) !important; }
-    .inline-chip { background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-secondary); display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 8px; }
+    .inline-chip { background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-secondary); display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 8px; }
 
     /* ── MOBILE ─────────────────────────────────────────────── */
     @media (max-width: 767px) {
@@ -586,11 +586,11 @@
           <span class="accordion-toggle" id="quickAddToggle">▼</span>
         </div>
         <div class="accordion-body" id="quickAddBody">
-        <p style="font-size:12px;color:var(--text-tertiary);margin-bottom:14px;">Paste a Google Place ID to auto-fill everything, then pick a category and add. Goes live immediately as approved.</p>
+        <p style="font-size:12px;color:var(--text-tertiary);margin-bottom:14px;">Paste a Google Maps share link to auto-fill everything, then pick a category and add. Goes live immediately as approved.</p>
         <div id="addBusinessForm">
-          <label>Google Place ID</label>
+          <label>Google Maps Link</label>
           <div style="display:flex;gap:8px;margin-bottom:12px;">
-            <input type="text" id="newBizPlaceId" placeholder="ChIJ..." style="flex:1;">
+            <input type="text" id="newBizPlaceId" placeholder="https://maps.app.goo.gl/... or paste a full Google Maps URL" style="flex:1;">
             <button class="btn btn-gold" onclick="lookupBizPlaceId()" id="bizLookupBtn" style="white-space:nowrap;">Lookup</button>
           </div>
           <div id="bizLookupStatus" style="display:none;font-size:12px;margin:-8px 0 12px;padding:8px 12px;border-radius:8px;"></div>
@@ -673,11 +673,11 @@
     <div class="tab-content" id="tab-restaurants">
       <div class="section">
         <div class="section-title"><span class="icon">➕</span> Add Restaurant</div>
-        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Paste a Google Place ID to auto-fill everything, then set halal status and add.</p>
+        <p style="font-size:12px;color:var(--text-tertiary);margin-bottom:14px;">Paste a Google Maps share link to auto-fill everything, then set halal status and add.</p>
         <div id="addRestaurantForm">
-          <label>Google Place ID</label>
+          <label>Google Maps Link</label>
           <div style="display:flex;gap:8px;margin-bottom:12px;">
-            <input type="text" id="newRestPlaceId" placeholder="ChIJ..." style="flex:1;">
+            <input type="text" id="newRestPlaceId" placeholder="https://maps.app.goo.gl/... or paste a full Google Maps URL" style="flex:1;">
             <button class="btn btn-gold" onclick="lookupPlaceId()" id="lookupBtn" style="white-space:nowrap;">Lookup</button>
           </div>
           <div id="lookupStatus" style="display:none;font-size:12px;margin:-8px 0 12px;padding:8px 12px;border-radius:8px;"></div>
@@ -1862,19 +1862,58 @@
       btn.disabled = false;
     }
 
+    // Extract a Google Place ID from a Maps share URL or raw ID
+    function parsePlaceIdFromInput(input) {
+      input = input.trim();
+      // Already a bare Place ID
+      if (/^ChIJ/i.test(input)) return { placeId: input, needsResolve: false };
+      // ?place_id=ChIJ... query param
+      var m = input.match(/[?&]place_id=(ChIJ[^&]+)/);
+      if (m) return { placeId: decodeURIComponent(m[1]), needsResolve: false };
+      // !1sChIJ... in data segment (desktop share link format)
+      m = input.match(/!1s(ChIJ[^!%]+)/);
+      if (m) return { placeId: m[1], needsResolve: false };
+      // Short URL or other full URL — needs server-side redirect resolution
+      if (/^https?:\/\//.test(input)) return { placeId: null, needsResolve: true, url: input };
+      return { placeId: null, needsResolve: false };
+    }
+
+    async function resolveToPlaceId(input, statusEl) {
+      var parsed = parsePlaceIdFromInput(input);
+      if (parsed.placeId) return parsed.placeId;
+      if (!parsed.needsResolve) return null;
+      statusEl.textContent = 'Resolving short link…';
+      try {
+        var r = await fetch('/api/admin/places/resolve-url?url=' + encodeURIComponent(parsed.url), {
+          headers: { 'Authorization': 'Bearer ' + adminToken }
+        });
+        var d = await r.json();
+        if (!r.ok || !d.place_id) {
+          statusEl.style.background = '#2A1818'; statusEl.style.color = '#F87171';
+          statusEl.textContent = d.error || 'Could not extract Place ID from that link. Try the full maps.google.com URL.';
+          return null;
+        }
+        return d.place_id;
+      } catch(e) {
+        statusEl.style.background = '#2A1818'; statusEl.style.color = '#F87171';
+        statusEl.textContent = 'Connection error resolving URL';
+        return null;
+      }
+    }
+
     var pendingBizLookupData = null;
 
     async function lookupBizPlaceId() {
-      var placeId = document.getElementById('newBizPlaceId').value.trim();
-      if (!placeId) { showToast('Enter a Place ID first', true); return; }
+      var input = document.getElementById('newBizPlaceId').value.trim();
+      if (!input) { showToast('Paste a Google Maps link first', true); return; }
       var btn = document.getElementById('bizLookupBtn');
       var status = document.getElementById('bizLookupStatus');
-      btn.disabled = true;
-      btn.textContent = 'Looking up...';
-      status.style.display = 'block';
-      status.style.background = '#1A2E22';
-      status.style.color = '#6EE7B7';
-      status.textContent = 'Fetching data from Google Places...';
+      btn.disabled = true; btn.textContent = 'Looking up…';
+      status.style.display = 'block'; status.style.background = '#1A2E22'; status.style.color = '#6EE7B7';
+      status.textContent = 'Parsing link…';
+      var placeId = await resolveToPlaceId(input, status);
+      if (!placeId) { btn.disabled = false; btn.textContent = 'Lookup'; return; }
+      status.textContent = 'Fetching data from Google Places…';
       try {
         var res = await fetch('/api/admin/businesses/lookup', {
           method: 'POST',
@@ -3146,16 +3185,16 @@
     }
 
     async function lookupPlaceId() {
-      var placeId = document.getElementById('newRestPlaceId').value.trim();
-      if (!placeId) { showToast('Enter a Place ID first', true); return; }
+      var input = document.getElementById('newRestPlaceId').value.trim();
+      if (!input) { showToast('Paste a Google Maps link first', true); return; }
       var btn = document.getElementById('lookupBtn');
       var status = document.getElementById('lookupStatus');
-      btn.disabled = true;
-      btn.textContent = 'Looking up...';
-      status.style.display = 'block';
-      status.style.background = '#1A2E22';
-      status.style.color = '#6EE7B7';
-      status.textContent = 'Fetching data from Google Places...';
+      btn.disabled = true; btn.textContent = 'Looking up…';
+      status.style.display = 'block'; status.style.background = '#1A2E22'; status.style.color = '#6EE7B7';
+      status.textContent = 'Parsing link…';
+      var placeId = await resolveToPlaceId(input, status);
+      if (!placeId) { btn.disabled = false; btn.textContent = 'Lookup'; return; }
+      status.textContent = 'Fetching data from Google Places…';
       try {
         var res = await fetch('/api/admin/restaurants/lookup', {
           method: 'POST',
