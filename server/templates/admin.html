@@ -555,6 +555,17 @@
         </div>
       </div>
       <div class="section">
+        <div class="section-title"><span class="icon">🗺️</span> Metro Bulk Import</div>
+        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Fetch halal restaurants from Google Places for an entire metro area. Run this when adding a new metro to the app.</p>
+        <div class="row" style="margin-bottom:12px;">
+          <div style="flex:2"><label>Metro Name</label><input type="text" id="metroImportName" placeholder="e.g. Las Vegas NV"></div>
+          <div><label>Lat</label><input type="text" id="metroImportLat" placeholder="36.1699"></div>
+          <div><label>Lng</label><input type="text" id="metroImportLng" placeholder="-115.1398"></div>
+        </div>
+        <button class="btn btn-gold" onclick="runMetroImport()" id="metroImportBtn">Run Import</button>
+        <div id="metroImportStatus" style="font-size:12px;color:#6B7280;margin-top:10px;"></div>
+      </div>
+      <div class="section">
         <div class="section-title"><span class="icon">⏳</span> Restaurants Waiting Approval</div>
         <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Community-submitted halal restaurants awaiting your review. Approve to add to the halal directory or reject.</p>
         <div id="restSubmissionList"><div class="loading">Loading...</div></div>
@@ -2400,6 +2411,34 @@
     }
 
     var pendingLookupData = null;
+
+    async function runMetroImport() {
+      var metro = document.getElementById('metroImportName').value.trim();
+      var lat = parseFloat(document.getElementById('metroImportLat').value.trim());
+      var lng = parseFloat(document.getElementById('metroImportLng').value.trim());
+      var status = document.getElementById('metroImportStatus');
+      var btn = document.getElementById('metroImportBtn');
+      if (!metro) { showToast('Enter a metro name', true); return; }
+      if (isNaN(lat) || isNaN(lng)) { showToast('Enter valid lat/lng', true); return; }
+      btn.disabled = true;
+      btn.textContent = 'Importing...';
+      status.textContent = 'Searching Google Places for halal restaurants in ' + metro + '...';
+      try {
+        var res = await fetch('/api/admin/restaurants/metro-import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify({ metro, lat, lng })
+        });
+        var data = await res.json();
+        if (!res.ok) { showToast(data.error || 'Import failed', true); status.textContent = ''; }
+        else {
+          status.textContent = '✅ Done! Found ' + data.found + ' places, inserted ' + data.inserted + ' new restaurants, skipped ' + data.skipped + ' duplicates.';
+          showToast('Metro import complete: ' + data.inserted + ' restaurants added');
+        }
+      } catch(e) { showToast('Import failed', true); status.textContent = ''; }
+      btn.disabled = false;
+      btn.textContent = 'Run Import';
+    }
 
     async function lookupPlaceId() {
       var placeId = document.getElementById('newRestPlaceId').value.trim();

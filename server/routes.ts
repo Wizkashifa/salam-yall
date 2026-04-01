@@ -2522,6 +2522,7 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     { name: "DMV", lat: 38.9072, lng: -77.0369, cities: ["Washington DC", "Falls Church", "Silver Spring", "Fairfax", "Herndon"] },
     { name: "Houston TX", lat: 29.7604, lng: -95.3698, cities: ["Houston", "Sugar Land", "Katy", "Pearland", "Missouri City"] },
     { name: "Indianapolis IN", lat: 39.7684, lng: -86.1581, cities: ["Indianapolis", "Carmel", "Fishers", "Greenwood", "Plainfield"] },
+    { name: "Las Vegas NV", lat: 36.1699, lng: -115.1398, cities: ["Las Vegas", "Henderson", "North Las Vegas", "Summerlin", "Enterprise"] },
     { name: "Los Angeles CA", lat: 34.0522, lng: -118.2437, cities: ["Los Angeles", "Anaheim", "Irvine", "Pasadena", "Glendale"] },
     { name: "Miami FL", lat: 25.7617, lng: -80.1918, cities: ["Miami", "Hialeah", "Pembroke Pines", "Davie", "Plantation"] },
     { name: "Minneapolis MN", lat: 44.9778, lng: -93.2650, cities: ["Minneapolis", "St. Paul", "Bloomington", "Brooklyn Park", "Eden Prairie"] },
@@ -3781,6 +3782,107 @@ Return ONLY the description text, nothing else.`,
     } catch (error: any) {
       console.error("Error looking up place:", error.message);
       res.status(500).json({ error: "Failed to look up place" });
+    }
+  });
+
+  app.post("/api/admin/restaurants/metro-import", async (req, res) => {
+    try {
+      if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+      const { metro, lat, lng, radius_meters = 40000 } = req.body;
+      if (!metro || !lat || !lng) return res.status(400).json({ error: "metro, lat, lng required" });
+      const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+      if (!apiKey) return res.status(500).json({ error: "Google Places API key not configured" });
+
+      const queries = [
+        "halal restaurants",
+        "zabiha halal food",
+        "halal meat restaurant",
+        "halal grocery store",
+        "Muslim restaurant",
+      ];
+
+      const fieldMask = "places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.googleMapsUri,places.location,places.rating,places.userRatingCount,places.photos,places.regularOpeningHours,places.types";
+
+      const seen = new Set<string>();
+      const toInsert: any[] = [];
+
+      for (const query of queries) {
+        let pageToken: string | undefined;
+        let pageCount = 0;
+        do {
+          const body: any = {
+            textQuery: `${query} in ${metro}`,
+            locationBias: { circle: { center: { latitude: lat, longitude: lng }, radius: radius_meters } },
+            maxResultCount: 20,
+          };
+          if (pageToken) body.pageToken = pageToken;
+
+          const resp = await fetch("https://places.googleapis.com/v1/places:searchText", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": fieldMask },
+            body: JSON.stringify(body),
+          });
+          const data = await resp.json();
+          pageToken = data.nextPageToken;
+          pageCount++;
+
+          for (const place of (data.places || [])) {
+            if (!place.id || seen.has(place.id)) continue;
+            seen.add(place.id);
+            toInsert.push(place);
+          }
+
+          if (pageToken && pageCount < 3) await new Promise(r => setTimeout(r, 800));
+          else break;
+        } while (pageToken);
+
+        await new Promise(r => setTimeout(r, 500));
+      }
+
+      let inserted = 0;
+      let skipped = 0;
+      for (const place of toInsert) {
+        const existing = await pool.query("SELECT id FROM halal_restaurants WHERE place_id = $1 OR LOWER(name) = LOWER($2)", [place.id, place.displayName?.text || ""]);
+        if (existing.rows.length > 0) { skipped++; continue; }
+
+        const photoRef = place.photos?.[0]?.name || null;
+        const hours = place.regularOpeningHours;
+        let openingHours = null;
+        if (hours?.periods) {
+          const days = ["SUNDAY","MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY"];
+          openingHours = { periods: hours.periods.map((p: any) => ({
+            open: { day: days[p.open?.day || 0], time: [p.open?.hour || 0, p.open?.minute || 0] },
+            close: p.close ? { day: days[p.close.day || 0], time: [p.close.hour || 0, p.close.minute || 0] } : { day: days[p.open?.day || 0], time: [23, 59] },
+          })) };
+        }
+
+        await pool.query(
+          `INSERT INTO halal_restaurants (name, formatted_address, formatted_phone, is_halal, website, url, lat, lng, place_id, rating, user_ratings_total, photo_reference, opening_hours, hours_last_updated)
+           VALUES ($1,$2,$3,'UNKNOWN',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+          [
+            place.displayName?.text || "",
+            place.formattedAddress || null,
+            place.nationalPhoneNumber || null,
+            place.websiteUri || null,
+            place.googleMapsUri || null,
+            place.location?.latitude || null,
+            place.location?.longitude || null,
+            place.id,
+            place.rating || null,
+            place.userRatingCount || null,
+            photoRef,
+            openingHours ? JSON.stringify(openingHours) : null,
+            photoRef ? new Date() : null,
+          ]
+        );
+        inserted++;
+      }
+
+      console.log(`[Metro Import] ${metro}: inserted ${inserted}, skipped ${skipped} duplicates out of ${toInsert.length} found`);
+      res.json({ metro, found: toInsert.length, inserted, skipped });
+    } catch (error: any) {
+      console.error("Metro import error:", error.message);
+      res.status(500).json({ error: "Failed to import metro restaurants" });
     }
   });
 
