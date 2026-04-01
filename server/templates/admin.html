@@ -6,92 +6,181 @@
   <title>Salam Y'all Admin</title>
   <link rel="icon" type="image/png" sizes="48x48" href="/assets/images/favicon.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --bg: #070F0B;
+      --bg-elevated: #0E1A13;
+      --card-bg: rgba(255,255,255,0.04);
+      --card-bg-hover: rgba(255,255,255,0.07);
+      --card-border: rgba(255,255,255,0.08);
+      --card-border-hover: rgba(255,255,255,0.15);
+      --emerald: #1B6B4A;
+      --emerald-light: #2A8C63;
+      --emerald-dark: #0d2b1a;
+      --gold: #D4A843;
+      --gold-subtle: rgba(212,168,67,0.1);
+      --text: #F0F0EC;
+      --text-secondary: rgba(255,255,255,0.6);
+      --text-tertiary: rgba(255,255,255,0.35);
+      --divider: rgba(255,255,255,0.06);
+      --input-bg: rgba(255,255,255,0.05);
+      --input-border: rgba(255,255,255,0.1);
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.3);
+    }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0C0C0C; color: #F5F5F5; min-height: 100vh; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+
+    /* LOGIN */
     .login-wrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
-    .login-card { background: #161616; border: 1px solid #252525; border-radius: 16px; padding: 40px; max-width: 360px; width: 100%; text-align: center; }
-    .login-card h1 { font-size: 22px; color: #D4A843; margin-bottom: 8px; }
-    .login-card p { font-size: 13px; color: #9CA3AF; margin-bottom: 24px; }
-    .login-card input { width: 100%; padding: 12px 16px; background: #1E1E1E; border: 1px solid #333; border-radius: 10px; color: #F5F5F5; font-size: 15px; outline: none; margin-bottom: 16px; }
-    .login-card input:focus { border-color: #D4A843; }
-    .login-card button { width: 100%; padding: 12px; background: #1B6B4A; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; }
-    .login-card button:hover { background: #14523A; }
+    .login-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 40px; max-width: 360px; width: 100%; text-align: center; }
+    .login-card h1 { font-family: 'Playfair Display', serif; font-size: 22px; color: var(--gold); margin-bottom: 8px; }
+    .login-card p { font-size: 13px; color: var(--text-secondary); margin-bottom: 24px; }
+    .login-card input { width: 100%; padding: 12px 16px; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 10px; color: var(--text); font-size: 15px; outline: none; margin-bottom: 16px; font-family: inherit; }
+    .login-card input:focus { border-color: var(--emerald); box-shadow: 0 0 0 3px rgba(27,107,74,0.15); }
+    .login-card button { width: 100%; padding: 12px; background: var(--emerald); color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .login-card button:hover { background: var(--emerald-light); }
     .login-error { color: #F87171; font-size: 13px; margin-bottom: 12px; display: none; }
 
+    /* APP LAYOUT */
     .app-wrap { display: none; width: 100%; margin: 0 auto; padding: 20px; padding-top: 110px; padding-bottom: 40px; max-width: 100%; }
     @media (min-width: 768px) { .app-wrap { max-width: 90%; margin: 0 auto; } }
-    .top-bar { position: fixed; top: 0; left: 0; right: 0; background: #161616; border-bottom: 1px solid #252525; z-index: 10; }
+
+    /* TOP BAR — glassmorphism */
+    .top-bar { position: fixed; top: 0; left: 0; right: 0; background: rgba(7,15,11,0.85); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); border-bottom: 1px solid var(--divider); z-index: 10; }
     .top-bar-inner { width: 100%; margin: 0 auto; padding: 14px 20px 0; }
     @media (min-width: 768px) { .top-bar-inner { max-width: 90%; margin: 0 auto; } }
     .top-bar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-    .top-bar h1 { font-size: 16px; color: #D4A843; }
-    .top-bar button.sign-out { background: none; border: 1px solid #333; color: #9CA3AF; padding: 6px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; }
-    .top-bar button.sign-out:hover { color: #F5F5F5; border-color: #555; }
+    .top-bar h1 { font-family: 'Playfair Display', serif; font-size: 16px; color: var(--gold); }
+    .top-bar button.sign-out { background: none; border: 1px solid var(--card-border); color: var(--text-secondary); padding: 6px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; font-family: inherit; }
+    .top-bar button.sign-out:hover { color: var(--text); border-color: var(--card-border-hover); }
 
-    .hamburger { display: none; background: none; border: none; color: #9CA3AF; font-size: 20px; cursor: pointer; padding: 4px 0; }
-    .hamburger:hover { color: #F5F5F5; }
+    .hamburger { display: none; background: none; border: none; color: var(--text-secondary); font-size: 20px; cursor: pointer; padding: 4px 0; }
+    .hamburger:hover { color: var(--text); }
     @media (max-width: 767px) { .hamburger { display: block; } }
 
+    /* TAB BAR */
     .tab-bar { display: flex; gap: 0; }
-    @media (max-width: 767px) { .tab-bar { display: none; max-height: 0; overflow: hidden; position: absolute; top: 60px; left: 0; right: 0; background: #161616; border-bottom: 1px solid #252525; flex-direction: column; } }
-    @media (max-width: 767px) { .tab-bar.mobile-open { display: flex; max-height: 400px; } }
-    .tab-btn { flex: 1; padding: 10px 0; font-size: 13px; font-weight: 600; color: #6B7280; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.2s; }
-    @media (max-width: 767px) { .tab-btn { flex: none; width: 100%; padding: 12px 20px; border-bottom: 1px solid #252525; border-right: 3px solid transparent; } }
-    @media (max-width: 767px) { .tab-btn.active { border-right-color: #D4A843; border-bottom-color: #252525; } }
-    .tab-btn:hover { color: #9CA3AF; }
-    .tab-btn.active { color: #D4A843; border-bottom-color: #D4A843; }
+    @media (max-width: 767px) {
+      .tab-bar { display: none; max-height: 0; overflow: hidden; position: absolute; top: 60px; left: 0; right: 0;
+        background: rgba(7,15,11,0.97); border-bottom: 1px solid var(--divider); flex-direction: column; }
+    }
+    @media (max-width: 767px) { .tab-bar.mobile-open { display: flex; max-height: 500px; } }
+    .tab-btn { flex: 1; padding: 10px 4px; font-size: 12px; font-weight: 600; color: var(--text-tertiary); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.2s; font-family: inherit; position: relative; white-space: nowrap; }
+    @media (max-width: 767px) { .tab-btn { flex: none; width: 100%; padding: 12px 20px; border-bottom: 1px solid var(--divider); border-right: 3px solid transparent; font-size: 14px; } }
+    @media (max-width: 767px) { .tab-btn.active { border-right-color: var(--gold); border-bottom-color: var(--divider); color: var(--gold); } }
+    .tab-btn:hover { color: var(--text-secondary); }
+    .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
 
+    /* TAB BADGE */
+    .tab-badge { display: inline-flex; align-items: center; justify-content: center; background: #DC2626; color: #fff; font-size: 9px; font-weight: 700; border-radius: 10px; padding: 1px 5px; min-width: 16px; height: 16px; margin-left: 4px; line-height: 1; vertical-align: middle; }
+
+    /* TAB CONTENT */
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
-    .section { background: #161616; border: 1px solid #252525; border-radius: 14px; padding: 20px; margin-bottom: 16px; }
-    .section-title { font-size: 15px; font-weight: 700; color: #D4A843; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    /* SECTION CARDS — frosted glass */
+    .section { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 20px; margin-bottom: 16px; }
+    .section-title { font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
     .section-title .icon { font-size: 16px; }
 
-    label { display: block; font-size: 12px; color: #9CA3AF; margin-bottom: 6px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
-    textarea, input[type="text"], input[type="datetime-local"], select {
-      width: 100%; padding: 10px 14px; background: #1E1E1E; border: 1px solid #333; border-radius: 10px;
-      color: #F5F5F5; font-size: 14px; font-family: inherit; outline: none; margin-bottom: 14px;
+    /* FORM ELEMENTS */
+    label { display: block; font-size: 11px; color: var(--text-tertiary); margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    textarea, input[type="text"], input[type="url"], input[type="number"], input[type="date"], input[type="password"], input[type="datetime-local"], select {
+      width: 100%; padding: 10px 14px; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 10px;
+      color: var(--text); font-size: 14px; font-family: 'Inter', inherit; outline: none; margin-bottom: 14px;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
+    select { background-color: #0E1A13; }
     textarea { resize: vertical; min-height: 80px; }
-    textarea:focus, input:focus, select:focus { border-color: #D4A843; }
+    textarea:focus, input:focus, select:focus { border-color: var(--emerald); box-shadow: 0 0 0 3px rgba(27,107,74,0.15); }
 
     .row { display: flex; gap: 12px; }
     .row > * { flex: 1; }
 
-    .btn { padding: 10px 20px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
-    .btn-primary { background: #1B6B4A; color: #fff; }
-    .btn-primary:hover { background: #14523A; }
-    .btn-gold { background: #D4A843; color: #0C0C0C; }
+    /* BUTTONS */
+    .btn { padding: 10px 20px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-family: inherit; transition: all 0.2s; }
+    .btn-primary { background: var(--emerald); color: #fff; }
+    .btn-primary:hover { background: var(--emerald-light); }
+    .btn-gold { background: var(--gold); color: #0C0C0C; }
     .btn-gold:hover { background: #B8922E; }
-    .btn-danger { background: #7F1D1D; color: #FCA5A5; }
+    .btn-danger { background: rgba(127,29,29,0.8); color: #FCA5A5; }
     .btn-danger:hover { background: #991B1B; }
     .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+    /* LISTS */
     .message-list { list-style: none; }
-    .message-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid #1E1E1E; }
+    .message-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--divider); }
     .message-item:last-child { border-bottom: none; }
     .message-badge { font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 3px 8px; border-radius: 6px; letter-spacing: 0.5px; white-space: nowrap; margin-top: 2px; }
-    .badge-info { background: #2A2318; color: #D4A843; }
-    .badge-urgent { background: #2A1818; color: #F87171; }
-    .badge-event { background: #1A2E22; color: #6EE7B7; }
-    .badge-reminder { background: #1E1E3A; color: #A5B4FC; }
-    .message-text { flex: 1; font-size: 13px; line-height: 1.5; color: #E5E5E5; }
-    .message-meta { font-size: 11px; color: #6B7280; margin-top: 4px; }
+    .badge-info { background: rgba(212,168,67,0.12); color: var(--gold); }
+    .badge-urgent { background: rgba(248,113,113,0.12); color: #F87171; }
+    .badge-event { background: rgba(110,231,183,0.1); color: #6EE7B7; }
+    .badge-reminder { background: rgba(165,180,252,0.1); color: #A5B4FC; }
+    .message-text { flex: 1; font-size: 13px; line-height: 1.5; color: var(--text-secondary); }
+    .message-meta { font-size: 11px; color: var(--text-tertiary); margin-top: 4px; }
     .message-actions { display: flex; align-items: flex-start; }
 
-    .empty-state { text-align: center; padding: 20px; color: #6B7280; font-size: 13px; }
-    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1B6B4A; color: #fff; padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 600; display: none; z-index: 100; }
+    /* UTILITIES */
+    .empty-state { text-align: center; padding: 20px; color: var(--text-tertiary); font-size: 13px; }
+    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--emerald); color: #fff; padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 600; display: none; z-index: 9999; }
     .toast.error { background: #7F1D1D; color: #FCA5A5; }
-    .loading { text-align: center; padding: 16px; color: #6B7280; font-size: 13px; }
+    .loading { text-align: center; padding: 16px; color: var(--text-tertiary); font-size: 13px; }
+
+    /* ADDRESS AUTOCOMPLETE — solid bg to stay readable */
     .addr-wrap { position: relative; }
-    .addr-suggestions { position: absolute; top: 100%; left: 0; right: 0; background: #1E1E1E; border: 1px solid #333; border-radius: 10px; z-index: 200; max-height: 220px; overflow-y: auto; margin-top: 2px; box-shadow: 0 6px 20px rgba(0,0,0,0.5); }
-    .addr-suggestions div { padding: 10px 14px; font-size: 13px; cursor: pointer; color: #E5E5E5; border-bottom: 1px solid #252525; line-height: 1.4; }
+    .addr-suggestions { position: absolute; top: 100%; left: 0; right: 0; background: #152019; border: 1px solid var(--card-border); border-radius: 10px; z-index: 200; max-height: 220px; overflow-y: auto; margin-top: 2px; box-shadow: 0 6px 20px rgba(0,0,0,0.5); }
+    .addr-suggestions div { padding: 10px 14px; font-size: 13px; cursor: pointer; color: var(--text-secondary); border-bottom: 1px solid var(--divider); line-height: 1.4; }
     .addr-suggestions div:last-child { border-bottom: none; }
-    .addr-suggestions div:hover, .addr-suggestions div.addr-active { background: #2A2A2A; color: #D4A843; }
-    .addr-coords { font-size: 11px; color: #4ADE80; margin-top: 4px; display: none; padding: 4px 8px; background: #0F2A1A; border-radius: 6px; }
+    .addr-suggestions div:hover, .addr-suggestions div.addr-active { background: rgba(27,107,74,0.12); color: var(--text); }
+    .addr-coords { font-size: 11px; color: #4ADE80; margin-top: 4px; display: none; padding: 4px 8px; background: rgba(15,42,26,0.8); border-radius: 6px; }
+
+    /* DASHBOARD CARDS */
+    .dash-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px; }
+    .dash-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 20px; text-align: center; transition: all 0.2s; }
+    .dash-card:hover { background: var(--card-bg-hover, rgba(255,255,255,0.07)); border-color: var(--card-border-hover); }
+    .dash-card-num { font-size: 36px; font-weight: 800; color: var(--gold); margin-bottom: 6px; font-family: 'Inter', sans-serif; }
+    .dash-card-num.zero { color: var(--text-tertiary); }
+    .dash-card-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; }
+    .dash-card-link { display: inline-block; font-size: 12px; font-weight: 600; color: var(--emerald-light); text-decoration: none; padding: 5px 12px; border: 1px solid rgba(27,107,74,0.3); border-radius: 8px; cursor: pointer; background: none; font-family: inherit; transition: all 0.2s; }
+    .dash-card-link:hover { background: rgba(27,107,74,0.12); border-color: rgba(27,107,74,0.5); }
+
+    /* QUICK-ADD ACCORDION */
+    .accordion-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 14px 0; border-bottom: 1px solid var(--divider); margin-bottom: 0; user-select: none; }
+    .accordion-header .section-title { margin-bottom: 0; }
+    .accordion-toggle { font-size: 12px; color: var(--text-tertiary); transition: transform 0.2s; }
+    .accordion-toggle.open { transform: rotate(180deg); }
+    .accordion-body { overflow: hidden; transition: max-height 0.3s ease; max-height: 0; }
+    .accordion-body.open { max-height: 2000px; padding-top: 16px; }
+
+    /* MODAL SECTIONS */
+    .modal-section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-tertiary); padding: 12px 0 8px; border-top: 1px solid var(--divider); margin-top: 4px; }
+    .modal-section-label:first-of-type { border-top: none; margin-top: 0; padding-top: 0; }
+    .modal-sticky-footer { position: sticky; bottom: 0; background: rgba(14,26,19,0.98); padding: 12px 0 4px; margin-top: 4px; border-top: 1px solid var(--divider); display: flex; gap: 8px; z-index: 5; }
+
+    /* FILTER ROW */
+    .filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
+    .filter-row input[type="text"] { flex: 1; min-width: 160px; margin-bottom: 0; }
+    .filter-row select { flex: 0 0 auto; width: auto; min-width: 130px; margin-bottom: 0; }
+
+    /* MESSAGE CARD (Masjid list items etc.) */
+    .message-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; transition: background 0.15s; }
+    .message-card:hover { background: var(--card-bg-hover); }
+
+    /* UTILITY CLASSES FOR JS-RENDERED HTML */
+    .text-primary { color: var(--text) !important; }
+    .text-secondary { color: var(--text-secondary) !important; }
+    .text-tertiary { color: var(--text-tertiary) !important; }
+    .text-gold { color: var(--gold) !important; }
+    .text-emerald { color: #4ADE80 !important; }
+    .text-danger { color: #F87171 !important; }
+    .btn-feature-on { background: rgba(212,168,67,0.12) !important; color: var(--gold) !important; }
+    .btn-feature-off { background: var(--card-bg) !important; color: var(--text-tertiary) !important; }
+    .inline-chip { background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-secondary); display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 8px; }
   </style>
 </head>
 <body>
@@ -116,18 +205,28 @@
           </div>
         </div>
         <div class="tab-bar" id="tabBar">
-          <button class="tab-btn active" data-tab="comms" onclick="switchTab('comms')">Notifications & Ticker</button>
-          <button class="tab-btn" data-tab="janaza" onclick="switchTab('janaza')">Janaza</button>
-          <button class="tab-btn" data-tab="events" onclick="switchTab('events')">Events</button>
-          <button class="tab-btn" data-tab="businesses" onclick="switchTab('businesses')">Business Submissions</button>
-          <button class="tab-btn" data-tab="restaurants" onclick="switchTab('restaurants')">Restaurants</button>
+          <button class="tab-btn active" data-tab="dashboard" onclick="switchTab('dashboard')">Dashboard</button>
+          <button class="tab-btn" data-tab="comms" onclick="switchTab('comms')">Comms</button>
+          <button class="tab-btn" data-tab="businesses" onclick="switchTab('businesses')">Businesses<span class="tab-badge" id="badge-businesses" style="display:none;"></span></button>
+          <button class="tab-btn" data-tab="events" onclick="switchTab('events')">Events<span class="tab-badge" id="badge-events" style="display:none;"></span></button>
+          <button class="tab-btn" data-tab="restaurants" onclick="switchTab('restaurants')">Restaurants<span class="tab-badge" id="badge-restaurants" style="display:none;"></span></button>
           <button class="tab-btn" data-tab="analytics" onclick="switchTab('analytics')">Analytics</button>
           <button class="tab-btn" data-tab="masjids" onclick="switchTab('masjids')">Masjids</button>
         </div>
       </div>
     </div>
 
-    <div class="tab-content active" id="tab-comms">
+    <div class="tab-content active" id="tab-dashboard">
+      <div class="section">
+        <div class="section-title"><span class="icon">📊</span> Pending Review</div>
+        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;">Items waiting for your attention right now.</p>
+        <div class="dash-cards" id="dashCards">
+          <div class="loading">Loading counts...</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-comms">
       <div class="section">
         <div class="section-title"><span class="icon">🔔</span> Send Push Notification</div>
         <label>Notification Type</label>
@@ -195,80 +294,6 @@
         <div id="tickerList"><div class="loading">Loading...</div></div>
       </div>
 
-      <div class="section" id="jumuahSection">
-        <div class="section-title" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;" onclick="toggleJumuahSection()">
-          <span><span class="icon">🕌</span> Jumu'ah Schedules</span>
-          <span id="jumuahToggleIcon" style="font-size:12px;color:#6B7280;">▼ Show</span>
-        </div>
-        <div id="jumuahSectionBody" style="display:none;margin-top:14px;">
-          <p style="font-size:12px;color:#9CA3AF;margin-bottom:14px;">Manage Jumuah schedules across all metro areas. Each entry supports multiple khutbah slots.</p>
-
-          <div style="margin-bottom:16px;">
-            <button class="btn btn-sm" style="background:#1B2E23;color:#4ADE80;margin-bottom:12px;" onclick="showJumuahForm()">+ Add Schedule</button>
-            <div id="jumuahAddForm" style="display:none;background:#1E1E1E;border:1px solid #333;border-radius:10px;padding:16px;margin-bottom:14px;">
-              <input type="hidden" id="jumuahEditId" value="">
-              <h4 id="jumuahFormTitle" style="margin:0 0 12px;font-size:13px;color:#F5F5F5;">New Jumu'ah Schedule</h4>
-              <div class="row">
-                <div><label>Masjid Name</label><input type="text" id="jumuahMasjid" placeholder="e.g. IAR (Atwater)"></div>
-                <div>
-                  <label>Metro Area</label>
-                  <select id="jumuahMetro" style="width:100%;padding:10px 14px;background:#1E1E1E;border:1px solid #333;border-radius:10px;color:#F5F5F5;font-size:14px;">
-                    <option value="Raleigh-Durham NC">Raleigh-Durham NC</option>
-                    <option value="Bay Area CA">Bay Area CA</option>
-                    <option value="Indianapolis IN">Indianapolis IN</option>
-                    <option value="Las Vegas NV">Las Vegas NV</option>
-                    <option value="">Other / None</option>
-                  </select>
-                </div>
-              </div>
-              <div class="row">
-                <div>
-                  <label>Timezone</label>
-                  <select id="jumuahTimezone" style="width:100%;padding:10px 14px;background:#1E1E1E;border:1px solid #333;border-radius:10px;color:#F5F5F5;font-size:14px;">
-                    <option value="America/New_York">Eastern (New York)</option>
-                    <option value="America/Chicago">Central (Chicago)</option>
-                    <option value="America/Denver">Mountain (Denver)</option>
-                    <option value="America/Los_Angeles">Pacific (Los Angeles)</option>
-                    <option value="America/Indiana/Indianapolis">Indiana (Indianapolis)</option>
-                    <option value="America/Phoenix">Arizona (Phoenix)</option>
-                  </select>
-                </div>
-              </div>
-              <div id="jumuahSlots">
-                <div class="jumuah-slot" style="border:1px solid #2A2A2A;border-radius:8px;padding:12px;margin-bottom:10px;">
-                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                    <span style="font-size:11px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;">Slot 1</span>
-                  </div>
-                  <div class="row">
-                    <div><label>Khutbah Time</label><input type="text" class="slot-khutbah" placeholder="1:00 PM"></div>
-                    <div><label>Iqama Time</label><input type="text" class="slot-iqama" placeholder="1:30 PM"></div>
-                  </div>
-                  <div class="row">
-                    <div><label>Speaker (optional)</label><input type="text" class="slot-speaker" placeholder="Sheikh name"></div>
-                    <div><label>Topic (optional)</label><input type="text" class="slot-topic" placeholder="Khutbah topic"></div>
-                  </div>
-                </div>
-              </div>
-              <button class="btn btn-sm" style="background:#252525;color:#9CA3AF;margin-bottom:12px;" onclick="addJumuahSlot()">+ Add Another Slot</button>
-              <div style="display:flex;gap:8px;">
-                <button class="btn btn-primary" onclick="submitJumuahForm()" id="addJumuahBtn">Save Schedule</button>
-                <button class="btn btn-sm" style="background:#252525;color:#9CA3AF;" onclick="hideJumuahForm()">Cancel</button>
-              </div>
-            </div>
-          </div>
-
-          <div id="jumuahMetroFilter" style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn btn-sm jumuah-filter-btn active-filter" onclick="filterJumuahByMetro(null,this)" style="background:#1B3A2E;color:#4ADE80;">All Metros</button>
-            <button class="btn btn-sm jumuah-filter-btn" onclick="filterJumuahByMetro('Raleigh-Durham NC',this)" style="background:#252525;color:#9CA3AF;">Raleigh-Durham NC</button>
-            <button class="btn btn-sm jumuah-filter-btn" onclick="filterJumuahByMetro('Bay Area CA',this)" style="background:#252525;color:#9CA3AF;">Bay Area CA</button>
-            <button class="btn btn-sm jumuah-filter-btn" onclick="filterJumuahByMetro('Indianapolis IN',this)" style="background:#252525;color:#9CA3AF;">Indianapolis IN</button>
-            <button class="btn btn-sm jumuah-filter-btn" onclick="filterJumuahByMetro('Las Vegas NV',this)" style="background:#252525;color:#9CA3AF;">Las Vegas NV</button>
-          </div>
-
-          <div id="jumuahList"><div class="loading">Loading...</div></div>
-        </div>
-      </div>
-
       <div class="section">
         <div class="section-title"><span class="icon">🎯</span> Community Monthly Goal</div>
         <p style="font-size:12px;color:#9CA3AF;margin-bottom:14px;">Set the target for prayers + Quran readings logged per month. Valid range: 100–100,000.</p>
@@ -278,35 +303,33 @@
         </div>
         <div id="communityGoalStatus" style="margin-top:12px;"></div>
       </div>
-    </div>
 
-    <div class="tab-content" id="tab-janaza">
       <div class="section">
         <div class="section-title"><span class="icon">🕊️</span> New Janaza Alert</div>
-        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Upload a janaza announcement image to auto-extract details, or enter them manually.</p>
+        <p style="font-size:12px;color:var(--text-tertiary);margin-bottom:14px;">Upload a janaza announcement image to auto-extract details, or enter them manually.</p>
 
-        <div id="jzUploadArea" style="border:2px dashed #333;border-radius:12px;padding:30px;text-align:center;cursor:pointer;margin-bottom:14px;transition:border-color 0.2s;" ondragover="event.preventDefault();this.style.borderColor='#D4A843';" ondragleave="this.style.borderColor='#333';" ondrop="handleJzDrop(event)" onclick="document.getElementById('jzFileInput').click()">
+        <div id="jzUploadArea" style="border:2px dashed var(--card-border);border-radius:12px;padding:30px;text-align:center;cursor:pointer;margin-bottom:14px;transition:border-color 0.2s;" ondragover="event.preventDefault();this.style.borderColor='var(--gold)';" ondragleave="this.style.borderColor='var(--card-border)';" ondrop="handleJzDrop(event)" onclick="document.getElementById('jzFileInput').click()">
           <div style="font-size:28px;margin-bottom:8px;">🕊️</div>
-          <div style="font-size:14px;color:#9CA3AF;">Drop a janaza announcement image here or click to upload</div>
-          <div style="font-size:11px;color:#6B7280;margin-top:4px;">JPG, PNG, or WebP</div>
+          <div style="font-size:14px;color:var(--text-secondary);">Drop a janaza announcement image here or click to upload</div>
+          <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px;">JPG, PNG, or WebP</div>
           <input type="file" id="jzFileInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleJzSelect(event)">
         </div>
 
         <div id="jzPreview" style="display:none;margin-bottom:14px;text-align:center;">
-          <img id="jzPreviewImg" style="max-width:100%;max-height:300px;border-radius:10px;border:1px solid #333;">
-          <button class="btn btn-sm" onclick="clearJz()" style="margin-top:8px;background:#2A2A2A;color:#9CA3AF;">Remove Image</button>
+          <img id="jzPreviewImg" style="max-width:100%;max-height:300px;border-radius:10px;border:1px solid var(--card-border);">
+          <button class="btn btn-sm" onclick="clearJz()" style="margin-top:8px;background:var(--card-bg);color:var(--text-secondary);">Remove Image</button>
         </div>
 
         <div style="display:flex;gap:8px;margin-bottom:14px;">
           <button class="btn btn-gold" onclick="extractJz()" id="extractJzBtn" disabled>✨ Extract Details with AI</button>
-          <button class="btn btn-sm" onclick="toggleJzForm()" style="background:#1C1C1C;color:#9CA3AF;">Manual Entry</button>
+          <button class="btn btn-sm" onclick="toggleJzForm()" style="background:var(--card-bg);color:var(--text-secondary);">Manual Entry</button>
         </div>
 
         <div id="jzExtractStatus" style="display:none;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:14px;"></div>
 
         <div id="jzForm" style="display:none;">
           <label>Masjid *</label>
-          <select id="jzMasjid" style="width:100%;padding:10px 14px;background:#1E1E1E;border:1px solid #333;border-radius:10px;color:#F5F5F5;font-size:14px;margin-bottom:14px;">
+          <select id="jzMasjid">
             <option value="">Select masjid...</option>
           </select>
           <label>Deceased Name *</label>
@@ -322,10 +345,10 @@
           <label>Burial Info</label>
           <input type="text" id="jzBurialInfo" placeholder="e.g., IAR Cemetery (6711 Hankinson Rd, Wendell, NC 27591)">
 
-          <div style="margin-top:16px;padding:14px;background:#1C1C1C;border:1px solid #333;border-radius:12px;">
+          <div style="margin-top:16px;padding:14px;background:var(--card-bg);border:1px solid var(--card-border);border-radius:12px;">
             <label style="margin-top:0;">Schedule Alert (optional)</label>
-            <input type="datetime-local" id="jzScheduleTime" style="width:100%;padding:10px 14px;background:#1E1E1E;border:1px solid #333;border-radius:10px;color:#F5F5F5;font-size:14px;">
-            <p style="font-size:11px;color:#6B7280;margin-top:4px;">Leave blank to send immediately. Set a time to queue the alert.</p>
+            <input type="datetime-local" id="jzScheduleTime">
+            <p style="font-size:11px;color:var(--text-tertiary);margin-top:4px;">Leave blank to send immediately. Set a time to queue the alert.</p>
           </div>
 
           <div style="display:flex;gap:8px;margin-top:14px;">
@@ -515,8 +538,12 @@
 
     <div class="tab-content" id="tab-businesses">
       <div class="section">
-        <div class="section-title"><span class="icon">➕</span> Quick Add Business</div>
-        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Paste a Google Place ID to auto-fill everything, then pick a category and add. Goes live immediately as approved.</p>
+        <div class="accordion-header" onclick="toggleQuickAdd()">
+          <div class="section-title"><span class="icon">➕</span> Quick Add Business</div>
+          <span class="accordion-toggle" id="quickAddToggle">▼</span>
+        </div>
+        <div class="accordion-body" id="quickAddBody">
+        <p style="font-size:12px;color:var(--text-tertiary);margin-bottom:14px;">Paste a Google Place ID to auto-fill everything, then pick a category and add. Goes live immediately as approved.</p>
         <div id="addBusinessForm">
           <label>Google Place ID</label>
           <div style="display:flex;gap:8px;margin-bottom:12px;">
@@ -556,18 +583,46 @@
           <input type="text" id="newBizDescription" placeholder="Brief description of the business">
           <label>Filter Tags (comma-separated)</label>
           <input type="text" id="newBizFilterTags" placeholder="e.g. mechanic, oil change, brakes">
-          <div id="bizLookupExtras" style="display:none;font-size:12px;color:#6B7280;margin-top:8px;padding:8px 12px;background:#1A1A1A;border-radius:8px;"></div>
+          <div id="bizLookupExtras" style="display:none;font-size:12px;color:var(--text-tertiary);margin-top:8px;padding:8px 12px;background:var(--card-bg);border-radius:8px;"></div>
           <button class="btn btn-gold" onclick="addBusiness()" style="margin-top:12px;width:100%;">Add Business</button>
+        </div>
         </div>
       </div>
       <div class="section">
         <div class="section-title"><span class="icon">🏪</span> Business Submissions</div>
         <div style="display:flex;gap:8px;margin-bottom:10px;">
-          <button class="btn btn-sm" id="filterPending" onclick="loadBusinesses('pending')" style="background:#2A2318;color:#D4A843;">Pending</button>
-          <button class="btn btn-sm" id="filterApproved" onclick="loadBusinesses('approved')" style="background:#1E1E1E;color:#9CA3AF;">Approved</button>
-          <button class="btn btn-sm" id="filterRejected" onclick="loadBusinesses('rejected')" style="background:#1E1E1E;color:#9CA3AF;">Rejected</button>
+          <button class="btn btn-sm" id="filterPending" onclick="loadBusinesses('pending')" style="background:rgba(212,168,67,0.12);color:var(--gold);">Pending</button>
+          <button class="btn btn-sm" id="filterApproved" onclick="loadBusinesses('approved')" style="background:var(--card-bg);color:var(--text-secondary);">Approved</button>
+          <button class="btn btn-sm" id="filterRejected" onclick="loadBusinesses('rejected')" style="background:var(--card-bg);color:var(--text-secondary);">Rejected</button>
         </div>
-        <input type="text" id="businessSearch" placeholder="Search businesses by name, category, or address..." style="margin-bottom:14px;" oninput="filterBusinessList()">
+        <div class="filter-row">
+          <input type="text" id="businessSearch" placeholder="Search by name, category, or address..." oninput="filterBusinessList()">
+          <select id="bizCategoryFilter" onchange="filterBusinessList()" style="margin-bottom:0;">
+            <option value="">All Categories</option>
+            <option>Food &amp; Drink</option>
+            <option>Grocery</option>
+            <option>Retail</option>
+            <option>Automotive</option>
+            <option>Real Estate</option>
+            <option>Healthcare</option>
+            <option>Services</option>
+            <option>Events</option>
+            <option>Creator</option>
+          </select>
+          <select id="bizMetroFilter" onchange="filterBusinessList()" style="margin-bottom:0;">
+            <option value="">All Metros</option>
+            <option>Triangle NC</option>
+            <option>Charlotte NC</option>
+            <option>Bay Area CA</option>
+            <option>Los Angeles CA</option>
+            <option>DFW TX</option>
+            <option>Houston TX</option>
+            <option>Chicago IL</option>
+            <option>NYC Metro</option>
+            <option>DMV</option>
+            <option>Nationwide / Remote</option>
+          </select>
+        </div>
         <div id="businessList"><div class="loading">Loading...</div></div>
       </div>
     </div>
@@ -743,8 +798,82 @@
     <div class="tab-content" id="tab-masjids">
       <div class="section">
         <div class="section-title"><span class="icon">🕌</span> Masjid Directory</div>
-        <button class="btn btn-sm" style="background:#2A2318;color:#D4A843;margin-bottom:16px;" onclick="showAddMasjidForm()">+ Add Masjid</button>
+        <button class="btn btn-sm" style="background:var(--gold-subtle);color:var(--gold);margin-bottom:16px;" onclick="showAddMasjidForm()">+ Add Masjid</button>
         <div id="masjidList"><div class="loading">Loading...</div></div>
+      </div>
+
+      <div class="section" id="jumuahSection">
+        <div class="accordion-header" onclick="toggleJumuahSection()">
+          <div class="section-title"><span class="icon">🕌</span> Jumu'ah Schedules</div>
+          <span id="jumuahToggleIcon" class="accordion-toggle">▼</span>
+        </div>
+        <div id="jumuahSectionBody" class="accordion-body">
+          <p style="font-size:12px;color:var(--text-tertiary);margin-bottom:14px;">Manage Jumuah schedules across all metro areas. Each entry supports multiple khutbah slots.</p>
+
+          <div style="margin-bottom:16px;">
+            <button class="btn btn-sm" style="background:rgba(27,107,74,0.15);color:#4ADE80;margin-bottom:12px;" onclick="showJumuahForm()">+ Add Schedule</button>
+            <div id="jumuahAddForm" style="display:none;background:var(--card-bg);border:1px solid var(--card-border);border-radius:10px;padding:16px;margin-bottom:14px;">
+              <input type="hidden" id="jumuahEditId" value="">
+              <h4 id="jumuahFormTitle" style="margin:0 0 12px;font-size:13px;color:var(--text);">New Jumu'ah Schedule</h4>
+              <div class="row">
+                <div><label>Masjid Name</label><input type="text" id="jumuahMasjid" placeholder="e.g. IAR (Atwater)"></div>
+                <div>
+                  <label>Metro Area</label>
+                  <select id="jumuahMetro">
+                    <option value="Raleigh-Durham NC">Raleigh-Durham NC</option>
+                    <option value="Bay Area CA">Bay Area CA</option>
+                    <option value="Indianapolis IN">Indianapolis IN</option>
+                    <option value="Las Vegas NV">Las Vegas NV</option>
+                    <option value="">Other / None</option>
+                  </select>
+                </div>
+              </div>
+              <div class="row">
+                <div>
+                  <label>Timezone</label>
+                  <select id="jumuahTimezone">
+                    <option value="America/New_York">Eastern (New York)</option>
+                    <option value="America/Chicago">Central (Chicago)</option>
+                    <option value="America/Denver">Mountain (Denver)</option>
+                    <option value="America/Los_Angeles">Pacific (Los Angeles)</option>
+                    <option value="America/Indiana/Indianapolis">Indiana (Indianapolis)</option>
+                    <option value="America/Phoenix">Arizona (Phoenix)</option>
+                  </select>
+                </div>
+              </div>
+              <div id="jumuahSlots">
+                <div class="jumuah-slot" style="border:1px solid var(--card-border);border-radius:8px;padding:12px;margin-bottom:10px;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <span style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;">Slot 1</span>
+                  </div>
+                  <div class="row">
+                    <div><label>Khutbah Time</label><input type="text" class="slot-khutbah" placeholder="1:00 PM"></div>
+                    <div><label>Iqama Time</label><input type="text" class="slot-iqama" placeholder="1:30 PM"></div>
+                  </div>
+                  <div class="row">
+                    <div><label>Speaker (optional)</label><input type="text" class="slot-speaker" placeholder="Sheikh name"></div>
+                    <div><label>Topic (optional)</label><input type="text" class="slot-topic" placeholder="Khutbah topic"></div>
+                  </div>
+                </div>
+              </div>
+              <button class="btn btn-sm" style="background:var(--card-bg);color:var(--text-secondary);margin-bottom:12px;" onclick="addJumuahSlot()">+ Add Another Slot</button>
+              <div style="display:flex;gap:8px;">
+                <button class="btn btn-primary" onclick="submitJumuahForm()" id="addJumuahBtn">Save Schedule</button>
+                <button class="btn btn-sm" style="background:var(--card-bg);color:var(--text-secondary);" onclick="hideJumuahForm()">Cancel</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="jumuahMetroFilter" style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-sm jumuah-filter-btn active-filter" onclick="filterJumuahByMetro(null,this)" style="background:rgba(27,107,74,0.15);color:#4ADE80;">All Metros</button>
+            <button class="btn btn-sm jumuah-filter-btn" onclick="filterJumuahByMetro('Raleigh-Durham NC',this)" style="background:var(--card-bg);color:var(--text-secondary);">Raleigh-Durham NC</button>
+            <button class="btn btn-sm jumuah-filter-btn" onclick="filterJumuahByMetro('Bay Area CA',this)" style="background:var(--card-bg);color:var(--text-secondary);">Bay Area CA</button>
+            <button class="btn btn-sm jumuah-filter-btn" onclick="filterJumuahByMetro('Indianapolis IN',this)" style="background:var(--card-bg);color:var(--text-secondary);">Indianapolis IN</button>
+            <button class="btn btn-sm jumuah-filter-btn" onclick="filterJumuahByMetro('Las Vegas NV',this)" style="background:var(--card-bg);color:var(--text-secondary);">Las Vegas NV</button>
+          </div>
+
+          <div id="jumuahList"><div class="loading">Loading...</div></div>
+        </div>
       </div>
 
       <div class="section">
@@ -832,101 +961,134 @@
       </div>
     </div>
 
-    <div id="editBusinessModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:1000;overflow:auto;padding:20px;">
-      <div style="background:#161616;border:1px solid #252525;border-radius:14px;max-width:500px;margin:40px auto;padding:20px;">
-        <div style="font-size:18px;font-weight:700;color:#D4A843;margin-bottom:20px;">Edit Business</div>
+    <div id="editBusinessModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);z-index:1000;overflow:auto;padding:20px;">
+      <div style="background:#0E1A13;border:1px solid var(--card-border);border-radius:14px;max-width:520px;margin:40px auto;padding:24px;">
+        <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--gold);margin-bottom:20px;">Edit Business</div>
         <input type="hidden" id="editingBusinessId">
+
+        <div class="modal-section-label">Basic Info</div>
         <label>Name</label>
-        <input type="text" id="editName" style="margin-bottom:14px;">
-        <label>Category</label>
-        <select id="editCategory" style="margin-bottom:14px;">
-          <option>Food &amp; Drink</option>
-          <option>Grocery</option>
-          <option>Retail</option>
-          <option>Automotive</option>
-          <option>Real Estate</option>
-          <option>Healthcare</option>
-          <option>Services</option>
-          <option>Events</option>
-          <option>Creator</option>
-        </select>
-        <label>Subcategory (optional)</label>
-        <input type="text" id="editSubcategory" style="margin-bottom:14px;">
+        <input type="text" id="editName">
+        <div class="row">
+          <div>
+            <label>Category</label>
+            <select id="editCategory">
+              <option>Food &amp; Drink</option>
+              <option>Grocery</option>
+              <option>Retail</option>
+              <option>Automotive</option>
+              <option>Real Estate</option>
+              <option>Healthcare</option>
+              <option>Services</option>
+              <option>Events</option>
+              <option>Creator</option>
+            </select>
+          </div>
+          <div>
+            <label>Subcategory (optional)</label>
+            <input type="text" id="editSubcategory">
+          </div>
+        </div>
         <label>Description</label>
         <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:14px;">
           <textarea id="editDescription" style="flex:1;margin-bottom:0;min-height:80px;"></textarea>
-          <button type="button" id="btnGenerateDesc" onclick="generateDescription()" style="background:#7c3aed;color:#fff;border:none;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:12px;white-space:nowrap;" title="Use AI to generate a description from the business website/Google listing">✨ AI Generate</button>
+          <button type="button" id="btnGenerateDesc" onclick="generateDescription()" style="background:#7c3aed;color:#fff;border:none;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:12px;white-space:nowrap;font-family:inherit;" title="Use AI to generate a description from the business website/Google listing">✨ AI</button>
         </div>
+
+        <div class="modal-section-label">Location &amp; Contact</div>
         <label>Address</label>
-        <input type="text" id="editAddress" style="margin-bottom:14px;">
-        <label>Phone</label>
-        <input type="text" id="editPhone" style="margin-bottom:14px;">
-        <label>Website</label>
-        <input type="text" id="editWebsite" style="margin-bottom:14px;">
+        <input type="text" id="editAddress">
+        <div class="row">
+          <div>
+            <label>Phone</label>
+            <input type="text" id="editPhone">
+          </div>
+          <div>
+            <label>Website</label>
+            <input type="text" id="editWebsite">
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>Location Type</label>
+            <select id="editLocationType">
+              <option value="physical">Physical Location</option>
+              <option value="service_area">Service Area</option>
+              <option value="virtual">Virtual / Online</option>
+              <option value="popup">Pop-up</option>
+            </select>
+          </div>
+          <div>
+            <label>Service Area / Metro</label>
+            <select id="editServiceArea">
+              <option value="">-- Select Metro --</option>
+              <option value="Triangle NC">Triangle NC</option>
+              <option value="Charlotte NC">Charlotte NC</option>
+              <option value="Bay Area CA">Bay Area CA</option>
+              <option value="Los Angeles CA">Los Angeles CA</option>
+              <option value="Sacramento CA">Sacramento CA</option>
+              <option value="San Diego CA">San Diego CA</option>
+              <option value="DFW TX">DFW TX</option>
+              <option value="Houston TX">Houston TX</option>
+              <option value="San Antonio TX">San Antonio TX</option>
+              <option value="Austin TX">Austin TX</option>
+              <option value="Chicago IL">Chicago IL</option>
+              <option value="NYC Metro">NYC Metro</option>
+              <option value="DMV">DMV (DC/MD/VA)</option>
+              <option value="Baltimore MD">Baltimore MD</option>
+              <option value="Philadelphia PA">Philadelphia PA</option>
+              <option value="Boston MA">Boston MA</option>
+              <option value="Detroit MI">Detroit MI</option>
+              <option value="Atlanta GA">Atlanta GA</option>
+              <option value="Orlando FL">Orlando FL</option>
+              <option value="Tampa FL">Tampa FL</option>
+              <option value="Miami FL">Miami FL</option>
+              <option value="Minneapolis MN">Minneapolis MN</option>
+              <option value="Columbus OH">Columbus OH</option>
+              <option value="Indianapolis IN">Indianapolis IN</option>
+              <option value="Nashville TN">Nashville TN</option>
+              <option value="St. Louis MO">St. Louis MO</option>
+              <option value="Phoenix AZ">Phoenix AZ</option>
+              <option value="Las Vegas NV">Las Vegas NV</option>
+              <option value="Seattle WA">Seattle WA</option>
+              <option value="Denver CO">Denver CO</option>
+              <option value="Nationwide / Remote">Nationwide / Remote</option>
+              <option value="Virtual">Virtual</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-section-label">Links</div>
+        <div class="row">
+          <div>
+            <label>Affiliation (optional)</label>
+            <input type="text" id="editAffiliation">
+          </div>
+          <div>
+            <label>Instagram URL (optional)</label>
+            <input type="text" id="editInstagramUrl" placeholder="https://instagram.com/yourbiz">
+          </div>
+        </div>
+        <label>Booking / Appointment URL (optional)</label>
+        <input type="text" id="editBookingUrl" placeholder="https://calendly.com/...">
+        <label>Search Aliases (comma-separated, optional)</label>
+        <input type="text" id="editSearchAliases">
         <label>Tags</label>
         <div id="editKeywordsChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;"></div>
-        <label>Affiliation (optional)</label>
-        <input type="text" id="editAffiliation" style="margin-bottom:14px;">
-        <label>Instagram URL (optional)</label>
-        <input type="text" id="editInstagramUrl" placeholder="https://instagram.com/yourbiz" style="margin-bottom:14px;">
-        <label>Search Aliases (comma-separated, optional)</label>
-        <input type="text" id="editSearchAliases" style="margin-bottom:14px;">
-        <label>Location Type</label>
-        <select id="editLocationType" style="margin-bottom:14px;">
-          <option value="physical">Physical Location</option>
-          <option value="service_area">Service Area</option>
-          <option value="virtual">Virtual / Online</option>
-          <option value="popup">Pop-up</option>
-        </select>
-        <label>Service Area / Metro</label>
-        <select id="editServiceArea" style="margin-bottom:14px;">
-          <option value="">-- Select Metro --</option>
-          <option value="Triangle NC">Triangle NC</option>
-          <option value="Charlotte NC">Charlotte NC</option>
-          <option value="Bay Area CA">Bay Area CA</option>
-          <option value="Los Angeles CA">Los Angeles CA</option>
-          <option value="Sacramento CA">Sacramento CA</option>
-          <option value="San Diego CA">San Diego CA</option>
-          <option value="DFW TX">DFW TX</option>
-          <option value="Houston TX">Houston TX</option>
-          <option value="San Antonio TX">San Antonio TX</option>
-          <option value="Austin TX">Austin TX</option>
-          <option value="Chicago IL">Chicago IL</option>
-          <option value="NYC Metro">NYC Metro</option>
-          <option value="DMV">DMV (DC/MD/VA)</option>
-          <option value="Baltimore MD">Baltimore MD</option>
-          <option value="Philadelphia PA">Philadelphia PA</option>
-          <option value="Boston MA">Boston MA</option>
-          <option value="Detroit MI">Detroit MI</option>
-          <option value="Atlanta GA">Atlanta GA</option>
-          <option value="Orlando FL">Orlando FL</option>
-          <option value="Tampa FL">Tampa FL</option>
-          <option value="Miami FL">Miami FL</option>
-          <option value="Minneapolis MN">Minneapolis MN</option>
-          <option value="Columbus OH">Columbus OH</option>
-          <option value="Indianapolis IN">Indianapolis IN</option>
-          <option value="Nashville TN">Nashville TN</option>
-          <option value="St. Louis MO">St. Louis MO</option>
-          <option value="Phoenix AZ">Phoenix AZ</option>
-          <option value="Las Vegas NV">Las Vegas NV</option>
-          <option value="Seattle WA">Seattle WA</option>
-          <option value="Denver CO">Denver CO</option>
-          <option value="Nationwide / Remote">Nationwide / Remote</option>
-          <option value="Virtual">Virtual</option>
-        </select>
-        <label>Booking / Appointment URL (optional)</label>
-        <input type="text" id="editBookingUrl" placeholder="https://calendly.com/..." style="margin-bottom:14px;">
+
+        <div class="modal-section-label">Settings</div>
         <label>Enrichment</label>
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
-          <div id="enrichToggle" onclick="toggleEnrichment()" style="width:50px;height:28px;border-radius:14px;background:#333;cursor:pointer;position:relative;transition:background 0.2s;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+          <div id="enrichToggle" onclick="toggleEnrichment()" style="width:50px;height:28px;border-radius:14px;background:var(--card-border);cursor:pointer;position:relative;transition:background 0.2s;">
             <div id="enrichToggleKnob" style="width:22px;height:22px;border-radius:11px;background:#fff;position:absolute;top:3px;left:3px;transition:left 0.2s;"></div>
           </div>
-          <span id="enrichToggleLabel" style="font-size:14px;color:#9CA3AF;">Enrichment disabled</span>
+          <span id="enrichToggleLabel" style="font-size:14px;color:var(--text-secondary);">Enrichment disabled</span>
           <input type="hidden" id="editDisableEnrichment" value="false">
         </div>
-        <div style="display:flex;gap:8px;">
-          <button class="btn btn-primary" onclick="saveBusiness()" style="flex:1;">Save</button>
-          <button class="btn" style="flex:1;background:#333;color:#9CA3AF;" onclick="closeBusinessEditor()">Cancel</button>
+
+        <div class="modal-sticky-footer">
+          <button class="btn btn-primary" onclick="saveBusiness()" style="flex:1;">Save Changes</button>
+          <button class="btn btn-sm" style="background:var(--card-bg);color:var(--text-secondary);border:1px solid var(--card-border);" onclick="closeBusinessEditor()">Cancel</button>
         </div>
       </div>
     </div>
@@ -1020,11 +1182,20 @@
     function switchTab(tab) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      document.querySelector('[data-tab="' + tab + '"]').classList.add('active');
-      document.getElementById('tab-' + tab).classList.add('active');
+      const tabBtn = document.querySelector('[data-tab="' + tab + '"]');
+      if (tabBtn) tabBtn.classList.add('active');
+      const tabEl = document.getElementById('tab-' + tab);
+      if (tabEl) tabEl.classList.add('active');
       const tabBar = document.getElementById('tabBar');
       if (tabBar.classList.contains('mobile-open')) {
         tabBar.classList.remove('mobile-open');
+      }
+      if (tab === 'dashboard') {
+        loadDashboard();
+      }
+      if (tab === 'comms') {
+        loadJzHistory();
+        loadJzMasjids();
       }
       if (tab === 'analytics') {
         initAnalyticsDateRange();
@@ -1038,8 +1209,96 @@
       }
       if (tab === 'masjids') {
         loadMasjids();
+        loadJumuah();
       }
     }
+
+    async function loadDashboard() {
+      var container = document.getElementById('dashCards');
+      if (!container) return;
+      container.innerHTML = '<div class="loading">Loading counts...</div>';
+      try {
+        var headers = { 'Authorization': 'Bearer ' + adminToken };
+        var [bizRes, evtRes, restRes] = await Promise.all([
+          fetch('/api/admin/businesses?status=pending', { headers, credentials: 'include' }),
+          fetch('/api/admin/community-events/pending', { headers, credentials: 'include' }),
+          fetch('/api/admin/restaurant-submissions?status=pending', { headers, credentials: 'include' })
+        ]);
+        var bizData = bizRes.ok ? await bizRes.json() : [];
+        var evtData = evtRes.ok ? await evtRes.json() : [];
+        var restData = restRes.ok ? await restRes.json() : [];
+        var bizCount = Array.isArray(bizData) ? bizData.length : 0;
+        var evtCount = Array.isArray(evtData) ? evtData.length : 0;
+        var restCount = Array.isArray(restData) ? restData.length : 0;
+        updateBadge('badge-businesses', bizCount);
+        updateBadge('badge-events', evtCount);
+        updateBadge('badge-restaurants', restCount);
+        container.innerHTML = makeDashCard(bizCount, 'Pending Businesses', "switchTab('businesses');loadBusinesses('pending');") +
+          makeDashCard(evtCount, 'Pending Events', "switchTab('events');") +
+          makeDashCard(restCount, 'Pending Restaurants', "switchTab('restaurants');loadRestSubmissions('pending');");
+      } catch(e) {
+        container.innerHTML = '<div class="empty-state">Failed to load counts</div>';
+      }
+    }
+
+    function makeDashCard(count, label, action) {
+      var numClass = count > 0 ? 'dash-card-num' : 'dash-card-num zero';
+      return '<div class="dash-card">' +
+        '<div class="' + numClass + '">' + count + '</div>' +
+        '<div class="dash-card-label">' + label + '</div>' +
+        '<button class="dash-card-link" onclick="' + escAttr(action) + '">Review →</button>' +
+        '</div>';
+    }
+
+    function updateBadge(id, count) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      if (count > 0) { el.textContent = count; el.style.display = 'inline-flex'; }
+      else { el.style.display = 'none'; }
+    }
+
+    async function refreshBadges() {
+      try {
+        var headers = { 'Authorization': 'Bearer ' + adminToken };
+        var [bizRes, evtRes, restRes] = await Promise.all([
+          fetch('/api/admin/businesses?status=pending', { headers, credentials: 'include' }),
+          fetch('/api/admin/community-events/pending', { headers, credentials: 'include' }),
+          fetch('/api/admin/restaurant-submissions?status=pending', { headers, credentials: 'include' })
+        ]);
+        var bizData = bizRes.ok ? await bizRes.json() : [];
+        var evtData = evtRes.ok ? await evtRes.json() : [];
+        var restData = restRes.ok ? await restRes.json() : [];
+        updateBadge('badge-businesses', Array.isArray(bizData) ? bizData.length : 0);
+        updateBadge('badge-events', Array.isArray(evtData) ? evtData.length : 0);
+        updateBadge('badge-restaurants', Array.isArray(restData) ? restData.length : 0);
+      } catch(e) {}
+    }
+
+    function toggleQuickAdd() {
+      var body = document.getElementById('quickAddBody');
+      var toggle = document.getElementById('quickAddToggle');
+      body.classList.toggle('open');
+      toggle.classList.toggle('open');
+    }
+
+    function toggleJumuahSection() {
+      var body = document.getElementById('jumuahSectionBody');
+      var toggle = document.getElementById('jumuahToggleIcon');
+      body.classList.toggle('open');
+      toggle.classList.toggle('open');
+      if (body.classList.contains('open')) { loadJumuah(); }
+    }
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        var modals = document.querySelectorAll('[id$="Modal"]');
+        modals.forEach(function(m) {
+          if (m.style.display === 'block' || m.style.display === 'flex') {
+            m.style.display = 'none';
+          }
+        });
+      }
+    });
 
     function showToast(msg, isError) {
       const t = document.getElementById('toast');
@@ -1065,9 +1324,9 @@
           document.getElementById('loginWrap').style.display = 'none';
           document.getElementById('appWrap').style.display = 'block';
           document.getElementById('loginError').style.display = 'none';
+          switchTab('dashboard');
           loadTickers();
           loadBusinesses('pending');
-          loadJumuah();
           loadCommunityEvents();
           loadPendingEvents();
           loadCommunityGoal();
@@ -1673,13 +1932,17 @@
 
     function filterBusinessList() {
       var q = (document.getElementById('businessSearch').value || '').toLowerCase().trim();
-      if (!q) { renderBusinessList(cachedBusinesses); return; }
+      var catFilter = (document.getElementById('bizCategoryFilter') || {}).value || '';
+      var metroFilter = (document.getElementById('bizMetroFilter') || {}).value || '';
       var filtered = cachedBusinesses.filter(function(b) {
-        return (b.name || '').toLowerCase().includes(q) ||
+        var matchText = !q || (b.name || '').toLowerCase().includes(q) ||
                (b.category || '').toLowerCase().includes(q) ||
                (b.address || '').toLowerCase().includes(q) ||
                (b.description || '').toLowerCase().includes(q) ||
                (b.phone || '').toLowerCase().includes(q);
+        var matchCat = !catFilter || (b.category || '') === catFilter;
+        var matchMetro = !metroFilter || (b.service_area || '') === metroFilter;
+        return matchText && matchCat && matchMetro;
       });
       renderBusinessList(filtered);
     }
@@ -1703,37 +1966,36 @@
         }
 
         // Badges row
-        var ltBg = locationTypeColors[b.location_type] || '#1E1E1E';
         var ltLabel = locationTypeLabels[b.location_type] || (b.location_type || 'Physical');
-        var featuredBadge = b.featured ? '<span style="background:#D4A843;color:#000;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;margin-left:4px;">★ FEATURED</span>' : '';
-        var ltBadge = '<span style="background:' + ltBg + ';color:#D4A843;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;">' + ltLabel + '</span>';
+        var featuredBadge = b.featured ? '<span class="inline-chip text-gold" style="margin-left:4px;">★ FEATURED</span>' : '';
+        var ltBadge = '<span class="inline-chip text-gold">' + ltLabel + '</span>';
 
         // Metro badge for service_area / popup
         var metroBadge = '';
         if ((b.location_type === 'service_area' || b.location_type === 'popup') && b.service_area_description) {
-          metroBadge = '<span style="background:#1A2535;color:#60A5FA;padding:2px 6px;border-radius:4px;font-size:10px;margin-left:4px;">' + escHtml(b.service_area_description) + '</span>';
+          metroBadge = '<span class="inline-chip" style="margin-left:4px;">' + escHtml(b.service_area_description) + '</span>';
         }
 
         // Description
-        var desc = b.description ? '<div style="font-size:12px;color:#9CA3AF;margin-top:5px;line-height:1.4;">' + escHtml(b.description.slice(0, 180)) + (b.description.length > 180 ? '…' : '') + '</div>' : '';
+        var desc = b.description ? '<div class="text-secondary" style="font-size:12px;margin-top:5px;line-height:1.4;">' + escHtml(b.description.slice(0, 180)) + (b.description.length > 180 ? '…' : '') + '</div>' : '';
 
         // Address (only for physical)
         var addrLine = (b.location_type !== 'service_area' && b.location_type !== 'virtual' && b.address)
-          ? '<div style="font-size:12px;color:#6B7280;margin-top:3px;">📍 ' + escHtml(b.address) + '</div>' : '';
+          ? '<div class="text-tertiary" style="font-size:12px;margin-top:3px;">📍 ' + escHtml(b.address) + '</div>' : '';
 
         // Contact links
         var links = [];
-        if (b.phone) links.push('<a href="tel:' + escAttr(b.phone) + '" style="color:#9CA3AF;font-size:11px;text-decoration:none;">📞 ' + escHtml(b.phone) + '</a>');
+        if (b.phone) links.push('<a href="tel:' + escAttr(b.phone) + '" class="text-secondary" style="font-size:11px;text-decoration:none;">📞 ' + escHtml(b.phone) + '</a>');
         if (b.website) links.push('<a href="' + escAttr(b.website) + '" target="_blank" style="color:#60A5FA;font-size:11px;">🌐 Website</a>');
         if (b.instagram_url) links.push('<a href="' + escAttr(b.instagram_url) + '" target="_blank" style="color:#E1306C;font-size:11px;">📸 Instagram</a>');
-        if (b.booking_url) links.push('<a href="' + escAttr(b.booking_url) + '" target="_blank" style="color:#4ADE80;font-size:11px;">📅 Book/Appt</a>');
+        if (b.booking_url) links.push('<a href="' + escAttr(b.booking_url) + '" target="_blank" class="text-emerald" style="font-size:11px;">📅 Book/Appt</a>');
         var linksHtml = links.length ? '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;">' + links.join('') + '</div>' : '';
 
         // Affiliation
-        var affLine = b.affiliation ? '<div style="font-size:11px;color:#6B7280;margin-top:3px;">👤 ' + escHtml(b.affiliation) + '</div>' : '';
+        var affLine = b.affiliation ? '<div class="text-tertiary" style="font-size:11px;margin-top:3px;">👤 ' + escHtml(b.affiliation) + '</div>' : '';
 
         // Actions
-        var actions = '<button class="btn btn-sm" onclick="toggleFeatured(' + b.id + ',' + !b.featured + ')" style="background:' + (b.featured ? '#2A2318' : '#1E1E1E') + ';color:' + (b.featured ? '#D4A843' : '#9CA3AF') + ';">' + (b.featured ? '★ Unfeature' : '☆ Feature') + '</button>';
+        var actions = '<button class="btn btn-sm ' + (b.featured ? 'btn-feature-on' : 'btn-feature-off') + '" onclick="toggleFeatured(' + b.id + ',' + !b.featured + ')">' + (b.featured ? '★ Unfeature' : '☆ Feature') + '</button>';
         actions += '<button class="btn btn-gold btn-sm" onclick="openBusinessEditor(' + b.id + ')">Edit</button>';
         if (currentBizFilter === 'pending') {
           actions += '<button class="btn btn-primary btn-sm" onclick="updateBusiness(' + b.id + ',\'approved\')">Approve</button>' +
@@ -1753,8 +2015,8 @@
                 '<span class="message-badge badge-event">' + escHtml(b.category) + '</span>' +
                 ltBadge + metroBadge + featuredBadge +
               '</div>' +
-              '<div style="font-size:14px;font-weight:600;color:#F5F5F5;">' + escHtml(b.name) + '</div>' +
-              (b.subcategory ? '<div style="font-size:11px;color:#9CA3AF;">' + escHtml(b.subcategory) + '</div>' : '') +
+              '<div style="font-size:14px;font-weight:600;" class="text-primary">' + escHtml(b.name) + '</div>' +
+              (b.subcategory ? '<div style="font-size:11px;" class="text-tertiary">' + escHtml(b.subcategory) + '</div>' : '') +
               addrLine + affLine + desc + linksHtml +
               '<div class="message-meta" style="margin-top:6px;">' + date + '</div>' +
             '</div>' +
@@ -1775,6 +2037,7 @@
           const data = await res.json();
           showToast(escHtml(data.name) + ' ' + status);
           loadBusinesses(currentBizFilter);
+          refreshBadges();
         } else {
           showToast('Failed to update', true);
         }
@@ -2107,17 +2370,17 @@
           var dateStr = startDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
           var timeStr = startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
           var submitted = new Date(ev.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-          var imgBadge = ev.has_image ? '<span style="font-size:10px;padding:2px 6px;background:#1A2E22;color:#6EE7B7;border-radius:4px;margin-left:6px;">HAS IMAGE</span>' : '';
-          return '<div style="background:#1E1E1E;border:1px solid #333;border-radius:12px;padding:16px;margin-bottom:12px;" id="pending-' + ev.id + '">' +
+          var imgBadge = ev.has_image ? '<span class="inline-chip badge-event" style="margin-left:6px;">HAS IMAGE</span>' : '';
+          return '<div class="message-card" style="padding:16px;margin-bottom:12px;" id="pending-' + ev.id + '">' +
             '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">' +
               '<div style="flex:1;">' +
-                '<div style="font-size:15px;font-weight:700;color:#F5F5F5;">' + escHtml(ev.title) + imgBadge + '</div>' +
-                '<div style="font-size:12px;color:#6B7280;margin-top:4px;">' + dateStr + ' at ' + timeStr + '</div>' +
-                (ev.organizer ? '<div style="font-size:12px;color:#6B7280;">' + escHtml(ev.organizer) + '</div>' : '') +
-                (ev.location ? '<div style="font-size:12px;color:#6B7280;">' + escHtml(ev.location) + '</div>' : '') +
-                (ev.description ? '<div style="font-size:12px;color:#9CA3AF;margin-top:6px;line-height:1.4;">' + escHtml(ev.description) + '</div>' : '') +
+                '<div class="text-primary" style="font-size:15px;font-weight:700;">' + escHtml(ev.title) + imgBadge + '</div>' +
+                '<div class="text-tertiary" style="font-size:12px;margin-top:4px;">' + dateStr + ' at ' + timeStr + '</div>' +
+                (ev.organizer ? '<div class="text-tertiary" style="font-size:12px;">' + escHtml(ev.organizer) + '</div>' : '') +
+                (ev.location ? '<div class="text-tertiary" style="font-size:12px;">' + escHtml(ev.location) + '</div>' : '') +
+                (ev.description ? '<div class="text-secondary" style="font-size:12px;margin-top:6px;line-height:1.4;">' + escHtml(ev.description) + '</div>' : '') +
                 (ev.registration_url ? '<div style="margin-top:4px;"><a href="' + escAttr(ev.registration_url) + '" target="_blank" style="font-size:11px;color:#60A5FA;">Registration Link</a></div>' : '') +
-                '<div style="font-size:10px;color:#4B5563;margin-top:8px;">Submitted ' + submitted + '</div>' +
+                '<div class="text-tertiary" style="font-size:10px;margin-top:8px;">Submitted ' + submitted + '</div>' +
               '</div>' +
             '</div>' +
             '<div style="display:flex;gap:8px;">' +
@@ -2143,6 +2406,7 @@
         showToast('Event approved!');
         loadPendingEvents();
         loadCommunityEvents();
+        refreshBadges();
       } catch { showToast('Connection error', true); }
     }
 
@@ -2158,6 +2422,7 @@
         if (!res.ok) { showToast('Failed to reject', true); return; }
         showToast('Event rejected');
         loadPendingEvents();
+        refreshBadges();
       } catch { showToast('Connection error', true); }
     }
 
@@ -2525,19 +2790,6 @@
     var allJumuahItems = [];
     var currentJumuahMetroFilter = null;
 
-    function toggleJumuahSection() {
-      var body = document.getElementById('jumuahSectionBody');
-      var icon = document.getElementById('jumuahToggleIcon');
-      if (body.style.display === 'none') {
-        body.style.display = 'block';
-        icon.textContent = '▲ Hide';
-        loadJumuah();
-      } else {
-        body.style.display = 'none';
-        icon.textContent = '▼ Show';
-      }
-    }
-
     function showJumuahForm() {
       document.getElementById('jumuahEditId').value = '';
       document.getElementById('jumuahFormTitle').textContent = "New Jumu'ah Schedule";
@@ -2895,11 +3147,11 @@
           html += '<li class="message-item" id="restSub-' + s.id + '">';
           html += '<div class="message-badge badge-event">NEW</div>';
           html += '<div class="message-text" style="flex:1;">';
-          html += '<div style="font-weight:600;color:#F5F5F5;">' + (s.name || 'Unnamed Restaurant') + '</div>';
-          html += '<div style="font-size:12px;color:#9CA3AF;margin-top:2px;">' + (s.address || 'No address') + '</div>';
-          html += '<div style="font-size:11px;color:#6B7280;margin-top:4px;">' + dateStr + votes + ' ' + mapsLink + '</div>';
+          html += '<div class="text-primary" style="font-weight:600;">' + (s.name || 'Unnamed Restaurant') + '</div>';
+          html += '<div class="text-secondary" style="font-size:12px;margin-top:2px;">' + (s.address || 'No address') + '</div>';
+          html += '<div class="text-tertiary" style="font-size:11px;margin-top:4px;">' + dateStr + votes + ' ' + mapsLink + '</div>';
           html += '<div style="margin-top:8px;display:flex;gap:8px;align-items:center;">';
-          html += '<select id="restSubHalal-' + s.id + '" style="padding:5px 10px;background:#1E1E1E;border:1px solid #333;border-radius:8px;color:#F5F5F5;font-size:12px;">';
+          html += '<select id="restSubHalal-' + s.id + '" style="font-size:12px;">';
           html += '<option value="IS_HALAL">Fully Halal</option>';
           html += '<option value="PARTIALLY_HALAL">Partially Halal</option>';
           html += '<option value="UNKNOWN">Unknown</option>';
@@ -2931,6 +3183,7 @@
         if (!list.querySelector('.message-item')) {
           list.innerHTML = '<div class="empty-state">No restaurants waiting for approval</div>';
         }
+        refreshBadges();
       } catch (e) {
         showToast('Failed to approve restaurant', true);
       }
@@ -2951,6 +3204,7 @@
         if (!list.querySelector('.message-item')) {
           list.innerHTML = '<div class="empty-state">No restaurants waiting for approval</div>';
         }
+        refreshBadges();
       } catch (e) {
         showToast('Failed to reject restaurant', true);
       }
@@ -3613,9 +3867,9 @@
           if (r.ok) {
             document.getElementById('loginWrap').style.display = 'none';
             document.getElementById('appWrap').style.display = 'block';
+            switchTab('dashboard');
             loadTickers();
             loadBusinesses('pending');
-            loadJumuah();
             loadCommunityEvents();
             loadPendingEvents();
             loadCommunityGoal();
@@ -3802,17 +4056,17 @@
         }
         container.innerHTML = masjids.map(function(m) {
           var statusBadge = m.active
-            ? '<span style="color:#34D399;font-size:11px;font-weight:600;">● Active</span>'
-            : '<span style="color:#EF4444;font-size:11px;font-weight:600;">● Inactive</span>';
+            ? '<span class="text-emerald" style="font-size:11px;font-weight:600;">● Active</span>'
+            : '<span class="text-danger" style="font-size:11px;font-weight:600;">● Inactive</span>';
           var iqamaBadge = m.has_iqama
-            ? '<span style="background:#1B6B4A;color:#fff;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:600;margin-left:6px;">IQAMA</span>'
+            ? '<span style="background:var(--emerald);color:#fff;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:600;margin-left:6px;">IQAMA</span>'
             : '';
           return '<div class="message-card" style="cursor:pointer;" onclick="editMasjid(' + m.id + ')">' +
             '<div style="display:flex;justify-content:space-between;align-items:center;">' +
               '<div>' +
-                '<div style="font-weight:700;color:#F5F5F5;font-size:14px;">' + escHtml(m.name) + iqamaBadge + '</div>' +
-                '<div style="color:#9CA3AF;font-size:12px;margin-top:2px;">' + escHtml(m.address) + '</div>' +
-                '<div style="color:#666;font-size:11px;margin-top:2px;">' + m.latitude.toFixed(4) + ', ' + m.longitude.toFixed(4) + ' · Sort: ' + m.sort_order + '</div>' +
+                '<div class="text-primary" style="font-weight:700;font-size:14px;">' + escHtml(m.name) + iqamaBadge + '</div>' +
+                '<div class="text-secondary" style="font-size:12px;margin-top:2px;">' + escHtml(m.address) + '</div>' +
+                '<div class="text-tertiary" style="font-size:11px;margin-top:2px;">' + m.latitude.toFixed(4) + ', ' + m.longitude.toFixed(4) + ' · Sort: ' + m.sort_order + '</div>' +
               '</div>' +
               '<div style="display:flex;align-items:center;gap:8px;">' +
                 statusBadge +
