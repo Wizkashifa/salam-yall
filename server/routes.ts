@@ -862,71 +862,107 @@ async function scrapeAdamsCenterJumuah(pool: pg.Pool): Promise<void> {
     }
     const html = await resp.text();
 
-    // Strip scripts/styles, collapse whitespace
+    // Decode HTML entities and strip scripts/styles/tags
     const text = html
       .replace(/<script[\s\S]*?<\/script>/gi, "")
       .replace(/<style[\s\S]*?<\/style>/gi, "")
+      .replace(/&amp;/g, "&")
+      .replace(/&#039;/g, "'")
+      .replace(/&apos;/g, "'")
+      .replace(/&[a-z]+;/gi, " ")
+      .replace(/&#\d+;/gi, " ")
       .replace(/<[^>]+>/g, " ")
       .replace(/\s{2,}/g, " ")
       .trim();
 
-    // Known ADAMS branches/venues and their DB names
-    const ADAMS_VENUES: { label: RegExp; masjid: string; location: string; sort: number }[] = [
-      { label: /sterling/i, masjid: "ADAMS Sterling", location: "46903 Sugarland Rd, Sterling, VA 20164", sort: 400 },
-      { label: /fairfax/i, masjid: "ADAMS Fairfax", location: "11216 Waples Mill Rd Unit 107, Fairfax, VA 22030", sort: 401 },
-      { label: /ashburn\s*village/i, masjid: "ADAMS Ashburn Village", location: "Ashburn Village, Ashburn, VA 20147", sort: 409 },
-      { label: /\bashburn\b(?!\s*village)/i, masjid: "ADAMS Ashburn", location: "21740 Beaumeade Circle Unit 120, Ashburn, VA 20147", sort: 402 },
-      { label: /gainesville/i, masjid: "ADAMS Gainesville", location: "12655 Vint Hill Rd, Nokesville, VA 20181", sort: 403 },
-      { label: /wyndham\s*gardens?\s*manassas|manassas/i, masjid: "ADAMS Manassas (Wyndham Gardens)", location: "10800 Vandor Ln, Manassas, VA 20109", sort: 408 },
-      { label: /sully|chantilly/i, masjid: "ADAMS Sully", location: "4431 Brookfield Corporate Dr Suite F, Chantilly, VA 20151", sort: 404 },
-      { label: /clarion\s*inn?\s*leesburg/i, masjid: "ADAMS Leesburg (Clarion Inn)", location: "900 E Market St, Leesburg, VA 20176", sort: 410 },
-      { label: /\bleesburg\b(?!.*clarion)/i, masjid: "ADAMS Leesburg", location: "19838 Sycolin Rd, Leesburg, VA 20175", sort: 405 },
-      { label: /nvhc|northern\s*virginia\s*h[a-z]*\s*c[a-z]*|reston/i, masjid: "ADAMS Reston (NVHC)", location: "12301 Bladensburg Rd, Reston, VA 20191", sort: 407 },
-      { label: /home2\s*suite|home2/i, masjid: "Home2 Suites Chantilly (ADAMS)", location: "4335 Chantilly Shopping Center, Chantilly, VA 20151", sort: 406 },
+    // All known ADAMS section headers in the page, mapped to DB masjid names.
+    // More-specific patterns (satellites) appear first so their positions are found
+    // before the main branch patterns, enabling correct section boundary detection.
+    const VENUE_HEADERS: { re: RegExp; masjid: string; sort: number }[] = [
+      // Satellite / overflow locations
+      { re: /\bAshburn\s+Satellite\s+Jumu[''\u2019]?ah\b/i,     masjid: "ADAMS Ashburn Village",           sort: 409 },
+      { re: /\bSully\s+Satellite\s+Jumu[''\u2019]?ah\b/i,        masjid: "Home2 Suites Chantilly (ADAMS)",  sort: 406 },
+      { re: /\bGainesville\s+Satellite\s+Jumu[''\u2019]?ah\b/i,  masjid: "ADAMS Manassas (Wyndham Gardens)", sort: 408 },
+      { re: /\bLeesburg\s+Satellite\s+Jumu[''\u2019]?ah\b/i,     masjid: "ADAMS Leesburg (Clarion Inn)",    sort: 410 },
+      // Main ADAMS branches
+      { re: /\bNVHC\s+Jumu[''\u2019]?ah\b|\bReston\s+Jumu[''\u2019]?ah\b/i, masjid: "ADAMS Reston (NVHC)", sort: 407 },
+      { re: /\bSterling\s+Jumu[''\u2019]?ah\b/i,                 masjid: "ADAMS Sterling",                  sort: 400 },
+      { re: /\bFairfax\s+Jumu[''\u2019]?ah\b/i,                  masjid: "ADAMS Fairfax",                   sort: 401 },
+      { re: /\bAshburn\s+Jumu[''\u2019]?ah\b/i,                  masjid: "ADAMS Ashburn",                   sort: 402 },
+      { re: /\bGainesville\s+Jumu[''\u2019]?ah\b/i,              masjid: "ADAMS Gainesville",               sort: 403 },
+      { re: /\bSully\s+Jumu[''\u2019]?ah\b/i,                    masjid: "ADAMS Sully",                     sort: 404 },
+      { re: /\bLeesburg\s+Jumu[''\u2019]?ah\b/i,                 masjid: "ADAMS Leesburg",                  sort: 405 },
     ];
 
-    // Split text into venue sections by looking for venue label patterns
-    // Strategy: find all venue mentions and their positions in text, then extract time blocks
-    type VenueSection = { masjid: string; location: string; sort: number; times: string[]; start: number; end: number };
-    const sections: VenueSection[] = [];
+    // Sentinel patterns: partner/footer sections that act as content boundaries only (not saved to DB)
+    const SENTINEL_PATTERNS: RegExp[] = [
+      /\bCrescent\s+Islamic\s+Center\s+Jumu[''\u2019]?ah\b/i,
+      /\bPartner\s+Jummah\s+Locations?\b/i,
+      /\bTysons\s+Jumu[''\u2019]?ah\b/i,
+    ];
 
-    for (const venue of ADAMS_VENUES) {
-      const match = venue.label.exec(text);
-      if (match) {
-        // De-duplicate: skip if this masjid is already added
-        if (!sections.find(s => s.masjid === venue.masjid)) {
-          sections.push({ masjid: venue.masjid, location: venue.location, sort: venue.sort, times: [], start: match.index, end: match.index + match[0].length });
-        }
+    // Find each venue's section header position in the text (first occurrence only)
+    type SectionEntry = { masjid: string | null; sort: number; headerEnd: number; headerStart: number };
+    const found: SectionEntry[] = [];
+    for (const vh of VENUE_HEADERS) {
+      const m = vh.re.exec(text);
+      if (m && !found.find(f => f.masjid === vh.masjid)) {
+        found.push({ masjid: vh.masjid, sort: vh.sort, headerStart: m.index, headerEnd: m.index + m[0].length });
       }
     }
-
-    sections.sort((a, b) => a.start - b.start);
-
-    // For each section, extract times + speaker names from the text between this and next section
-    for (let i = 0; i < sections.length; i++) {
-      const sec = sections[i];
-      const nextStart = sections[i + 1]?.start ?? sec.start + 800;
-      const chunk = text.slice(sec.start, Math.min(nextStart, sec.start + 1000));
-      let tm;
-      const times: string[] = [];
-      const re = /\b(\d{1,2}:\d{2}\s*[AP]M)\b/gi;
-      while ((tm = re.exec(chunk)) !== null) {
-        const t = tm[1].replace(/\s+/, " ").toUpperCase();
-        if (!times.includes(t)) times.push(t);
-      }
-      sec.times = times;
-      // Extract speaker names: look for "Sheikh/Imam/Dr/Brother/Sister <Name>" patterns
-      const speakerRe = /\b(?:Sheikh|Shaykh|Imam|Dr\.?|Brother|Sister|Br\.?|Sr\.?)\s+([A-Z][a-zA-Z'-]+(?:\s+[A-Z][a-zA-Z'-]+){0,3})/g;
-      const speakers: string[] = [];
-      let sm;
-      while ((sm = speakerRe.exec(chunk)) !== null) {
-        const sp = sm[0].trim();
-        if (!speakers.includes(sp)) speakers.push(sp);
-      }
-      (sec as any).speakers = speakers;
+    // Add sentinel positions as null-masjid boundary markers
+    for (const sp of SENTINEL_PATTERNS) {
+      const m = sp.exec(text);
+      if (m) found.push({ masjid: null, sort: 999, headerStart: m.index, headerEnd: m.index + m[0].length });
     }
 
-    const validSections = sections.filter(s => s.times.length >= 1);
+    const venueCount = found.filter(f => f.masjid !== null).length;
+    if (venueCount === 0) {
+      console.warn("[Adams Jumuah] No Jumu'ah section headers found in page");
+      return;
+    }
+
+    // Sort all entries (venues + sentinels) by document position
+    found.sort((a, b) => a.headerStart - b.headerStart);
+
+    // Build parsed sections map
+    const parsedSections = new Map<string, { masjid: string; sort: number; slots: { khutbah_time: string; speaker?: string }[] }>();
+
+    for (let i = 0; i < found.length; i++) {
+      const sec = found[i];
+      if (sec.masjid === null) continue; // sentinel boundary — skip parsing, used only for positioning
+
+      // Content runs from after this section's "Jumu'ah" to the start of the next section header
+      const contentStart = sec.headerEnd;
+      const contentEnd = found[i + 1]?.headerStart ?? text.length;
+      const content = text.slice(contentStart, Math.min(contentEnd, contentStart + 1500));
+
+      // Find all times in this section
+      const TIME_RE = /\b(\d{1,2}:\d{2}\s*(?:AM|PM))\b/gi;
+      const timeMatches = [...content.matchAll(TIME_RE)];
+      if (timeMatches.length === 0) continue;
+
+      // For each time, extract the speaker name that follows (text until next time or end)
+      const slots: { khutbah_time: string; speaker?: string }[] = [];
+      for (let j = 0; j < timeMatches.length; j++) {
+        const tm = timeMatches[j];
+        const khutbah_time = tm[1].replace(/\s+/g, " ").toUpperCase();
+
+        // Extract speaker: one or more words (capitalized) following the time
+        // Allow hyphens and mixed-case Arabic name particles (al, ar, ibn, bin, Abd, etc.)
+        const afterStart = tm.index! + tm[0].length;
+        const afterEnd = timeMatches[j + 1]?.index ?? content.length;
+        const afterText = content.slice(afterStart, afterEnd).trim();
+        const speakerMatch = afterText.match(/^([A-Z][a-zA-Z'.\-]+(?:\s+(?:[A-Z]|(?:al|ar|bin|bint|ibn|Abd|Ar|El|Al|Ul|Ur))[a-zA-Z'.\-]*){0,5})/);
+        const speaker = speakerMatch ? speakerMatch[1].replace(/\s+/g, " ").trim() : undefined;
+
+        slots.push({ khutbah_time, ...(speaker ? { speaker } : {}) });
+      }
+
+      parsedSections.set(sec.masjid, { masjid: sec.masjid, sort: sec.sort, slots });
+    }
+
+    const validSections = [...parsedSections.values()];
 
     if (validSections.length === 0) {
       console.warn("[Adams Jumuah] No time slots found in page");
@@ -934,20 +970,10 @@ async function scrapeAdamsCenterJumuah(pool: pg.Pool): Promise<void> {
     }
 
     for (const sec of validSections) {
-      const speakers: string[] = (sec as any).speakers || [];
-      // Each extracted time is a khutbah start time (not alternating khutbah/iqama)
-      const slots: { khutbah_time: string; speaker?: string }[] = sec.times.map((t, i) => ({
-        khutbah_time: t,
-        ...(speakers[i] ? { speaker: speakers[i] } : {}),
-      }));
-
-      const legacyKhutbah = slots.map(s => s.khutbah_time).join(", ");
-      // iqama times are not separately provided by the source — mirror khutbah times
-      const legacyIqama = legacyKhutbah;
-
+      const legacyTimes = sec.slots.map(s => s.khutbah_time).join(", ");
       await pool.query(
         `INSERT INTO jumuah_schedules (masjid, khutbah_time, iqama_time, metro, timezone, khutbahs, sort_order)
-         VALUES ($1, $2, $3, 'DMV', 'America/New_York', $4, $5)
+         VALUES ($1, $2, $2, 'DMV', 'America/New_York', $3, $4)
          ON CONFLICT (masjid) DO UPDATE SET
            khutbah_time = EXCLUDED.khutbah_time,
            iqama_time = EXCLUDED.iqama_time,
@@ -956,14 +982,14 @@ async function scrapeAdamsCenterJumuah(pool: pg.Pool): Promise<void> {
            khutbahs = EXCLUDED.khutbahs,
            sort_order = EXCLUDED.sort_order,
            updated_at = NOW()`,
-        [sec.masjid, legacyKhutbah, legacyIqama, JSON.stringify(slots), sec.sort]
+        [sec.masjid, legacyTimes, JSON.stringify(sec.slots), sec.sort]
       ).catch((err: any) => console.error(`[Adams Jumuah] DB error for ${sec.masjid}:`, err.message));
     }
 
-    // Validation: log found vs missing venues for observability
-    const REQUIRED_VENUES = ["ADAMS Sterling", "ADAMS Fairfax", "ADAMS Ashburn", "ADAMS Gainesville", "ADAMS Sully", "ADAMS Leesburg"];
+    // Validation: warn if any required main branch is missing
+    const REQUIRED = ["ADAMS Sterling", "ADAMS Fairfax", "ADAMS Ashburn", "ADAMS Gainesville", "ADAMS Sully", "ADAMS Leesburg"];
     const foundNames = validSections.map(s => s.masjid);
-    const missing = REQUIRED_VENUES.filter(v => !foundNames.some(f => f.startsWith(v)));
+    const missing = REQUIRED.filter(v => !foundNames.some(f => f.startsWith(v)));
     if (missing.length > 0) console.warn(`[Adams Jumuah] Missing expected venues: ${missing.join(", ")}`);
     console.log(`[Adams Jumuah] Scraped and saved ${validSections.length} venue(s): ${foundNames.join(", ")}`);
   } catch (err: any) {
