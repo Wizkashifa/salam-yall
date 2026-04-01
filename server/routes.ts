@@ -823,6 +823,8 @@ async function seedJumuahMetros(pool: pg.Pool) {
     { masjid: 'ADAMS Gainesville', khutbah_time: '1:15 PM', iqama_time: '1:30 PM', metro: 'DMV', timezone: 'America/New_York', sort_order: 403, slots: [{ khutbah_time: '1:15 PM', iqama_time: '1:30 PM' }] },
     { masjid: 'ADAMS Leesburg', khutbah_time: '1:15 PM', iqama_time: '1:30 PM', metro: 'DMV', timezone: 'America/New_York', sort_order: 405, slots: [{ khutbah_time: '1:15 PM', iqama_time: '1:30 PM' }] },
     { masjid: 'ADAMS Sully', khutbah_time: '1:15 PM', iqama_time: '1:30 PM', metro: 'DMV', timezone: 'America/New_York', sort_order: 404, slots: [{ khutbah_time: '1:15 PM', iqama_time: '1:30 PM' }] },
+    { masjid: 'ADAMS Ashburn Village', khutbah_time: '1:15 PM', iqama_time: '1:30 PM', metro: 'DMV', timezone: 'America/New_York', sort_order: 409, slots: [{ khutbah_time: '1:15 PM', iqama_time: '1:30 PM' }] },
+    { masjid: 'ADAMS Leesburg (Clarion Inn)', khutbah_time: '1:15 PM', iqama_time: '1:30 PM', metro: 'DMV', timezone: 'America/New_York', sort_order: 410, slots: [{ khutbah_time: '1:15 PM', iqama_time: '1:30 PM' }] },
     { masjid: 'ADAMS Reston (NVHC)', khutbah_time: '1:15 PM', iqama_time: '1:30 PM', metro: 'DMV', timezone: 'America/New_York', sort_order: 407, slots: [{ khutbah_time: '1:15 PM', iqama_time: '1:30 PM' }] },
     { masjid: 'Home2 Suites Chantilly (ADAMS)', khutbah_time: '1:15 PM', iqama_time: '1:30 PM', metro: 'DMV', timezone: 'America/New_York', sort_order: 406, slots: [{ khutbah_time: '1:15 PM', iqama_time: '1:30 PM' }] },
     { masjid: 'ADAMS Manassas (Wyndham Gardens)', khutbah_time: '1:15 PM', iqama_time: '1:30 PM', metro: 'DMV', timezone: 'America/New_York', sort_order: 408, slots: [{ khutbah_time: '1:15 PM', iqama_time: '1:30 PM' }] },
@@ -872,12 +874,13 @@ async function scrapeAdamsCenterJumuah(pool: pg.Pool): Promise<void> {
     const ADAMS_VENUES: { label: RegExp; masjid: string; location: string; sort: number }[] = [
       { label: /sterling/i, masjid: "ADAMS Sterling", location: "46903 Sugarland Rd, Sterling, VA 20164", sort: 400 },
       { label: /fairfax/i, masjid: "ADAMS Fairfax", location: "11216 Waples Mill Rd Unit 107, Fairfax, VA 22030", sort: 401 },
-      { label: /ashburn\s*village/i, masjid: "ADAMS Ashburn", location: "21740 Beaumeade Circle Unit 120, Ashburn, VA 20147", sort: 402 },
+      { label: /ashburn\s*village/i, masjid: "ADAMS Ashburn Village", location: "Ashburn Village, Ashburn, VA 20147", sort: 409 },
       { label: /\bashburn\b(?!\s*village)/i, masjid: "ADAMS Ashburn", location: "21740 Beaumeade Circle Unit 120, Ashburn, VA 20147", sort: 402 },
       { label: /gainesville/i, masjid: "ADAMS Gainesville", location: "12655 Vint Hill Rd, Nokesville, VA 20181", sort: 403 },
       { label: /wyndham\s*gardens?\s*manassas|manassas/i, masjid: "ADAMS Manassas (Wyndham Gardens)", location: "10800 Vandor Ln, Manassas, VA 20109", sort: 408 },
       { label: /sully|chantilly/i, masjid: "ADAMS Sully", location: "4431 Brookfield Corporate Dr Suite F, Chantilly, VA 20151", sort: 404 },
-      { label: /leesburg|clarion\s*inn\s*leesburg/i, masjid: "ADAMS Leesburg", location: "19838 Sycolin Rd, Leesburg, VA 20175", sort: 405 },
+      { label: /clarion\s*inn?\s*leesburg/i, masjid: "ADAMS Leesburg (Clarion Inn)", location: "900 E Market St, Leesburg, VA 20176", sort: 410 },
+      { label: /\bleesburg\b(?!.*clarion)/i, masjid: "ADAMS Leesburg", location: "19838 Sycolin Rd, Leesburg, VA 20175", sort: 405 },
       { label: /nvhc|northern\s*virginia\s*h[a-z]*\s*c[a-z]*|reston/i, masjid: "ADAMS Reston (NVHC)", location: "12301 Bladensburg Rd, Reston, VA 20191", sort: 407 },
       { label: /home2\s*suite|home2/i, masjid: "Home2 Suites Chantilly (ADAMS)", location: "4335 Chantilly Shopping Center, Chantilly, VA 20151", sort: 406 },
     ];
@@ -957,7 +960,12 @@ async function scrapeAdamsCenterJumuah(pool: pg.Pool): Promise<void> {
       ).catch((err: any) => console.error(`[Adams Jumuah] DB error for ${sec.masjid}:`, err.message));
     }
 
-    console.log(`[Adams Jumuah] Scraped and saved ${validSections.length} venue(s)`);
+    // Validation: log found vs missing venues for observability
+    const REQUIRED_VENUES = ["ADAMS Sterling", "ADAMS Fairfax", "ADAMS Ashburn", "ADAMS Gainesville", "ADAMS Sully", "ADAMS Leesburg"];
+    const foundNames = validSections.map(s => s.masjid);
+    const missing = REQUIRED_VENUES.filter(v => !foundNames.some(f => f.startsWith(v)));
+    if (missing.length > 0) console.warn(`[Adams Jumuah] Missing expected venues: ${missing.join(", ")}`);
+    console.log(`[Adams Jumuah] Scraped and saved ${validSections.length} venue(s): ${foundNames.join(", ")}`);
   } catch (err: any) {
     console.error("[Adams Jumuah] Scrape error:", err.message);
   }
