@@ -1,4 +1,6 @@
 import pg from "pg";
+import fs from "fs";
+import path from "path";
 import { generateJIARSchedule } from "./jiar-iqama-data";
 import { generateMCCSchedule } from "./mcc-iqama-data";
 
@@ -234,6 +236,67 @@ export async function seedMCCData(pool: pg.Pool) {
   }
 
   console.log(`[Iqama] Refreshed MCC static schedule (${schedule.length} days)`);
+}
+
+export async function seedAdamsCenterIqama(pool: pg.Pool) {
+  const { rows: countRows } = await pool.query(
+    "SELECT COUNT(*) as count FROM iqama_schedules WHERE masjid LIKE 'ADAMS%'"
+  );
+  if (parseInt(countRows[0].count) >= 300) return;
+
+  const csvPath = path.join(process.cwd(), "attached_assets", "Pasted-date-hijri-day-fajr-fajr-iqamah-sunrise-dhuhr-dhuhr-iqa_1775064801440.txt");
+  let csvText: string;
+  try {
+    csvText = fs.readFileSync(csvPath, "utf-8");
+  } catch (err: any) {
+    console.error("[Iqama] Adams Center CSV not found:", err.message);
+    return;
+  }
+
+  const branches = [
+    "ADAMS Sterling",
+    "ADAMS Fairfax",
+    "ADAMS Ashburn",
+    "ADAMS Gainesville",
+    "ADAMS Sully",
+    "ADAMS Leesburg",
+  ];
+
+  const lines = csvText.split("\n").slice(1);
+  const parsed: { masjid: string; date: string; fajr: string; dhuhr: string; asr: string; maghrib: string; isha: string }[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    const cols = trimmed.split(",");
+    if (cols.length < 14) continue;
+    const dateParts = cols[0].split("/");
+    if (dateParts.length !== 3) continue;
+    const month = dateParts[0].padStart(2, "0");
+    const day = dateParts[1].padStart(2, "0");
+    const year = dateParts[2].trim();
+    if (!year || year.length !== 4) continue;
+    const dateKey = `${year}-${month}-${day}`;
+    const fajr = cols[4].trim();
+    const dhuhr = cols[7].trim();
+    const asr = cols[9].trim();
+    const maghrib = cols[11].trim();
+    const isha = cols[13].trim();
+    if (!fajr || !isha) continue;
+    for (const branch of branches) {
+      parsed.push({ masjid: branch, date: dateKey, fajr, dhuhr, asr, maghrib, isha });
+    }
+  }
+
+  const dayCount = parsed.length / branches.length;
+  console.log(`[Iqama] Seeding ${dayCount} days × ${branches.length} ADAMS Center branches...`);
+
+  const batchSize = 300;
+  for (let i = 0; i < parsed.length; i += batchSize) {
+    await bulkUpsert(pool, parsed.slice(i, i + batchSize));
+  }
+
+  console.log("[Iqama] Adams Center iqama schedule seeded successfully");
 }
 
 async function fetchDPT(pool: pg.Pool, source: IqamaSource): Promise<void> {

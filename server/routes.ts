@@ -5,7 +5,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { getUncachableGoogleCalendarClient } from "./google-calendar";
 import halalSeedData from "./halal-seed-data.json";
-import { ensureIqamaTable, seedJIARData, seedMCCData, startIqamaSync, getIqamaSchedules } from "./iqama-scraper";
+import { ensureIqamaTable, seedJIARData, seedMCCData, seedAdamsCenterIqama, startIqamaSync, getIqamaSchedules } from "./iqama-scraper";
 import Anthropic from "@anthropic-ai/sdk";
 
 const CALENDAR_ID = "5c6138b3c670e90f28b9ec65a6650268569a070eff5ae0ae919129f763d216af@group.calendar.google.com";
@@ -101,6 +101,20 @@ const NAME_MATCHES: [string, string][] = [
   ["mcc east bay", "Muslim Community Center of the East Bay"],
   ["mcc pleasanton", "Muslim Community Center of the East Bay"],
   ["mcceastbay", "Muslim Community Center of the East Bay"],
+  ["adams center sterling", "ADAMS Sterling"],
+  ["adams sterling", "ADAMS Sterling"],
+  ["adams center fairfax", "ADAMS Fairfax"],
+  ["adams fairfax", "ADAMS Fairfax"],
+  ["adams center ashburn", "ADAMS Ashburn"],
+  ["adams ashburn", "ADAMS Ashburn"],
+  ["adams center gainesville", "ADAMS Gainesville"],
+  ["adams gainesville", "ADAMS Gainesville"],
+  ["adams center sully", "ADAMS Sully"],
+  ["adams sully", "ADAMS Sully"],
+  ["adams center leesburg", "ADAMS Leesburg"],
+  ["adams leesburg", "ADAMS Leesburg"],
+  ["qahwah cafe", "Qahwah Cafe"],
+  ["qahwah coffee", "Qahwah Cafe"],
 ];
 
 const STREET_MATCHES: [string, string][] = [
@@ -387,6 +401,13 @@ const KNOWN_COORDINATES: Record<string, { lat: number; lng: number }> = {
   "Los Gatos Islamic Center": { lat: 37.2358, lng: -121.9175 },
   "Los Gatos Islamic Center (LGIC)": { lat: 37.2358, lng: -121.9175 },
   "Saratoga Musalla": { lat: 37.3137, lng: -122.0310 },
+  "ADAMS Sterling": { lat: 39.0057, lng: -77.4050 },
+  "ADAMS Fairfax": { lat: 38.8697, lng: -77.3284 },
+  "ADAMS Ashburn": { lat: 39.0438, lng: -77.4874 },
+  "ADAMS Gainesville": { lat: 38.7004, lng: -77.5641 },
+  "ADAMS Sully": { lat: 38.8874, lng: -77.4282 },
+  "ADAMS Leesburg": { lat: 39.1157, lng: -77.5636 },
+  "Qahwah Cafe": { lat: 39.0057, lng: -77.4050 },
 };
 
 function resolveCoordinates(organizer: string, location: string): { latitude: number | null; longitude: number | null } {
@@ -515,6 +536,13 @@ const ORGANIZER_ADDRESS_MAP: Record<string, string> = {
   "Muslim Community Association": "3003 Scott Blvd, Santa Clara, CA 95054",
   "San Ramon Valley Islamic Center": "2232 San Ramon Valley Blvd, San Ramon, CA 94583",
   "Roots DFW": "4200 International Pkwy, Carrollton, TX 75007",
+  "ADAMS Sterling": "46903 Sugarland Rd, Sterling, VA 20164",
+  "ADAMS Fairfax": "11216 Waples Mill Rd Unit 107, Fairfax, VA 22030",
+  "ADAMS Ashburn": "21740 Beaumeade Circle Unit 120, Ashburn, VA 20147",
+  "ADAMS Gainesville": "12655 Vint Hill Rd, Nokesville, VA 20181",
+  "ADAMS Sully": "4431 Brookfield Corporate Dr Suite F, Chantilly, VA 20151",
+  "ADAMS Leesburg": "19838 Sycolin Rd, Leesburg, VA 20175",
+  "Qahwah Cafe": "46903 Sugarland Rd, Sterling, VA 20164",
 };
 
 function resolveOrgName(rawOrg: string): string {
@@ -685,6 +713,8 @@ async function ensureJumuahTable(pool: pg.Pool) {
     );
   `);
 
+  // Widen khutbah_time if it is still the original narrow VARCHAR(20)
+  await pool.query(`ALTER TABLE jumuah_schedules ALTER COLUMN khutbah_time TYPE VARCHAR(200);`).catch(() => {});
   // Add metro, timezone, khutbahs columns if they don't exist
   await pool.query(`ALTER TABLE jumuah_schedules ADD COLUMN IF NOT EXISTS metro VARCHAR(255);`);
   await pool.query(`ALTER TABLE jumuah_schedules ADD COLUMN IF NOT EXISTS timezone VARCHAR(100);`);
@@ -778,6 +808,23 @@ async function seedJumuahMetros(pool: pg.Pool) {
     { masjid: 'Las Vegas Islamic Center (LVIC)', khutbah_time: '1:30 PM', iqama_time: '1:45 PM', metro: 'Las Vegas NV', timezone: 'America/Los_Angeles', sort_order: 300 },
     { masjid: 'Southern Nevada Muslim Community Center (SNVMC)', khutbah_time: '1:30 PM', iqama_time: '1:45 PM', metro: 'Las Vegas NV', timezone: 'America/Los_Angeles', sort_order: 301 },
   ];
+  // DMV — ADAMS Center branches (seed times; scraper will update on Thursdays)
+  const dmvMasjids = [
+    { masjid: 'ADAMS Sterling', khutbah_time: '1:00 PM, 2:00 PM, 3:00 PM', iqama_time: '1:15 PM, 2:15 PM, 3:15 PM', metro: 'DMV', timezone: 'America/New_York', sort_order: 400, slots: [{ khutbah_time: '1:00 PM', iqama_time: '1:15 PM' }, { khutbah_time: '2:00 PM', iqama_time: '2:15 PM' }, { khutbah_time: '3:00 PM', iqama_time: '3:15 PM' }] },
+    { masjid: 'ADAMS Fairfax', khutbah_time: '1:15 PM', iqama_time: '1:30 PM', metro: 'DMV', timezone: 'America/New_York', sort_order: 401, slots: [{ khutbah_time: '1:15 PM', iqama_time: '1:30 PM' }] },
+    { masjid: 'ADAMS Ashburn', khutbah_time: '1:15 PM', iqama_time: '1:30 PM', metro: 'DMV', timezone: 'America/New_York', sort_order: 402, slots: [{ khutbah_time: '1:15 PM', iqama_time: '1:30 PM' }] },
+    { masjid: 'ADAMS Gainesville', khutbah_time: '1:15 PM', iqama_time: '1:30 PM', metro: 'DMV', timezone: 'America/New_York', sort_order: 403, slots: [{ khutbah_time: '1:15 PM', iqama_time: '1:30 PM' }] },
+    { masjid: 'ADAMS Leesburg', khutbah_time: '1:15 PM', iqama_time: '1:30 PM', metro: 'DMV', timezone: 'America/New_York', sort_order: 405, slots: [{ khutbah_time: '1:15 PM', iqama_time: '1:30 PM' }] },
+    { masjid: 'ADAMS Sully', khutbah_time: '1:15 PM', iqama_time: '1:30 PM', metro: 'DMV', timezone: 'America/New_York', sort_order: 404, slots: [{ khutbah_time: '1:15 PM', iqama_time: '1:30 PM' }] },
+  ];
+  for (const r of dmvMasjids) {
+    await pool.query(
+      `INSERT INTO jumuah_schedules (masjid, khutbah_time, iqama_time, metro, timezone, khutbahs, sort_order) VALUES ($1,$2,$3,$4,$5,$6,$7)
+       ON CONFLICT (masjid) DO NOTHING`,
+      [r.masjid, r.khutbah_time, r.iqama_time, r.metro, r.timezone, JSON.stringify(r.slots), r.sort_order]
+    );
+  }
+
   const allNew = [...bayAreaMasjids, ...indiMasjids, ...lasMasjids];
   // Remove incorrectly-named rows from previous seeds
   await pool.query(`DELETE FROM jumuah_schedules WHERE masjid IN ('Muslim Community Center of the East Bay (MCC)', 'Islamic Society of Greater Indianapolis (ISOG)', 'Al-Huda Foundation (IAT)')`);
@@ -789,6 +836,126 @@ async function seedJumuahMetros(pool: pg.Pool) {
       [r.masjid, r.khutbah_time, r.iqama_time, r.metro, r.timezone, JSON.stringify(slots), r.sort_order]
     );
   }
+}
+
+async function scrapeAdamsCenterJumuah(pool: pg.Pool): Promise<void> {
+  try {
+    const resp = await fetch("https://adamscenter.org/jummah/", {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; SalamYallBot/1.0)" },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!resp.ok) {
+      console.error(`[Adams Jumuah] HTTP ${resp.status}`);
+      return;
+    }
+    const html = await resp.text();
+
+    // Strip scripts/styles, collapse whitespace
+    const text = html
+      .replace(/<script[\s\S]*?<\/script>/gi, "")
+      .replace(/<style[\s\S]*?<\/style>/gi, "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+
+    // Known ADAMS branches/venues and their DB names
+    const ADAMS_VENUES: { label: RegExp; masjid: string; location: string; sort: number }[] = [
+      { label: /sterling/i, masjid: "ADAMS Sterling", location: "46903 Sugarland Rd, Sterling, VA 20164", sort: 400 },
+      { label: /fairfax/i, masjid: "ADAMS Fairfax", location: "11216 Waples Mill Rd Unit 107, Fairfax, VA 22030", sort: 401 },
+      { label: /ashburn\s*village|ashburn/i, masjid: "ADAMS Ashburn", location: "21740 Beaumeade Circle Unit 120, Ashburn, VA 20147", sort: 402 },
+      { label: /gainesville/i, masjid: "ADAMS Gainesville", location: "12655 Vint Hill Rd, Nokesville, VA 20181", sort: 403 },
+      { label: /sully|chantilly/i, masjid: "ADAMS Sully", location: "4431 Brookfield Corporate Dr Suite F, Chantilly, VA 20151", sort: 404 },
+      { label: /leesburg/i, masjid: "ADAMS Leesburg", location: "19838 Sycolin Rd, Leesburg, VA 20175", sort: 405 },
+      { label: /home2\s*suite|home2/i, masjid: "Home2 Suites Chantilly (ADAMS)", location: "4335 Chantilly Shopping Center, Chantilly, VA 20151", sort: 406 },
+    ];
+
+    // Split text into venue sections by looking for venue label patterns
+    // Strategy: find all venue mentions and their positions in text, then extract time blocks
+    type VenueSection = { masjid: string; location: string; sort: number; times: string[]; start: number; end: number };
+    const sections: VenueSection[] = [];
+
+    for (const venue of ADAMS_VENUES) {
+      const match = venue.label.exec(text);
+      if (match) {
+        sections.push({ masjid: venue.masjid, location: venue.location, sort: venue.sort, times: [], start: match.index, end: match.index + match[0].length });
+      }
+    }
+
+    sections.sort((a, b) => a.start - b.start);
+
+    // For each section, extract times from the text between this section start and next section start
+    for (let i = 0; i < sections.length; i++) {
+      const sec = sections[i];
+      const nextStart = sections[i + 1]?.start ?? sec.start + 500;
+      const chunk = text.slice(sec.start, Math.min(nextStart, sec.start + 800));
+      let tm;
+      const times: string[] = [];
+      const re = /\b(\d{1,2}:\d{2}\s*[AP]M)\b/gi;
+      while ((tm = re.exec(chunk)) !== null) {
+        const t = tm[1].replace(/\s+/, " ").toUpperCase();
+        if (!times.includes(t)) times.push(t);
+      }
+      sec.times = times;
+    }
+
+    const validSections = sections.filter(s => s.times.length >= 1);
+
+    if (validSections.length === 0) {
+      console.warn("[Adams Jumuah] No time slots found in page");
+      return;
+    }
+
+    for (const sec of validSections) {
+      // Build khutbahs array: assume alternating khutbah+iqama, or just use times as iqama times
+      let slots: { khutbah_time?: string; iqama_time: string }[] = [];
+      if (sec.times.length >= 2) {
+        // Pair up: first is khutbah, second is iqama for each slot
+        for (let i = 0; i + 1 < sec.times.length; i += 2) {
+          slots.push({ khutbah_time: sec.times[i], iqama_time: sec.times[i + 1] });
+        }
+        // If odd number: last time is an extra iqama slot
+        if (sec.times.length % 2 === 1) {
+          slots.push({ iqama_time: sec.times[sec.times.length - 1] });
+        }
+      } else {
+        slots = [{ iqama_time: sec.times[0] }];
+      }
+
+      const legacyKhutbah = slots.map(s => s.khutbah_time || s.iqama_time).join(", ");
+      const legacyIqama = slots.map(s => s.iqama_time).join(", ");
+
+      await pool.query(
+        `INSERT INTO jumuah_schedules (masjid, khutbah_time, iqama_time, metro, timezone, khutbahs, sort_order)
+         VALUES ($1, $2, $3, 'DMV', 'America/New_York', $4, $5)
+         ON CONFLICT (masjid) DO UPDATE SET
+           khutbah_time = EXCLUDED.khutbah_time,
+           iqama_time = EXCLUDED.iqama_time,
+           metro = EXCLUDED.metro,
+           timezone = EXCLUDED.timezone,
+           khutbahs = EXCLUDED.khutbahs,
+           sort_order = EXCLUDED.sort_order,
+           updated_at = NOW()`,
+        [sec.masjid, legacyKhutbah, legacyIqama, JSON.stringify(slots), sec.sort]
+      ).catch((err: any) => console.error(`[Adams Jumuah] DB error for ${sec.masjid}:`, err.message));
+    }
+
+    console.log(`[Adams Jumuah] Scraped and saved ${validSections.length} venue(s)`);
+  } catch (err: any) {
+    console.error("[Adams Jumuah] Scrape error:", err.message);
+  }
+}
+
+function scheduleAdamsJumuahScraper(pool: pg.Pool): void {
+  // Run immediately on startup
+  scrapeAdamsCenterJumuah(pool).catch(err => console.error("[Adams Jumuah] Startup scrape error:", err.message));
+
+  // Re-scrape every 24 hours, but only actually update on Thursdays
+  setInterval(() => {
+    const nowET = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
+    if (nowET.getDay() === 4) {
+      scrapeAdamsCenterJumuah(pool).catch(err => console.error("[Adams Jumuah] Thursday scrape error:", err.message));
+    }
+  }, 24 * 60 * 60 * 1000);
 }
 
 async function ensureEventOverridesTable(pool: pg.Pool) {
@@ -931,6 +1098,12 @@ async function ensureMasjidsTable(pool: pg.Pool) {
       { name: 'Los Gatos Islamic Center (LGIC)', lat: 37.2358, lng: -121.9175, addr: '16769 Farley Rd, Los Gatos, CA 95032', website: 'https://wvmuslim.org', terms: ['lgic', 'los gatos islamic', 'los gatos masjid', 'wvmuslim', 'farley rd', 'west valley muslim'], iqama: true, sort: 22, campusGroup: 'lgic' },
       { name: 'Saratoga Musalla', lat: 37.3137, lng: -122.0310, addr: '12370 Saratoga-Sunnyvale Rd, Saratoga, CA 95070', website: 'https://wvmuslim.org', terms: ['saratoga musalla', 'saratoga-sunnyvale rd', 'saratoga masjid'], iqama: true, sort: 22, campusGroup: 'lgic', iqamaSource: 'LGIC' },
       { name: 'Al-Huda Foundation', lat: 39.9567, lng: -86.0131, addr: '12213 Lantern Rd, Fishers, IN 46038', website: 'https://alhudafoundation.org', terms: ['al-huda', 'alhuda', 'al huda foundation', 'lantern rd', 'fishers', 'aici'], iqama: true, sort: 23, iqamaSource: 'url|https://alhudafoundation.org/' },
+      { name: 'ADAMS Sterling', lat: 39.0057, lng: -77.4050, addr: '46903 Sugarland Rd, Sterling, VA 20164', website: 'https://adamscenter.org', terms: ['adams sterling', 'adams center sterling', 'sugarland rd', 'sterling masjid', 'adams center hq'], iqama: true, sort: 24, campusGroup: 'adams', iqamaSource: 'other|2026 Annual Schedule' },
+      { name: 'ADAMS Ashburn', lat: 39.0438, lng: -77.4874, addr: '21740 Beaumeade Circle Unit 120, Ashburn, VA 20147', website: 'https://adamscenter.org', terms: ['adams ashburn', 'adams center ashburn', 'beaumeade circle', 'ashburn masjid'], iqama: true, sort: 25, campusGroup: 'adams', iqamaSource: 'other|2026 Annual Schedule' },
+      { name: 'ADAMS Fairfax', lat: 38.8697, lng: -77.3284, addr: '11216 Waples Mill Rd Unit 107, Fairfax, VA 22030', website: 'https://adamscenter.org', terms: ['adams fairfax', 'adams center fairfax', 'waples mill rd', 'fairfax masjid'], iqama: true, sort: 26, campusGroup: 'adams', iqamaSource: 'other|2026 Annual Schedule' },
+      { name: 'ADAMS Gainesville', lat: 38.7004, lng: -77.5641, addr: '12655 Vint Hill Rd, Nokesville, VA 20181', website: 'https://adamscenter.org', terms: ['adams gainesville', 'adams center gainesville', 'vint hill rd', 'nokesville masjid'], iqama: true, sort: 27, campusGroup: 'adams', iqamaSource: 'other|2026 Annual Schedule' },
+      { name: 'ADAMS Leesburg', lat: 39.1157, lng: -77.5636, addr: '19838 Sycolin Rd, Leesburg, VA 20175', website: 'https://adamscenter.org', terms: ['adams leesburg', 'adams center leesburg', 'sycolin rd', 'leesburg masjid'], iqama: true, sort: 28, campusGroup: 'adams', iqamaSource: 'other|2026 Annual Schedule' },
+      { name: 'ADAMS Sully', lat: 38.8874, lng: -77.4282, addr: '4431 Brookfield Corporate Dr Suite F, Chantilly, VA 20151', website: 'https://adamscenter.org', terms: ['adams sully', 'adams center sully', 'brookfield corporate dr', 'chantilly masjid'], iqama: true, sort: 29, campusGroup: 'adams', iqamaSource: 'other|2026 Annual Schedule' },
     ];
     for (const m of masjidUpserts) {
       await pool.query(
@@ -1521,6 +1694,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await ensureIqamaTable(pool).catch(err => console.error("[DB] Iqama table init error:", err.message));
   await seedJIARData(pool).catch(err => console.error("[DB] JIAR seed error:", err.message));
   await seedMCCData(pool).catch(err => console.error("[DB] MCC seed error:", err.message));
+  await seedAdamsCenterIqama(pool).catch(err => console.error("[DB] Adams Center iqama seed error:", err.message));
   await ensureJanazaAlertsTable(pool).catch(err => console.error("[DB] Janaza alerts table init error:", err.message));
   await ensureUserAccountsTable(pool).catch(err => console.error("[DB] User accounts table init error:", err.message));
   await ensureUserRatingsTable(pool).catch(err => console.error("[DB] User ratings table init error:", err.message));
@@ -1587,8 +1761,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
   console.log("[DB] Upserted Fishers-area restaurants");
 
+  // Seed Qahwah Cafe as a DMV business
+  const qahwahExists = await pool.query("SELECT id FROM businesses WHERE LOWER(name) = 'qahwah cafe'").catch(() => ({ rows: [] }));
+  if (qahwahExists.rows.length === 0) {
+    await pool.query(
+      `INSERT INTO businesses (name, category, subcategory, description, address, phone, website, instagram_url, filter_tags, search_aliases, location_type, lat, lng, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'physical', $11, $12, 'approved')`,
+      [
+        "Qahwah Cafe",
+        "Food & Drink",
+        "Cafe & Coffee",
+        "Muslim-owned specialty coffee shop and cafe located inside ADAMS Center Sterling. Serving artisan coffee, Middle Eastern pastries, and light bites.",
+        "46903 Sugarland Rd, Sterling, VA 20164",
+        "",
+        "https://www.qahwacafe.com",
+        "https://www.instagram.com/qahwacafe",
+        ["cafe", "coffee", "halal", "pastries", "middle-eastern", "muslim-owned"],
+        ["qahwah cafe", "qahwah coffee", "qahwa cafe", "sterling cafe", "adams center cafe"],
+        39.0057,
+        -77.4050,
+      ]
+    ).catch((err: any) => console.error("[DB] Error seeding Qahwah Cafe:", err.message));
+    console.log("[DB] Seeded Qahwah Cafe business");
+  }
+
   startHalalAutoSync(pool);
   startIqamaSync(pool);
+  scheduleAdamsJumuahScraper(pool);
 
   async function applyEventOverrides(events: CachedEvent[]): Promise<CachedEvent[]> {
     try {
@@ -2000,6 +2199,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  let cachedQahwahEvents: CachedEvent[] = [];
+  let qahwahLastFetch = 0;
+  const QAHWAH_CACHE_TTL = 60 * 60 * 1000;
+
+  async function fetchQahwahEvents(): Promise<CachedEvent[]> {
+    const now = Date.now();
+    if (cachedQahwahEvents.length > 0 && (now - qahwahLastFetch) < QAHWAH_CACHE_TTL) {
+      return cachedQahwahEvents.filter(e => new Date(e.end || e.start) >= new Date());
+    }
+    try {
+      const nowDate = new Date();
+      const months = [
+        `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, "0")}`,
+        `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 2).padStart(2, "0")}`,
+      ].map(m => {
+        const [y, mo] = m.split("-").map(Number);
+        if (mo > 12) return `${y + 1}-01`;
+        return m;
+      });
+
+      const allItems: any[] = [];
+      for (const month of months) {
+        const url = `https://www.qahwacafe.com/api/open/GetItemsByMonth?month=${month}&type=events`;
+        try {
+          const r = await fetch(url, {
+            headers: { "User-Agent": "Mozilla/5.0 (compatible; SalamYallBot/1.0)" },
+            signal: AbortSignal.timeout(10000),
+          });
+          if (r.ok) {
+            const json = await r.json() as any;
+            const items = json?.items || json?.upcoming || json?.events || (Array.isArray(json) ? json : []);
+            allItems.push(...items);
+          }
+        } catch {}
+      }
+
+      const events: CachedEvent[] = allItems
+        .filter(item => item && (item.title || item.fullUrl))
+        .map((item: any, idx: number) => {
+          const startMs = item.startDate || item.publishOn || Date.now();
+          const endMs = item.endDate || startMs + 3600000;
+          const desc = item.body ? item.body.replace(/<[^>]+>/g, " ").replace(/\s{2,}/g, " ").trim() : "";
+          const regUrl = item.fullUrl ? `https://www.qahwacafe.com${item.fullUrl}` : "https://www.qahwacafe.com/events";
+          return {
+            id: `qahwah_${item.id || idx}`,
+            title: item.title || "Qahwah Cafe Event",
+            description: desc,
+            location: item.location || "46903 Sugarland Rd, Sterling, VA 20164",
+            start: new Date(startMs).toISOString(),
+            end: new Date(endMs).toISOString(),
+            isAllDay: false,
+            organizer: "Qahwah Cafe",
+            imageUrl: item.assetUrl || item.thumbnailUrl || "",
+            registrationUrl: regUrl,
+            speaker: "",
+            latitude: 39.0057,
+            longitude: -77.4050,
+            isVirtual: false,
+            isFeatured: false,
+          };
+        });
+
+      cachedQahwahEvents = events;
+      qahwahLastFetch = Date.now();
+      if (events.length > 0) console.log(`[Qahwah] Fetched ${events.length} events`);
+      return events.filter(e => new Date(e.end || e.start) >= new Date());
+    } catch (err: any) {
+      console.error("[Qahwah] Events fetch error:", err.message);
+      return cachedQahwahEvents.filter(e => new Date(e.end || e.start) >= new Date());
+    }
+  }
+
   const MCA_CALENDAR_ID = "c_0f12fe7cae6832644dd87c48e910a7e82060b70a81d12cd9def13d6764be61bf@group.calendar.google.com";
   let cachedMCAEvents: CachedEvent[] = [];
   let mcaLastFetch = 0;
@@ -2081,7 +2352,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const mcaEvents = await fetchMCAEvents();
       const icfEvents = await fetchICFEvents();
       const lgicEvents = await fetchLGICEvents();
-      const merged = [...communityEvents, ...rootsDfwEvents, ...mccEastBayEvents, ...srvicEvents, ...mcaEvents, ...icfEvents, ...lgicEvents]
+      const qahwahEvents = await fetchQahwahEvents();
+      const merged = [...communityEvents, ...rootsDfwEvents, ...mccEastBayEvents, ...srvicEvents, ...mcaEvents, ...icfEvents, ...lgicEvents, ...qahwahEvents]
         .filter(ev => !ev.title.toLowerCase().includes("private event"));
       const seen = new Set<string>();
       const allEvents = merged.filter(ev => {
@@ -2608,7 +2880,7 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     { name: "Denver CO", lat: 39.7392, lng: -104.9903, cities: ["Denver", "Aurora", "Thornton", "Westminster", "Lakewood"] },
     { name: "Detroit MI", lat: 42.3314, lng: -83.0458, cities: ["Detroit", "Dearborn", "Canton", "Hamtramck", "Troy"] },
     { name: "DFW TX", lat: 32.7767, lng: -96.7970, cities: ["Dallas", "Fort Worth", "Plano", "Irving", "Arlington"] },
-    { name: "DMV", lat: 38.9072, lng: -77.0369, cities: ["Washington DC", "Falls Church", "Silver Spring", "Fairfax", "Herndon"] },
+    { name: "DMV", lat: 38.9072, lng: -77.0369, cities: ["Washington DC", "Falls Church", "Silver Spring", "Fairfax", "Herndon", "Sterling", "Ashburn", "Chantilly", "Leesburg", "Nokesville", "Reston", "Manassas", "Alexandria", "Arlington"] },
     { name: "Houston TX", lat: 29.7604, lng: -95.3698, cities: ["Houston", "Sugar Land", "Katy", "Pearland", "Missouri City"] },
     { name: "Indianapolis IN", lat: 39.7684, lng: -86.1581, cities: ["Indianapolis", "Carmel", "Fishers", "Greenwood", "Plainfield"] },
     { name: "Las Vegas NV", lat: 36.1699, lng: -115.1398, cities: ["Las Vegas", "Henderson", "North Las Vegas", "Summerlin", "Enterprise"] },
