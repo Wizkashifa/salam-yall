@@ -181,6 +181,49 @@
     .btn-feature-on { background: rgba(212,168,67,0.12) !important; color: var(--gold) !important; }
     .btn-feature-off { background: var(--card-bg) !important; color: var(--text-tertiary) !important; }
     .inline-chip { background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-secondary); display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 8px; }
+
+    /* ── MOBILE ─────────────────────────────────────────────── */
+    @media (max-width: 767px) {
+      /* Layout */
+      .app-wrap { padding: 100px 12px 60px; }
+      .section { padding: 14px 12px; }
+
+      /* Forms: side-by-side rows collapse to single column */
+      .row { flex-direction: column; gap: 0; }
+
+      /* Filter row: full-width stack */
+      .filter-row { flex-direction: column; }
+      .filter-row input[type="text"],
+      .filter-row select { width: 100%; min-width: unset; flex: none; }
+
+      /* Bigger tap targets for small buttons */
+      .btn-sm { min-height: 38px; padding: 8px 14px; font-size: 13px; }
+
+      /* Modals — slide over full screen, scroll inside */
+      [id$="Modal"] { padding: 0 !important; overflow-y: hidden !important; }
+      [id$="Modal"] > div {
+        margin: 0 !important;
+        max-width: 100% !important;
+        height: 100dvh;
+        border-radius: 0 !important;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      /* Modal sticky footer stays visible above iOS home bar */
+      .modal-sticky-footer { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+
+      /* Business / event card action buttons: full width rows */
+      .message-item { padding: 12px 0; }
+
+      /* Dashboard count cards: 2-column grid on small phones */
+      .dash-cards { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .dash-card { padding: 14px 10px; }
+      .dash-card-num { font-size: 28px; }
+
+      /* Section title slightly smaller */
+      .section-title { font-size: 15px; }
+    }
   </style>
 </head>
 <body>
@@ -377,14 +420,14 @@
       <div class="section">
         <div class="section-title"><span class="icon">📸</span> Scan Event Flyer</div>
         <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Upload a flyer image to automatically extract event details using AI, or fill in manually.</p>
-        <div id="flyerUploadArea" style="border:2px dashed #333;border-radius:12px;padding:30px;text-align:center;cursor:pointer;margin-bottom:14px;transition:border-color 0.2s;" ondragover="event.preventDefault();this.style.borderColor='#D4A843';" ondragleave="this.style.borderColor='#333';" ondrop="handleFlyerDrop(event)" onclick="document.getElementById('flyerFileInput').click()">
+        <div id="flyerUploadArea" style="border:2px dashed var(--card-border);border-radius:12px;padding:30px;text-align:center;cursor:pointer;margin-bottom:14px;transition:border-color 0.2s;" ondragover="event.preventDefault();this.style.borderColor='var(--gold)';" ondragleave="this.style.borderColor='var(--card-border)';" ondrop="handleFlyerDrop(event)" onclick="document.getElementById('flyerFileInput').click()">
           <div style="font-size:28px;margin-bottom:8px;">📸</div>
-          <div style="font-size:14px;color:#9CA3AF;">Drop a flyer image here or click to upload</div>
-          <div style="font-size:11px;color:#6B7280;margin-top:4px;">JPG, PNG, or WebP</div>
+          <div style="font-size:14px;color:var(--text-secondary);">Drop, paste, or click to upload a flyer image</div>
+          <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px;">JPG, PNG, WebP · or Ctrl+V / ⌘V to paste from clipboard</div>
           <input type="file" id="flyerFileInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleFlyerSelect(event)">
         </div>
         <div id="flyerPreview" style="display:none;margin-bottom:14px;text-align:center;">
-          <img id="flyerPreviewImg" style="max-width:100%;max-height:300px;border-radius:10px;border:1px solid #333;">
+          <img id="flyerPreviewImg" style="max-width:100%;max-height:300px;border-radius:10px;border:1px solid var(--card-border);">
           <button class="btn btn-sm" onclick="clearFlyer()" style="margin-top:8px;background:#333;color:#9CA3AF;">Remove Image</button>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:14px;">
@@ -1299,6 +1342,36 @@
         });
       }
     });
+
+    // Global paste handler — routes clipboard image to whichever upload area is visible
+    document.addEventListener('paste', function(e) {
+      var items = e.clipboardData && e.clipboardData.items;
+      if (!items) return;
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') === -1) continue;
+        var file = items[i].getAsFile();
+        if (!file) continue;
+        var jzArea   = document.getElementById('jzUploadArea');
+        var flyerArea = document.getElementById('flyerUploadArea');
+        // Route to whichever area is visible (in the active tab and not already replaced by a preview)
+        if (jzArea && jzArea.style.display !== 'none' && jzArea.offsetParent !== null) {
+          e.preventDefault();
+          processJzFile(file);
+          flashUploadArea(jzArea);
+        } else if (flyerArea && flyerArea.style.display !== 'none' && flyerArea.offsetParent !== null) {
+          e.preventDefault();
+          loadFlyerFile(file);
+          flashUploadArea(flyerArea);
+        }
+        break;
+      }
+    });
+
+    function flashUploadArea(el) {
+      var prev = el.style.borderColor;
+      el.style.borderColor = 'var(--emerald)';
+      setTimeout(function() { el.style.borderColor = prev || 'var(--card-border)'; }, 600);
+    }
 
     function showToast(msg, isError) {
       const t = document.getElementById('toast');
