@@ -821,18 +821,44 @@
           <option value="virtual">Virtual / Online</option>
           <option value="popup">Pop-up</option>
         </select>
-        <label>Service Area Description (optional)</label>
+        <label>Service Area / Metro</label>
         <select id="editServiceArea" style="margin-bottom:14px;">
-          <option value="">-- Select --</option>
-          <option value="Local Area">Local Area</option>
-          <option value="Metro Area">Metro Area</option>
-          <option value="Raleigh Metro">Raleigh Metro</option>
-          <option value="Durham / Chapel Hill">Durham / Chapel Hill</option>
-          <option value="Cary / Apex / Morrisville">Cary / Apex / Morrisville</option>
-          <option value="Wake County">Wake County</option>
-          <option value="NC Statewide">NC Statewide</option>
+          <option value="">-- Select Metro --</option>
+          <option value="Triangle NC">Triangle NC</option>
+          <option value="Charlotte NC">Charlotte NC</option>
+          <option value="Bay Area CA">Bay Area CA</option>
+          <option value="Los Angeles CA">Los Angeles CA</option>
+          <option value="Sacramento CA">Sacramento CA</option>
+          <option value="San Diego CA">San Diego CA</option>
+          <option value="DFW TX">DFW TX</option>
+          <option value="Houston TX">Houston TX</option>
+          <option value="San Antonio TX">San Antonio TX</option>
+          <option value="Austin TX">Austin TX</option>
+          <option value="Chicago IL">Chicago IL</option>
+          <option value="NYC Metro">NYC Metro</option>
+          <option value="DMV">DMV (DC/MD/VA)</option>
+          <option value="Baltimore MD">Baltimore MD</option>
+          <option value="Philadelphia PA">Philadelphia PA</option>
+          <option value="Boston MA">Boston MA</option>
+          <option value="Detroit MI">Detroit MI</option>
+          <option value="Atlanta GA">Atlanta GA</option>
+          <option value="Orlando FL">Orlando FL</option>
+          <option value="Tampa FL">Tampa FL</option>
+          <option value="Miami FL">Miami FL</option>
+          <option value="Minneapolis MN">Minneapolis MN</option>
+          <option value="Columbus OH">Columbus OH</option>
+          <option value="Indianapolis IN">Indianapolis IN</option>
+          <option value="Nashville TN">Nashville TN</option>
+          <option value="St. Louis MO">St. Louis MO</option>
+          <option value="Phoenix AZ">Phoenix AZ</option>
+          <option value="Las Vegas NV">Las Vegas NV</option>
+          <option value="Seattle WA">Seattle WA</option>
+          <option value="Denver CO">Denver CO</option>
           <option value="Nationwide / Remote">Nationwide / Remote</option>
+          <option value="Virtual">Virtual</option>
         </select>
+        <label>Booking / Appointment URL (optional)</label>
+        <input type="text" id="editBookingUrl" placeholder="https://calendly.com/..." style="margin-bottom:14px;">
         <label>Enrichment</label>
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
           <div id="enrichToggle" onclick="toggleEnrichment()" style="width:50px;height:28px;border-radius:14px;background:#333;cursor:pointer;position:relative;transition:background 0.2s;">
@@ -1601,42 +1627,84 @@
       renderBusinessList(filtered);
     }
 
+    var locationTypeColors = { physical:'#1E3A2E', service_area:'#1E2A3A', virtual:'#2A1E3A', popup:'#3A2A1E' };
+    var locationTypeLabels = { physical:'📍 Physical', service_area:'🗺 Service Area', virtual:'💻 Virtual', popup:'🎪 Pop-up' };
+
     function renderBusinessList(businesses) {
       var list = document.getElementById('businessList');
       if (!businesses.length) {
-          list.innerHTML = '<div class="empty-state">No ' + currentBizFilter + ' businesses found</div>';
-          return;
+        list.innerHTML = '<div class="empty-state">No ' + currentBizFilter + ' businesses found</div>';
+        return;
+      }
+      list.innerHTML = '<ul class="message-list">' + businesses.map(function(b) {
+        var date = new Date(b.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+        // Photo thumbnail
+        var photoHtml = '';
+        if (b.photo_url) {
+          photoHtml = '<img src="' + escAttr(b.photo_url) + '" style="width:56px;height:56px;border-radius:8px;object-fit:cover;flex-shrink:0;" onerror="this.style.display=\'none\'">';
         }
-        list.innerHTML = '<ul class="message-list">' + businesses.map(b => {
-          const date = new Date(b.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-          const desc = b.description ? '<div style="font-size:12px;color:#9CA3AF;margin-top:4px;">' + escHtml(b.description) + '</div>' : '';
-          const contact = [b.phone, b.website].filter(Boolean).join(' · ');
-          const contactLine = contact ? '<div style="font-size:11px;color:#6B7280;margin-top:2px;">' + escHtml(contact) + '</div>' : '';
-          const featuredBadge = b.featured ? '<span style="background:#D4A843;color:#000;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;margin-left:6px;">★ FEATURED</span>' : '';
-          let actions = '<button class="btn btn-sm" onclick="toggleFeatured(' + b.id + ',' + !b.featured + ')" style="margin-right:6px;background:' + (b.featured ? '#2A2318' : '#1E1E1E') + ';color:' + (b.featured ? '#D4A843' : '#9CA3AF') + ';">' + (b.featured ? '★ Unfeature' : '☆ Feature') + '</button>';
-          actions += '<button class="btn btn-gold btn-sm" onclick="openBusinessEditor(' + b.id + ')" style="margin-right:6px;">Edit</button>';
-          if (currentBizFilter === 'pending') {
-            actions += '<button class="btn btn-primary btn-sm" onclick="updateBusiness(' + b.id + ',\'approved\')" style="margin-right:6px;">Approve</button>' +
-                      '<button class="btn btn-danger btn-sm" onclick="updateBusiness(' + b.id + ',\'rejected\')">Reject</button>';
-          } else if (currentBizFilter === 'approved') {
-            actions += '<button class="btn btn-danger btn-sm" onclick="updateBusiness(' + b.id + ',\'rejected\')">Reject</button>';
-          } else {
-            actions += '<button class="btn btn-primary btn-sm" onclick="updateBusiness(' + b.id + ',\'approved\')" style="margin-right:6px;">Approve</button>' +
-                      '<button class="btn btn-danger btn-sm" onclick="deleteBusiness(' + b.id + ')">Delete</button>';
-          }
-          return '<li class="message-item" style="flex-direction:column;gap:8px;">' +
-            '<div style="display:flex;align-items:flex-start;gap:12px;width:100%;">' +
-              '<span class="message-badge badge-event">' + escHtml(b.category) + '</span>' +
-              '<div style="flex:1;">' +
-                '<div style="font-size:14px;font-weight:600;color:#F5F5F5;">' + escHtml(b.name) + featuredBadge + '</div>' +
-                '<div style="font-size:12px;color:#9CA3AF;margin-top:2px;">' + escHtml(b.address) + '</div>' +
-                desc + contactLine +
-                '<div class="message-meta">' + date + '</div>' +
+
+        // Badges row
+        var ltBg = locationTypeColors[b.location_type] || '#1E1E1E';
+        var ltLabel = locationTypeLabels[b.location_type] || (b.location_type || 'Physical');
+        var featuredBadge = b.featured ? '<span style="background:#D4A843;color:#000;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;margin-left:4px;">★ FEATURED</span>' : '';
+        var ltBadge = '<span style="background:' + ltBg + ';color:#D4A843;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;">' + ltLabel + '</span>';
+
+        // Metro badge for service_area / popup
+        var metroBadge = '';
+        if ((b.location_type === 'service_area' || b.location_type === 'popup') && b.service_area_description) {
+          metroBadge = '<span style="background:#1A2535;color:#60A5FA;padding:2px 6px;border-radius:4px;font-size:10px;margin-left:4px;">' + escHtml(b.service_area_description) + '</span>';
+        }
+
+        // Description
+        var desc = b.description ? '<div style="font-size:12px;color:#9CA3AF;margin-top:5px;line-height:1.4;">' + escHtml(b.description.slice(0, 180)) + (b.description.length > 180 ? '…' : '') + '</div>' : '';
+
+        // Address (only for physical)
+        var addrLine = (b.location_type !== 'service_area' && b.location_type !== 'virtual' && b.address)
+          ? '<div style="font-size:12px;color:#6B7280;margin-top:3px;">📍 ' + escHtml(b.address) + '</div>' : '';
+
+        // Contact links
+        var links = [];
+        if (b.phone) links.push('<a href="tel:' + escAttr(b.phone) + '" style="color:#9CA3AF;font-size:11px;text-decoration:none;">📞 ' + escHtml(b.phone) + '</a>');
+        if (b.website) links.push('<a href="' + escAttr(b.website) + '" target="_blank" style="color:#60A5FA;font-size:11px;">🌐 Website</a>');
+        if (b.instagram_url) links.push('<a href="' + escAttr(b.instagram_url) + '" target="_blank" style="color:#E1306C;font-size:11px;">📸 Instagram</a>');
+        if (b.booking_url) links.push('<a href="' + escAttr(b.booking_url) + '" target="_blank" style="color:#4ADE80;font-size:11px;">📅 Book/Appt</a>');
+        var linksHtml = links.length ? '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;">' + links.join('') + '</div>' : '';
+
+        // Affiliation
+        var affLine = b.affiliation ? '<div style="font-size:11px;color:#6B7280;margin-top:3px;">👤 ' + escHtml(b.affiliation) + '</div>' : '';
+
+        // Actions
+        var actions = '<button class="btn btn-sm" onclick="toggleFeatured(' + b.id + ',' + !b.featured + ')" style="background:' + (b.featured ? '#2A2318' : '#1E1E1E') + ';color:' + (b.featured ? '#D4A843' : '#9CA3AF') + ';">' + (b.featured ? '★ Unfeature' : '☆ Feature') + '</button>';
+        actions += '<button class="btn btn-gold btn-sm" onclick="openBusinessEditor(' + b.id + ')">Edit</button>';
+        if (currentBizFilter === 'pending') {
+          actions += '<button class="btn btn-primary btn-sm" onclick="updateBusiness(' + b.id + ',\'approved\')">Approve</button>' +
+                     '<button class="btn btn-danger btn-sm" onclick="updateBusiness(' + b.id + ',\'rejected\')">Reject</button>';
+        } else if (currentBizFilter === 'approved') {
+          actions += '<button class="btn btn-danger btn-sm" onclick="updateBusiness(' + b.id + ',\'rejected\')">Reject</button>';
+        } else {
+          actions += '<button class="btn btn-primary btn-sm" onclick="updateBusiness(' + b.id + ',\'approved\')">Approve</button>' +
+                     '<button class="btn btn-danger btn-sm" onclick="deleteBusiness(' + b.id + ')">Delete</button>';
+        }
+
+        return '<li class="message-item" style="flex-direction:column;gap:8px;padding:14px;">' +
+          '<div style="display:flex;gap:10px;width:100%;">' +
+            photoHtml +
+            '<div style="flex:1;min-width:0;">' +
+              '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-bottom:4px;">' +
+                '<span class="message-badge badge-event">' + escHtml(b.category) + '</span>' +
+                ltBadge + metroBadge + featuredBadge +
               '</div>' +
+              '<div style="font-size:14px;font-weight:600;color:#F5F5F5;">' + escHtml(b.name) + '</div>' +
+              (b.subcategory ? '<div style="font-size:11px;color:#9CA3AF;">' + escHtml(b.subcategory) + '</div>' : '') +
+              addrLine + affLine + desc + linksHtml +
+              '<div class="message-meta" style="margin-top:6px;">' + date + '</div>' +
             '</div>' +
-            '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + actions + '</div>' +
-          '</li>';
-        }).join('') + '</ul>';
+          '</div>' +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + actions + '</div>' +
+        '</li>';
+      }).join('') + '</ul>';
     }
 
     async function updateBusiness(id, status) {
@@ -2296,6 +2364,7 @@
         document.getElementById('editInstagramUrl').value = business.instagram_url || '';
         document.getElementById('editLocationType').value = business.location_type || 'physical';
         document.getElementById('editServiceArea').value = business.service_area_description || '';
+        document.getElementById('editBookingUrl').value = business.booking_url || '';
         setEnrichToggle(business.place_id !== 'none');
         document.getElementById('editBusinessModal').style.display = 'block';
         document.getElementById('editCategory').onchange = function() {
@@ -2354,9 +2423,10 @@
       const instagram_url = document.getElementById('editInstagramUrl').value.trim();
       const location_type = document.getElementById('editLocationType').value;
       const service_area_description = document.getElementById('editServiceArea').value.trim();
+      const booking_url = document.getElementById('editBookingUrl').value.trim();
       const disable_enrichment = document.getElementById('editDisableEnrichment').value === 'true';
       if (!name || !category) { showToast('Name and category are required', true); return; }
-      const body = { name, category, subcategory, description, address, phone, website, instagram_url, disable_enrichment, location_type, service_area_description };
+      const body = { name, category, subcategory, description, address, phone, website, instagram_url, booking_url, disable_enrichment, location_type, service_area_description };
       if (filter_tags.length > 0) body.filter_tags = filter_tags;
       if (affiliation) body.affiliation = affiliation;
       if (search_aliases.length > 0) body.search_aliases = search_aliases;

@@ -3548,10 +3548,18 @@ Return ONLY the description text, nothing else.`,
         values.push(validLT.includes(location_type) ? location_type : "physical");
       }
       if (service_area_description !== undefined) {
-        const validSA = ["", "Local Area", "Metro Area", "Statewide", "Nationwide / Remote", "Triangle Area (Raleigh, Durham, Chapel Hill)", "Raleigh Metro", "Durham / Chapel Hill", "Cary / Apex / Morrisville", "Wake County", "NC Statewide"];
+        const validSA = [
+          "", "Triangle NC", "Bay Area CA", "Los Angeles CA", "DFW TX", "Houston TX",
+          "Chicago IL", "NYC Metro", "DMV", "Detroit MI", "Atlanta GA", "Philadelphia PA",
+          "Minneapolis MN", "San Diego CA", "Orlando FL", "Tampa FL", "Miami FL",
+          "Phoenix AZ", "Seattle WA", "Denver CO", "Charlotte NC", "Columbus OH",
+          "Nashville TN", "San Antonio TX", "Austin TX", "St. Louis MO", "Sacramento CA",
+          "Boston MA", "Baltimore MD", "Indianapolis IN", "Las Vegas NV",
+          "Nationwide / Remote", "Virtual",
+        ];
         const saVal = String(service_area_description);
         if (saVal && !validSA.includes(saVal)) {
-          return res.status(400).json({ error: "Invalid service area description" });
+          return res.status(400).json({ error: "Invalid service area: " + saVal });
         }
         fields.push(`service_area_description = $${idx++}`);
         values.push(saVal);
