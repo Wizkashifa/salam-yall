@@ -3788,35 +3788,28 @@ Return ONLY the description text, nothing else.`,
   app.post("/api/admin/restaurants/metro-import", async (req, res) => {
     try {
       if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
-      const { metro, lat, lng, radius_meters = 40000 } = req.body;
+      const { metro, lat, lng, cities = [], radius_meters = 40000 } = req.body;
       if (!metro || !lat || !lng) return res.status(400).json({ error: "metro, lat, lng required" });
       const apiKey = process.env.GOOGLE_PLACES_API_KEY;
       if (!apiKey) return res.status(500).json({ error: "Google Places API key not configured" });
 
-      const queries = [
-        "halal restaurants",
-        "zabiha halal food",
-        "halal meat restaurant",
-        "halal grocery store",
-        "Muslim restaurant",
-      ];
+      // Extract state abbreviation from metro name (e.g. "Bay Area CA" → "CA")
+      const stateMatch = metro.match(/\b([A-Z]{2})$/);
+      const stateAbbr = stateMatch ? stateMatch[1] : "";
 
-      const fieldMask = "places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.googleMapsUri,places.location,places.rating,places.userRatingCount,places.photos,places.regularOpeningHours,places.types";
+      const keywords = ["halal restaurants", "zabiha halal", "halal food", "Muslim restaurant"];
+      const fieldMask = "places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.googleMapsUri,places.location,places.rating,places.userRatingCount,places.photos,places.regularOpeningHours";
 
       const seen = new Set<string>();
       const toInsert: any[] = [];
 
-      for (const query of queries) {
+      async function searchPlaces(textQuery: string, bias?: { lat: number; lng: number; radius: number }) {
         let pageToken: string | undefined;
         let pageCount = 0;
         do {
-          const body: any = {
-            textQuery: `${query} in ${metro}`,
-            locationBias: { circle: { center: { latitude: lat, longitude: lng }, radius: radius_meters } },
-            maxResultCount: 20,
-          };
+          const body: any = { textQuery, maxResultCount: 20 };
+          if (bias) body.locationBias = { circle: { center: { latitude: bias.lat, longitude: bias.lng }, radius: bias.radius } };
           if (pageToken) body.pageToken = pageToken;
-
           const resp = await fetch("https://places.googleapis.com/v1/places:searchText", {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": fieldMask },
@@ -3825,18 +3818,29 @@ Return ONLY the description text, nothing else.`,
           const data = await resp.json();
           pageToken = data.nextPageToken;
           pageCount++;
-
           for (const place of (data.places || [])) {
             if (!place.id || seen.has(place.id)) continue;
             seen.add(place.id);
             toInsert.push(place);
           }
-
-          if (pageToken && pageCount < 3) await new Promise(r => setTimeout(r, 800));
+          if (pageToken && pageCount < 2) await new Promise(r => setTimeout(r, 800));
           else break;
         } while (pageToken);
+        await new Promise(r => setTimeout(r, 400));
+      }
 
-        await new Promise(r => setTimeout(r, 500));
+      // Search metro-wide (with location bias)
+      for (const kw of keywords) {
+        await searchPlaces(`${kw} in ${metro}`, { lat, lng, radius: radius_meters });
+      }
+
+      // Search each sub-city by name
+      const cityList: string[] = Array.isArray(cities) ? cities : [];
+      for (const city of cityList) {
+        const cityQuery = stateAbbr ? `${city}, ${stateAbbr}` : city;
+        for (const kw of keywords) {
+          await searchPlaces(`${kw} in ${cityQuery}`, { lat, lng, radius: radius_meters });
+        }
       }
 
       let inserted = 0;
@@ -3878,8 +3882,8 @@ Return ONLY the description text, nothing else.`,
         inserted++;
       }
 
-      console.log(`[Metro Import] ${metro}: inserted ${inserted}, skipped ${skipped} duplicates out of ${toInsert.length} found`);
-      res.json({ metro, found: toInsert.length, inserted, skipped });
+      console.log(`[Metro Import] ${metro}: searched metro + ${cityList.length} cities, inserted ${inserted}, skipped ${skipped} (${toInsert.length} found total)`);
+      res.json({ metro, cities_searched: cityList.length, found: toInsert.length, inserted, skipped });
     } catch (error: any) {
       console.error("Metro import error:", error.message);
       res.status(500).json({ error: "Failed to import metro restaurants" });

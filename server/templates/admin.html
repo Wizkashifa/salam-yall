@@ -556,11 +556,19 @@
       </div>
       <div class="section">
         <div class="section-title"><span class="icon">🗺️</span> Metro Bulk Import</div>
-        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Fetch halal restaurants from Google Places for an entire metro area. Run this when adding a new metro to the app.</p>
-        <div class="row" style="margin-bottom:12px;">
-          <div style="flex:2"><label>Metro Name</label><input type="text" id="metroImportName" placeholder="e.g. Las Vegas NV"></div>
-          <div><label>Lat</label><input type="text" id="metroImportLat" placeholder="36.1699"></div>
-          <div><label>Lng</label><input type="text" id="metroImportLng" placeholder="-115.1398"></div>
+        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Fetch halal restaurants from Google Places for an entire metro — searches both the metro area and each sub-city individually.</p>
+        <datalist id="metroNameList"></datalist>
+        <label>Metro Name</label>
+        <input type="text" id="metroImportName" placeholder="e.g. Bay Area CA" list="metroNameList" oninput="onMetroNameInput()" style="margin-bottom:10px;">
+        <div class="row" style="margin-bottom:10px;">
+          <div><label>Lat</label><input type="text" id="metroImportLat" placeholder="37.5485"></div>
+          <div><label>Lng</label><input type="text" id="metroImportLng" placeholder="-121.9886"></div>
+        </div>
+        <label>Sub-Cities to Search</label>
+        <div id="metroImportCitiesWrap" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;min-height:32px;padding:6px 0;"></div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <input type="text" id="metroImportCityInput" placeholder="Add a city..." style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault();addMetroCity();}">
+          <button class="btn" onclick="addMetroCity()" style="padding:8px 14px;background:#333;color:#F5F5F5;border-radius:8px;border:none;cursor:pointer;font-size:13px;">Add</button>
         </div>
         <button class="btn btn-gold" onclick="runMetroImport()" id="metroImportBtn">Run Import</button>
         <div id="metroImportStatus" style="font-size:12px;color:#6B7280;margin-top:10px;"></div>
@@ -895,6 +903,7 @@
       }
       if (tab === 'restaurants') {
         loadRestSubmissions();
+        loadMetroAreas();
       }
       if (tab === 'masjids') {
         loadMasjids();
@@ -2412,6 +2421,59 @@
 
     var pendingLookupData = null;
 
+    var metroImportCities = [];
+    var cachedMetroAreas = null;
+
+    async function loadMetroAreas() {
+      if (cachedMetroAreas) return cachedMetroAreas;
+      try {
+        var res = await fetch('/api/geo/metros');
+        cachedMetroAreas = await res.json();
+        var dl = document.getElementById('metroNameList');
+        if (dl) dl.innerHTML = cachedMetroAreas.map(function(m) { return '<option value="' + m.name + '">'; }).join('');
+      } catch(e) { cachedMetroAreas = []; }
+      return cachedMetroAreas;
+    }
+
+    function renderMetroCities() {
+      var wrap = document.getElementById('metroImportCitiesWrap');
+      if (!wrap) return;
+      wrap.innerHTML = metroImportCities.map(function(c, i) {
+        return '<span style="display:inline-flex;align-items:center;gap:4px;background:#2A2A2A;border:1px solid #444;border-radius:16px;padding:3px 10px;font-size:12px;color:#F5F5F5;">'
+          + c
+          + '<button onclick="removeMetroCity(' + i + ')" style="background:none;border:none;color:#888;cursor:pointer;padding:0 0 0 4px;font-size:14px;line-height:1;">×</button>'
+          + '</span>';
+      }).join('');
+    }
+
+    function removeMetroCity(idx) {
+      metroImportCities.splice(idx, 1);
+      renderMetroCities();
+    }
+
+    function addMetroCity() {
+      var input = document.getElementById('metroImportCityInput');
+      var val = (input.value || '').trim();
+      if (val && !metroImportCities.includes(val)) {
+        metroImportCities.push(val);
+        renderMetroCities();
+      }
+      input.value = '';
+      input.focus();
+    }
+
+    async function onMetroNameInput() {
+      var metros = await loadMetroAreas();
+      var val = document.getElementById('metroImportName').value.trim();
+      var match = metros.find(function(m) { return m.name.toLowerCase() === val.toLowerCase(); });
+      if (match) {
+        document.getElementById('metroImportLat').value = match.lat;
+        document.getElementById('metroImportLng').value = match.lng;
+        metroImportCities = (match.cities || []).slice();
+        renderMetroCities();
+      }
+    }
+
     async function runMetroImport() {
       var metro = document.getElementById('metroImportName').value.trim();
       var lat = parseFloat(document.getElementById('metroImportLat').value.trim());
@@ -2422,17 +2484,18 @@
       if (isNaN(lat) || isNaN(lng)) { showToast('Enter valid lat/lng', true); return; }
       btn.disabled = true;
       btn.textContent = 'Importing...';
-      status.textContent = 'Searching Google Places for halal restaurants in ' + metro + '...';
+      var cityCount = metroImportCities.length;
+      status.textContent = 'Searching Google Places in ' + metro + (cityCount ? ' + ' + cityCount + ' sub-cities' : '') + '... (this may take a minute)';
       try {
         var res = await fetch('/api/admin/restaurants/metro-import', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
-          body: JSON.stringify({ metro, lat, lng })
+          body: JSON.stringify({ metro, lat, lng, cities: metroImportCities })
         });
         var data = await res.json();
         if (!res.ok) { showToast(data.error || 'Import failed', true); status.textContent = ''; }
         else {
-          status.textContent = '✅ Done! Found ' + data.found + ' places, inserted ' + data.inserted + ' new restaurants, skipped ' + data.skipped + ' duplicates.';
+          status.textContent = '✅ Done! Found ' + data.found + ' places across metro + ' + (data.cities_searched || 0) + ' cities — inserted ' + data.inserted + ' new, skipped ' + data.skipped + ' duplicates.';
           showToast('Metro import complete: ' + data.inserted + ' restaurants added');
         }
       } catch(e) { showToast('Import failed', true); status.textContent = ''; }
