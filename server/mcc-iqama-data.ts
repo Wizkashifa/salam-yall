@@ -25,11 +25,8 @@ const MCC_IQAMA_CHANGES_2026: MCCIqamaChange[] = [
   { month: 3, day: 22, fajr: "6:15 AM", zuhr: "1:30 PM", asr: "6:00 PM", isha: "9:15 PM" },
   { month: 3, day: 29, fajr: "6:00 AM", zuhr: "1:30 PM", asr: "6:00 PM", isha: "9:15 PM" },
 
-  { month: 4, day: 1, fajr: "6:00 AM", zuhr: "1:30 PM", asr: "6:00 PM", isha: "9:15 PM" },
-  { month: 4, day: 5, fajr: "6:00 AM", zuhr: "1:30 PM", asr: "6:00 PM", isha: "9:15 PM" },
-  { month: 4, day: 12, fajr: "5:45 AM", zuhr: "1:30 PM", asr: "6:00 PM", isha: "9:30 PM" },
-  { month: 4, day: 19, fajr: "5:30 AM", zuhr: "1:30 PM", asr: "6:15 PM", isha: "9:30 PM" },
-  { month: 4, day: 26, fajr: "5:30 AM", zuhr: "1:30 PM", asr: "6:15 PM", isha: "9:45 PM" },
+  { month: 4, day: 1,  fajr: "5:30 AM", zuhr: "1:30 PM", asr: "5:45 PM", isha: "9:00 PM" },
+  { month: 4, day: 16, fajr: "5:15 AM", zuhr: "1:30 PM", asr: "6:00 PM", isha: "9:30 PM" },
 
   { month: 5, day: 1, fajr: "5:30 AM", zuhr: "1:30 PM", asr: "6:15 PM", isha: "9:45 PM" },
   { month: 5, day: 3, fajr: "5:20 AM", zuhr: "1:30 PM", asr: "6:15 PM", isha: "9:45 PM" },

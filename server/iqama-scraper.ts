@@ -222,13 +222,7 @@ export async function seedJIARData(pool: pg.Pool) {
 }
 
 export async function seedMCCData(pool: pg.Pool) {
-  const { rows } = await pool.query(
-    "SELECT COUNT(*) as count FROM iqama_schedules WHERE masjid = 'MCC'"
-  );
-  if (parseInt(rows[0].count) > 0) return;
-
   const schedule = generateMCCSchedule();
-  console.log(`[Iqama] Seeding ${schedule.length} days of MCC schedule data...`);
 
   const batchSize = 50;
   for (let i = 0; i < schedule.length; i += batchSize) {
@@ -239,7 +233,7 @@ export async function seedMCCData(pool: pg.Pool) {
     await bulkUpsert(pool, batchRows);
   }
 
-  console.log(`[Iqama] Seeded MCC schedule (${schedule.length} days)`);
+  console.log(`[Iqama] Refreshed MCC static schedule (${schedule.length} days)`);
 }
 
 async function fetchDPT(pool: pg.Pool, source: IqamaSource): Promise<void> {
