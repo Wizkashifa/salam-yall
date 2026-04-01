@@ -5531,6 +5531,279 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     }
   });
 
+  // ── Prayer Times Ingest Agent ────────────────────────────────────────────
+  // Uses Claude with tool-use to browse a masjid's website and extract iqama
+  // times automatically.  Progress streams back to admin via SSE.
+
+  interface IngestJob {
+    id: string;
+    status: "running" | "done" | "error";
+    logs: Array<{ level: "info" | "success" | "warn" | "error"; msg: string; ts: number }>;
+    result?: { saved: number };
+    error?: string;
+    sseClients: Set<(data: string) => void>;
+  }
+  const ingestJobs = new Map<string, IngestJob>();
+
+  function jobLog(job: IngestJob, level: IngestJob["logs"][0]["level"], msg: string) {
+    const entry = { level, msg, ts: Date.now() };
+    job.logs.push(entry);
+    const payload = JSON.stringify({ type: "log", ...entry });
+    job.sseClients.forEach(send => send(payload));
+  }
+
+  function jobFinish(job: IngestJob, result: { saved: number }) {
+    job.status = "done";
+    job.result = result;
+    const payload = JSON.stringify({ type: "done", saved: result.saved });
+    job.sseClients.forEach(send => send(payload));
+  }
+
+  function jobError(job: IngestJob, msg: string) {
+    job.status = "error";
+    job.error = msg;
+    const payload = JSON.stringify({ type: "error", msg });
+    job.sseClients.forEach(send => send(payload));
+  }
+
+  function isAdminAuthorizedSse(req: any): boolean {
+    if (isAdminAuthorized(req)) return true;
+    const q = (req.query.auth as string) || "";
+    return adminSessions.has(q) || q === ADMIN_KEY;
+  }
+
+  // SSE stream endpoint
+  app.get("/api/admin/iqama/ingest-agent/:jobId/stream", (req, res) => {
+    if (!isAdminAuthorizedSse(req)) return res.status(401).end();
+    const job = ingestJobs.get(req.params.jobId);
+    if (!job) return res.status(404).end();
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders();
+
+    // Replay existing logs so late-connecting clients catch up
+    for (const entry of job.logs) {
+      res.write(`data: ${JSON.stringify({ type: "log", ...entry })}\n\n`);
+    }
+    if (job.status === "done") {
+      res.write(`data: ${JSON.stringify({ type: "done", saved: job.result?.saved ?? 0 })}\n\n`);
+      return res.end();
+    }
+    if (job.status === "error") {
+      res.write(`data: ${JSON.stringify({ type: "error", msg: job.error })}\n\n`);
+      return res.end();
+    }
+
+    const send = (data: string) => res.write(`data: ${data}\n\n`);
+    job.sseClients.add(send);
+    req.on("close", () => job.sseClients.delete(send));
+  });
+
+  // Job status (non-SSE fallback)
+  app.get("/api/admin/iqama/ingest-agent/:jobId", (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    const job = ingestJobs.get(req.params.jobId);
+    if (!job) return res.status(404).json({ error: "Job not found" });
+    res.json({ id: job.id, status: job.status, logs: job.logs, result: job.result, error: job.error });
+  });
+
+  // Start agent job
+  app.post("/api/admin/iqama/ingest-agent", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    const { masjidName, websiteUrl, timezone } = req.body;
+    if (!masjidName || !websiteUrl || !timezone) {
+      return res.status(400).json({ error: "masjidName, websiteUrl, and timezone required" });
+    }
+
+    const jobId = `iqama-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const job: IngestJob = { id: jobId, status: "running", logs: [], sseClients: new Set() };
+    ingestJobs.set(jobId, job);
+
+    // Clean old jobs (keep last 20)
+    if (ingestJobs.size > 20) {
+      const oldest = [...ingestJobs.keys()].slice(0, ingestJobs.size - 20);
+      oldest.forEach(k => ingestJobs.delete(k));
+    }
+
+    res.json({ jobId });
+
+    // Run agent asynchronously
+    runIqamaIngestAgent(job, masjidName, websiteUrl, timezone, pool).catch(() => {});
+  });
+
+  async function runIqamaIngestAgent(job: IngestJob, masjidName: string, websiteUrl: string, timezone: string, db: pg.Pool) {
+    const agentAnthropicKey = process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY;
+    if (!agentAnthropicKey) {
+      return jobError(job, "Anthropic API key not configured.");
+    }
+    const agentClient = new Anthropic({
+      apiKey: agentAnthropicKey,
+      baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
+    });
+
+    const tools: Anthropic.Tool[] = [
+      {
+        name: "fetch_page",
+        description: "Fetches the HTML content of a URL. Use this to browse the masjid's website and find prayer/iqama time data. Returns the text content of the page (HTML tags stripped). If the page has links to a dedicated prayer times page, fetch that URL next.",
+        input_schema: {
+          type: "object" as const,
+          properties: {
+            url: { type: "string", description: "The full URL to fetch" },
+          },
+          required: ["url"],
+        },
+      },
+      {
+        name: "save_iqama_times",
+        description: "Saves extracted iqama (congregation prayer) times to the database. Call this once you have extracted the times. Times must be in 12-hour format like '6:15 AM'. Each entry covers one calendar date.",
+        input_schema: {
+          type: "object" as const,
+          properties: {
+            days: {
+              type: "array",
+              description: "Array of day entries",
+              items: {
+                type: "object",
+                properties: {
+                  date: { type: "string", description: "Date in YYYY-MM-DD format" },
+                  fajr: { type: "string", description: "Fajr iqama time, e.g. '6:15 AM'" },
+                  dhuhr: { type: "string", description: "Dhuhr iqama time, e.g. '1:30 PM'" },
+                  asr: { type: "string", description: "Asr iqama time, e.g. '5:00 PM'" },
+                  maghrib: { type: "string", description: "Maghrib iqama time, e.g. '7:45 PM' (usually at or after sunset)" },
+                  isha: { type: "string", description: "Isha iqama time, e.g. '9:00 PM'" },
+                },
+                required: ["date", "fajr", "dhuhr", "asr", "maghrib", "isha"],
+              },
+            },
+          },
+          required: ["days"],
+        },
+      },
+    ];
+
+    const systemPrompt = `You are a prayer times extraction agent for a Muslim community app. Your job is to:
+1. Visit a masjid's website and find their iqama (congregation prayer) times — NOT adhan times.
+2. Extract the times for as many dates as possible (ideally the current and next month).
+3. Save them using the save_iqama_times tool.
+
+Important notes:
+- Iqama times are when the congregation prayer begins, typically 10-20 minutes after adhan.
+- If only one set of times is shown (no adhan/iqama distinction), treat them as iqama times.
+- Times may vary by date (especially Fajr and Maghrib), so extract per-date when available.
+- If times are given as a monthly schedule, extract all dates.
+- If times change weekly or seasonally, duplicate the same time across all relevant dates.
+- Today is ${new Date().toISOString().split("T")[0]}. Extract data for current month onward.
+- The masjid's timezone is ${timezone}.
+- Always fetch the main URL first, then follow links to prayer schedule pages.
+- Limit yourself to fetching at most 4 pages. Stop once you have the times.`;
+
+    const messages: Anthropic.MessageParam[] = [
+      {
+        role: "user",
+        content: `Please extract iqama times for ${masjidName}. Their website is: ${websiteUrl}\n\nStart by fetching the main page, find where the prayer/iqama schedule is, then extract and save the times.`,
+      },
+    ];
+
+    jobLog(job, "info", `Starting agent for ${masjidName} (${websiteUrl})`);
+
+    let totalSaved = 0;
+    let iterations = 0;
+    const MAX_ITERATIONS = 10;
+
+    try {
+      while (iterations < MAX_ITERATIONS) {
+        iterations++;
+        const response = await agentClient.messages.create({
+          model: "claude-sonnet-4-6",
+          max_tokens: 4096,
+          system: systemPrompt,
+          tools,
+          messages,
+        });
+
+        // Add assistant response to message history
+        messages.push({ role: "assistant", content: response.content });
+
+        if (response.stop_reason === "end_turn") {
+          // Agent is done — extract any final text message
+          const finalText = response.content.find((b: any) => b.type === "text")?.text;
+          if (finalText) jobLog(job, "info", `Agent: ${finalText.slice(0, 300)}`);
+          break;
+        }
+
+        // Process tool calls
+        const toolUses = response.content.filter((b: any) => b.type === "tool_use") as Anthropic.ToolUseBlock[];
+        if (toolUses.length === 0) break;
+
+        const toolResults: Anthropic.ToolResultBlockParam[] = [];
+
+        for (const toolUse of toolUses) {
+          if (toolUse.name === "fetch_page") {
+            const { url } = toolUse.input as { url: string };
+            jobLog(job, "info", `Fetching: ${url}`);
+            try {
+              const pageRes = await fetch(url, {
+                headers: { "User-Agent": "Mozilla/5.0 (compatible; SalamYallBot/1.0)" },
+                signal: AbortSignal.timeout(15000),
+              });
+              if (!pageRes.ok) throw new Error(`HTTP ${pageRes.status}`);
+              const rawHtml = await pageRes.text();
+              // Strip HTML tags, collapse whitespace, truncate to 15k chars
+              const text = rawHtml
+                .replace(/<script[\s\S]*?<\/script>/gi, "")
+                .replace(/<style[\s\S]*?<\/style>/gi, "")
+                .replace(/<[^>]+>/g, " ")
+                .replace(/\s{2,}/g, " ")
+                .trim()
+                .slice(0, 15000);
+              jobLog(job, "info", `  → Got ${text.length} chars of content`);
+              toolResults.push({ type: "tool_result", tool_use_id: toolUse.id, content: text });
+            } catch (err: any) {
+              jobLog(job, "warn", `  → Fetch failed: ${err.message}`);
+              toolResults.push({ type: "tool_result", tool_use_id: toolUse.id, content: `Error: ${err.message}`, is_error: true });
+            }
+          } else if (toolUse.name === "save_iqama_times") {
+            const { days } = toolUse.input as { days: Array<{ date: string; fajr: string; dhuhr: string; asr: string; maghrib: string; isha: string }> };
+            jobLog(job, "info", `Saving ${days.length} day(s) of iqama times for ${masjidName}...`);
+            let saved = 0;
+            for (const d of days) {
+              if (!d.date || !d.fajr || !d.dhuhr || !d.asr || !d.maghrib || !d.isha) continue;
+              try {
+                await db.query(
+                  `INSERT INTO iqama_schedules (masjid, date, fajr, dhuhr, asr, maghrib, isha)
+                   VALUES ($1, $2, $3, $4, $5, $6, $7)
+                   ON CONFLICT (masjid, date) DO UPDATE SET fajr=EXCLUDED.fajr, dhuhr=EXCLUDED.dhuhr, asr=EXCLUDED.asr, maghrib=EXCLUDED.maghrib, isha=EXCLUDED.isha, updated_at=NOW()`,
+                  [masjidName, d.date, d.fajr, d.dhuhr, d.asr, d.maghrib, d.isha]
+                );
+                saved++;
+              } catch (err: any) {
+                jobLog(job, "warn", `  Skipped ${d.date}: ${err.message}`);
+              }
+            }
+            totalSaved += saved;
+            jobLog(job, "success", `  ✓ Saved ${saved} days (${totalSaved} total)`);
+            toolResults.push({ type: "tool_result", tool_use_id: toolUse.id, content: `Successfully saved ${saved} days of iqama times for ${masjidName}.` });
+          }
+        }
+
+        messages.push({ role: "user", content: toolResults });
+      }
+
+      if (totalSaved > 0) {
+        jobLog(job, "success", `Done! Saved ${totalSaved} days of iqama times for ${masjidName}.`);
+        jobFinish(job, { saved: totalSaved });
+      } else {
+        jobError(job, `Agent completed but no iqama times were saved. The website may not have a machine-readable prayer schedule, or the format was unrecognised.`);
+      }
+    } catch (err: any) {
+      jobLog(job, "error", `Agent error: ${err.message}`);
+      jobError(job, err.message);
+    }
+  }
+  // ── End Prayer Times Ingest Agent ───────────────────────────────────────
+
   let weatherCache: { data: any; timestamp: number; key: string } | null = null;
   const tafsirCache = new Map<string, { data: any; timestamp: number }>();
   const TAFSIR_CACHE_MS = 24 * 60 * 60 * 1000;

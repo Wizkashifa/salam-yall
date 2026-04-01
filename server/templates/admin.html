@@ -683,6 +683,35 @@
         <button class="btn btn-sm" style="background:#2A2318;color:#D4A843;margin-bottom:16px;" onclick="showAddMasjidForm()">+ Add Masjid</button>
         <div id="masjidList"><div class="loading">Loading...</div></div>
       </div>
+
+      <div class="section">
+        <div class="section-title"><span class="icon">🤖</span> AI Prayer Times Ingest</div>
+        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Give the agent a masjid website and it will browse to find iqama times, extract them, and save them — automatically. Streams progress live below.</p>
+        <label>Masjid Name</label>
+        <input type="text" id="ingestMasjidName" placeholder="e.g. Masjid Al-Noor" style="margin-bottom:10px;">
+        <label>Website URL</label>
+        <input type="text" id="ingestWebsiteUrl" placeholder="https://masjidalnoor.org" style="margin-bottom:10px;">
+        <label>Timezone</label>
+        <select id="ingestTimezone" style="width:100%;padding:10px 14px;background:#1E1E1E;border:1px solid #333;border-radius:10px;color:#F5F5F5;font-size:14px;margin-bottom:14px;">
+          <option value="America/New_York">Eastern (New York)</option>
+          <option value="America/Chicago">Central (Chicago)</option>
+          <option value="America/Denver">Mountain (Denver)</option>
+          <option value="America/Los_Angeles">Pacific (Los Angeles)</option>
+          <option value="America/Phoenix">Arizona (Phoenix)</option>
+          <option value="America/Indiana/Indianapolis">Indiana (Indianapolis)</option>
+          <option value="America/Anchorage">Alaska (Anchorage)</option>
+          <option value="Pacific/Honolulu">Hawaii (Honolulu)</option>
+        </select>
+        <button class="btn btn-gold" id="ingestAgentBtn" onclick="runIngestAgent()" style="margin-bottom:14px;">Run Agent</button>
+
+        <div id="ingestLogWrap" style="display:none;">
+          <div style="font-size:11px;color:#6B7280;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
+            <span>Agent Log</span>
+            <span id="ingestStatusBadge" style="padding:2px 8px;border-radius:10px;font-size:11px;background:#1E3A2E;color:#4ADE80;">Running...</span>
+          </div>
+          <div id="ingestLog" style="background:#0D0D0D;border:1px solid #252525;border-radius:10px;padding:12px;font-family:monospace;font-size:12px;max-height:280px;overflow-y:auto;line-height:1.6;"></div>
+        </div>
+      </div>
     </div>
 
     <div id="editMasjidModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:1000;overflow:auto;padding:20px;">
@@ -3309,6 +3338,99 @@
           }
         })
         .catch(() => handleUnauthorized());
+    }
+
+    var activeIngestSource = null;
+
+    function ingestLogLine(level, msg) {
+      var log = document.getElementById('ingestLog');
+      if (!log) return;
+      var colors = { info: '#9CA3AF', success: '#4ADE80', warn: '#FBBF24', error: '#F87171' };
+      var prefix = { info: '  ', success: '✓ ', warn: '⚠ ', error: '✗ ' };
+      var line = document.createElement('div');
+      line.style.color = colors[level] || '#9CA3AF';
+      line.style.whiteSpace = 'pre-wrap';
+      line.textContent = (prefix[level] || '') + msg;
+      log.appendChild(line);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    async function runIngestAgent() {
+      var masjid = document.getElementById('ingestMasjidName').value.trim();
+      var url = document.getElementById('ingestWebsiteUrl').value.trim();
+      var tz = document.getElementById('ingestTimezone').value;
+      if (!masjid) { showToast('Enter a masjid name', true); return; }
+      if (!url) { showToast('Enter a website URL', true); return; }
+      if (!url.startsWith('http')) url = 'https://' + url;
+
+      var btn = document.getElementById('ingestAgentBtn');
+      var wrap = document.getElementById('ingestLogWrap');
+      var badge = document.getElementById('ingestStatusBadge');
+      var log = document.getElementById('ingestLog');
+
+      btn.disabled = true;
+      btn.textContent = 'Running...';
+      wrap.style.display = 'block';
+      log.innerHTML = '';
+      badge.textContent = 'Running...';
+      badge.style.background = '#1E3A2E';
+      badge.style.color = '#4ADE80';
+
+      if (activeIngestSource) { activeIngestSource.close(); activeIngestSource = null; }
+
+      try {
+        var startRes = await fetch('/api/admin/iqama/ingest-agent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify({ masjidName: masjid, websiteUrl: url, timezone: tz })
+        });
+        var startData = await startRes.json();
+        if (!startRes.ok) { showToast(startData.error || 'Failed to start agent', true); btn.disabled = false; btn.textContent = 'Run Agent'; return; }
+
+        var jobId = startData.jobId;
+        var evtSource = new EventSource('/api/admin/iqama/ingest-agent/' + jobId + '/stream?auth=' + encodeURIComponent(adminToken));
+        activeIngestSource = evtSource;
+
+        evtSource.onmessage = function(e) {
+          var data = JSON.parse(e.data);
+          if (data.type === 'log') {
+            ingestLogLine(data.level, data.msg);
+          } else if (data.type === 'done') {
+            badge.textContent = '✓ Done — ' + data.saved + ' days saved';
+            badge.style.background = '#1E3A2E';
+            badge.style.color = '#4ADE80';
+            btn.disabled = false;
+            btn.textContent = 'Run Agent';
+            showToast('Prayer times ingested: ' + data.saved + ' days saved for ' + masjid);
+            evtSource.close();
+            activeIngestSource = null;
+          } else if (data.type === 'error') {
+            badge.textContent = '✗ Failed';
+            badge.style.background = '#3B1A1A';
+            badge.style.color = '#F87171';
+            ingestLogLine('error', data.msg);
+            btn.disabled = false;
+            btn.textContent = 'Run Agent';
+            showToast('Ingest failed: ' + data.msg, true);
+            evtSource.close();
+            activeIngestSource = null;
+          }
+        };
+        evtSource.onerror = function() {
+          if (evtSource.readyState === EventSource.CLOSED) return;
+          badge.textContent = '✗ Connection lost';
+          badge.style.background = '#3B1A1A';
+          badge.style.color = '#F87171';
+          btn.disabled = false;
+          btn.textContent = 'Run Agent';
+          evtSource.close();
+          activeIngestSource = null;
+        };
+      } catch(e) {
+        showToast('Agent error: ' + e.message, true);
+        btn.disabled = false;
+        btn.textContent = 'Run Agent';
+      }
     }
 
     async function loadMasjids() {
