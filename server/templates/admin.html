@@ -961,9 +961,8 @@
       <div style="background:#161616;border:1px solid #252525;border-radius:14px;max-width:600px;margin:40px auto;padding:20px;">
         <div id="masjidModalTitle" style="font-size:18px;font-weight:700;color:#D4A843;margin-bottom:16px;">Add Masjid</div>
         <input type="hidden" id="editingMasjidId">
-        <div class="row">
-          <div style="flex:2"><label>Name</label><input type="text" id="masjidName" placeholder="Masjid name"></div>
-          <div style="flex:1"><label>Sort Order</label><input type="number" id="masjidSortOrder" value="0"></div>
+        <div>
+          <label>Name</label><input type="text" id="masjidName" placeholder="Masjid name">
         </div>
         <div>
           <label>Address</label>
@@ -4178,7 +4177,7 @@
               '<div>' +
                 '<div class="text-primary" style="font-weight:700;font-size:14px;">' + escHtml(m.name) + iqamaBadge + '</div>' +
                 '<div class="text-secondary" style="font-size:12px;margin-top:2px;">' + escHtml(m.address) + '</div>' +
-                '<div class="text-tertiary" style="font-size:11px;margin-top:2px;">' + m.latitude.toFixed(4) + ', ' + m.longitude.toFixed(4) + ' · Sort: ' + m.sort_order + '</div>' +
+                '<div class="text-tertiary" style="font-size:11px;margin-top:2px;">' + m.latitude.toFixed(4) + ', ' + m.longitude.toFixed(4) + '</div>' +
               '</div>' +
               '<div style="display:flex;align-items:center;gap:8px;">' +
                 statusBadge +
@@ -4205,7 +4204,6 @@
       document.getElementById('masjidMatchTerms').value = '';
       document.getElementById('masjidHasIqama').checked = false;
       document.getElementById('masjidActive').checked = true;
-      document.getElementById('masjidSortOrder').value = '0';
       document.getElementById('editMasjidModal').style.display = 'block';
     }
 
@@ -4231,7 +4229,6 @@
         document.getElementById('masjidMatchTerms').value = (m.match_terms || []).join(', ');
         document.getElementById('masjidHasIqama').checked = !!m.has_iqama;
         document.getElementById('masjidActive').checked = m.active !== false;
-        document.getElementById('masjidSortOrder').value = m.sort_order || 0;
         document.getElementById('editMasjidModal').style.display = 'block';
       } catch(e) {
         showToast('Failed to load masjid details', true);
@@ -4252,7 +4249,6 @@
       var matchTermsStr = document.getElementById('masjidMatchTerms').value.trim();
       var hasIqama = document.getElementById('masjidHasIqama').checked;
       var active = document.getElementById('masjidActive').checked;
-      var sortOrder = parseInt(document.getElementById('masjidSortOrder').value) || 0;
 
       if (!name || !address || !lat || !lon) {
         showToast('Name, address, latitude, and longitude are required', true);
@@ -4268,8 +4264,7 @@
         website: website || null,
         match_terms: matchTerms,
         has_iqama: hasIqama,
-        active: active,
-        sort_order: sortOrder
+        active: active
       };
 
       try {

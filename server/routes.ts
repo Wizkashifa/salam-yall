@@ -5380,7 +5380,7 @@ Return ONLY the JSON object, no markdown, no explanation.`,
   app.get("/api/masjids", async (_req, res) => {
     try {
       const { rows } = await pool.query(
-        "SELECT id, name, latitude, longitude, address, website, match_terms, has_iqama, campus_group, iqama_source FROM masjids WHERE active = true ORDER BY sort_order, name"
+        "SELECT id, name, latitude, longitude, address, website, match_terms, has_iqama, campus_group, iqama_source FROM masjids WHERE active = true ORDER BY name"
       );
       const masjids = rows.map((r: any) => ({
         id: r.id,
@@ -5404,7 +5404,7 @@ Return ONLY the JSON object, no markdown, no explanation.`,
   app.get("/api/admin/masjids", async (req, res) => {
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {
-      const { rows } = await pool.query("SELECT * FROM masjids ORDER BY sort_order, name");
+      const { rows } = await pool.query("SELECT * FROM masjids ORDER BY name");
       res.json(rows);
     } catch (error: any) {
       res.status(500).json({ error: "Failed to fetch masjids" });

@@ -286,7 +286,9 @@ export default function SettingsScreen() {
     if (userLocation) {
       return getAllMasjidsByDistance(userLocation.latitude, userLocation.longitude, masjidList);
     }
-    return masjidList.map((m) => ({ masjid: m, distanceMiles: 0, driveMinutes: 0 }));
+    return [...masjidList]
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((m) => ({ masjid: m, distanceMiles: 0, driveMinutes: 0 }));
   }, [userLocation, masjidList]);
 
   const filteredMasjids = useMemo(() => {
