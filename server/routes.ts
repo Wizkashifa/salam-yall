@@ -930,7 +930,7 @@ async function ensureMasjidsTable(pool: pg.Pool) {
       { name: 'Islamic Society of Greater Charlotte', lat: 35.2025, lng: -80.7937, addr: '1700 Progress Ln, Charlotte, NC 28205', website: 'https://isgcharlotte.org', terms: ['isgc', 'islamic society of greater charlotte', 'progress ln', 'isg charlotte'], iqama: true, sort: 21 },
       { name: 'Los Gatos Islamic Center (LGIC)', lat: 37.2358, lng: -121.9175, addr: '16769 Farley Rd, Los Gatos, CA 95032', website: 'https://wvmuslim.org', terms: ['lgic', 'los gatos islamic', 'los gatos masjid', 'wvmuslim', 'farley rd', 'west valley muslim'], iqama: true, sort: 22, campusGroup: 'lgic' },
       { name: 'Saratoga Musalla', lat: 37.3137, lng: -122.0310, addr: '12370 Saratoga-Sunnyvale Rd, Saratoga, CA 95070', website: 'https://wvmuslim.org', terms: ['saratoga musalla', 'saratoga-sunnyvale rd', 'saratoga masjid'], iqama: true, sort: 22, campusGroup: 'lgic', iqamaSource: 'LGIC' },
-      { name: 'Al-Huda Foundation', lat: 39.9567, lng: -86.0131, addr: '12213 Lantern Rd, Fishers, IN 46038', website: 'https://alhudafoundation.org', terms: ['al-huda', 'alhuda', 'al huda foundation', 'lantern rd', 'fishers', 'aici'], iqama: true, sort: 23 },
+      { name: 'Al-Huda Foundation', lat: 39.9567, lng: -86.0131, addr: '12213 Lantern Rd, Fishers, IN 46038', website: 'https://alhudafoundation.org', terms: ['al-huda', 'alhuda', 'al huda foundation', 'lantern rd', 'fishers', 'aici'], iqama: true, sort: 23, iqamaSource: 'url|https://alhudafoundation.org/' },
     ];
     for (const m of masjidUpserts) {
       await pool.query(
