@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -579,6 +579,7 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
   const [locationType, setLocationType] = useState("");
   const [serviceAreaDescription, setServiceAreaDescription] = useState("");
   const [addressSuggestions, setAddressSuggestions] = useState<{ description: string; place_id: string }[]>([]);
+  const autocompleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [autoUrl, setAutoUrl] = useState("");
   const [autoLoaded, setAutoLoaded] = useState(false);
@@ -935,13 +936,16 @@ function SubmitBusinessModal({ visible, onClose, colors, isDark }: { visible: bo
                   value={address}
                   onChangeText={(text) => {
                     setAddress(text);
+                    if (autocompleteTimerRef.current) clearTimeout(autocompleteTimerRef.current);
                     if (text.length >= 3) {
-                      const url = new URL("/api/businesses/address-autocomplete", getApiUrl());
-                      url.searchParams.set("input", text);
-                      fetch(url.toString())
-                        .then(r => r.json())
-                        .then(data => setAddressSuggestions(data.predictions || []))
-                        .catch(() => setAddressSuggestions([]));
+                      autocompleteTimerRef.current = setTimeout(() => {
+                        const url = new URL("/api/businesses/address-autocomplete", getApiUrl());
+                        url.searchParams.set("input", text);
+                        fetch(url.toString())
+                          .then(r => r.json())
+                          .then(data => setAddressSuggestions(data.predictions || []))
+                          .catch(() => setAddressSuggestions([]));
+                      }, 400);
                     } else {
                       setAddressSuggestions([]);
                     }
