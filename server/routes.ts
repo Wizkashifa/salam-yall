@@ -837,6 +837,18 @@ async function seedJumuahMetros(pool: pg.Pool) {
     );
   }
 
+  // DFW TX
+  const dfwMasjids = [
+    { masjid: 'Valley Ranch Islamic Center', khutbah_time: '1:45 PM, 3:00 PM, 4:00 PM', iqama_time: '2:00 PM, 3:15 PM, 4:15 PM', metro: 'DFW TX', timezone: 'America/Chicago', sort_order: 600, slots: [{ khutbah_time: '1:45 PM', iqama_time: '2:00 PM', speaker: 'Sh. Majed Mahmoud' }, { khutbah_time: '3:00 PM', iqama_time: '3:15 PM', speaker: 'Dr. Abdul Razzak Junaid' }, { khutbah_time: '4:00 PM', iqama_time: '4:15 PM', speaker: 'Ust. Ameen Atta' }] },
+  ];
+  for (const r of dfwMasjids) {
+    await pool.query(
+      `INSERT INTO jumuah_schedules (masjid, khutbah_time, iqama_time, metro, timezone, khutbahs, sort_order) VALUES ($1,$2,$3,$4,$5,$6,$7)
+       ON CONFLICT (masjid) DO UPDATE SET metro=EXCLUDED.metro, timezone=EXCLUDED.timezone, khutbahs=EXCLUDED.khutbahs, sort_order=EXCLUDED.sort_order`,
+      [r.masjid, r.khutbah_time, r.iqama_time, r.metro, r.timezone, JSON.stringify(r.slots), r.sort_order]
+    );
+  }
+
   // Milwaukee WI
   const mkeMasjids = [
     { masjid: 'ISM', khutbah_time: '12:30 PM, 1:45 PM', iqama_time: '1:00 PM, 2:15 PM', metro: 'Milwaukee WI', timezone: 'America/Chicago', sort_order: 500, slots: [{ khutbah_time: '12:30 PM', iqama_time: '1:00 PM' }, { khutbah_time: '1:45 PM', iqama_time: '2:15 PM' }] },
@@ -1139,7 +1151,7 @@ async function ensureMasjidsTable(pool: pg.Pool) {
       { name: 'Al-Noor Islamic Center', lat: 35.5843, lng: -78.7706, addr: '6317 Sunset Lake Rd, Fuquay-Varina, NC 27526', website: 'https://alnooric.org', terms: ['al-noor', 'alnoor', 'sunset lake', 'fuquay'], iqama: true, sort: 1 },
       { name: 'Islamic Association of Raleigh (Atwater)', lat: 35.7898, lng: -78.6912, addr: '808 Atwater St, Raleigh, NC 27607', website: 'https://raleighmasjid.org', terms: ['iar', 'islamic association of raleigh', 'atwater'], iqama: true, sort: 2, campusGroup: 'iar' },
       { name: 'Islamic Association of Raleigh (Page Rd)', lat: 35.9067, lng: -78.8169, addr: '3104 Page Rd, Morrisville, NC 27560', website: 'https://raleighmasjid.org', terms: ['iar', 'islamic association of raleigh', 'page rd', 'page road'], iqama: true, sort: 3, campusGroup: 'iar', iqamaSource: 'IAR' },
-      { name: 'Islamic Center of Morrisville', lat: 35.8099, lng: -78.8228, addr: '107 Quail Fields Ct, Morrisville, NC 27560', website: 'https://www.icmnc.org', terms: ['icm', 'islamic center of morrisville', 'quail fields', 'icmnc'], iqama: true, sort: 4 },
+      { name: 'Islamic Center of Morrisville', lat: 35.8099, lng: -78.8228, addr: '107 Quail Fields Ct, Morrisville, NC 27560', website: 'https://www.icmnc.org', terms: ['icm', 'islamic center of morrisville', 'quail fields', 'icmnc'], iqama: true, sort: 4, iqamaSource: 'ICMNC' },
       { name: 'Jamaat Ibad Ar-Rahman (Fayetteville)', lat: 35.9856, lng: -78.8977, addr: '3034 Fayetteville St, Durham, NC 27707', website: 'https://ibadarrahman.org', terms: ['jamaat ibad', 'jiar', 'fayetteville st', 'ibad ar-rahman'], iqama: true, sort: 5, campusGroup: 'jiar' },
       { name: 'Jamaat Ibad Ar-Rahman (Parkwood)', lat: 35.8938, lng: -78.9109, addr: '5122 Revere Rd, Durham, NC 27713', website: 'https://ibadarrahman.org', terms: ['parkwood', 'revere rd', 'ibad ar-rahman'], iqama: true, sort: 6, campusGroup: 'jiar' },
       { name: 'Apex Masjid', lat: 35.7294, lng: -78.8415, addr: '733 Center St, Apex, NC 27502', website: 'https://apexmosque.org', terms: ['apex masjid', 'apex mosque', 'center st, apex'], iqama: false, sort: 7 },
@@ -1169,12 +1181,27 @@ async function ensureMasjidsTable(pool: pg.Pool) {
       { name: 'ADAMS Leesburg', lat: 39.1157, lng: -77.5636, addr: '19838 Sycolin Rd, Leesburg, VA 20175', website: 'https://adamscenter.org', terms: ['adams leesburg', 'adams center leesburg', 'sycolin rd', 'leesburg masjid'], iqama: true, sort: 28, campusGroup: 'adams', iqamaSource: 'other|2026 Annual Schedule' },
       { name: 'ADAMS Sully', lat: 38.8874, lng: -77.4282, addr: '4431 Brookfield Corporate Dr Suite F, Chantilly, VA 20151', website: 'https://adamscenter.org', terms: ['adams sully', 'adams center sully', 'brookfield corporate dr', 'chantilly masjid'], iqama: true, sort: 29, campusGroup: 'adams', iqamaSource: 'other|2026 Annual Schedule' },
       { name: 'ISM', lat: 42.9589, lng: -87.9299, addr: '4707 South 13th Street, Milwaukee, WI 53221', website: 'https://www.ismonline.org', terms: ['ism', 'islamic society of milwaukee', 'ismonline', 'south 13th street milwaukee', 'milwaukee masjid'], iqama: true, sort: 50, campusGroup: 'ism', iqamaSource: 'athanplus' },
-      { name: 'ISM University Center', lat: 43.0744, lng: -87.8819, addr: '2223 E Kenwood Blvd, Milwaukee, WI 53211', website: 'https://www.ismonline.org', terms: ['ism university', 'islamic society of milwaukee university', 'kenwood blvd milwaukee', 'ism uwm'], iqama: true, sort: 51, campusGroup: 'ism', iqamaSource: null },
-      { name: 'ISM West (Masjid Al-Noor)', lat: 43.0663, lng: -88.1194, addr: '16670 Pheasant Dr, Brookfield, WI 53005', website: 'https://www.ismonline.org', terms: ['ism west', 'masjid al-noor brookfield', 'islamic society of milwaukee west', 'pheasant dr brookfield', 'brookfield masjid'], iqama: true, sort: 52, campusGroup: 'ism', iqamaSource: null },
+      { name: 'ISM University Center', lat: 43.0744, lng: -87.8819, addr: '2223 E Kenwood Blvd, Milwaukee, WI 53211', website: 'https://www.ismonline.org', terms: ['ism university', 'islamic society of milwaukee university', 'kenwood blvd milwaukee', 'ism uwm'], iqama: true, sort: 51, campusGroup: 'ism', iqamaSource: 'athanplus' },
+      { name: 'ISM West (Masjid Al-Noor)', lat: 43.0663, lng: -88.1194, addr: '16670 Pheasant Dr, Brookfield, WI 53005', website: 'https://www.ismonline.org', terms: ['ism west', 'masjid al-noor brookfield', 'islamic society of milwaukee west', 'pheasant dr brookfield', 'brookfield masjid'], iqama: true, sort: 52, campusGroup: 'ism', iqamaSource: 'athanplus' },
       { name: 'Milwaukee Islamic Dawah Center', lat: 43.1103, lng: -87.9501, addr: '5135 N Teutonia Ave, Milwaukee, WI 53209', website: null, terms: ['milwaukee islamic dawah center', 'masjid ar rahman milwaukee', 'teutonia ave milwaukee', 'midc milwaukee'], iqama: false, sort: 53, campusGroup: null, iqamaSource: null },
       { name: "Al-Qur'an Mosque", lat: 43.1766, lng: -88.0582, addr: '11723 W Brown Deer Rd, Milwaukee, WI 53224', website: null, terms: ['al quran mosque milwaukee', 'brown deer rd masjid', 'milwaukee northwest masjid'], iqama: false, sort: 54, campusGroup: null, iqamaSource: null },
       { name: 'Al-Huda Mosque South Milwaukee', lat: 42.9134, lng: -87.8735, addr: '1800 16th Ave, South Milwaukee, WI 53172', website: null, terms: ['al huda mosque south milwaukee', 'al-huda south milwaukee', '16th ave south milwaukee masjid'], iqama: false, sort: 55, campusGroup: 'alhuda-mke', iqamaSource: null },
       { name: 'Al-Huda Mosque Greenfield', lat: 42.9525, lng: -87.9691, addr: '5075 S 43rd St, Greenfield, WI 53220', website: null, terms: ['al huda mosque greenfield', 'al-huda greenfield', '43rd st greenfield masjid', 'greenfield masjid'], iqama: false, sort: 56, campusGroup: 'alhuda-mke', iqamaSource: null },
+      // Charlotte NC — 3rd iqama source
+      { name: 'Islamic Center of Charlotte', lat: 35.2085, lng: -80.7691, addr: '1700 Progress Ln, Charlotte, NC 28205', website: 'https://iccharlotte.org', terms: ['icc charlotte', 'islamic center of charlotte', 'iccharlotte', 'progress ln charlotte'], iqama: true, sort: 57, iqamaSource: 'ICC Charlotte' },
+      // Indianapolis IN — 2nd & 3rd iqama sources
+      { name: 'Masjid Al-Taqwa Indianapolis', lat: 39.6953, lng: -86.1459, addr: '4836 Mt Vernon Dr, Indianapolis, IN 46227', website: 'http://www.taqwacenter.com', terms: ['mcc indianapolis', 'masjid al taqwa indianapolis', 'taqwa center', 'mt vernon dr indianapolis'], iqama: true, sort: 58, iqamaSource: 'MCC Indianapolis' },
+      // DFW TX
+      { name: 'Valley Ranch Islamic Center', lat: 32.9173, lng: -96.9478, addr: '351 Ranchview Dr, Irving, TX 75063', website: 'https://vric.org', terms: ['vric', 'valley ranch islamic center', 'ranchview dr irving', 'valley ranch masjid'], iqama: true, sort: 59, iqamaSource: 'Valley Ranch Islamic Center' },
+      { name: 'EPIC Masjid', lat: 33.0137, lng: -96.7062, addr: '4700 14th St, Plano, TX 75074', website: 'https://epicmasjid.org', terms: ['epic masjid', 'east plano islamic center', 'epic plano', '14th st plano', 'plano masjid'], iqama: true, sort: 59, iqamaSource: 'EPIC Masjid' },
+      { name: 'IANT', lat: 32.9483, lng: -96.7299, addr: '840 Abrams Rd, Richardson, TX 75081', website: 'https://iant.com', terms: ['iant', 'islamic association of north texas', 'abrams rd richardson', 'richardson masjid', 'richardson mosque'], iqama: true, sort: 59, iqamaSource: 'IANT' },
+      { name: 'Islamic Center of Irving', lat: 32.8427, lng: -97.0107, addr: '2555 Esters Rd, Irving, TX 75062', website: 'https://www.irvingmasjid.org', terms: ['ici', 'islamic center of irving', 'irving masjid', 'esters rd irving', 'irving mosque'], iqama: true, sort: 60, iqamaSource: 'Islamic Center of Irving' },
+      // Chicago IL
+      { name: 'MCC Chicago', lat: 41.9565, lng: -87.7237, addr: '4380 N Elston Ave, Chicago, IL 60641', website: 'https://mccchicago.org', terms: ['mcc chicago', 'muslim community center chicago', 'elston ave chicago'], iqama: true, sort: 60, iqamaSource: 'MCC' },
+      { name: 'Mosque Foundation', lat: 41.7229, lng: -87.8030, addr: '7360 W 93rd St, Bridgeview, IL 60455', website: 'https://mosquefoundation.org', terms: ['mosque foundation', 'mosque foundation bridgeview', 'bridgeview mosque', 'w 93rd st bridgeview'], iqama: true, sort: 61, iqamaSource: 'Mosque Foundation' },
+      // Boston MA
+      { name: 'ISB Roxbury', lat: 42.3309, lng: -71.0934, addr: '100 Malcolm X Blvd, Boston, MA 02120', website: 'https://isbcc.org', terms: ['isb roxbury', 'islamic society of boston roxbury', 'isbcc', 'malcolm x blvd boston'], iqama: true, sort: 62, campusGroup: 'isb', iqamaSource: 'ISB Roxbury' },
+      { name: 'ISB Cambridge', lat: 42.3703, lng: -71.1001, addr: '204 Prospect St, Cambridge, MA 02139', website: 'https://isbcc.org', terms: ['isb cambridge', 'islamic society of boston cambridge', 'prospect st cambridge masjid'], iqama: true, sort: 63, campusGroup: 'isb', iqamaSource: 'ISB Cambridge' },
     ];
     for (const m of masjidUpserts) {
       await pool.query(
