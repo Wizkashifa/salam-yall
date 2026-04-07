@@ -43,7 +43,6 @@ const IQAMA_SOURCES: IqamaSource[] = [
     type: "iar-jumuah",
     url: "https://raleighmasjid.org",
     timezone: "America/New_York",
-    syncDays: [4, 5, 6], // Thu/Fri/Sat — site updates by Thursday
   },
   {
     name: "ICMNC Jumuah",
@@ -1168,6 +1167,20 @@ async function fetchMasjidApps(pool: pg.Pool, source: IqamaSource): Promise<void
 }
 
 async function fetchIARJumuah(pool: pg.Pool, source: IqamaSource): Promise<void> {
+  // Converts a bare Jumuah time like "11:30" or "1:00" to 12-hour AM/PM.
+  // Jumuah shifts run 11 AM – 5 PM: treat h>=10 as AM, h<10 as PM.
+  function jumuahTo12h(raw: string): string {
+    if (/[AP]M/i.test(raw)) return raw.trim();
+    const [hStr, mStr] = raw.split(":");
+    const h = parseInt(hStr, 10);
+    const m = mStr ? mStr.padStart(2, "0") : "00";
+    if (isNaN(h)) return raw.trim();
+    const isPM = h < 10; // 1, 2, 3 … = PM; 10, 11, 12 = AM/PM naturally
+    const suffix = isPM ? "PM" : "AM";
+    const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return `${h12}:${m} ${suffix}`;
+  }
+
   try {
     const resp = await fetch(source.url, { headers: {
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -1175,54 +1188,81 @@ async function fetchIARJumuah(pool: pg.Pool, source: IqamaSource): Promise<void>
     if (!resp.ok) { console.error(`[Jumuah] IAR homepage returned ${resp.status}`); return; }
     const html = await resp.text();
 
-    // Strip tags, collapse whitespace into lines for pattern matching
-    const text = html.replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&#\d+;/g, " ").replace(/\s+/g, " ");
+    // Parse using the actual class names in IAR's HTML:
+    //   <div class="prayerschedule-prayer">1st Shift · Atwater Campus</div>
+    //   <div class="prayerschedule-title-time">11:30</div>
+    //   <div class="prayerschedule-shift">Title to be Announced</div>
+    //   <h6>Speaker to be Announced</h6>
+    const campusSlots: Record<string, { khutbah_time: string; iqama_time: string; speaker?: string; topic?: string }[]> = {};
 
-    // Each shift block: "Nth Shift · [Campus] Campus ... time ... speaker"
-    // We'll collect slots per campus name
-    const campusSlots: Record<string, { khutbah_time: string; iqama_time: string; speaker?: string }[]> = {};
+    const labelRegex  = /<div[^>]*class="prayerschedule-prayer"[^>]*>([\s\S]*?)<\/div>/gi;
+    const timeRegex   = /<div[^>]*class="prayerschedule-title-time"[^>]*>([\s\S]*?)<\/div>/gi;
+    const topicRegex  = /<div[^>]*class="prayerschedule-shift"[^>]*>([\s\S]*?)<\/div>/gi;
+    // Only grab the <h6> inside prayerschedule-title-nametime, not all h6 on page
+    const speakerRegex = /<div[^>]*class="prayerschedule-title-nametime"[^>]*>[\s\S]*?<h6[^>]*>([\s\S]*?)<\/h6>/gi;
 
-    const shiftRegex = /(\d+)(?:st|nd|rd|th)\s+Shift\s*[·•]\s*(Atwater|Page(?:\s+Rd)?)\s+Campus\s+(\d{1,2}:\d{2}(?:\s*[AP]M)?)\s+(?:[^<\n]*?)\s+((?!Speaker to be|Title to be)[A-Z][a-zA-Z\s.'-]{3,}?)(?=\s+\d+(?:st|nd|rd|th)\s+Shift|\s*$)/gi;
+    const clean = (s: string) => s.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&#\d+;/g, " ").trim();
+    const isPlaceholder = (s: string) => /to be (announced|confirmed)/i.test(s) || s === "";
 
-    let m;
-    while ((m = shiftRegex.exec(text)) !== null) {
-      const campus = m[2].toLowerCase().includes("page") ? "page" : "atwater";
-      const timeRaw = m[3].trim();
-      const time = /[AP]M/i.test(timeRaw) ? timeRaw : to12h(timeRaw + ":00");
-      const speaker = m[4].trim();
+    const labels  = [...html.matchAll(labelRegex)].map(m => clean(m[1]));
+    const times   = [...html.matchAll(timeRegex)].map(m => clean(m[1]));
+    const topics  = [...html.matchAll(topicRegex)].map(m => clean(m[1]));
+    const speakers = [...html.matchAll(speakerRegex)].map(m => clean(m[1]));
+
+    for (let i = 0; i < labels.length; i++) {
+      const label = labels[i];
+      const campusMatch = label.match(/(Atwater|Page)/i);
+      if (!campusMatch) continue;
+      const campus = campusMatch[1].toLowerCase().startsWith("page") ? "page" : "atwater";
+
+      const timeRaw = times[i] || "";
+      const time = jumuahTo12h(timeRaw);
+
+      const rawTopic   = topics[i]   || "";
+      const rawSpeaker = speakers[i] || "";
+      const topic   = isPlaceholder(rawTopic)   ? undefined : rawTopic;
+      const speaker = isPlaceholder(rawSpeaker) ? undefined : rawSpeaker;
+
       if (!campusSlots[campus]) campusSlots[campus] = [];
-      campusSlots[campus].push({ khutbah_time: time, iqama_time: time, speaker: speaker || undefined });
+      const slot: { khutbah_time: string; iqama_time: string; speaker?: string; topic?: string } = { khutbah_time: time, iqama_time: time };
+      if (speaker) slot.speaker = speaker;
+      if (topic)   slot.topic   = topic;
+      campusSlots[campus].push(slot);
     }
 
-    // Simpler fallback: find all shifts, times, and h6-like speaker sections
+    // Fallback: plain-text regex if HTML classes are missing
     if (Object.keys(campusSlots).length === 0) {
+      const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
       const blocks = [...text.matchAll(/(\d+)(?:st|nd|rd|th)\s+Shift\s*[·•]\s*(Atwater|Page)[^0-9]*(\d{1,2}:\d{2})/gi)];
       for (const block of blocks) {
-        const campus = block[2].toLowerCase().includes("page") ? "page" : "atwater";
-        const time = to12h(block[3] + ":00");
+        const campus = block[2].toLowerCase().startsWith("page") ? "page" : "atwater";
+        const time = jumuahTo12h(block[3]);
         if (!campusSlots[campus]) campusSlots[campus] = [];
         campusSlots[campus].push({ khutbah_time: time, iqama_time: time });
       }
     }
 
     const masjidMap: Record<string, string> = {
-      atwater: "Islamic Association of Raleigh (Atwater)",
-      page: "Islamic Association of Raleigh (Page Rd)",
+      atwater: "IAR (Atwater)",
+      page: "IAR (Page Rd)",
     };
 
+    let totalUpdated = 0;
     for (const [campus, slots] of Object.entries(campusSlots)) {
       if (slots.length === 0) continue;
       const masjidName = masjidMap[campus];
       if (!masjidName) continue;
       const khutbahStr = slots.map(s => s.khutbah_time).join(", ");
-      const iqamaStr = slots.map(s => s.iqama_time).join(", ");
+      const iqamaStr   = slots.map(s => s.iqama_time).join(", ");
       await pool.query(
         `UPDATE jumuah_schedules SET khutbahs=$1, khutbah_time=$2, iqama_time=$3, updated_at=NOW() WHERE masjid=$4`,
         [JSON.stringify(slots), khutbahStr, iqamaStr, masjidName]
       );
       const speakerNames = slots.filter(s => s.speaker).map(s => s.speaker).join(", ");
       console.log(`[Jumuah] Updated IAR ${campus}: ${slots.length} shifts${speakerNames ? ` (${speakerNames})` : ""}`);
+      totalUpdated += slots.length;
     }
+    if (totalUpdated === 0) console.warn(`[Jumuah] IAR: no shifts parsed from homepage`);
   } catch (err: any) {
     console.error(`[Jumuah] Error syncing IAR Jumuah:`, err.message);
   }
