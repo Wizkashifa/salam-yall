@@ -119,6 +119,13 @@ const IQAMA_SOURCES: IqamaSource[] = [
     url: "https://mccchicago.org/",
     timezone: "America/Chicago",
   },
+  {
+    name: "ISM",
+    type: "athanplus",
+    url: "https://timing.athanplus.com/masjid/widgets/monthly?theme=1&masjid_id=nzKzJoKO",
+    timezone: "America/Chicago",
+    maghribOffset: 0,
+  },
 ];
 
 interface IARDayData {

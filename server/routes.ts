@@ -1156,6 +1156,7 @@ async function ensureMasjidsTable(pool: pg.Pool) {
       { name: 'ADAMS Gainesville', lat: 38.7004, lng: -77.5641, addr: '12655 Vint Hill Rd, Nokesville, VA 20181', website: 'https://adamscenter.org', terms: ['adams gainesville', 'adams center gainesville', 'vint hill rd', 'nokesville masjid'], iqama: true, sort: 27, campusGroup: 'adams', iqamaSource: 'other|2026 Annual Schedule' },
       { name: 'ADAMS Leesburg', lat: 39.1157, lng: -77.5636, addr: '19838 Sycolin Rd, Leesburg, VA 20175', website: 'https://adamscenter.org', terms: ['adams leesburg', 'adams center leesburg', 'sycolin rd', 'leesburg masjid'], iqama: true, sort: 28, campusGroup: 'adams', iqamaSource: 'other|2026 Annual Schedule' },
       { name: 'ADAMS Sully', lat: 38.8874, lng: -77.4282, addr: '4431 Brookfield Corporate Dr Suite F, Chantilly, VA 20151', website: 'https://adamscenter.org', terms: ['adams sully', 'adams center sully', 'brookfield corporate dr', 'chantilly masjid'], iqama: true, sort: 29, campusGroup: 'adams', iqamaSource: 'other|2026 Annual Schedule' },
+      { name: 'ISM', lat: 42.9589, lng: -87.9299, addr: '4707 South 13th Street, Milwaukee, WI 53221', website: 'https://www.ismonline.org', terms: ['ism', 'islamic society of milwaukee', 'ismonline', 'south 13th street milwaukee', 'milwaukee masjid'], iqama: true, sort: 50, campusGroup: null, iqamaSource: 'athanplus' },
     ];
     for (const m of masjidUpserts) {
       await pool.query(
@@ -3026,6 +3027,7 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     { name: "Las Vegas NV", lat: 36.1699, lng: -115.1398, cities: ["Las Vegas", "Henderson", "North Las Vegas", "Summerlin", "Enterprise"] },
     { name: "Los Angeles CA", lat: 34.0522, lng: -118.2437, cities: ["Los Angeles", "Anaheim", "Irvine", "Pasadena", "Glendale"] },
     { name: "Miami FL", lat: 25.7617, lng: -80.1918, cities: ["Miami", "Hialeah", "Pembroke Pines", "Davie", "Plantation"] },
+    { name: "Milwaukee WI", lat: 43.0389, lng: -87.9065, cities: ["Milwaukee", "Wauwatosa", "West Allis", "Greenfield", "New Berlin"] },
     { name: "Minneapolis MN", lat: 44.9778, lng: -93.2650, cities: ["Minneapolis", "St. Paul", "Bloomington", "Brooklyn Park", "Eden Prairie"] },
     { name: "Nashville TN", lat: 36.1627, lng: -86.7816, cities: ["Nashville", "Murfreesboro", "Franklin", "Antioch", "Hendersonville"] },
     { name: "NYC Metro", lat: 40.7128, lng: -74.0060, cities: ["New York", "Jersey City", "Paterson", "Edison", "Clifton"] },
