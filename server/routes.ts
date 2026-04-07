@@ -837,6 +837,18 @@ async function seedJumuahMetros(pool: pg.Pool) {
     );
   }
 
+  // Milwaukee WI
+  const mkeMasjids = [
+    { masjid: 'ISM', khutbah_time: '12:30 PM, 1:45 PM', iqama_time: '1:00 PM, 2:15 PM', metro: 'Milwaukee WI', timezone: 'America/Chicago', sort_order: 500, slots: [{ khutbah_time: '12:30 PM', iqama_time: '1:00 PM' }, { khutbah_time: '1:45 PM', iqama_time: '2:15 PM' }] },
+  ];
+  for (const r of mkeMasjids) {
+    await pool.query(
+      `INSERT INTO jumuah_schedules (masjid, khutbah_time, iqama_time, metro, timezone, khutbahs, sort_order) VALUES ($1,$2,$3,$4,$5,$6,$7)
+       ON CONFLICT (masjid) DO UPDATE SET metro=EXCLUDED.metro, timezone=EXCLUDED.timezone, khutbahs=EXCLUDED.khutbahs, sort_order=EXCLUDED.sort_order`,
+      [r.masjid, r.khutbah_time, r.iqama_time, r.metro, r.timezone, JSON.stringify(r.slots), r.sort_order]
+    );
+  }
+
   const allNew = [...bayAreaMasjids, ...indiMasjids, ...lasMasjids];
   // Remove incorrectly-named rows from previous seeds
   await pool.query(`DELETE FROM jumuah_schedules WHERE masjid IN ('Muslim Community Center of the East Bay (MCC)', 'Islamic Society of Greater Indianapolis (ISOG)', 'Al-Huda Foundation (IAT)')`);
@@ -1156,7 +1168,13 @@ async function ensureMasjidsTable(pool: pg.Pool) {
       { name: 'ADAMS Gainesville', lat: 38.7004, lng: -77.5641, addr: '12655 Vint Hill Rd, Nokesville, VA 20181', website: 'https://adamscenter.org', terms: ['adams gainesville', 'adams center gainesville', 'vint hill rd', 'nokesville masjid'], iqama: true, sort: 27, campusGroup: 'adams', iqamaSource: 'other|2026 Annual Schedule' },
       { name: 'ADAMS Leesburg', lat: 39.1157, lng: -77.5636, addr: '19838 Sycolin Rd, Leesburg, VA 20175', website: 'https://adamscenter.org', terms: ['adams leesburg', 'adams center leesburg', 'sycolin rd', 'leesburg masjid'], iqama: true, sort: 28, campusGroup: 'adams', iqamaSource: 'other|2026 Annual Schedule' },
       { name: 'ADAMS Sully', lat: 38.8874, lng: -77.4282, addr: '4431 Brookfield Corporate Dr Suite F, Chantilly, VA 20151', website: 'https://adamscenter.org', terms: ['adams sully', 'adams center sully', 'brookfield corporate dr', 'chantilly masjid'], iqama: true, sort: 29, campusGroup: 'adams', iqamaSource: 'other|2026 Annual Schedule' },
-      { name: 'ISM', lat: 42.9589, lng: -87.9299, addr: '4707 South 13th Street, Milwaukee, WI 53221', website: 'https://www.ismonline.org', terms: ['ism', 'islamic society of milwaukee', 'ismonline', 'south 13th street milwaukee', 'milwaukee masjid'], iqama: true, sort: 50, campusGroup: null, iqamaSource: 'athanplus' },
+      { name: 'ISM', lat: 42.9589, lng: -87.9299, addr: '4707 South 13th Street, Milwaukee, WI 53221', website: 'https://www.ismonline.org', terms: ['ism', 'islamic society of milwaukee', 'ismonline', 'south 13th street milwaukee', 'milwaukee masjid'], iqama: true, sort: 50, campusGroup: 'ism', iqamaSource: 'athanplus' },
+      { name: 'ISM University Center', lat: 43.0744, lng: -87.8819, addr: '2223 E Kenwood Blvd, Milwaukee, WI 53211', website: 'https://www.ismonline.org', terms: ['ism university', 'islamic society of milwaukee university', 'kenwood blvd milwaukee', 'ism uwm'], iqama: true, sort: 51, campusGroup: 'ism', iqamaSource: null },
+      { name: 'ISM West (Masjid Al-Noor)', lat: 43.0663, lng: -88.1194, addr: '16670 Pheasant Dr, Brookfield, WI 53005', website: 'https://www.ismonline.org', terms: ['ism west', 'masjid al-noor brookfield', 'islamic society of milwaukee west', 'pheasant dr brookfield', 'brookfield masjid'], iqama: true, sort: 52, campusGroup: 'ism', iqamaSource: null },
+      { name: 'Milwaukee Islamic Dawah Center', lat: 43.1103, lng: -87.9501, addr: '5135 N Teutonia Ave, Milwaukee, WI 53209', website: null, terms: ['milwaukee islamic dawah center', 'masjid ar rahman milwaukee', 'teutonia ave milwaukee', 'midc milwaukee'], iqama: false, sort: 53, campusGroup: null, iqamaSource: null },
+      { name: "Al-Qur'an Mosque", lat: 43.1766, lng: -88.0582, addr: '11723 W Brown Deer Rd, Milwaukee, WI 53224', website: null, terms: ['al quran mosque milwaukee', 'brown deer rd masjid', 'milwaukee northwest masjid'], iqama: false, sort: 54, campusGroup: null, iqamaSource: null },
+      { name: 'Al-Huda Mosque South Milwaukee', lat: 42.9134, lng: -87.8735, addr: '1800 16th Ave, South Milwaukee, WI 53172', website: null, terms: ['al huda mosque south milwaukee', 'al-huda south milwaukee', '16th ave south milwaukee masjid'], iqama: false, sort: 55, campusGroup: 'alhuda-mke', iqamaSource: null },
+      { name: 'Al-Huda Mosque Greenfield', lat: 42.9525, lng: -87.9691, addr: '5075 S 43rd St, Greenfield, WI 53220', website: null, terms: ['al huda mosque greenfield', 'al-huda greenfield', '43rd st greenfield masjid', 'greenfield masjid'], iqama: false, sort: 56, campusGroup: 'alhuda-mke', iqamaSource: null },
     ];
     for (const m of masjidUpserts) {
       await pool.query(
@@ -3027,7 +3045,7 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     { name: "Las Vegas NV", lat: 36.1699, lng: -115.1398, cities: ["Las Vegas", "Henderson", "North Las Vegas", "Summerlin", "Enterprise"] },
     { name: "Los Angeles CA", lat: 34.0522, lng: -118.2437, cities: ["Los Angeles", "Anaheim", "Irvine", "Pasadena", "Glendale"] },
     { name: "Miami FL", lat: 25.7617, lng: -80.1918, cities: ["Miami", "Hialeah", "Pembroke Pines", "Davie", "Plantation"] },
-    { name: "Milwaukee WI", lat: 43.0389, lng: -87.9065, cities: ["Milwaukee", "Wauwatosa", "West Allis", "Greenfield", "New Berlin"] },
+    { name: "Milwaukee WI", lat: 43.0389, lng: -87.9065, cities: ["Milwaukee", "Wauwatosa", "West Allis", "Greenfield", "New Berlin", "Brookfield", "South Milwaukee", "Oak Creek", "Franklin"] },
     { name: "Minneapolis MN", lat: 44.9778, lng: -93.2650, cities: ["Minneapolis", "St. Paul", "Bloomington", "Brooklyn Park", "Eden Prairie"] },
     { name: "Nashville TN", lat: 36.1627, lng: -86.7816, cities: ["Nashville", "Murfreesboro", "Franklin", "Antioch", "Hendersonville"] },
     { name: "NYC Metro", lat: 40.7128, lng: -74.0060, cities: ["New York", "Jersey City", "Paterson", "Edison", "Clifton"] },
@@ -6587,6 +6605,7 @@ Important notes:
   const CENTRAL_ORGS = new Set([
     "Roots DFW",
     "Roots Community",
+    "ISM",
   ]);
 
   function resolveTimezone(organizer: string): string {
