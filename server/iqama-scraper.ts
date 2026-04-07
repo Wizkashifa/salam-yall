@@ -157,13 +157,7 @@ const IQAMA_SOURCES: IqamaSource[] = [
     url: "https://timing.athanplus.com/masjid/widgets/monthly?theme=1&masjid_id=RKxy6lLO",
     timezone: "America/Indiana/Indianapolis",
   },
-  // DFW TX
-  {
-    name: "Valley Ranch Islamic Center",
-    type: "masjidapps",
-    url: "https://portal.masjidapps.com/public/readOnlySalahTimes?id=MQ2&code=NzY1ZjcxZmQtZjE0NS00OGFjLTljYTgtMjBiYmRlYjdkZGRj0",
-    timezone: "America/Chicago",
-  },
+  // DFW TX (Valley Ranch uses MasjidApps SPA — no server-side API; skip iqama sync)
   {
     name: "EPIC Masjid",
     type: "epic-html",
@@ -1055,10 +1049,10 @@ async function fetchEPICHtml(pool: pg.Pool, source: IqamaSource): Promise<void> 
     }
     const html = await resp.text();
 
-    // Find <table class="prayer_table"> and extract iqamah column (3rd <td>)
-    const tableMatch = html.match(/<table[^>]*class="[^"]*prayer_table[^"]*"[^>]*>([\s\S]*?)<\/table>/i);
+    // Find <table id="first_namaz"> and extract iqamah column (3rd <td>)
+    const tableMatch = html.match(/<table[^>]*id="first_namaz"[^>]*>([\s\S]*?)<\/table>/i);
     if (!tableMatch) {
-      console.error(`[Iqama] ${source.name}: prayer_table not found`);
+      console.error(`[Iqama] ${source.name}: first_namaz table not found`);
       return;
     }
     const tableHtml = tableMatch[1];
