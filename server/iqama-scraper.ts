@@ -18,7 +18,7 @@ export interface MasjidIqamaSchedule {
   iqama: DayIqama;
 }
 
-type IqamaSourceType = "dpt" | "iar" | "mca-html" | "alnoor-html" | "sbia-html" | "icf-html" | "athanplus" | "alhuda-html" | "berkeley-json" | "mcc-html" | "epic-html" | "masjidapps" | "iar-jumuah" | "icmnc-jumuah";
+type IqamaSourceType = "dpt" | "iar" | "mca-html" | "alnoor-html" | "sbia-html" | "icf-html" | "athanplus" | "alhuda-html" | "berkeley-json" | "mcc-html" | "epic-html" | "masjidapps" | "iar-jumuah" | "icmnc-jumuah" | "jiar-jumuah";
 
 interface IqamaSource {
   name: string;
@@ -49,7 +49,12 @@ const IQAMA_SOURCES: IqamaSource[] = [
     type: "icmnc-jumuah",
     url: "https://www.icmnc.org",
     timezone: "America/New_York",
-    syncDays: [4, 5, 6], // Thu/Fri/Sat — site updates by Thursday
+  },
+  {
+    name: "JIAR Jumuah",
+    type: "jiar-jumuah",
+    url: "https://ibadarrahman.org",
+    timezone: "America/New_York",
   },
   {
     name: "ICMNC",
@@ -1323,6 +1328,106 @@ async function fetchICMNCJumuah(pool: pg.Pool, source: IqamaSource): Promise<voi
   }
 }
 
+async function fetchJIARJumuah(pool: pg.Pool, source: IqamaSource): Promise<void> {
+  // Add N minutes to a 12-hour time string, e.g. "12:10 PM" + 30 → "12:40 PM"
+  function addMinutes(timeStr: string, mins: number): string {
+    const m = timeStr.match(/(\d{1,2}):(\d{2})\s*([AP]M)/i);
+    if (!m) return timeStr;
+    let h = parseInt(m[1]);
+    const min = parseInt(m[2]);
+    const isPM = m[3].toUpperCase() === "PM";
+    if (isPM && h !== 12) h += 12;
+    if (!isPM && h === 12) h = 0;
+    const total = h * 60 + min + mins;
+    const newH = Math.floor(total / 60) % 24;
+    const newM = total % 60;
+    const newIsPM = newH >= 12;
+    const h12 = newH === 0 ? 12 : newH > 12 ? newH - 12 : newH;
+    return `${h12}:${String(newM).padStart(2, "0")} ${newIsPM ? "PM" : "AM"}`;
+  }
+
+  try {
+    const resp = await fetch(source.url, { headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    }});
+    if (!resp.ok) { console.error(`[Jumuah] JIAR homepage returned ${resp.status}`); return; }
+    const html = await resp.text();
+
+    // JIAR uses Elementor — messy inline styles, split ordinals ("3" + "rd Shift").
+    // Strip all tags and collapse whitespace for reliable plain-text parsing.
+    const text = html
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&amp;/g, "&").replace(/&#\d+;/g, " ").replace(/&nbsp;/g, " ")
+      .replace(/\s+/g, " ");
+
+    // Find the Friday Prayer Schedule section
+    const fridayIdx = text.search(/Friday\s+Prayer\s+Schedule/i);
+    if (fridayIdx < 0) {
+      console.warn("[Jumuah] JIAR: Friday Prayer Schedule not found on homepage");
+      return;
+    }
+    // Work within a 1500-char window starting from the schedule heading
+    const section = text.substring(fridayIdx, fridayIdx + 1500);
+
+    // --- Parkwood: "Nth Shift HH:MM PM: Speaker Name" ---
+    // The ordinal suffix may be detached: "3 rd Shift" or "3rd Shift"
+    const parkwoodSlots: { khutbah_time: string; iqama_time: string; speaker?: string }[] = [];
+
+    // Only parse Parkwood section (before Fayetteville)
+    const favIdx = section.search(/Fayetteville/i);
+    const parkwoodSection = favIdx > 0 ? section.substring(0, favIdx) : section;
+
+    let sm;
+    const shiftRe = /(\d+)\s*(?:st|nd|rd|th)\s+Shift\s+(\d{1,2}:\d{2}\s*[AP]M)\s*:\s*([A-Za-z][A-Za-z\s.'-]{2,40}?)(?=\s*\d+\s*(?:st|nd|rd|th)\s+Shift|\s*Fayetteville|\s*(?:Jumuah\s+Survey|Monthly|Recent|\s*$))/gi;
+    while ((sm = shiftRe.exec(parkwoodSection)) !== null) {
+      const khutbah = sm[2].trim();
+      const speaker = sm[3].trim();
+      parkwoodSlots.push({
+        khutbah_time: khutbah,
+        iqama_time: addMinutes(khutbah, 30),
+        speaker: speaker || undefined,
+      });
+    }
+
+    // --- Fayetteville St: "One Shift HH:MM PM: Speaker Name" ---
+    const favSection = favIdx > 0 ? section.substring(favIdx) : "";
+    const favMatch = favSection.match(/One\s+Shift\s+(\d{1,2}:\d{2}\s*[AP]M)\s*:\s*([A-Za-z][A-Za-z\s.'-]{2,40}?)(?=\s*(?:Jumuah\s+Survey|Recent|Monthly|\s*$))/i);
+    const favSlots: { khutbah_time: string; iqama_time: string; speaker?: string }[] = [];
+    if (favMatch) {
+      const khutbah = favMatch[1].trim();
+      favSlots.push({
+        khutbah_time: khutbah,
+        iqama_time: addMinutes(khutbah, 30),
+        speaker: favMatch[2].trim() || undefined,
+      });
+    }
+
+    // Update DB for each location
+    const updates: { masjid: string; slots: typeof parkwoodSlots }[] = [];
+    if (parkwoodSlots.length > 0) updates.push({ masjid: "JIAR Parkwood (3 shifts)", slots: parkwoodSlots });
+    if (favSlots.length > 0)     updates.push({ masjid: "JIAR (Fayetteville St)", slots: favSlots });
+
+    for (const { masjid, slots } of updates) {
+      const khutbahStr = slots.map(s => s.khutbah_time).join(", ");
+      const iqamaStr   = slots.map(s => s.iqama_time).join(", ");
+      const result = await pool.query(
+        `UPDATE jumuah_schedules SET khutbahs=$1, khutbah_time=$2, iqama_time=$3, updated_at=NOW() WHERE masjid=$4`,
+        [JSON.stringify(slots), khutbahStr, iqamaStr, masjid]
+      );
+      const speakerNames = slots.filter(s => s.speaker).map(s => s.speaker).join(", ");
+      if (result.rowCount && result.rowCount > 0) {
+        console.log(`[Jumuah] Updated JIAR ${masjid}: ${slots.length} shift(s)${speakerNames ? ` (${speakerNames})` : ""}`);
+      } else {
+        console.warn(`[Jumuah] JIAR: no DB row matched for "${masjid}"`);
+      }
+    }
+
+    if (updates.length === 0) console.warn("[Jumuah] JIAR: no Parkwood or Fayetteville shifts parsed");
+  } catch (err: any) {
+    console.error("[Jumuah] Error syncing JIAR Jumuah:", err.message);
+  }
+}
+
 async function syncSource(pool: pg.Pool, source: IqamaSource, year: number, month: number): Promise<void> {
   // Check syncDays restriction (day-of-week in the source's timezone)
   if (source.syncDays && source.syncDays.length > 0) {
@@ -1373,6 +1478,9 @@ async function syncSource(pool: pg.Pool, source: IqamaSource, year: number, mont
       break;
     case "icmnc-jumuah":
       await fetchICMNCJumuah(pool, source);
+      break;
+    case "jiar-jumuah":
+      await fetchJIARJumuah(pool, source);
       break;
   }
 }
