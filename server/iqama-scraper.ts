@@ -157,7 +157,14 @@ const IQAMA_SOURCES: IqamaSource[] = [
     url: "https://timing.athanplus.com/masjid/widgets/monthly?theme=1&masjid_id=RKxy6lLO",
     timezone: "America/Indiana/Indianapolis",
   },
-  // DFW TX (Valley Ranch uses MasjidApps SPA — no server-side API; skip iqama sync)
+  // DFW TX
+  {
+    name: "Valley Ranch Islamic Center",
+    type: "masjidapps",
+    // JSON API: https://api.masjidapps.com/masjid/publicPrayerTimes/{id}/{code}
+    url: "https://api.masjidapps.com/masjid/publicPrayerTimes/MQ2/NzY1ZjcxZmQtZjE0NS00OGFjLTljYTgtMjBiYmRlYjdkZGRj0",
+    timezone: "America/Chicago",
+  },
   {
     name: "EPIC Masjid",
     type: "epic-html",
@@ -1098,51 +1105,26 @@ async function fetchEPICHtml(pool: pg.Pool, source: IqamaSource): Promise<void> 
 }
 
 async function fetchMasjidApps(pool: pg.Pool, source: IqamaSource): Promise<void> {
+  // source.url must be the JSON API endpoint:
+  // https://api.masjidapps.com/masjid/publicPrayerTimes/{id}/{code}
   try {
-    const resp = await fetch(source.url, { headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    }});
+    const resp = await fetch(source.url, {
+      headers: { "Accept": "application/json" },
+    });
     if (!resp.ok) {
-      console.error(`[Iqama] ${source.name} page returned ${resp.status}`);
+      console.error(`[Iqama] ${source.name} API returned ${resp.status}`);
       return;
     }
-    const html = await resp.text();
+    const data = await resp.json() as Record<string, string | null>;
 
-    // Table has columns: Salah | Adhan | Iqamah
-    const prayerMap: Record<string, string> = {};
-    const jumuahSlots: { khutbah_time: string; iqama_time: string; speaker?: string }[] = [];
-    let lastJumuahIdx = -1;
+    const fajr    = data.fajrIqamah    || "";
+    const dhuhr   = data.duhrIqamah    || "";
+    const asr     = data.asrIqamah     || "";
+    const maghrib = data.maghribIqamah || "";
+    const isha    = data.ishaIqamah    || "";
 
-    const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
-    let rowMatch;
-    while ((rowMatch = rowRegex.exec(html)) !== null) {
-      const cells = [...rowMatch[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m =>
-        m[1].replace(/<[^>]+>/g, "").trim()
-      );
-      if (cells.length < 2) continue;
-      const label = cells[0].toLowerCase();
-      const col1 = cells[1]?.trim() || "";
-      const col2 = cells[2]?.trim() || "";
-
-      if (/fajr/.test(label) && col2) prayerMap.fajr = col2;
-      else if (/dhuhr|zuhr/.test(label) && col2) prayerMap.dhuhr = col2;
-      else if (/asr/.test(label) && col2) prayerMap.asr = col2;
-      else if (/maghrib/.test(label) && col2) prayerMap.maghrib = col2;
-      else if (/isha/.test(label) && col2) prayerMap.isha = col2;
-      else if (/jum(m?u?a?h?|aa)/.test(label) && col1 && col2) {
-        // Jummah / Jummah 2 / Jummah 3 — khutbah in col1, iqama in col2
-        lastJumuahIdx = jumuahSlots.length;
-        jumuahSlots.push({ khutbah_time: col1, iqama_time: col2 });
-      } else if (/khateeb/.test(label) && col1 && lastJumuahIdx >= 0) {
-        // Khateeb row follows its Jummah row — attach speaker to that slot
-        jumuahSlots[lastJumuahIdx].speaker = col1;
-        lastJumuahIdx = -1;
-      }
-    }
-
-    if (!prayerMap.fajr || !prayerMap.isha) {
-      console.error(`[Iqama] ${source.name}: could not parse prayer times (found: ${Object.keys(prayerMap).join(", ")})`);
+    if (!fajr || !isha) {
+      console.error(`[Iqama] ${source.name}: missing iqama fields in API response`);
       return;
     }
 
@@ -1150,23 +1132,35 @@ async function fetchMasjidApps(pool: pg.Pool, source: IqamaSource): Promise<void
     const count = await bulkUpsert(pool, [{
       masjid: source.name,
       date: dateKey,
-      fajr: prayerMap.fajr,
-      dhuhr: prayerMap.dhuhr || "",
-      asr: prayerMap.asr || "",
-      maghrib: prayerMap.maghrib || "",
-      isha: prayerMap.isha,
+      fajr,
+      dhuhr,
+      asr,
+      maghrib,
+      isha,
     }]);
     if (count > 0) console.log(`[Iqama] Synced ${source.name} for ${dateKey}`);
 
-    // Update jumuah_schedules with live slot times + speaker names
+    // Build Jumuah slots from firstJummah / secondJummah / thirdJummah fields
+    const jumuahSlots: { khutbah_time: string; iqama_time: string; speaker?: string }[] = [];
+    for (const prefix of ["first", "second", "third"] as const) {
+      const khutbah = data[`${prefix}JummahAdhan`]?.trim() || "";
+      const iqama   = data[`${prefix}JummahIqamah`]?.trim() || "";
+      const speaker = data[`${prefix}JummahKhateeb`]?.trim() || "";
+      if (khutbah && iqama) {
+        const slot: { khutbah_time: string; iqama_time: string; speaker?: string } = { khutbah_time: khutbah, iqama_time: iqama };
+        if (speaker) slot.speaker = speaker;
+        jumuahSlots.push(slot);
+      }
+    }
+
     if (jumuahSlots.length > 0) {
       const khutbahTimes = jumuahSlots.map(s => s.khutbah_time).join(", ");
-      const iqamaTimes = jumuahSlots.map(s => s.iqama_time).join(", ");
+      const iqamaTimes   = jumuahSlots.map(s => s.iqama_time).join(", ");
       await pool.query(
         `UPDATE jumuah_schedules SET khutbahs=$1, khutbah_time=$2, iqama_time=$3, updated_at=NOW() WHERE masjid=$4`,
         [JSON.stringify(jumuahSlots), khutbahTimes, iqamaTimes, source.name]
       );
-      console.log(`[Iqama] Updated ${source.name} Jumuah slots with speakers`);
+      console.log(`[Iqama] Updated ${source.name} Jumuah slots (${jumuahSlots.length} slots)`);
     }
   } catch (err: any) {
     console.error(`[Iqama] Error syncing ${source.name}:`, err.message);
