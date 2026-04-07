@@ -18,7 +18,7 @@ export interface MasjidIqamaSchedule {
   iqama: DayIqama;
 }
 
-type IqamaSourceType = "dpt" | "iar" | "mca-html" | "alnoor-html" | "sbia-html" | "icf-html" | "athanplus" | "alhuda-html" | "berkeley-json" | "mcc-html";
+type IqamaSourceType = "dpt" | "iar" | "mca-html" | "alnoor-html" | "sbia-html" | "icf-html" | "athanplus" | "alhuda-html" | "berkeley-json" | "mcc-html" | "epic-html" | "masjidapps" | "iar-jumuah" | "icmnc-jumuah";
 
 interface IqamaSource {
   name: string;
@@ -27,6 +27,8 @@ interface IqamaSource {
   timezone: string;
   filter?: "today" | "month";
   maghribOffset?: number;
+  /** Day-of-week numbers (0=Sun…6=Sat) to run this sync. Omit = run every day. */
+  syncDays?: number[];
 }
 
 const IQAMA_SOURCES: IqamaSource[] = [
@@ -35,6 +37,20 @@ const IQAMA_SOURCES: IqamaSource[] = [
     type: "iar",
     url: "https://raleighmasjid.org/API/prayer/month/",
     timezone: "America/New_York",
+  },
+  {
+    name: "IAR Jumuah",
+    type: "iar-jumuah",
+    url: "https://raleighmasjid.org",
+    timezone: "America/New_York",
+    syncDays: [4, 5, 6], // Thu/Fri/Sat — site updates by Thursday
+  },
+  {
+    name: "ICMNC Jumuah",
+    type: "icmnc-jumuah",
+    url: "https://www.icmnc.org",
+    timezone: "America/New_York",
+    syncDays: [4, 5, 6], // Thu/Fri/Sat — site updates by Thursday
   },
   {
     name: "ICMNC",
@@ -125,6 +141,67 @@ const IQAMA_SOURCES: IqamaSource[] = [
     url: "https://timing.athanplus.com/masjid/widgets/monthly?theme=1&masjid_id=nzKzJoKO",
     timezone: "America/Chicago",
     maghribOffset: 0,
+  },
+  // Charlotte NC
+  {
+    name: "ICC Charlotte",
+    type: "dpt",
+    url: "https://iccharlotte.org/wp-json/dpt/v1/prayertime",
+    timezone: "America/New_York",
+    filter: "today",
+  },
+  // Indianapolis IN
+  {
+    name: "MCC Indianapolis",
+    type: "athanplus",
+    url: "https://timing.athanplus.com/masjid/widgets/monthly?theme=1&masjid_id=RKxy6lLO",
+    timezone: "America/Indiana/Indianapolis",
+  },
+  // DFW TX
+  {
+    name: "Valley Ranch Islamic Center",
+    type: "masjidapps",
+    url: "https://portal.masjidapps.com/public/readOnlySalahTimes?id=MQ2&code=NzY1ZjcxZmQtZjE0NS00OGFjLTljYTgtMjBiYmRlYjdkZGRj0",
+    timezone: "America/Chicago",
+  },
+  {
+    name: "EPIC Masjid",
+    type: "epic-html",
+    url: "https://epicmasjid.org",
+    timezone: "America/Chicago",
+  },
+  {
+    name: "IANT",
+    type: "athanplus",
+    url: "https://timing.athanplus.com/masjid/widgets/monthly?theme=1&masjid_id=xdy03lAX",
+    timezone: "America/Chicago",
+  },
+  {
+    name: "Islamic Center of Irving",
+    type: "dpt",
+    url: "https://www.irvingmasjid.org/wp-json/dpt/v1/prayertime",
+    timezone: "America/Chicago",
+    filter: "today",
+  },
+  // Chicago IL
+  {
+    name: "Mosque Foundation",
+    type: "athanplus",
+    url: "https://timing.athanplus.com/masjid/widgets/monthly?theme=1&masjid_id=pQKM3ABE",
+    timezone: "America/Chicago",
+  },
+  // Boston MA
+  {
+    name: "ISB Roxbury",
+    type: "athanplus",
+    url: "https://timing.athanplus.com/masjid/widgets/monthly?theme=1&masjid_id=zVKp9PLP",
+    timezone: "America/New_York",
+  },
+  {
+    name: "ISB Cambridge",
+    type: "athanplus",
+    url: "https://timing.athanplus.com/masjid/widgets/monthly?theme=1&masjid_id=kAk28BLq",
+    timezone: "America/New_York",
   },
 ];
 
@@ -333,6 +410,15 @@ async function fetchDPT(pool: pg.Pool, source: IqamaSource): Promise<void> {
         isha: to12h(today.isha_jamah),
       }]);
       console.log(`[Iqama] Synced ${source.name} for ${dateKey}`);
+      // Update jumuah_schedules with live Jumuah iqama times
+      if (Array.isArray(today.jumuah) && today.jumuah.length > 0) {
+        const slots = today.jumuah.map((t: string) => ({ khutbah_time: to12h(t), iqama_time: to12h(t) }));
+        const times = slots.map((s: any) => s.iqama_time).join(", ");
+        await pool.query(
+          `UPDATE jumuah_schedules SET khutbahs=$1, khutbah_time=$2, iqama_time=$3, updated_at=NOW() WHERE masjid=$4`,
+          [JSON.stringify(slots), times, times, source.name]
+        );
+      }
       return;
     }
 
@@ -640,6 +726,24 @@ async function fetchAthanPlus(pool: pg.Pool, source: IqamaSource): Promise<void>
 
     const count = await bulkUpsert(pool, rows);
     if (count > 0) console.log(`[Iqama] Synced ${count} ${source.name} days for month ${String(month).padStart(2, "0")}`);
+
+    // Extract Jumuah times from juma2-sec section
+    const jumaMatch = html.match(/juma2-sec[\s\S]*?(?=<\/table>|class="footer|<\/body>)/i);
+    if (jumaMatch) {
+      const timeRegex = /(\d{1,2}:\d{2}\s*[AP]M)/gi;
+      const jumuahTimes: string[] = [];
+      let tm;
+      while ((tm = timeRegex.exec(jumaMatch[0])) !== null) jumuahTimes.push(tm[1].trim());
+      if (jumuahTimes.length > 0) {
+        const slots = jumuahTimes.map(t => ({ khutbah_time: t, iqama_time: t }));
+        const times = jumuahTimes.join(", ");
+        await pool.query(
+          `UPDATE jumuah_schedules SET khutbahs=$1, khutbah_time=$2, iqama_time=$3, updated_at=NOW() WHERE masjid=$4`,
+          [JSON.stringify(slots), times, times, source.name]
+        );
+        console.log(`[Iqama] Updated ${source.name} Jumuah times: ${times}`);
+      }
+    }
   } catch (err: any) {
     console.error(`[Iqama] Error syncing ${source.name}:`, err.message);
   }
@@ -939,7 +1043,266 @@ async function fetchMCCHtml(pool: pg.Pool, source: IqamaSource): Promise<void> {
   }
 }
 
+async function fetchEPICHtml(pool: pg.Pool, source: IqamaSource): Promise<void> {
+  try {
+    const resp = await fetch(source.url, { headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    }});
+    if (!resp.ok) {
+      console.error(`[Iqama] ${source.name} page returned ${resp.status}`);
+      return;
+    }
+    const html = await resp.text();
+
+    // Find <table class="prayer_table"> and extract iqamah column (3rd <td>)
+    const tableMatch = html.match(/<table[^>]*class="[^"]*prayer_table[^"]*"[^>]*>([\s\S]*?)<\/table>/i);
+    if (!tableMatch) {
+      console.error(`[Iqama] ${source.name}: prayer_table not found`);
+      return;
+    }
+    const tableHtml = tableMatch[1];
+
+    const prayerMap: Record<string, string> = {};
+    const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+    let rowMatch;
+    while ((rowMatch = rowRegex.exec(tableHtml)) !== null) {
+      const rowHtml = rowMatch[1];
+      const cells = [...rowHtml.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m =>
+        m[1].replace(/<[^>]+>/g, "").trim()
+      );
+      if (cells.length < 3) continue;
+      const label = cells[0].toLowerCase();
+      const iqamah = cells[2].trim();
+      if (!iqamah || iqamah === "—" || iqamah === "-") continue;
+      if (/fajr/.test(label)) prayerMap.fajr = iqamah;
+      else if (/dhuhr|zuhr/.test(label)) prayerMap.dhuhr = iqamah;
+      else if (/asr/.test(label)) prayerMap.asr = iqamah;
+      else if (/maghrib/.test(label)) prayerMap.maghrib = iqamah;
+      else if (/isha/.test(label)) prayerMap.isha = iqamah;
+    }
+
+    if (!prayerMap.fajr || !prayerMap.isha) {
+      console.error(`[Iqama] ${source.name}: could not parse prayer times (found: ${Object.keys(prayerMap).join(", ")})`);
+      return;
+    }
+
+    const { dateKey } = getDateInTz(source.timezone);
+    const count = await bulkUpsert(pool, [{
+      masjid: source.name,
+      date: dateKey,
+      fajr: prayerMap.fajr,
+      dhuhr: prayerMap.dhuhr || "",
+      asr: prayerMap.asr || "",
+      maghrib: prayerMap.maghrib || "",
+      isha: prayerMap.isha,
+    }]);
+    if (count > 0) console.log(`[Iqama] Synced ${source.name} for ${dateKey}`);
+  } catch (err: any) {
+    console.error(`[Iqama] Error syncing ${source.name}:`, err.message);
+  }
+}
+
+async function fetchMasjidApps(pool: pg.Pool, source: IqamaSource): Promise<void> {
+  try {
+    const resp = await fetch(source.url, { headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    }});
+    if (!resp.ok) {
+      console.error(`[Iqama] ${source.name} page returned ${resp.status}`);
+      return;
+    }
+    const html = await resp.text();
+
+    // Table has columns: Salah | Adhan | Iqamah
+    const prayerMap: Record<string, string> = {};
+    const jumuahSlots: { khutbah_time: string; iqama_time: string; speaker?: string }[] = [];
+    let lastJumuahIdx = -1;
+
+    const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+    let rowMatch;
+    while ((rowMatch = rowRegex.exec(html)) !== null) {
+      const cells = [...rowMatch[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m =>
+        m[1].replace(/<[^>]+>/g, "").trim()
+      );
+      if (cells.length < 2) continue;
+      const label = cells[0].toLowerCase();
+      const col1 = cells[1]?.trim() || "";
+      const col2 = cells[2]?.trim() || "";
+
+      if (/fajr/.test(label) && col2) prayerMap.fajr = col2;
+      else if (/dhuhr|zuhr/.test(label) && col2) prayerMap.dhuhr = col2;
+      else if (/asr/.test(label) && col2) prayerMap.asr = col2;
+      else if (/maghrib/.test(label) && col2) prayerMap.maghrib = col2;
+      else if (/isha/.test(label) && col2) prayerMap.isha = col2;
+      else if (/jum(m?u?a?h?|aa)/.test(label) && col1 && col2) {
+        // Jummah / Jummah 2 / Jummah 3 — khutbah in col1, iqama in col2
+        lastJumuahIdx = jumuahSlots.length;
+        jumuahSlots.push({ khutbah_time: col1, iqama_time: col2 });
+      } else if (/khateeb/.test(label) && col1 && lastJumuahIdx >= 0) {
+        // Khateeb row follows its Jummah row — attach speaker to that slot
+        jumuahSlots[lastJumuahIdx].speaker = col1;
+        lastJumuahIdx = -1;
+      }
+    }
+
+    if (!prayerMap.fajr || !prayerMap.isha) {
+      console.error(`[Iqama] ${source.name}: could not parse prayer times (found: ${Object.keys(prayerMap).join(", ")})`);
+      return;
+    }
+
+    const { dateKey } = getDateInTz(source.timezone);
+    const count = await bulkUpsert(pool, [{
+      masjid: source.name,
+      date: dateKey,
+      fajr: prayerMap.fajr,
+      dhuhr: prayerMap.dhuhr || "",
+      asr: prayerMap.asr || "",
+      maghrib: prayerMap.maghrib || "",
+      isha: prayerMap.isha,
+    }]);
+    if (count > 0) console.log(`[Iqama] Synced ${source.name} for ${dateKey}`);
+
+    // Update jumuah_schedules with live slot times + speaker names
+    if (jumuahSlots.length > 0) {
+      const khutbahTimes = jumuahSlots.map(s => s.khutbah_time).join(", ");
+      const iqamaTimes = jumuahSlots.map(s => s.iqama_time).join(", ");
+      await pool.query(
+        `UPDATE jumuah_schedules SET khutbahs=$1, khutbah_time=$2, iqama_time=$3, updated_at=NOW() WHERE masjid=$4`,
+        [JSON.stringify(jumuahSlots), khutbahTimes, iqamaTimes, source.name]
+      );
+      console.log(`[Iqama] Updated ${source.name} Jumuah slots with speakers`);
+    }
+  } catch (err: any) {
+    console.error(`[Iqama] Error syncing ${source.name}:`, err.message);
+  }
+}
+
+async function fetchIARJumuah(pool: pg.Pool, source: IqamaSource): Promise<void> {
+  try {
+    const resp = await fetch(source.url, { headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    }});
+    if (!resp.ok) { console.error(`[Jumuah] IAR homepage returned ${resp.status}`); return; }
+    const html = await resp.text();
+
+    // Strip tags, collapse whitespace into lines for pattern matching
+    const text = html.replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&#\d+;/g, " ").replace(/\s+/g, " ");
+
+    // Each shift block: "Nth Shift · [Campus] Campus ... time ... speaker"
+    // We'll collect slots per campus name
+    const campusSlots: Record<string, { khutbah_time: string; iqama_time: string; speaker?: string }[]> = {};
+
+    const shiftRegex = /(\d+)(?:st|nd|rd|th)\s+Shift\s*[·•]\s*(Atwater|Page(?:\s+Rd)?)\s+Campus\s+(\d{1,2}:\d{2}(?:\s*[AP]M)?)\s+(?:[^<\n]*?)\s+((?!Speaker to be|Title to be)[A-Z][a-zA-Z\s.'-]{3,}?)(?=\s+\d+(?:st|nd|rd|th)\s+Shift|\s*$)/gi;
+
+    let m;
+    while ((m = shiftRegex.exec(text)) !== null) {
+      const campus = m[2].toLowerCase().includes("page") ? "page" : "atwater";
+      const timeRaw = m[3].trim();
+      const time = /[AP]M/i.test(timeRaw) ? timeRaw : to12h(timeRaw + ":00");
+      const speaker = m[4].trim();
+      if (!campusSlots[campus]) campusSlots[campus] = [];
+      campusSlots[campus].push({ khutbah_time: time, iqama_time: time, speaker: speaker || undefined });
+    }
+
+    // Simpler fallback: find all shifts, times, and h6-like speaker sections
+    if (Object.keys(campusSlots).length === 0) {
+      const blocks = [...text.matchAll(/(\d+)(?:st|nd|rd|th)\s+Shift\s*[·•]\s*(Atwater|Page)[^0-9]*(\d{1,2}:\d{2})/gi)];
+      for (const block of blocks) {
+        const campus = block[2].toLowerCase().includes("page") ? "page" : "atwater";
+        const time = to12h(block[3] + ":00");
+        if (!campusSlots[campus]) campusSlots[campus] = [];
+        campusSlots[campus].push({ khutbah_time: time, iqama_time: time });
+      }
+    }
+
+    const masjidMap: Record<string, string> = {
+      atwater: "Islamic Association of Raleigh (Atwater)",
+      page: "Islamic Association of Raleigh (Page Rd)",
+    };
+
+    for (const [campus, slots] of Object.entries(campusSlots)) {
+      if (slots.length === 0) continue;
+      const masjidName = masjidMap[campus];
+      if (!masjidName) continue;
+      const khutbahStr = slots.map(s => s.khutbah_time).join(", ");
+      const iqamaStr = slots.map(s => s.iqama_time).join(", ");
+      await pool.query(
+        `UPDATE jumuah_schedules SET khutbahs=$1, khutbah_time=$2, iqama_time=$3, updated_at=NOW() WHERE masjid=$4`,
+        [JSON.stringify(slots), khutbahStr, iqamaStr, masjidName]
+      );
+      const speakerNames = slots.filter(s => s.speaker).map(s => s.speaker).join(", ");
+      console.log(`[Jumuah] Updated IAR ${campus}: ${slots.length} shifts${speakerNames ? ` (${speakerNames})` : ""}`);
+    }
+  } catch (err: any) {
+    console.error(`[Jumuah] Error syncing IAR Jumuah:`, err.message);
+  }
+}
+
+async function fetchICMNCJumuah(pool: pg.Pool, source: IqamaSource): Promise<void> {
+  try {
+    const resp = await fetch(source.url, { headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    }});
+    if (!resp.ok) { console.error(`[Jumuah] ICMNC homepage returned ${resp.status}`); return; }
+    const html = await resp.text();
+
+    // Find the Friday Prayer Schedule table (Time | Speaker | Topic)
+    // The table appears after "Friday Prayer Schedule" heading
+    const fridaySection = html.match(/Friday\s+Prayer\s+Schedule[\s\S]{0,500}?(<table[\s\S]*?<\/table>)/i);
+    if (!fridaySection) {
+      console.warn(`[Jumuah] ICMNC: could not find Friday Prayer Schedule table`);
+      return;
+    }
+    const tableHtml = fridaySection[1];
+
+    // Parse rows: skip header row (Time|Speaker|Topic), grab data rows
+    const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+    const slots: { khutbah_time: string; iqama_time: string; speaker?: string; topic?: string }[] = [];
+    let rowMatch;
+    while ((rowMatch = rowRegex.exec(tableHtml)) !== null) {
+      const cells = [...rowMatch[1].matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi)]
+        .map(c => c[1].replace(/<[^>]+>/g, "").trim());
+      if (cells.length < 2) continue;
+      const [timeStr, speaker, topic] = cells;
+      // Skip header row
+      if (/time/i.test(timeStr) || /speaker/i.test(timeStr)) continue;
+      if (!timeStr || !/\d/.test(timeStr)) continue;
+      slots.push({
+        khutbah_time: timeStr,
+        iqama_time: timeStr,
+        speaker: speaker || undefined,
+        topic: topic || undefined,
+      });
+    }
+
+    if (slots.length === 0) {
+      console.warn(`[Jumuah] ICMNC: no slots parsed from Friday table`);
+      return;
+    }
+
+    const khutbahStr = slots.map(s => s.khutbah_time).join(", ");
+    const iqamaStr = slots.map(s => s.iqama_time).join(", ");
+    await pool.query(
+      `UPDATE jumuah_schedules SET khutbahs=$1, khutbah_time=$2, iqama_time=$3, updated_at=NOW() WHERE masjid=$4`,
+      [JSON.stringify(slots), khutbahStr, iqamaStr, "Islamic Center of Morrisville"]
+    );
+    const speakerNames = slots.filter(s => s.speaker).map(s => s.speaker).join(", ");
+    console.log(`[Jumuah] Updated ICMNC: ${slots.length} slots${speakerNames ? ` (${speakerNames})` : ""}`);
+  } catch (err: any) {
+    console.error(`[Jumuah] Error syncing ICMNC Jumuah:`, err.message);
+  }
+}
+
 async function syncSource(pool: pg.Pool, source: IqamaSource, year: number, month: number): Promise<void> {
+  // Check syncDays restriction (day-of-week in the source's timezone)
+  if (source.syncDays && source.syncDays.length > 0) {
+    const nowInTz = new Date(new Date().toLocaleString("en-US", { timeZone: source.timezone }));
+    const dayOfWeek = nowInTz.getDay();
+    if (!source.syncDays.includes(dayOfWeek)) return;
+  }
+
   switch (source.type) {
     case "dpt":
       await fetchDPT(pool, source);
@@ -970,6 +1333,18 @@ async function syncSource(pool: pg.Pool, source: IqamaSource, year: number, mont
       break;
     case "mcc-html":
       await fetchMCCHtml(pool, source);
+      break;
+    case "epic-html":
+      await fetchEPICHtml(pool, source);
+      break;
+    case "masjidapps":
+      await fetchMasjidApps(pool, source);
+      break;
+    case "iar-jumuah":
+      await fetchIARJumuah(pool, source);
+      break;
+    case "icmnc-jumuah":
+      await fetchICMNCJumuah(pool, source);
       break;
   }
 }
