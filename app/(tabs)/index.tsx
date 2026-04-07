@@ -1053,6 +1053,7 @@ export default function PrayerScreen() {
   }
 
   const isFridayOrThursday = useMemo(() => {
+    if (__DEV__) return true; // DEV PREVIEW — remove before release
     const d = new Date().getDay();
     return d === 4 || d === 5; // Thu or Fri — fetch ahead for notification scheduling
   }, [clockTick]);
@@ -1066,6 +1067,7 @@ export default function PrayerScreen() {
   const [showJumuahModal, setShowJumuahModal] = useState(false);
 
   const isJumuahWindow = useMemo(() => {
+    if (__DEV__) return true; // DEV PREVIEW — remove before release
     if (!fridayMode || prayers.length === 0) return false;
     const now = new Date();
     const sunrisePrayer = prayers.find(p => p.name === "sunrise");
