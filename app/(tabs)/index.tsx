@@ -816,9 +816,10 @@ export default function PrayerScreen() {
     }
   }, [calcMethod, masjidList, asrCalc, hijriOffset]);
 
-  const { getEffectiveLocation, isOverrideActive } = useLocationOverride();
+  const { getEffectiveLocation, isOverrideActive, overrideReady } = useLocationOverride();
 
   const loadPrayerData = useCallback(async () => {
+    if (!overrideReady) return;
     try {
       if (isOverrideActive) {
         const { lat, lng } = getEffectiveLocation(35.7796, -78.6382);
@@ -906,7 +907,7 @@ export default function PrayerScreen() {
     } finally {
       setLoading(false);
     }
-  }, [loadDefaultPrayers, masjidList, isOverrideActive, getEffectiveLocation]);
+  }, [loadDefaultPrayers, masjidList, isOverrideActive, overrideReady, getEffectiveLocation]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
