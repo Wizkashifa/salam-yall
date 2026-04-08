@@ -446,24 +446,25 @@ function CountdownRing({ colors, isDark, progress, qiblaBearing, hasRealLocation
 
 function JumuahSlotRow({ slot, isDark, colors }: { slot: { khutbah_time: string; iqama_time: string; speaker?: string; topic?: string }; isDark: boolean; colors: any }) {
   return (
-    <View style={{ paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)" }}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <View style={{ flexDirection: "row", gap: 16 }}>
-          <View style={{ alignItems: "center" }}>
-            <Text style={{ fontSize: 9, fontFamily: "Inter_600SemiBold", color: colors.textTertiary, textTransform: "uppercase" as const, letterSpacing: 0.4, marginBottom: 2 }}>KHUTBAH</Text>
-            <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.text }}>{slot.khutbah_time}</Text>
-          </View>
-          <View style={{ alignItems: "center" }}>
-            <Text style={{ fontSize: 9, fontFamily: "Inter_600SemiBold", color: colors.textTertiary, textTransform: "uppercase" as const, letterSpacing: 0.4, marginBottom: 2 }}>IQAMA</Text>
-            <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.gold }}>{slot.iqama_time}</Text>
-          </View>
+    <View style={{ paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)" }}>
+      <View style={{ flexDirection: "row", gap: 16, marginBottom: slot.speaker ? 8 : 0 }}>
+        <View style={{ alignItems: "center" }}>
+          <Text style={{ fontSize: 9, fontFamily: "Inter_600SemiBold", color: colors.textTertiary, textTransform: "uppercase" as const, letterSpacing: 0.4, marginBottom: 2 }}>KHUTBAH</Text>
+          <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.text }}>{slot.khutbah_time}</Text>
         </View>
-        {slot.speaker ? (
-          <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: colors.textSecondary, flex: 1, textAlign: "right" as const, marginLeft: 12 }} numberOfLines={1}>{slot.speaker}</Text>
-        ) : null}
+        <View style={{ alignItems: "center" }}>
+          <Text style={{ fontSize: 9, fontFamily: "Inter_600SemiBold", color: colors.textTertiary, textTransform: "uppercase" as const, letterSpacing: 0.4, marginBottom: 2 }}>IQAMA</Text>
+          <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.gold }}>{slot.iqama_time}</Text>
+        </View>
       </View>
+      {slot.speaker ? (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+          <Ionicons name="person-outline" size={13} color={colors.emerald} />
+          <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.text }} numberOfLines={1}>{slot.speaker}</Text>
+        </View>
+      ) : null}
       {slot.topic ? (
-        <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.textSecondary, marginTop: 4, fontStyle: "italic" as const }} numberOfLines={2}>{slot.topic}</Text>
+        <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: colors.textSecondary, marginTop: 3, marginLeft: 18 }} numberOfLines={2}>{slot.topic}</Text>
       ) : null}
     </View>
   );
@@ -2243,24 +2244,25 @@ export default function PrayerScreen() {
                         ) : null}
                       </View>
                       {slots.map((slot, si) => (
-                        <View key={si} style={{ paddingTop: si > 0 ? 8 : 0, borderTopWidth: si > 0 ? StyleSheet.hairlineWidth : 0, borderTopColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)" }}>
-                          <View style={{ flexDirection: "row", gap: 14, marginBottom: slot.speaker || slot.topic ? 4 : 0 }}>
+                        <View key={si} style={{ paddingTop: si > 0 ? 10 : 0, borderTopWidth: si > 0 ? StyleSheet.hairlineWidth : 0, borderTopColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)", marginBottom: si < slots.length - 1 ? 10 : 0 }}>
+                          <View style={{ flexDirection: "row", gap: 14, marginBottom: slot.speaker ? 8 : 0 }}>
                             <View>
-                              <Text style={{ fontSize: 9, fontFamily: "Inter_600SemiBold", color: colors.textTertiary, textTransform: "uppercase" as const, letterSpacing: 0.4, marginBottom: 1 }}>Khutbah</Text>
+                              <Text style={{ fontSize: 9, fontFamily: "Inter_600SemiBold", color: colors.textTertiary, textTransform: "uppercase" as const, letterSpacing: 0.4, marginBottom: 1 }}>KHUTBAH</Text>
                               <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.text }}>{slot.khutbah_time}</Text>
                             </View>
                             <View>
-                              <Text style={{ fontSize: 9, fontFamily: "Inter_600SemiBold", color: colors.textTertiary, textTransform: "uppercase" as const, letterSpacing: 0.4, marginBottom: 1 }}>Iqama</Text>
+                              <Text style={{ fontSize: 9, fontFamily: "Inter_600SemiBold", color: colors.textTertiary, textTransform: "uppercase" as const, letterSpacing: 0.4, marginBottom: 1 }}>IQAMA</Text>
                               <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.gold }}>{slot.iqama_time}</Text>
                             </View>
-                            {slot.speaker ? (
-                              <View style={{ flex: 1, justifyContent: "flex-end" as const }}>
-                                <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: colors.textSecondary, textAlign: "right" as const }} numberOfLines={1}>{slot.speaker}</Text>
-                              </View>
-                            ) : null}
                           </View>
+                          {slot.speaker ? (
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                              <Ionicons name="person-outline" size={13} color={colors.emerald} />
+                              <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.text }} numberOfLines={1}>{slot.speaker}</Text>
+                            </View>
+                          ) : null}
                           {slot.topic ? (
-                            <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.textSecondary, fontStyle: "italic" as const }} numberOfLines={2}>{slot.topic}</Text>
+                            <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: colors.textSecondary, marginTop: 3, marginLeft: 18 }} numberOfLines={2}>{slot.topic}</Text>
                           ) : null}
                         </View>
                       ))}
