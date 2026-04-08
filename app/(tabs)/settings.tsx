@@ -85,7 +85,7 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
 
 export default function SettingsScreen() {
   const { colors, isDark, themeMode, setThemeMode, ramadanMode, setRamadanMode } = useTheme();
-  const { isOverrideActive, getEffectiveLocation } = useLocationOverride();
+  const { isOverrideActive, getEffectiveLocation, setOverrideMetro, overrideMetro, metroAreas } = useLocationOverride();
   const router = useRouter();
   const { calcMethod, setCalcMethod, notificationsEnabled, setNotificationsEnabled, iqamaAlertsEnabled, setIqamaAlertsEnabled, preferredMasjid, setPreferredMasjid, consumePendingSettingsSection, hijriOffset, setHijriOffset, asrCalc, setAsrCalc } = useSettings();
   const { user, signInWithApple, devSignIn, signOut, isLoading: authLoading, getAuthHeaders } = useAuth();
@@ -202,6 +202,8 @@ export default function SettingsScreen() {
   const [monthLogs, setMonthLogs] = useState<{ [dateKey: string]: DayLog }>({});
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [missedFasts, setMissedFasts] = useState<Set<string>>(new Set());
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [locationSearch, setLocationSearch] = useState("");
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationRequested, setLocationRequested] = useState(false);
   const [badgeStates, setBadgeStates] = useState<BadgeState[]>([]);
@@ -800,6 +802,24 @@ export default function SettingsScreen() {
           <Ionicons name="chevron-forward" size={16} color={colors.gold} />
         </Pressable>
       )}
+
+      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>LOCATION</Text>
+
+      <Pressable
+        style={({ pressed }) => [styles.menuItem, { backgroundColor: pressed ? colors.surfaceSecondary : colors.surface, borderColor: colors.border }]}
+        onPress={() => { setShowLocationPicker(true); setLocationSearch(""); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+      >
+        <View style={[styles.menuIcon, { backgroundColor: colors.prayerIconBg }]}>
+          <Ionicons name="location-outline" size={20} color={colors.emerald} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.menuLabel, { color: colors.text }]}>My Location</Text>
+          <Text style={[styles.menuSublabel, { color: isOverrideActive ? colors.gold : colors.textSecondary }]}>
+            {isOverrideActive && overrideMetro ? overrideMetro.name : "Using GPS"}
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+      </Pressable>
 
       <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>PRAYER CALCULATION</Text>
 
@@ -2604,6 +2624,84 @@ export default function SettingsScreen() {
           </ScrollView>
         )}
       </Animated.View>
+
+      <Modal visible={showLocationPicker} transparent animationType="slide" onRequestClose={() => setShowLocationPicker(false)}>
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}>
+          <GlassModalContainer style={{ borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "80%", flex: 0, paddingBottom: Platform.OS === "web" ? 34 : 20 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: 20, paddingBottom: 12 }}>
+              <Text style={{ fontFamily: "Inter_700Bold", fontSize: 18, color: colors.text }}>My Location</Text>
+              <Pressable onPress={() => setShowLocationPicker(false)} hitSlop={8}>
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              </Pressable>
+            </View>
+            <TextInput
+              value={locationSearch}
+              onChangeText={setLocationSearch}
+              placeholder="Search metro areas..."
+              placeholderTextColor={colors.textTertiary}
+              style={{ marginHorizontal: 20, marginBottom: 12, backgroundColor: colors.surfaceSecondary, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, fontFamily: "Inter_400Regular", fontSize: 15, color: colors.text, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border }}
+            />
+            <ScrollView style={{ paddingHorizontal: 20 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              <Pressable
+                style={({ pressed }) => ({
+                  flexDirection: "row" as const,
+                  alignItems: "center" as const,
+                  paddingVertical: 14,
+                  paddingHorizontal: 4,
+                  borderBottomWidth: StyleSheet.hairlineWidth,
+                  borderBottomColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
+                  opacity: pressed ? 0.7 : 1,
+                })}
+                onPress={() => {
+                  setOverrideMetro(null);
+                  setShowLocationPicker(false);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
+              >
+                <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: !isOverrideActive ? colors.emerald : colors.prayerIconBg, alignItems: "center", justifyContent: "center", marginRight: 12 }}>
+                  <Ionicons name="navigate" size={16} color={!isOverrideActive ? "#fff" : colors.emerald} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 15, color: colors.text }}>Use GPS</Text>
+                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: colors.textSecondary, marginTop: 1 }}>Detect my location automatically</Text>
+                </View>
+                {!isOverrideActive && <Ionicons name="checkmark-circle" size={22} color={colors.emerald} />}
+              </Pressable>
+              {metroAreas
+                .filter(m => !locationSearch.trim() || m.name.toLowerCase().includes(locationSearch.toLowerCase()))
+                .map(metro => {
+                  const isSelected = isOverrideActive && overrideMetro?.name === metro.name;
+                  return (
+                    <Pressable
+                      key={metro.name}
+                      style={({ pressed }) => ({
+                        flexDirection: "row" as const,
+                        alignItems: "center" as const,
+                        paddingVertical: 14,
+                        paddingHorizontal: 4,
+                        borderBottomWidth: StyleSheet.hairlineWidth,
+                        borderBottomColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
+                        opacity: pressed ? 0.7 : 1,
+                      })}
+                      onPress={() => {
+                        setOverrideMetro(metro);
+                        setShowLocationPicker(false);
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }}
+                    >
+                      <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: isSelected ? colors.emerald : colors.prayerIconBg, alignItems: "center", justifyContent: "center", marginRight: 12 }}>
+                        <Ionicons name="location" size={16} color={isSelected ? "#fff" : colors.emerald} />
+                      </View>
+                      <Text style={{ fontFamily: isSelected ? "Inter_600SemiBold" : "Inter_400Regular", fontSize: 15, color: colors.text, flex: 1 }}>{metro.name}</Text>
+                      {isSelected && <Ionicons name="checkmark-circle" size={22} color={colors.emerald} />}
+                    </Pressable>
+                  );
+                })}
+              <View style={{ height: 20 }} />
+            </ScrollView>
+          </GlassModalContainer>
+        </View>
+      </Modal>
     </View>
   );
 }
