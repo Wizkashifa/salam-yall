@@ -4,7 +4,7 @@ import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { Platform, StyleSheet, View, Text, Pressable } from "react-native";
+import { Platform, StyleSheet, View, Text } from "react-native";
 import React, { useState, useEffect } from "react";
 import { useTheme } from "@/lib/theme-context";
 import { getMissedPrayerCount } from "@/lib/prayer-tracker";
@@ -42,7 +42,7 @@ function NativeTabLayout() {
 }
 
 function LocationOverrideBanner() {
-  const { overrideMetro, isOverrideActive, setOverrideMetro } = useLocationOverride();
+  const { overrideMetro, isOverrideActive } = useLocationOverride();
   const { colors } = useTheme();
   const isWeb = Platform.OS === "web";
 
@@ -64,12 +64,9 @@ function LocationOverrideBanner() {
       gap: 6,
     }}>
       <Ionicons name="location" size={12} color="#1A1A1A" />
-      <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: "#1A1A1A", letterSpacing: 0.3, flex: 1, textAlign: "center" }}>
+      <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: "#1A1A1A", letterSpacing: 0.3 }}>
         Location Override: {overrideMetro.name}
       </Text>
-      <Pressable onPress={() => setOverrideMetro(null)} hitSlop={10}>
-        <Ionicons name="close" size={16} color="#1A1A1A" />
-      </Pressable>
     </View>
   );
 }

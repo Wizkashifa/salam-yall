@@ -48,7 +48,6 @@ interface LocationOverrideContextValue {
   setOverrideMetro: (metro: MetroArea | null) => void;
   getEffectiveLocation: (realLat: number, realLng: number) => { lat: number; lng: number };
   isOverrideActive: boolean;
-  overrideReady: boolean;
   metroAreas: MetroArea[];
 }
 
@@ -57,7 +56,6 @@ const LocationOverrideContext = createContext<LocationOverrideContextValue | nul
 export function LocationOverrideProvider({ children }: { children: ReactNode }) {
   const [overrideMetro, setOverrideMetroState] = useState<MetroArea | null>(null);
   const [metroAreas, setMetroAreas] = useState<MetroArea[]>(FALLBACK_METROS);
-  const [overrideReady, setOverrideReady] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem(METROS_CACHE_KEY).then((cached) => {
@@ -91,7 +89,6 @@ export function LocationOverrideProvider({ children }: { children: ReactNode }) 
           if (found) setOverrideMetroState(found);
         } catch {}
       }
-      setOverrideReady(true);
     });
   }, [metroAreas]);
 
@@ -121,7 +118,6 @@ export function LocationOverrideProvider({ children }: { children: ReactNode }) 
         setOverrideMetro,
         getEffectiveLocation,
         isOverrideActive: overrideMetro !== null,
-        overrideReady,
         metroAreas,
       }}
     >
