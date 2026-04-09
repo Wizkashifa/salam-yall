@@ -43,21 +43,18 @@ const IQAMA_SOURCES: IqamaSource[] = [
     type: "iar-jumuah",
     url: "https://raleighmasjid.org",
     timezone: "America/New_York",
-    syncDays: [5], // Friday only — data persists in DB for rest of week
   },
   {
     name: "ICMNC Jumuah",
     type: "icmnc-jumuah",
     url: "https://www.icmnc.org",
     timezone: "America/New_York",
-    syncDays: [5], // Friday only
   },
   {
     name: "JIAR Jumuah",
     type: "jiar-jumuah",
     url: "https://ibadarrahman.org",
     timezone: "America/New_York",
-    syncDays: [5], // Friday only
   },
   {
     name: "ICMNC",
