@@ -447,13 +447,13 @@ function CountdownRing({ colors, isDark, progress, qiblaBearing, hasRealLocation
 function JumuahSlotRow({ slot, isDark, colors }: { slot: { khutbah_time: string; iqama_time: string; speaker?: string; topic?: string }; isDark: boolean; colors: any }) {
   return (
     <View style={{ paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)" }}>
-      <View style={{ flexDirection: "row", gap: 16, marginBottom: slot.speaker ? 8 : 0 }}>
-        <View style={{ alignItems: "center" }}>
-          <Text style={{ fontSize: 9, fontFamily: "Inter_600SemiBold", color: colors.textTertiary, textTransform: "uppercase" as const, letterSpacing: 0.4, marginBottom: 2 }}>KHUTBAH</Text>
+      <View style={{ flexDirection: "row", gap: 20, marginBottom: slot.speaker ? 8 : 0 }}>
+        <View style={{ flexDirection: "row", alignItems: "baseline", gap: 5 }}>
+          <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.textTertiary, textTransform: "uppercase" as const, letterSpacing: 0.4 }}>Khutbah</Text>
           <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.text }}>{slot.khutbah_time}</Text>
         </View>
-        <View style={{ alignItems: "center" }}>
-          <Text style={{ fontSize: 9, fontFamily: "Inter_600SemiBold", color: colors.textTertiary, textTransform: "uppercase" as const, letterSpacing: 0.4, marginBottom: 2 }}>IQAMA</Text>
+        <View style={{ flexDirection: "row", alignItems: "baseline", gap: 5 }}>
+          <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.textTertiary, textTransform: "uppercase" as const, letterSpacing: 0.4 }}>Iqama</Text>
           <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.gold }}>{slot.iqama_time}</Text>
         </View>
       </View>
@@ -2245,13 +2245,13 @@ export default function PrayerScreen() {
                       </View>
                       {slots.map((slot, si) => (
                         <View key={si} style={{ paddingTop: si > 0 ? 10 : 0, borderTopWidth: si > 0 ? StyleSheet.hairlineWidth : 0, borderTopColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)", marginBottom: si < slots.length - 1 ? 10 : 0 }}>
-                          <View style={{ flexDirection: "row", gap: 14, marginBottom: slot.speaker ? 8 : 0 }}>
-                            <View>
-                              <Text style={{ fontSize: 9, fontFamily: "Inter_600SemiBold", color: colors.textTertiary, textTransform: "uppercase" as const, letterSpacing: 0.4, marginBottom: 1 }}>KHUTBAH</Text>
+                          <View style={{ flexDirection: "row", gap: 20, marginBottom: slot.speaker ? 8 : 0 }}>
+                            <View style={{ flexDirection: "row", alignItems: "baseline", gap: 5 }}>
+                              <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.textTertiary, textTransform: "uppercase" as const, letterSpacing: 0.4 }}>Khutbah</Text>
                               <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.text }}>{slot.khutbah_time}</Text>
                             </View>
-                            <View>
-                              <Text style={{ fontSize: 9, fontFamily: "Inter_600SemiBold", color: colors.textTertiary, textTransform: "uppercase" as const, letterSpacing: 0.4, marginBottom: 1 }}>IQAMA</Text>
+                            <View style={{ flexDirection: "row", alignItems: "baseline", gap: 5 }}>
+                              <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.textTertiary, textTransform: "uppercase" as const, letterSpacing: 0.4 }}>Iqama</Text>
                               <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.gold }}>{slot.iqama_time}</Text>
                             </View>
                           </View>
