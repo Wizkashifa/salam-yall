@@ -1053,22 +1053,16 @@ export default function PrayerScreen() {
     khutbahs: JumuahSlot[] | null;
   }
 
-  const isFridayOrThursday = useMemo(() => {
-    if (__DEV__) return true; // DEV PREVIEW — remove before release
-    const d = new Date().getDay();
-    return d === 4 || d === 5; // Thu or Fri — fetch ahead for notification scheduling
-  }, [clockTick]);
+  const isFridayOrThursday = true; // always fetch so modal is accessible any day
 
   const { data: jumuahSchedules = [] } = useQuery<JumuahSchedule[]>({
     queryKey: ["/api/jumuah-schedules"],
-    enabled: isFridayOrThursday,
     staleTime: 6 * 60 * 60 * 1000,
   });
 
   const [showJumuahModal, setShowJumuahModal] = useState(false);
 
   const isJumuahWindow = useMemo(() => {
-    if (__DEV__) return true; // DEV PREVIEW — remove before release
     if (!fridayMode || prayers.length === 0) return false;
     const now = new Date();
     const sunrisePrayer = prayers.find(p => p.name === "sunrise");
@@ -1662,8 +1656,13 @@ export default function PrayerScreen() {
                 <MaterialCommunityIcons name="mosque" size={16} color={colors.gold} />
                 <Text style={[styles.iqamaCardLabel, { color: colors.gold }]}>MY MASJID, MY HOME</Text>
               </View>
-              <Pressable onPress={() => { setPendingSettingsSection("masjids"); router.navigate("/settings"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} hitSlop={8}>
-                <Text style={[styles.iqamaCardMasjidName, { color: colors.textSecondary }]} numberOfLines={1}>{preferredMasjid.replace(/\s*\(.*\)/, "")}</Text>
+              <Pressable
+                onPress={() => { setShowJumuahModal(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                hitSlop={8}
+                style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 3, opacity: pressed ? 0.6 : 1 })}
+              >
+                <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.emerald }}>Jumuah</Text>
+                <Ionicons name="chevron-forward" size={13} color={colors.emerald} />
               </Pressable>
             </View>
             <View style={[styles.prayerPillRowView, { borderTopColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)" }]}>
