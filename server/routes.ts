@@ -1810,6 +1810,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await pool.query("ALTER TABLE community_events ADD COLUMN IF NOT EXISTS additional_images JSONB DEFAULT '[]'").catch(() => {});
   await pool.query("ALTER TABLE community_events ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION").catch(() => {});
   await pool.query("ALTER TABLE community_events ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION").catch(() => {});
+  await pool.query("ALTER TABLE community_events ADD COLUMN IF NOT EXISTS submitter_name TEXT").catch(() => {});
+  await pool.query("ALTER TABLE community_events ADD COLUMN IF NOT EXISTS submitter_email TEXT").catch(() => {});
   await pool.query("ALTER TABLE event_overrides ADD COLUMN IF NOT EXISTS is_virtual BOOLEAN").catch(() => {});
   await pool.query("ALTER TABLE event_overrides ADD COLUMN IF NOT EXISTS is_featured BOOLEAN").catch(() => {});
   await pool.query("ALTER TABLE saved_events ADD COLUMN IF NOT EXISTS reminder_sent BOOLEAN NOT NULL DEFAULT false").catch(() => {});
@@ -2686,10 +2688,10 @@ Return ONLY the JSON object, no markdown, no explanation.`,
       })) : [];
       const addImgs = normalizedAdditional.length > 0 ? JSON.stringify(normalizedAdditional) : '[]';
       const result = await pool.query(
-        `INSERT INTO community_events (title, description, location, start_time, end_time, organizer, registration_url, image_data, image_mime, additional_images, is_virtual, is_featured, status, lat, lng)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, false, false, 'pending', $11, $12)
+        `INSERT INTO community_events (title, description, location, start_time, end_time, organizer, registration_url, image_data, image_mime, additional_images, is_virtual, is_featured, status, lat, lng, submitter_name, submitter_email)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, false, false, 'pending', $11, $12, $13, $14)
          RETURNING id`,
-        [title, description || null, location || null, new Date(startTime), endTime ? new Date(endTime) : null, organizer || null, registrationUrl || null, image || null, imageMime || "image/jpeg", addImgs, eventLat, eventLng]
+        [title, description || null, location || null, new Date(startTime), endTime ? new Date(endTime) : null, organizer || null, registrationUrl || null, image || null, imageMime || "image/jpeg", addImgs, eventLat, eventLng, submitterName || null, submitterEmail || null]
       );
 
       console.log(`[Public Event Submit] "${title}" by ${submitterName || 'anonymous'} (${submitterEmail || 'no email'}) — pending approval (ID: ${result.rows[0].id})`);
@@ -7362,7 +7364,7 @@ ${profileInfo.slice(0, 30000)}`,
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {
       const { rows } = await pool.query(
-        "SELECT id, title, description, location, start_time, end_time, organizer, registration_url, is_virtual, status, created_at, CASE WHEN image_data IS NOT NULL THEN true ELSE false END as has_image FROM community_events WHERE status = 'pending' ORDER BY created_at DESC"
+        "SELECT id, title, description, location, start_time, end_time, organizer, registration_url, is_virtual, status, created_at, submitter_name, submitter_email, CASE WHEN image_data IS NOT NULL THEN true ELSE false END as has_image FROM community_events WHERE status = 'pending' ORDER BY created_at DESC"
       );
       res.json(rows);
     } catch (error: any) {

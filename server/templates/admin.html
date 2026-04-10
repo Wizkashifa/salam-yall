@@ -474,7 +474,7 @@
 
       <div class="section" id="pendingEventsSection" style="border-left:3px solid #F59E0B;">
         <div class="section-title"><span class="icon">⏳</span> Community Submissions — Pending Approval</div>
-        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Events submitted by community members through the website. Review and approve or reject.</p>
+        <p style="font-size:12px;color:#6B7280;margin-bottom:14px;">Events submitted by community members through the website or app. Review and approve or reject.</p>
         <div id="pendingEventsList"><div class="loading">Loading...</div></div>
       </div>
 
@@ -2508,7 +2508,10 @@
                 (ev.location ? '<div class="text-tertiary" style="font-size:12px;">' + escHtml(ev.location) + '</div>' : '') +
                 (ev.description ? '<div class="text-secondary" style="font-size:12px;margin-top:6px;line-height:1.4;">' + escHtml(ev.description) + '</div>' : '') +
                 (ev.registration_url ? '<div style="margin-top:4px;"><a href="' + escAttr(ev.registration_url) + '" target="_blank" style="font-size:11px;color:#60A5FA;">Registration Link</a></div>' : '') +
-                '<div class="text-tertiary" style="font-size:10px;margin-top:8px;">Submitted ' + submitted + '</div>' +
+                '<div class="text-tertiary" style="font-size:10px;margin-top:8px;">Submitted ' + submitted +
+                  (ev.submitter_name ? ' by <strong style="color:#9CA3AF;">' + escHtml(ev.submitter_name) + '</strong>' : '') +
+                  (ev.submitter_email ? ' &lt;<a href="mailto:' + escAttr(ev.submitter_email) + '" style="color:#60A5FA;">' + escHtml(ev.submitter_email) + '</a>&gt;' : '') +
+                '</div>' +
               '</div>' +
             '</div>' +
             '<div style="display:flex;gap:8px;">' +
