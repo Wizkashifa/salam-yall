@@ -4218,8 +4218,19 @@ Return ONLY the description text, nothing else.`,
   app.get("/api/admin/events", async (req, res) => {
     try {
       if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
-      const communityEvents = await getCommunityEvents(req);
-      res.json(communityEvents);
+      const statusFilter = req.query.status as string | undefined;
+      const query = statusFilter
+        ? "SELECT * FROM community_events WHERE status = $1 ORDER BY created_at DESC"
+        : "SELECT * FROM community_events ORDER BY created_at DESC";
+      const params = statusFilter ? [statusFilter] : [];
+      const { rows } = await pool.query(query, params);
+      const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
+      const host = req.headers["host"] || "localhost:5000";
+      const baseUrl = `${protocol}://${host}`;
+      res.json(rows.map((r: any) => ({
+        ...r,
+        imageUrl: r.image_data ? `${baseUrl}/api/events/image/${r.id}` : null,
+      })));
     } catch (error: any) {
       console.error("Error fetching admin events:", error.message);
       res.status(500).json({ error: "Failed to fetch events" });
