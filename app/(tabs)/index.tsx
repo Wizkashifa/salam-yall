@@ -664,41 +664,11 @@ export default function PrayerScreen() {
   const activeIqama = useMemo(() => {
     if (!iqamaData || iqamaData.length === 0) return null;
 
-    let targetMasjid = "IAR";
-    if (preferredMasjid) {
-      const pref = preferredMasjid.toLowerCase();
-      if (pref.includes("parkwood")) {
-        targetMasjid = "JIAR (Parkwood)";
-      } else if (pref.includes("fayetteville") && pref.includes("jamaat")) {
-        targetMasjid = "JIAR (Fayetteville)";
-      } else if (pref.includes("morrisville") || pref.includes("icm")) {
-        targetMasjid = "ICMNC";
-      } else if (pref.includes("al-noor") || pref.includes("alnoor") || pref.includes("al noor")) {
-        targetMasjid = "Al Noor";
-      } else if (pref.includes("srvic") || pref.includes("san ramon")) {
-        targetMasjid = "SRVIC";
-      } else if (pref.includes("mca al-noor") || pref.includes("mca alnoor") || pref.includes("mca noor") || pref.includes("catherine st")) {
-        targetMasjid = "MCA Al-Noor";
-      } else if (pref.includes("mca") || pref.includes("muslim community association") || pref.includes("scott blvd")) {
-        targetMasjid = "MCA";
-      } else if (pref.includes("muslim community center") || pref.includes("mcc east bay") || pref.includes("las positas") || pref.includes("pleasanton") || pref === "mcc") {
-        targetMasjid = "MCC";
-      } else if (pref.includes("sbia") || pref.includes("south bay islamic")) {
-        targetMasjid = "SBIA";
-      } else if (pref.includes("zakariya")) {
-        targetMasjid = "ICF";
-      } else if (pref.includes("icf") || pref.includes("islamic center of fremont") || pref.includes("irvington")) {
-        targetMasjid = "ICF";
-      } else if (pref.includes("saratoga musalla")) {
-        targetMasjid = "LGIC";
-      } else if (pref.includes("lgic") || pref.includes("los gatos islamic") || pref.includes("farley")) {
-        targetMasjid = "LGIC";
-      } else if (pref.includes("pillars")) {
-        targetMasjid = "Pillars Mosque";
-      } else if (pref.includes("isgc") || pref.includes("islamic society of greater charlotte")) {
-        targetMasjid = "ISGC";
-      }
-    }
+    // Look up iqamaId directly from the masjid list entry
+    const prefEntry = preferredMasjid
+      ? masjidList.find(m => m.name.toLowerCase() === preferredMasjid.toLowerCase())
+      : null;
+    const targetMasjid = prefEntry?.iqamaId ?? "IAR";
 
     const todayEntry = iqamaData.find(s => s.masjid === targetMasjid && s.date === todayDateStr);
     if (todayEntry) return todayEntry;
@@ -709,7 +679,7 @@ export default function PrayerScreen() {
     return iqamaData.find(s => s.masjid === "IAR" && s.date === todayDateStr)
       || iqamaData.find(s => s.masjid === "IAR")
       || iqamaData[0];
-  }, [iqamaData, preferredMasjid, todayDateStr]);
+  }, [iqamaData, preferredMasjid, masjidList, todayDateStr]);
 
   const isDaytimeMode = useMemo(() => {
     const h = new Date().getHours();
@@ -1071,29 +1041,26 @@ export default function PrayerScreen() {
     return now >= sunrisePrayer.time && now < asrPrayer.time;
   }, [fridayMode, prayers, clockTick]);
 
-  // Helper: check if a jumuah masjid name matches a masjid list entry using matchTerms
-  const jumuahMatchesMasjid = useCallback((jumuahName: string, masjid: { name: string; matchTerms?: string[] }) => {
-    const jn = jumuahName.toLowerCase();
-    const n = masjid.name.toLowerCase();
-    if (n === jn) return true;
-    // Check matchTerms from masjid list against jumuah name
-    if (masjid.matchTerms) {
-      for (const term of masjid.matchTerms) {
-        if (jn.includes(term.toLowerCase())) return true;
-      }
+  // Build a map of jumuahId → masjid list entry for fast lookups
+  const jumuahIdToMasjid = useMemo(() => {
+    const map = new Map<string, typeof masjidList[0]>();
+    for (const m of masjidList) {
+      if (m.jumuahId) map.set(m.jumuahId.toLowerCase(), m);
     }
-    // Check if full base names match (strip parentheticals)
-    const nBase = n.split(/[,(]/)[0].trim();
-    const jnBase = jn.split(/[,(]/)[0].trim();
-    if (nBase && jnBase && (nBase.includes(jnBase) || jnBase.includes(nBase))) return true;
-    return false;
-  }, []);
+    return map;
+  }, [masjidList]);
 
   const allAnnotatedJumuah = useMemo((): Array<JumuahSchedule & { distanceMiles?: number }> => {
     if (!jumuahSchedules || jumuahSchedules.length === 0) return [];
     return jumuahSchedules
       .map(j => {
-        const matchedMasjid = masjidList.find(m => jumuahMatchesMasjid(j.masjid, m));
+        // Match jumuah entry to masjid list via jumuahId, then fall back to matchTerms
+        const matchedMasjid = jumuahIdToMasjid.get(j.masjid.toLowerCase())
+          || masjidList.find(m => {
+            if (!m.matchTerms) return false;
+            const jn = j.masjid.toLowerCase();
+            return m.matchTerms.some(term => jn.includes(term.toLowerCase()));
+          });
         const distanceMiles = matchedMasjid
           ? kmToMiles(getDistanceKm(userCoords.lat, userCoords.lon, matchedMasjid.latitude, matchedMasjid.longitude))
           : undefined;
@@ -1105,23 +1072,27 @@ export default function PrayerScreen() {
         if (b.distanceMiles === undefined) return -1;
         return a.distanceMiles - b.distanceMiles;
       });
-  }, [jumuahSchedules, masjidList, userCoords, jumuahMatchesMasjid]);
+  }, [jumuahSchedules, masjidList, userCoords, jumuahIdToMasjid]);
 
   const userJumuahMetro = useMemo((): string | null => {
     if (preferredMasjid && allAnnotatedJumuah.length > 0) {
-      const prefMasjid = masjidList.find(m => m.name.toLowerCase() === preferredMasjid.toLowerCase());
-      const match = allAnnotatedJumuah.find(j => {
-        if (prefMasjid) return jumuahMatchesMasjid(j.masjid, prefMasjid);
-        // Fallback: direct name comparison
-        const pref = preferredMasjid.toLowerCase();
-        const jn = j.masjid.toLowerCase();
-        return jn === pref || pref.includes(jn) || jn.includes(pref.split(/[,(]/)[0].trim());
-      });
-      if (match?.metro) return match.metro;
+      const prefEntry = masjidList.find(m => m.name.toLowerCase() === preferredMasjid.toLowerCase());
+      if (prefEntry?.jumuahId) {
+        const match = allAnnotatedJumuah.find(j => j.masjid === prefEntry.jumuahId);
+        if (match?.metro) return match.metro;
+      }
+      // Fallback: check matchTerms
+      if (prefEntry?.matchTerms) {
+        const match = allAnnotatedJumuah.find(j => {
+          const jn = j.masjid.toLowerCase();
+          return prefEntry.matchTerms!.some(term => jn.includes(term.toLowerCase()));
+        });
+        if (match?.metro) return match.metro;
+      }
     }
     const nearest = allAnnotatedJumuah.find(j => j.distanceMiles !== undefined);
     return nearest?.metro || (allAnnotatedJumuah[0]?.metro ?? null);
-  }, [allAnnotatedJumuah, preferredMasjid, masjidList, jumuahMatchesMasjid]);
+  }, [allAnnotatedJumuah, preferredMasjid, masjidList]);
 
   const metroJumuahSchedules = useMemo((): Array<JumuahSchedule & { distanceMiles?: number }> => {
     if (allAnnotatedJumuah.length === 0) return [];
@@ -1133,17 +1104,23 @@ export default function PrayerScreen() {
   const preferredJumuah = useMemo((): JumuahSchedule | null => {
     if (!jumuahSchedules || jumuahSchedules.length === 0) return null;
     if (preferredMasjid) {
-      const prefMasjid = masjidList.find(m => m.name.toLowerCase() === preferredMasjid.toLowerCase());
-      const match = metroJumuahSchedules.find(j => {
-        if (prefMasjid) return jumuahMatchesMasjid(j.masjid, prefMasjid);
-        const pref = preferredMasjid.toLowerCase();
-        const jn = j.masjid.toLowerCase();
-        return jn === pref || pref.includes(jn) || jn.includes(pref.split(/[,(]/)[0].trim());
-      });
-      if (match) return match;
+      const prefEntry = masjidList.find(m => m.name.toLowerCase() === preferredMasjid.toLowerCase());
+      // Direct jumuahId match
+      if (prefEntry?.jumuahId) {
+        const match = metroJumuahSchedules.find(j => j.masjid === prefEntry.jumuahId);
+        if (match) return match;
+      }
+      // Fallback: matchTerms
+      if (prefEntry?.matchTerms) {
+        const match = metroJumuahSchedules.find(j => {
+          const jn = j.masjid.toLowerCase();
+          return prefEntry.matchTerms!.some(term => jn.includes(term.toLowerCase()));
+        });
+        if (match) return match;
+      }
     }
     return metroJumuahSchedules[0] || allAnnotatedJumuah[0] || null;
-  }, [jumuahSchedules, preferredMasjid, metroJumuahSchedules, allAnnotatedJumuah, masjidList, jumuahMatchesMasjid]);
+  }, [jumuahSchedules, preferredMasjid, metroJumuahSchedules, allAnnotatedJumuah, masjidList]);
 
   useEffect(() => {
     const interval = setInterval(() => {
