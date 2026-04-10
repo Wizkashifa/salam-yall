@@ -14,7 +14,10 @@ import {
   Linking,
   Share,
   Alert,
+  TextInput,
+  KeyboardAvoidingView,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
@@ -397,6 +400,402 @@ function OrganizerFollowButton({ organizer }: { organizer: string }) {
   );
 }
 
+function SubmitEventModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
+  const [flyerImages, setFlyerImages] = useState<Array<{ uri: string; base64: string; mime: string }>>([]);
+  const [extracting, setExtracting] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [title, setTitle] = useState("");
+  const [date, setDate] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [location, setLocation] = useState("");
+  const [description, setDescription] = useState("");
+  const [organizer, setOrganizer] = useState("");
+  const [registrationUrl, setRegistrationUrl] = useState("");
+  const [submitterName, setSubmitterName] = useState("");
+  const [submitterEmail, setSubmitterEmail] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [statusMsg, setStatusMsg] = useState<{ text: string; type: "success" | "error" | "loading" } | null>(null);
+
+  const resetForm = () => {
+    setFlyerImages([]);
+    setTitle("");
+    setDate("");
+    setStartTime("");
+    setEndTime("");
+    setLocation("");
+    setDescription("");
+    setOrganizer("");
+    setRegistrationUrl("");
+    setSubmitterName("");
+    setSubmitterEmail("");
+    setShowForm(false);
+    setStatusMsg(null);
+    setExtracting(false);
+    setSubmitting(false);
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
+  const pickImages = async () => {
+    if (Platform.OS === "web") {
+      Alert.alert("Not supported", "Photo upload is only available on mobile devices.");
+      return;
+    }
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission needed", "Please allow photo library access to upload flyer images.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      selectionLimit: 5,
+      quality: 0.7,
+      base64: true,
+    });
+    if (!result.canceled && result.assets.length > 0) {
+      const newImages = result.assets
+        .filter(a => a.base64)
+        .map(a => ({
+          uri: a.uri,
+          base64: a.base64!,
+          mime: a.uri.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg",
+        }));
+      setFlyerImages(prev => [...prev, ...newImages].slice(0, 5));
+    }
+  };
+
+  const extractFromFlyer = async () => {
+    if (flyerImages.length === 0) return;
+    setExtracting(true);
+    setStatusMsg({ text: "Extracting details from flyer...", type: "loading" });
+    try {
+      const baseUrl = getApiUrl();
+      const res = await fetch(new URL("/api/public/events/extract-flyer", baseUrl).toString(), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          images: flyerImages.map(img => ({ data: img.base64, mimeType: img.mime })),
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Extraction failed");
+      }
+      const data = await res.json();
+      if (data.title) setTitle(data.title);
+      if (data.date) setDate(data.date);
+      if (data.startTime) setStartTime(data.startTime);
+      if (data.endTime) setEndTime(data.endTime);
+      if (data.location) setLocation(data.location);
+      if (data.description) setDescription(data.description);
+      if (data.organizer) setOrganizer(data.organizer);
+      if (data.registrationUrl) setRegistrationUrl(data.registrationUrl);
+      setShowForm(true);
+      setStatusMsg({ text: "Details extracted — review and submit below", type: "success" });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e: any) {
+      setStatusMsg({ text: e.message || "Could not extract details. Try entering manually.", type: "error" });
+      setShowForm(true);
+    }
+    setExtracting(false);
+  };
+
+  const submitEvent = async () => {
+    if (!title.trim()) { setStatusMsg({ text: "Please enter an event title.", type: "error" }); return; }
+    if (!date || !startTime) { setStatusMsg({ text: "Please enter a date and start time.", type: "error" }); return; }
+    setSubmitting(true);
+    setStatusMsg({ text: "Submitting your event...", type: "loading" });
+    try {
+      const startISO = `${date}T${startTime}:00`;
+      const endISO = endTime ? `${date}T${endTime}:00` : null;
+      const mainImage = flyerImages.length > 0 ? flyerImages[0].base64 : null;
+      const mainMime = flyerImages.length > 0 ? flyerImages[0].mime : null;
+      const additionalImages = flyerImages.length > 1
+        ? flyerImages.slice(1).map(f => ({ data: f.base64, mimeType: f.mime }))
+        : [];
+
+      const baseUrl = getApiUrl();
+      const res = await fetch(new URL("/api/public/events/submit", baseUrl).toString(), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: title.trim(),
+          description: description.trim() || null,
+          location: location.trim() || null,
+          startTime: startISO,
+          endTime: endISO,
+          organizer: organizer.trim() || null,
+          registrationUrl: registrationUrl.trim() || null,
+          image: mainImage,
+          imageMime: mainMime,
+          additionalImages,
+          submitterName: submitterName.trim() || null,
+          submitterEmail: submitterEmail.trim() || null,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Submission failed");
+      }
+      setStatusMsg({ text: "Event submitted! It will appear once approved by our team.", type: "success" });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      trackEvent("event_submitted", { title: title.trim() });
+      setTimeout(() => handleClose(), 2000);
+    } catch (e: any) {
+      setStatusMsg({ text: e.message || "Something went wrong. Try again.", type: "error" });
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <GlassModalContainer style={{ flex: 1 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: Platform.OS === "web" ? 67 : insets.top + 12, paddingBottom: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.divider }}>
+            <Text style={{ fontSize: 18, fontFamily: "Inter_700Bold", color: colors.text }}>Submit an Event</Text>
+            <Pressable onPress={handleClose} hitSlop={8}>
+              <Ionicons name="close" size={24} color={colors.textSecondary} />
+            </Pressable>
+          </View>
+
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+            <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: colors.textSecondary, marginBottom: 16 }}>
+              Upload your event flyer and we'll fill in the details for you. All submissions are reviewed before being listed.
+            </Text>
+
+            {/* Flyer upload area */}
+            <Pressable
+              onPress={pickImages}
+              style={({ pressed }) => ({
+                borderWidth: 2,
+                borderStyle: "dashed" as const,
+                borderColor: flyerImages.length > 0 ? colors.emerald + "60" : colors.border,
+                borderRadius: 14,
+                padding: 20,
+                alignItems: "center" as const,
+                backgroundColor: pressed ? colors.surface : "transparent",
+                marginBottom: 12,
+              })}
+            >
+              <Ionicons name="cloud-upload-outline" size={28} color={flyerImages.length > 0 ? colors.emerald : colors.textTertiary} />
+              <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: colors.text, marginTop: 6 }}>
+                {flyerImages.length > 0 ? `${flyerImages.length} image${flyerImages.length > 1 ? "s" : ""} selected` : "Tap to upload flyer images"}
+              </Text>
+              <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.textTertiary, marginTop: 2 }}>
+                JPG or PNG · Up to 5 images
+              </Text>
+            </Pressable>
+
+            {flyerImages.length > 0 ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
+                {flyerImages.map((img, idx) => (
+                  <View key={idx} style={{ marginRight: 8, position: "relative" as const }}>
+                    <Image source={{ uri: img.uri }} style={{ width: 70, height: 70, borderRadius: 10 }} />
+                    <Pressable
+                      onPress={() => setFlyerImages(prev => prev.filter((_, i) => i !== idx))}
+                      style={{ position: "absolute" as const, top: -6, right: -6, backgroundColor: colors.text, borderRadius: 10, width: 20, height: 20, alignItems: "center" as const, justifyContent: "center" as const }}
+                    >
+                      <Ionicons name="close" size={12} color={colors.background} />
+                    </Pressable>
+                  </View>
+                ))}
+              </ScrollView>
+            ) : null}
+
+            {flyerImages.length > 0 && !showForm ? (
+              <Pressable
+                onPress={extractFromFlyer}
+                disabled={extracting}
+                style={({ pressed }) => ({
+                  backgroundColor: extracting ? colors.emerald + "80" : colors.emerald,
+                  borderRadius: 12,
+                  paddingVertical: 14,
+                  alignItems: "center" as const,
+                  opacity: pressed ? 0.8 : 1,
+                  marginBottom: 14,
+                })}
+              >
+                {extracting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff" }}>Extract Details from Flyer</Text>
+                )}
+              </Pressable>
+            ) : null}
+
+            {!showForm && flyerImages.length === 0 ? (
+              <Pressable
+                onPress={() => setShowForm(true)}
+                style={({ pressed }) => ({
+                  paddingVertical: 10,
+                  alignItems: "center" as const,
+                  opacity: pressed ? 0.6 : 1,
+                })}
+              >
+                <Text style={{ fontSize: 13, fontFamily: "Inter_500Medium", color: colors.emerald }}>Or enter details manually</Text>
+              </Pressable>
+            ) : null}
+
+            {showForm ? (
+              <View style={{ gap: 12 }}>
+                <View style={{ borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.divider, paddingBottom: 4, marginBottom: 4 }}>
+                  <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.textTertiary, textTransform: "uppercase" as const, letterSpacing: 0.5 }}>
+                    {flyerImages.length > 0 ? "Review & complete" : "Event details"}
+                  </Text>
+                </View>
+
+                <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.text }}>Event Title *</Text>
+                <TextInput
+                  style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, fontSize: 15, fontFamily: "Inter_400Regular", color: colors.text }}
+                  value={title}
+                  onChangeText={setTitle}
+                  placeholder="e.g. Community Iftar Dinner"
+                  placeholderTextColor={colors.textTertiary}
+                />
+
+                <View style={{ flexDirection: "row" as const, gap: 10 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.text, marginBottom: 4 }}>Date *</Text>
+                    <TextInput
+                      style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, fontSize: 15, fontFamily: "Inter_400Regular", color: colors.text }}
+                      value={date}
+                      onChangeText={setDate}
+                      placeholder="YYYY-MM-DD"
+                      placeholderTextColor={colors.textTertiary}
+                      keyboardType="numbers-and-punctuation"
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.text, marginBottom: 4 }}>Start Time *</Text>
+                    <TextInput
+                      style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, fontSize: 15, fontFamily: "Inter_400Regular", color: colors.text }}
+                      value={startTime}
+                      onChangeText={setStartTime}
+                      placeholder="HH:MM"
+                      placeholderTextColor={colors.textTertiary}
+                      keyboardType="numbers-and-punctuation"
+                    />
+                  </View>
+                </View>
+
+                <View style={{ flexDirection: "row" as const, gap: 10 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.text, marginBottom: 4 }}>End Time</Text>
+                    <TextInput
+                      style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, fontSize: 15, fontFamily: "Inter_400Regular", color: colors.text }}
+                      value={endTime}
+                      onChangeText={setEndTime}
+                      placeholder="HH:MM"
+                      placeholderTextColor={colors.textTertiary}
+                      keyboardType="numbers-and-punctuation"
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.text, marginBottom: 4 }}>Organizer</Text>
+                    <TextInput
+                      style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, fontSize: 15, fontFamily: "Inter_400Regular", color: colors.text }}
+                      value={organizer}
+                      onChangeText={setOrganizer}
+                      placeholder="Organization name"
+                      placeholderTextColor={colors.textTertiary}
+                    />
+                  </View>
+                </View>
+
+                <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.text }}>Location</Text>
+                <TextInput
+                  style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, fontSize: 15, fontFamily: "Inter_400Regular", color: colors.text }}
+                  value={location}
+                  onChangeText={setLocation}
+                  placeholder="Venue name or full address"
+                  placeholderTextColor={colors.textTertiary}
+                />
+
+                <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.text }}>Description</Text>
+                <TextInput
+                  style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, fontSize: 15, fontFamily: "Inter_400Regular", color: colors.text, minHeight: 80 }}
+                  value={description}
+                  onChangeText={setDescription}
+                  placeholder="Brief event description"
+                  placeholderTextColor={colors.textTertiary}
+                  multiline
+                  textAlignVertical="top"
+                />
+
+                <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.text }}>Registration / RSVP Link</Text>
+                <TextInput
+                  style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, fontSize: 15, fontFamily: "Inter_400Regular", color: colors.text }}
+                  value={registrationUrl}
+                  onChangeText={setRegistrationUrl}
+                  placeholder="https://"
+                  placeholderTextColor={colors.textTertiary}
+                  keyboardType="url"
+                  autoCapitalize="none"
+                />
+
+                <View style={{ borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.divider, paddingTop: 12, marginTop: 4 }}>
+                  <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.text, marginBottom: 4 }}>Your Name (optional)</Text>
+                  <TextInput
+                    style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, fontSize: 15, fontFamily: "Inter_400Regular", color: colors.text }}
+                    value={submitterName}
+                    onChangeText={setSubmitterName}
+                    placeholder="So we know who submitted"
+                    placeholderTextColor={colors.textTertiary}
+                  />
+                  <Text style={{ fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.text, marginTop: 10, marginBottom: 4 }}>Your Email (optional)</Text>
+                  <TextInput
+                    style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, fontSize: 15, fontFamily: "Inter_400Regular", color: colors.text }}
+                    value={submitterEmail}
+                    onChangeText={setSubmitterEmail}
+                    placeholder="For follow-up if needed"
+                    placeholderTextColor={colors.textTertiary}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                </View>
+
+                <Pressable
+                  onPress={submitEvent}
+                  disabled={submitting}
+                  style={({ pressed }) => ({
+                    backgroundColor: submitting ? colors.emerald + "80" : colors.emerald,
+                    borderRadius: 12,
+                    paddingVertical: 16,
+                    alignItems: "center" as const,
+                    opacity: pressed ? 0.8 : 1,
+                    marginTop: 8,
+                  })}
+                >
+                  {submitting ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={{ fontSize: 16, fontFamily: "Inter_700Bold", color: "#fff" }}>Submit for Approval</Text>
+                  )}
+                </Pressable>
+              </View>
+            ) : null}
+
+            {statusMsg ? (
+              <View style={{ marginTop: 14, padding: 12, borderRadius: 10, backgroundColor: statusMsg.type === "success" ? colors.emerald + "15" : statusMsg.type === "error" ? "#ff4444" + "15" : colors.surface }}>
+                <Text style={{ fontSize: 13, fontFamily: "Inter_500Medium", color: statusMsg.type === "success" ? colors.emerald : statusMsg.type === "error" ? "#ff4444" : colors.text, textAlign: "center" as const }}>
+                  {statusMsg.text}
+                </Text>
+              </View>
+            ) : null}
+          </ScrollView>
+        </GlassModalContainer>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
 function EventDetailModal({ event, visible, onClose, isSaved, onToggleSave }: { event: CalendarEvent | null; visible: boolean; onClose: () => void; isSaved: boolean; onToggleSave: (event: CalendarEvent) => void }) {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
@@ -583,6 +982,7 @@ export default function EventsScreen() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const { pendingTarget, consumeTarget } = useDeepLink();
   const [distanceFilter, setDistanceFilter] = useState<DistanceFilter>(50);
@@ -783,20 +1183,36 @@ export default function EventsScreen() {
               {selectedDateLabel ? `Showing ${selectedDateLabel}` : "Programs and events in the local area"}
             </Text>
           </View>
-          <Pressable
-            onPress={() => { setShowCalendar(!showCalendar); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-            style={({ pressed }) => ({
-              width: 36,
-              height: 36,
-              borderRadius: 18,
-              backgroundColor: pressed ? "rgba(255,255,255,0.2)" : (showCalendar ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.15)"),
-              alignItems: "center" as const,
-              justifyContent: "center" as const,
-              opacity: pressed ? 0.8 : 1,
-            })}
-          >
-            <Ionicons name={showCalendar ? "calendar" : "map"} size={20} color="#fff" />
-          </Pressable>
+          <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 8 }}>
+            <Pressable
+              onPress={() => { setShowSubmitModal(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); }}
+              style={({ pressed }) => ({
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: pressed ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.15)",
+                alignItems: "center" as const,
+                justifyContent: "center" as const,
+                opacity: pressed ? 0.8 : 1,
+              })}
+            >
+              <Ionicons name="add" size={20} color="#fff" />
+            </Pressable>
+            <Pressable
+              onPress={() => { setShowCalendar(!showCalendar); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+              style={({ pressed }) => ({
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: pressed ? "rgba(255,255,255,0.2)" : (showCalendar ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.15)"),
+                alignItems: "center" as const,
+                justifyContent: "center" as const,
+                opacity: pressed ? 0.8 : 1,
+              })}
+            >
+              <Ionicons name={showCalendar ? "calendar" : "map"} size={20} color="#fff" />
+            </Pressable>
+          </View>
         </View>
         <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10 }}>
           <View style={{ flexDirection: "row", gap: 8 }}>
@@ -1135,6 +1551,11 @@ export default function EventsScreen() {
         onClose={() => setSelectedEvent(null)}
         isSaved={!!selectedEvent && savedEventIds.has(selectedEvent.id)}
         onToggleSave={toggleSave}
+      />
+
+      <SubmitEventModal
+        visible={showSubmitModal}
+        onClose={() => setShowSubmitModal(false)}
       />
     </View>
   );

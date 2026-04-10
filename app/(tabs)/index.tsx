@@ -483,7 +483,7 @@ function JumuahCard({ jumuah, colors, glassCardBg, glassCardBorder, isDark, onOp
     : [{ khutbah_time: jumuah.khutbah_time, iqama_time: jumuah.iqama_time, speaker: jumuah.speaker || undefined, topic: jumuah.topic || undefined }];
 
   return (
-    <View style={[{ borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" as const, marginBottom: 12 }, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
+    <View style={[styles.glassCard, styles.prayerCard, { overflow: "hidden" as const, marginBottom: 12 }, { backgroundColor: glassCardBg, borderColor: glassCardBorder }]}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
           <MaterialCommunityIcons name="mosque" size={16} color={colors.gold} />
@@ -1096,8 +1096,9 @@ export default function PrayerScreen() {
   const userJumuahMetro = useMemo((): string | null => {
     if (preferredMasjid && allAnnotatedJumuah.length > 0) {
       const pref = preferredMasjid.toLowerCase();
+      const prefBase = pref.split(/[,(]/)[0].trim();
       const match = allAnnotatedJumuah.find(j => j.masjid.toLowerCase() === pref)
-        || allAnnotatedJumuah.find(j => pref.includes(j.masjid.toLowerCase()) || j.masjid.toLowerCase().includes(pref.split(/[\s,(]/)[0]));
+        || allAnnotatedJumuah.find(j => pref.includes(j.masjid.toLowerCase()) || j.masjid.toLowerCase().includes(prefBase));
       if (match?.metro) return match.metro;
     }
     const nearest = allAnnotatedJumuah.find(j => j.distanceMiles !== undefined);
@@ -1115,8 +1116,9 @@ export default function PrayerScreen() {
     if (!jumuahSchedules || jumuahSchedules.length === 0) return null;
     if (preferredMasjid) {
       const pref = preferredMasjid.toLowerCase();
+      const prefBase = pref.split(/[,(]/)[0].trim();
       const match = metroJumuahSchedules.find(j => j.masjid.toLowerCase() === pref)
-        || metroJumuahSchedules.find(j => pref.includes(j.masjid.toLowerCase()) || j.masjid.toLowerCase().includes(pref.split(/[\s,(]/)[0]));
+        || metroJumuahSchedules.find(j => pref.includes(j.masjid.toLowerCase()) || j.masjid.toLowerCase().includes(prefBase));
       if (match) return match;
     }
     return metroJumuahSchedules[0] || allAnnotatedJumuah[0] || null;
