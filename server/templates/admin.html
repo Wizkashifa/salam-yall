@@ -2546,7 +2546,6 @@
       btn.disabled = true;
       btn.textContent = 'Publishing...';
       try {
-        var isRecurring = document.getElementById('flyerRecurring').checked;
         var body = {
           title: title,
           description: document.getElementById('flyerDescription').value.trim(),
@@ -2558,7 +2557,6 @@
           image: flyerBase64,
           imageMime: flyerMime,
           additionalImages: additionalFlyerImages.length > 0 ? additionalFlyerImages : [],
-          recurring: isRecurring,
         };
         var res = await fetch('/api/admin/events/publish', {
           method: 'POST',
@@ -2568,7 +2566,7 @@
         if (res.status === 401) { handleUnauthorized(); return; }
         var data = await res.json();
         if (!res.ok) { showToast(data.error || 'Failed to publish', true); return; }
-        var msg = isRecurring ? 'Published ' + (data.count || 12) + ' weekly events!' : 'Event published! It will appear in the app immediately.';
+        var msg = 'Event published! It will appear in the app immediately.';
         showToast(msg);
         document.getElementById('flyerTitle').value = '';
         document.getElementById('flyerDescription').value = '';
