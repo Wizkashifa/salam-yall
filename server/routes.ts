@@ -1816,35 +1816,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await pool.query("ALTER TABLE event_overrides ADD COLUMN IF NOT EXISTS is_featured BOOLEAN").catch(() => {});
   await pool.query("ALTER TABLE saved_events ADD COLUMN IF NOT EXISTS reminder_sent BOOLEAN NOT NULL DEFAULT false").catch(() => {});
 
-  // Fix LHP event times: seeder stored Eastern hours as-if-UTC; previous attempted fix
-  // went the wrong direction. Current stored values are Eastern local time (too early).
-  // Formula: add 2x the Eastern offset so naive value becomes correct UTC.
-  // Idempotent: guard checks Back To Basics hour = 15 (wrong); after fix it will be 23.
-  await pool.query(`
-    UPDATE community_events
-    SET
-      start_time = start_time + (
-        EXTRACT(EPOCH FROM (
-          (start_time AT TIME ZONE 'UTC')::timestamptz -
-          (start_time AT TIME ZONE 'America/New_York')::timestamptz
-        )) * -2 || ' seconds'
-      )::interval,
-      end_time = end_time + (
-        EXTRACT(EPOCH FROM (
-          (end_time AT TIME ZONE 'UTC')::timestamptz -
-          (end_time AT TIME ZONE 'America/New_York')::timestamptz
-        )) * -2 || ' seconds'
-      )::interval
-    WHERE organizer = 'The Light House Project'
-      AND EXISTS (
-        SELECT 1 FROM community_events
-        WHERE title = 'Back To Basics'
-          AND organizer = 'The Light House Project'
-          AND EXTRACT(HOUR FROM start_time) = 15
-        LIMIT 1
-      )
-  `).catch((e: any) => console.error('[LHP tz fix2]', e.message));
-
   await pool.query("UPDATE community_events SET organizer = 'Islamic Association of Raleigh' WHERE organizer LIKE 'Islamic Association of Raleigh%' AND organizer != 'Islamic Association of Raleigh'").catch(() => {});
   await pool.query("UPDATE community_events SET organizer = 'Al-Noor Islamic Center' WHERE organizer ILIKE '%alnoor islamic center%' AND organizer != 'Al-Noor Islamic Center'").catch(() => {});
 
