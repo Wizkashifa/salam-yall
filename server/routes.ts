@@ -7038,17 +7038,29 @@ Important notes:
               type: "text",
               text: `Extract event details from ${imageBlocks.length > 1 ? 'these flyer images (they are multiple pages/views of the same event)' : 'this flyer image'}. Today's date is ${new Date().toISOString().split("T")[0]}. IMPORTANT: If the flyer does not specify a year, assume the next upcoming occurrence of that date (i.e. use ${new Date().getFullYear()} or ${new Date().getFullYear() + 1}, whichever makes the date in the future). Also look carefully for any QR codes in the image — if you find one, decode it and use the URL as the registrationUrl. QR codes on event flyers typically link to registration or RSVP pages. If both a visible text URL and a QR code URL are present, prefer the QR code URL.${imageBlocks.length > 1 ? ' Combine information from ALL images to build the most complete event details.' : ''}
 
+Also detect if this is a recurring event (phrases like "every Wednesday", "monthly", "3rd Thursday of each month", "bi-monthly", "weekly", etc.).
+
 Return ONLY a JSON object with these fields (use null for any field you cannot determine):
 {
   "title": "event title",
-  "date": "YYYY-MM-DD",
-  "startTime": "HH:MM" (24-hour format),
-  "endTime": "HH:MM" (24-hour format, null if not shown),
+  "date": "YYYY-MM-DD (first/next occurrence)",
+  "startTime": "HH:MM (24-hour)",
+  "endTime": "HH:MM (24-hour, null if not shown)",
   "location": "full address or venue name",
   "description": "brief description of the event (2-3 sentences max)",
   "organizer": "organization or group hosting the event",
-  "registrationUrl": "decoded QR code URL, or visible registration/RSVP URL"
+  "registrationUrl": "decoded QR code URL, or visible registration/RSVP URL",
+  "isRecurring": true or false,
+  "recurring": {
+    "description": "human-readable pattern, e.g. 'Every 3rd Thursday' or 'Every Wednesday'",
+    "type": "weekly" | "monthly_nth_weekday" | "bimonthly_nth_weekday" | "custom",
+    "dayOfWeek": 0-6 (0=Sunday, 1=Monday ... 6=Saturday),
+    "weekOfMonth": 1-4 or null (which week of the month, for monthly/bimonthly),
+    "nthWeekdays": [1,2] or null (list of week-of-month numbers, for bimonthly — e.g. [1,2] means 1st and 2nd),
+    "intervalMonths": 1 or 2 (1=monthly, 2=every other month, for bimonthly)
+  }
 }
+Set "isRecurring": false and "recurring": null if it is a one-time event.
 Return ONLY the JSON object, no markdown, no explanation.`,
             },
           ],
@@ -7437,6 +7449,84 @@ ${profileInfo.slice(0, 30000)}`,
     } catch (error: any) {
       console.error("[Community Events] Publish error:", error.message);
       res.status(500).json({ error: "Failed to publish event" });
+    }
+  });
+
+  app.post("/api/admin/events/publish-recurring", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { title, description, location, organizer, registrationUrl, image, imageMime, additionalImages, startTime, endTime, recurring, rangeEnd } = req.body;
+      if (!title || !startTime || !recurring) return res.status(400).json({ error: "title, startTime, and recurring pattern are required" });
+
+      const resolvedOrg = resolveOrgName(organizer || "") || organizer || "";
+      let eventLat: number | null = null, eventLng: number | null = null;
+      const resolved = resolveCoordinates(resolvedOrg, location || "");
+      if (resolved.latitude && resolved.longitude) { eventLat = resolved.latitude; eventLng = resolved.longitude; }
+      else if (location) { const geo = await geocodeAddress(location); if (geo) { eventLat = geo.lat; eventLng = geo.lng; } }
+
+      const baseStart = new Date(startTime);
+      const baseEnd = endTime ? new Date(endTime) : null;
+      const durationMs = baseEnd ? baseEnd.getTime() - baseStart.getTime() : 0;
+      const rangeEndDate = rangeEnd ? new Date(rangeEnd) : new Date(baseStart.getFullYear() + 1, baseStart.getMonth(), baseStart.getDate());
+      const addImgs = Array.isArray(additionalImages) && additionalImages.length > 0 ? JSON.stringify(additionalImages) : '[]';
+
+      function getNthWD(year: number, month: number, wd: number, n: number): Date {
+        const d = new Date(year, month, 1); let count = 0;
+        while (d.getMonth() === month) { if (d.getDay() === wd && ++count === n) return new Date(d); d.setDate(d.getDate() + 1); }
+        return new Date(NaN);
+      }
+
+      const occurrences: {start: Date; end: Date | null}[] = [];
+      const { type, dayOfWeek, weekOfMonth, nthWeekdays, intervalMonths } = recurring;
+
+      if (type === "weekly") {
+        const cur = new Date(baseStart);
+        while (cur <= rangeEndDate) {
+          occurrences.push({ start: new Date(cur), end: baseEnd ? new Date(cur.getTime() + durationMs) : null });
+          cur.setDate(cur.getDate() + 7);
+        }
+      } else if (type === "monthly_nth_weekday") {
+        let y = baseStart.getFullYear(), m = baseStart.getMonth();
+        while (y < rangeEndDate.getFullYear() || (y === rangeEndDate.getFullYear() && m <= rangeEndDate.getMonth())) {
+          const occ = getNthWD(y, m, dayOfWeek, weekOfMonth);
+          if (!isNaN(occ.getTime())) {
+            const s = new Date(y, m, occ.getDate(), baseStart.getHours(), baseStart.getMinutes());
+            if (s >= baseStart && s <= rangeEndDate) occurrences.push({ start: s, end: baseEnd ? new Date(s.getTime() + durationMs) : null });
+          }
+          m++; if (m > 11) { m = 0; y++; }
+        }
+      } else if (type === "bimonthly_nth_weekday") {
+        const interval = intervalMonths || 2;
+        let y = baseStart.getFullYear(), m = baseStart.getMonth();
+        while (y < rangeEndDate.getFullYear() || (y === rangeEndDate.getFullYear() && m <= rangeEndDate.getMonth())) {
+          for (const n of (nthWeekdays || [weekOfMonth])) {
+            const occ = getNthWD(y, m, dayOfWeek, n);
+            if (!isNaN(occ.getTime())) {
+              const s = new Date(y, m, occ.getDate(), baseStart.getHours(), baseStart.getMinutes());
+              if (s >= baseStart && s <= rangeEndDate) occurrences.push({ start: s, end: baseEnd ? new Date(s.getTime() + durationMs) : null });
+            }
+          }
+          m += interval; if (m > 11) { m -= 12; y++; }
+        }
+      }
+
+      const ids: number[] = [];
+      for (const { start, end } of occurrences) {
+        const ex = await pool.query("SELECT id FROM community_events WHERE title = $1 AND start_time = $2", [title, start]);
+        if (ex.rows.length > 0) continue;
+        const result = await pool.query(
+          `INSERT INTO community_events (title, description, location, start_time, end_time, organizer, registration_url, image_data, image_mime, additional_images, is_virtual, is_featured, status, lat, lng)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,false,false,'approved',$11,$12) RETURNING id`,
+          [title, description || null, location || null, start, end, resolvedOrg || null, registrationUrl || null, image || null, imageMime || "image/jpeg", addImgs, eventLat, eventLng]
+        );
+        ids.push(result.rows[0].id);
+      }
+
+      console.log(`[Recurring Publish] "${title}" — ${ids.length} events created (${recurring.description})`);
+      res.json({ count: ids.length, ids, pattern: recurring.description });
+    } catch (error: any) {
+      console.error("[Recurring Publish] Error:", error.message);
+      res.status(500).json({ error: "Failed to publish recurring events: " + error.message });
     }
   });
 

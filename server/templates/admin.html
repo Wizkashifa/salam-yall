@@ -462,13 +462,21 @@
             <button type="button" class="btn btn-sm" onclick="document.getElementById('additionalFlyerInput').click()" style="background:#1E1E1E;color:#9CA3AF;font-size:12px;">+ Add More Flyers</button>
             <input type="file" id="additionalFlyerInput" accept="image/jpeg,image/png,image/webp" multiple style="display:none;" onchange="handleAdditionalFlyers(event)">
           </div>
-          <div style="display:flex;align-items:center;gap:8px;margin:10px 0;">
-            <label style="margin:0;cursor:pointer;display:flex;align-items:center;gap:6px;">
-              <input type="checkbox" id="flyerRecurring" style="width:16px;height:16px;accent-color:#10B981;">
-              <span style="font-size:13px;color:#D1D5DB;">Repeat weekly for 12 weeks</span>
-            </label>
+          <div id="recurringPanel" style="display:none;margin:14px 0;border:1px solid #1B6B4A;border-radius:10px;padding:14px;background:#0C1F16;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-size:16px;">🔁</span>
+              <span style="font-size:13px;font-weight:600;color:#6EE7B7;">Recurring Event Detected</span>
+            </div>
+            <div id="recurringDescription" style="font-size:13px;color:#D1D5DB;margin-bottom:12px;"></div>
+            <label style="font-size:12px;color:#9CA3AF;">Generate occurrences through</label>
+            <input type="date" id="recurringRangeEnd" style="width:100%;margin:6px 0 10px;padding:8px;border-radius:8px;border:1px solid #374151;background:#111;color:#fff;font-size:13px;">
+            <div id="recurringPreviewCount" style="font-size:12px;color:#9CA3AF;margin-bottom:10px;"></div>
+            <button class="btn btn-primary" onclick="createRecurringEvents()" id="createRecurringBtn" style="width:100%;background:#1B6B4A;">Create All Occurrences</button>
+            <div style="margin-top:8px;text-align:center;">
+              <button onclick="hideRecurringPanel()" style="background:none;border:none;color:#6B7280;font-size:12px;cursor:pointer;text-decoration:underline;">Publish as single event instead</button>
+            </div>
           </div>
-          <button class="btn btn-primary" onclick="publishCommunityEvent()" id="publishEventBtn" style="margin-top:8px;width:100%;">Publish Event</button>
+          <button class="btn btn-primary" id="publishEventBtn" onclick="publishCommunityEvent()" style="margin-top:8px;width:100%;">Publish Event</button>
         </div>
       </div>
 
@@ -2364,6 +2372,54 @@
       form.style.display = form.style.display === 'none' ? 'block' : 'none';
     }
 
+    var detectedRecurringPattern = null;
+
+    function updateRecurringPreview() {
+      var rangeEndEl = document.getElementById('recurringRangeEnd');
+      var previewEl = document.getElementById('recurringPreviewCount');
+      if (!detectedRecurringPattern || !rangeEndEl.value) { previewEl.textContent = ''; return; }
+      var startEl = document.getElementById('flyerStartTime');
+      if (!startEl.value) { previewEl.textContent = ''; return; }
+      var baseStart = new Date(startEl.value);
+      var rangeEnd = new Date(rangeEndEl.value + 'T23:59:59');
+      var p = detectedRecurringPattern;
+      var count = 0;
+      function getNthWD(y, m, wd, n) {
+        var d = new Date(y, m, 1), cnt = 0;
+        while (d.getMonth() === m) { if (d.getDay() === wd && ++cnt === n) return new Date(d); d.setDate(d.getDate()+1); }
+        return new Date(NaN);
+      }
+      if (p.type === 'weekly') {
+        var cur = new Date(baseStart);
+        while (cur <= rangeEnd) { count++; cur.setDate(cur.getDate()+7); }
+      } else if (p.type === 'monthly_nth_weekday') {
+        var y = baseStart.getFullYear(), mo = baseStart.getMonth();
+        while (y < rangeEnd.getFullYear() || (y === rangeEnd.getFullYear() && mo <= rangeEnd.getMonth())) {
+          var occ = getNthWD(y, mo, p.dayOfWeek, p.weekOfMonth);
+          if (!isNaN(occ.getTime())) { var s = new Date(y, mo, occ.getDate(), baseStart.getHours(), baseStart.getMinutes()); if (s >= baseStart && s <= rangeEnd) count++; }
+          mo++; if (mo > 11) { mo = 0; y++; }
+        }
+      } else if (p.type === 'bimonthly_nth_weekday') {
+        var intv = p.intervalMonths || 2;
+        var y2 = baseStart.getFullYear(), mo2 = baseStart.getMonth();
+        var weeks = p.nthWeekdays || [p.weekOfMonth];
+        while (y2 < rangeEnd.getFullYear() || (y2 === rangeEnd.getFullYear() && mo2 <= rangeEnd.getMonth())) {
+          for (var ni = 0; ni < weeks.length; ni++) {
+            var occ2 = getNthWD(y2, mo2, p.dayOfWeek, weeks[ni]);
+            if (!isNaN(occ2.getTime())) { var s2 = new Date(y2, mo2, occ2.getDate(), baseStart.getHours(), baseStart.getMinutes()); if (s2 >= baseStart && s2 <= rangeEnd) count++; }
+          }
+          mo2 += intv; if (mo2 > 11) { mo2 -= 12; y2++; }
+        }
+      }
+      previewEl.textContent = count > 0 ? 'Will create ' + count + ' occurrence' + (count !== 1 ? 's' : '') : 'No occurrences in this range';
+    }
+
+    function hideRecurringPanel() {
+      document.getElementById('recurringPanel').style.display = 'none';
+      document.getElementById('publishEventBtn').style.display = 'block';
+      detectedRecurringPattern = null;
+    }
+
     async function extractFlyer() {
       if (!flyerBase64) { showToast('Upload a flyer image first', true); return; }
       var btn = document.getElementById('extractFlyerBtn');
@@ -2377,9 +2433,7 @@
       try {
         var allImages = [{ data: flyerBase64, mimeType: flyerMime }];
         if (additionalFlyerImages && additionalFlyerImages.length > 0) {
-          additionalFlyerImages.forEach(function(img) {
-            allImages.push({ data: img.data, mimeType: img.mime });
-          });
+          additionalFlyerImages.forEach(function(img) { allImages.push({ data: img.data, mimeType: img.mime }); });
         }
         var res = await fetch('/api/admin/events/extract-flyer', {
           method: 'POST',
@@ -2389,10 +2443,8 @@
         if (res.status === 401) { handleUnauthorized(); return; }
         var data = await res.json();
         if (!res.ok) {
-          status.style.background = '#2A1818';
-          status.style.color = '#F87171';
-          status.textContent = data.error || 'Extraction failed';
-          return;
+          status.style.background = '#2A1818'; status.style.color = '#F87171';
+          status.textContent = data.error || 'Extraction failed'; return;
         }
         document.getElementById('flyerTitle').value = data.title || '';
         document.getElementById('flyerDescription').value = data.description || '';
@@ -2400,24 +2452,88 @@
         document.getElementById('flyerOrganizer').value = data.organizer || '';
         document.getElementById('flyerRegUrl').value = data.registrationUrl || '';
         if (data.date) {
-          var startDT = data.date + 'T' + (data.startTime || '00:00');
-          document.getElementById('flyerStartTime').value = startDT;
-          if (data.endTime) {
-            document.getElementById('flyerEndTime').value = data.date + 'T' + data.endTime;
-          }
+          document.getElementById('flyerStartTime').value = data.date + 'T' + (data.startTime || '00:00');
+          if (data.endTime) document.getElementById('flyerEndTime').value = data.date + 'T' + data.endTime;
         }
         document.getElementById('flyerForm').style.display = 'block';
-        status.style.background = '#1A2E22';
-        status.style.color = '#6EE7B7';
-        status.textContent = 'Details extracted! Review and edit below, then publish.';
+
+        // Handle recurring pattern
+        var recurringPanel = document.getElementById('recurringPanel');
+        var publishBtn = document.getElementById('publishEventBtn');
+        if (data.isRecurring && data.recurring && data.recurring.type !== 'custom') {
+          detectedRecurringPattern = data.recurring;
+          document.getElementById('recurringDescription').textContent = data.recurring.description || 'Recurring event';
+          // Default range end: 1 year from first occurrence
+          var defaultEnd = data.date ? new Date(data.date) : new Date();
+          defaultEnd.setFullYear(defaultEnd.getFullYear() + 1);
+          document.getElementById('recurringRangeEnd').value = defaultEnd.toISOString().split('T')[0];
+          document.getElementById('recurringRangeEnd').addEventListener('change', updateRecurringPreview);
+          recurringPanel.style.display = 'block';
+          publishBtn.style.display = 'none';
+          updateRecurringPreview();
+          status.style.background = '#1A2E22'; status.style.color = '#6EE7B7';
+          status.textContent = 'Recurring event detected! Review the pattern below and set how far out to generate.';
+        } else {
+          detectedRecurringPattern = null;
+          recurringPanel.style.display = 'none';
+          publishBtn.style.display = 'block';
+          status.style.background = '#1A2E22'; status.style.color = '#6EE7B7';
+          status.textContent = 'Details extracted! Review and edit below, then publish.';
+        }
       } catch(e) {
-        status.style.background = '#2A1818';
-        status.style.color = '#F87171';
+        status.style.background = '#2A1818'; status.style.color = '#F87171';
         status.textContent = 'Connection error';
       } finally {
         btn.disabled = false;
         btn.textContent = 'Extract Details with AI';
       }
+    }
+
+    async function createRecurringEvents() {
+      if (!detectedRecurringPattern) return;
+      var title = document.getElementById('flyerTitle').value.trim();
+      var startTime = document.getElementById('flyerStartTime').value;
+      var rangeEnd = document.getElementById('recurringRangeEnd').value;
+      if (!title || !startTime) { showToast('Title and start time are required', true); return; }
+      if (!rangeEnd) { showToast('Please set a range end date', true); return; }
+      var btn = document.getElementById('createRecurringBtn');
+      btn.disabled = true; btn.textContent = 'Creating...';
+      try {
+        var body = {
+          title: title,
+          description: document.getElementById('flyerDescription').value.trim(),
+          location: document.getElementById('flyerLocation').value.trim(),
+          organizer: document.getElementById('flyerOrganizer').value.trim(),
+          startTime: new Date(startTime).toISOString(),
+          endTime: document.getElementById('flyerEndTime').value ? new Date(document.getElementById('flyerEndTime').value).toISOString() : null,
+          registrationUrl: document.getElementById('flyerRegUrl').value.trim(),
+          image: flyerBase64,
+          imageMime: flyerMime,
+          additionalImages: additionalFlyerImages.length > 0 ? additionalFlyerImages : [],
+          recurring: detectedRecurringPattern,
+          rangeEnd: rangeEnd,
+        };
+        var res = await fetch('/api/admin/events/publish-recurring', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken },
+          body: JSON.stringify(body),
+        });
+        if (res.status === 401) { handleUnauthorized(); return; }
+        var data = await res.json();
+        if (!res.ok) { showToast(data.error || 'Failed to create occurrences', true); return; }
+        showToast('Created ' + data.count + ' occurrences of "' + title + '"!');
+        // Reset form
+        ['flyerTitle','flyerDescription','flyerLocation','flyerOrganizer','flyerStartTime','flyerEndTime','flyerRegUrl'].forEach(function(id) { document.getElementById(id).value = ''; });
+        additionalFlyerImages = []; renderAdditionalFlyerThumbs();
+        document.getElementById('flyerForm').style.display = 'none';
+        document.getElementById('recurringPanel').style.display = 'none';
+        document.getElementById('publishEventBtn').style.display = 'block';
+        document.getElementById('extractStatus').style.display = 'none';
+        detectedRecurringPattern = null;
+        clearFlyer();
+        loadCommunityEvents();
+      } catch(e) { showToast('Connection error', true); }
+      finally { btn.disabled = false; btn.textContent = 'Create All Occurrences'; }
     }
 
 
