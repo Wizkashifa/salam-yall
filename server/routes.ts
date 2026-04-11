@@ -1816,6 +1816,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await pool.query("ALTER TABLE event_overrides ADD COLUMN IF NOT EXISTS is_featured BOOLEAN").catch(() => {});
   await pool.query("ALTER TABLE saved_events ADD COLUMN IF NOT EXISTS reminder_sent BOOLEAN NOT NULL DEFAULT false").catch(() => {});
 
+  // Fix LHP events stored with UTC times instead of Eastern times (one-time idempotent migration)
+  await pool.query(`
+    UPDATE community_events
+    SET start_time = (start_time AT TIME ZONE 'UTC') AT TIME ZONE 'America/New_York',
+        end_time   = (end_time   AT TIME ZONE 'UTC') AT TIME ZONE 'America/New_York'
+    WHERE organizer = 'The Light House Project'
+      AND EXISTS (
+        SELECT 1 FROM community_events
+        WHERE title = 'After Hours'
+          AND organizer = 'The Light House Project'
+          AND EXTRACT(HOUR FROM start_time AT TIME ZONE 'UTC') = 19
+        LIMIT 1
+      )
+  `).catch((e: any) => console.error('[LHP tz fix]', e.message));
+
   await pool.query("UPDATE community_events SET organizer = 'Islamic Association of Raleigh' WHERE organizer LIKE 'Islamic Association of Raleigh%' AND organizer != 'Islamic Association of Raleigh'").catch(() => {});
   await pool.query("UPDATE community_events SET organizer = 'Al-Noor Islamic Center' WHERE organizer ILIKE '%alnoor islamic center%' AND organizer != 'Al-Noor Islamic Center'").catch(() => {});
 
