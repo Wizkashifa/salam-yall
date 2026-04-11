@@ -513,8 +513,25 @@ function SubmitEventModal({ visible, onClose }: { visible: boolean; onClose: () 
     setSubmitting(true);
     setStatusMsg({ text: "Submitting your event...", type: "loading" });
     try {
-      const startISO = `${date}T${startTime}:00`;
-      const endISO = endTime ? `${date}T${endTime}:00` : null;
+      const toUTCIso = (dateStr: string, timeStr: string): string => {
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const [year, month, day] = dateStr.split("-").map(Number);
+        const [hour, minute] = timeStr.split(":").map(Number);
+        const fakeUtc = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
+        const parts = new Intl.DateTimeFormat("en-US", {
+          timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit",
+          hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+        }).formatToParts(fakeUtc);
+        const p: Record<string, string> = {};
+        for (const part of parts) p[part.type] = part.value;
+        const tzInterpreted = Date.UTC(
+          parseInt(p.year), parseInt(p.month) - 1, parseInt(p.day),
+          parseInt(p.hour) % 24, parseInt(p.minute), parseInt(p.second)
+        );
+        return new Date(fakeUtc.getTime() + (fakeUtc.getTime() - tzInterpreted)).toISOString();
+      };
+      const startISO = toUTCIso(date, startTime);
+      const endISO = endTime ? toUTCIso(date, endTime) : null;
       const mainImage = flyerImages.length > 0 ? flyerImages[0].base64 : null;
       const mainMime = flyerImages.length > 0 ? flyerImages[0].mime : null;
       const additionalImages = flyerImages.length > 1
