@@ -1073,6 +1073,11 @@ async function ensureCommunityEventsTable(pool: pg.Pool) {
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
+  // Recurrence columns
+  await pool.query(`ALTER TABLE community_events ADD COLUMN IF NOT EXISTS recurrence_group_id UUID`).catch(() => {});
+  await pool.query(`ALTER TABLE community_events ADD COLUMN IF NOT EXISTS recurrence_type VARCHAR(50)`).catch(() => {});
+  await pool.query(`ALTER TABLE community_events ADD COLUMN IF NOT EXISTS recurrence_config JSONB`).catch(() => {});
+  await pool.query(`ALTER TABLE community_events ADD COLUMN IF NOT EXISTS series_index INTEGER DEFAULT 0`).catch(() => {});
 }
 
 async function ensureAnalyticsTable(pool: pg.Pool) {
@@ -1641,6 +1646,11 @@ async function ensureOrgPortalsTable(pool: pg.Pool) {
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
+  // Role-based columns
+  await pool.query(`ALTER TABLE org_portals ADD COLUMN IF NOT EXISTS role VARCHAR(50) NOT NULL DEFAULT 'community_org'`).catch(() => {});
+  await pool.query(`ALTER TABLE org_portals ADD COLUMN IF NOT EXISTS metro VARCHAR(255)`).catch(() => {});
+  await pool.query(`ALTER TABLE org_portals ADD COLUMN IF NOT EXISTS display_name VARCHAR(255)`).catch(() => {});
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS org_profiles (
       id SERIAL PRIMARY KEY,
@@ -1663,9 +1673,9 @@ async function ensureOrgPortalsTable(pool: pg.Pool) {
     const crypto = await import("crypto");
     const hash = crypto.createHash("sha256").update(lhpKey).digest("hex");
     await pool.query(
-      `INSERT INTO org_portals (org_name, password_hash)
-       VALUES ($1, $2)
-       ON CONFLICT (org_name) DO UPDATE SET password_hash = $2`,
+      `INSERT INTO org_portals (org_name, password_hash, role, display_name)
+       VALUES ($1, $2, 'community_org', 'The Light House Project')
+       ON CONFLICT (org_name) DO UPDATE SET password_hash = $2, role = 'community_org'`,
       ["The Light House Project", hash]
     );
   }
@@ -1675,12 +1685,16 @@ async function ensureOrgPortalsTable(pool: pg.Pool) {
     const crypto = await import("crypto");
     const hash = crypto.createHash("sha256").update(iarKey).digest("hex");
     await pool.query(
-      `INSERT INTO org_portals (org_name, password_hash)
-       VALUES ($1, $2)
-       ON CONFLICT (org_name) DO UPDATE SET password_hash = $2`,
+      `INSERT INTO org_portals (org_name, password_hash, role, display_name)
+       VALUES ($1, $2, 'masjid', 'Islamic Association of Raleigh')
+       ON CONFLICT (org_name) DO UPDATE SET password_hash = $2, role = 'masjid'`,
       ["Islamic Association of Raleigh", hash]
     );
   }
+
+  // Migrate existing records that don't have a role set
+  await pool.query(`UPDATE org_portals SET role = 'community_org', display_name = org_name WHERE role = 'community_org' AND display_name IS NULL`).catch(() => {});
+  await pool.query(`UPDATE org_portals SET role = 'masjid' WHERE org_name = 'Islamic Association of Raleigh' AND role = 'community_org'`).catch(() => {});
 }
 
 async function ensureOrganizerFollowsTable(pool: pg.Pool) {
@@ -5512,6 +5526,391 @@ Return ONLY the description text, nothing else.`,
     res.json({ valid: true });
   });
 
+  // ─── Unified Admin Auth ───────────────────────────────────────────────────
+  // Single login endpoint for all admin roles. Returns role, orgName, metro.
+  const unifiedSessions = new Map<string, { role: string; orgName: string; metro: string | null; displayName: string }>();
+
+  function getUnifiedSession(req: any): { role: string; orgName: string; metro: string | null; displayName: string } | null {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return null;
+    const token = authHeader.replace("Bearer ", "");
+    return unifiedSessions.get(token) || null;
+  }
+
+  function requireUnifiedRole(req: any, ...roles: string[]) {
+    const session = getUnifiedSession(req);
+    if (!session) return null;
+    if (roles.length && !roles.includes(session.role)) return null;
+    return session;
+  }
+
+  app.post("/api/auth/admin-login", async (req, res) => {
+    const { orgName, password } = req.body;
+    if (!password) return res.status(400).json({ error: "Password required" });
+    try {
+      // No orgName → try super admin password
+      if (!orgName || orgName.trim() === "") {
+        if (password !== ADMIN_KEY) return res.status(401).json({ error: "Invalid credentials" });
+        const tok = crypto.randomBytes(32).toString("hex");
+        unifiedSessions.set(tok, { role: "super_admin", orgName: "admin", metro: null, displayName: "Super Admin" });
+        // Also add to legacy adminSessions so existing /api/admin/* routes still work
+        adminSessions.add(tok);
+        return res.json({ token: tok, role: "super_admin", orgName: "admin", metro: null, displayName: "Super Admin" });
+      }
+      // Org login
+      const { rows } = await pool.query(
+        "SELECT id, org_name, password_hash, role, metro, display_name FROM org_portals WHERE org_name = $1",
+        [orgName.trim()]
+      );
+      if (!rows.length) return res.status(401).json({ error: "Organization not found" });
+      const hash = crypto.createHash("sha256").update(password).digest("hex");
+      if (hash !== rows[0].password_hash) return res.status(401).json({ error: "Invalid credentials" });
+      const tok = crypto.randomBytes(32).toString("hex");
+      const session = {
+        role: rows[0].role || "community_org",
+        orgName: rows[0].org_name,
+        metro: rows[0].metro || null,
+        displayName: rows[0].display_name || rows[0].org_name,
+      };
+      unifiedSessions.set(tok, session);
+      // Also add to legacy portalSessions so existing /api/portal/:org/* routes still work
+      portalSessions.set(tok, rows[0].org_name);
+      return res.json({ token: tok, ...session });
+    } catch (err: any) {
+      console.error("[UnifiedAuth] Login error:", err.message);
+      res.status(500).json({ error: "Login failed" });
+    }
+  });
+
+  app.get("/api/auth/admin-verify", (req, res) => {
+    const session = getUnifiedSession(req);
+    if (!session) return res.status(401).json({ valid: false });
+    res.json({ valid: true, ...session });
+  });
+
+  app.post("/api/auth/admin-logout", (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (authHeader) {
+      const tok = authHeader.replace("Bearer ", "");
+      unifiedSessions.delete(tok);
+      adminSessions.delete(tok);
+      portalSessions.delete(tok);
+    }
+    res.json({ ok: true });
+  });
+
+  // ─── Account Management (super_admin only) ────────────────────────────────
+  app.get("/api/admin/accounts", async (req, res) => {
+    const session = requireUnifiedRole(req, "super_admin");
+    if (!session) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { rows } = await pool.query(
+        "SELECT id, org_name, role, metro, display_name, created_at FROM org_portals ORDER BY role, org_name"
+      );
+      res.json(rows);
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to list accounts" });
+    }
+  });
+
+  app.post("/api/admin/accounts", async (req, res) => {
+    const session = requireUnifiedRole(req, "super_admin");
+    if (!session) return res.status(401).json({ error: "Unauthorized" });
+    const { orgName, password, role, metro, displayName } = req.body;
+    if (!orgName || !password || !role) return res.status(400).json({ error: "orgName, password, and role are required" });
+    const validRoles = ["metro_manager", "community_org", "masjid"];
+    if (!validRoles.includes(role)) return res.status(400).json({ error: "Invalid role" });
+    try {
+      const hash = crypto.createHash("sha256").update(password).digest("hex");
+      const { rows } = await pool.query(
+        `INSERT INTO org_portals (org_name, password_hash, role, metro, display_name)
+         VALUES ($1, $2, $3, $4, $5) RETURNING id, org_name, role, metro, display_name`,
+        [orgName.trim(), hash, role, metro || null, displayName || orgName.trim()]
+      );
+      res.json(rows[0]);
+    } catch (err: any) {
+      if (err.code === "23505") return res.status(409).json({ error: "An account with that name already exists" });
+      res.status(500).json({ error: "Failed to create account" });
+    }
+  });
+
+  app.put("/api/admin/accounts/:id", async (req, res) => {
+    const session = requireUnifiedRole(req, "super_admin");
+    if (!session) return res.status(401).json({ error: "Unauthorized" });
+    const { id } = req.params;
+    const { orgName, password, role, metro, displayName } = req.body;
+    try {
+      const updates: string[] = [];
+      const vals: any[] = [];
+      let idx = 1;
+      if (orgName) { updates.push(`org_name = $${idx++}`); vals.push(orgName.trim()); }
+      if (password) { updates.push(`password_hash = $${idx++}`); vals.push(crypto.createHash("sha256").update(password).digest("hex")); }
+      if (role) { updates.push(`role = $${idx++}`); vals.push(role); }
+      if (metro !== undefined) { updates.push(`metro = $${idx++}`); vals.push(metro || null); }
+      if (displayName !== undefined) { updates.push(`display_name = $${idx++}`); vals.push(displayName || null); }
+      if (!updates.length) return res.status(400).json({ error: "Nothing to update" });
+      vals.push(id);
+      await pool.query(`UPDATE org_portals SET ${updates.join(", ")} WHERE id = $${idx}`, vals);
+      res.json({ updated: true });
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to update account" });
+    }
+  });
+
+  app.delete("/api/admin/accounts/:id", async (req, res) => {
+    const session = requireUnifiedRole(req, "super_admin");
+    if (!session) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const result = await pool.query("DELETE FROM org_portals WHERE id = $1 RETURNING id, org_name", [req.params.id]);
+      if (!result.rows.length) return res.status(404).json({ error: "Account not found" });
+      res.json({ deleted: true, orgName: result.rows[0].org_name });
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to delete account" });
+    }
+  });
+
+  // ─── Metro Manager Account Creation ──────────────────────────────────────
+  app.post("/api/metro-admin/accounts", async (req, res) => {
+    const session = requireUnifiedRole(req, "metro_manager", "super_admin");
+    if (!session) return res.status(401).json({ error: "Unauthorized" });
+    const { orgName, password, role, displayName } = req.body;
+    if (!orgName || !password || !role) return res.status(400).json({ error: "orgName, password, and role are required" });
+    if (!["community_org", "masjid"].includes(role)) return res.status(400).json({ error: "Metro managers can only create community_org or masjid accounts" });
+    try {
+      const metro = session.metro;
+      const hash = crypto.createHash("sha256").update(password).digest("hex");
+      const { rows } = await pool.query(
+        `INSERT INTO org_portals (org_name, password_hash, role, metro, display_name)
+         VALUES ($1, $2, $3, $4, $5) RETURNING id, org_name, role, metro, display_name`,
+        [orgName.trim(), hash, role, metro, displayName || orgName.trim()]
+      );
+      res.json(rows[0]);
+    } catch (err: any) {
+      if (err.code === "23505") return res.status(409).json({ error: "An account with that name already exists" });
+      res.status(500).json({ error: "Failed to create account" });
+    }
+  });
+
+  // ─── Metro Manager Scoped APIs ───────────────────────────────────────────
+  app.get("/api/metro-admin/businesses", async (req, res) => {
+    const session = requireUnifiedRole(req, "metro_manager", "super_admin");
+    if (!session) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const metro = (req.query.metro as string) || session.metro || "";
+      const { rows } = await pool.query(
+        `SELECT id, name, category, subcategory, address, service_area_description, status, featured, phone, website, created_at
+         FROM businesses
+         WHERE (address ILIKE $1 OR service_area_description ILIKE $1)
+         ORDER BY created_at DESC LIMIT 200`,
+        [`%${metro}%`]
+      );
+      res.json(rows);
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to list businesses" });
+    }
+  });
+
+  app.patch("/api/metro-admin/businesses/:id", async (req, res) => {
+    const session = requireUnifiedRole(req, "metro_manager", "super_admin");
+    if (!session) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { id } = req.params;
+      const { status, featured, name, description, address, phone, website } = req.body;
+      const updates: string[] = [];
+      const vals: any[] = [];
+      let idx = 1;
+      if (status !== undefined) { updates.push(`status = $${idx++}`); vals.push(status); }
+      if (featured !== undefined) { updates.push(`featured = $${idx++}`); vals.push(featured); }
+      if (name !== undefined) { updates.push(`name = $${idx++}`); vals.push(name); }
+      if (description !== undefined) { updates.push(`description = $${idx++}`); vals.push(description); }
+      if (address !== undefined) { updates.push(`address = $${idx++}`); vals.push(address); }
+      if (phone !== undefined) { updates.push(`phone = $${idx++}`); vals.push(phone); }
+      if (website !== undefined) { updates.push(`website = $${idx++}`); vals.push(website); }
+      if (!updates.length) return res.status(400).json({ error: "Nothing to update" });
+      vals.push(id);
+      await pool.query(`UPDATE businesses SET ${updates.join(", ")} WHERE id = $${idx}`, vals);
+      res.json({ updated: true });
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to update business" });
+    }
+  });
+
+  app.post("/api/metro-admin/businesses/add", async (req, res) => {
+    const session = requireUnifiedRole(req, "metro_manager", "super_admin");
+    if (!session) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { name, category, subcategory, description, address, phone, website, filter_tags, location_type, service_area_description } = req.body;
+      if (!name || !category) return res.status(400).json({ error: "Name and category are required" });
+      const metro = session.metro || service_area_description || "";
+      const { rows } = await pool.query(
+        `INSERT INTO businesses (name, category, subcategory, description, address, phone, website, filter_tags, location_type, service_area_description, status)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'approved') RETURNING id`,
+        [name, category, subcategory || null, description || null, address || null, phone || null, website || null, filter_tags || [], location_type || "physical", service_area_description || metro]
+      );
+      res.json({ id: rows[0].id });
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to add business" });
+    }
+  });
+
+  app.delete("/api/metro-admin/businesses/:id", async (req, res) => {
+    const session = requireUnifiedRole(req, "metro_manager", "super_admin");
+    if (!session) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      await pool.query("DELETE FROM businesses WHERE id = $1", [req.params.id]);
+      res.json({ deleted: true });
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to delete business" });
+    }
+  });
+
+  app.get("/api/metro-admin/events", async (req, res) => {
+    const session = requireUnifiedRole(req, "metro_manager", "super_admin");
+    if (!session) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const metro = session.metro || "";
+      // Get orgs in this metro plus events with location matching metro
+      const { rows } = await pool.query(
+        `SELECT id, title, description, location, start_time, end_time, organizer, status, created_at,
+         CASE WHEN image_data IS NOT NULL THEN '/api/community-events/' || id || '/image' ELSE NULL END as image_url
+         FROM community_events
+         WHERE (location ILIKE $1 OR organizer IN (
+           SELECT org_name FROM org_portals WHERE metro = $2
+         ))
+         ORDER BY start_time DESC LIMIT 200`,
+        [`%${metro}%`, metro]
+      );
+      res.json(rows);
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to list events" });
+    }
+  });
+
+  app.post("/api/metro-admin/events/publish", async (req, res) => {
+    const session = requireUnifiedRole(req, "metro_manager", "super_admin");
+    if (!session) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { title, description, location, startTime, endTime, organizer, registrationUrl, image, imageMime, recurrenceType, recurrenceConfig, recurring } = req.body;
+      if (!title || !startTime) return res.status(400).json({ error: "Title and start time are required" });
+
+      let eventLat: number | null = null, eventLng: number | null = null;
+      if (location) {
+        const geo = await geocodeAddress(location);
+        if (geo) { eventLat = geo.lat; eventLng = geo.lng; }
+      }
+
+      const rType = recurrenceType || (recurring ? "weekly" : "none");
+      const rConfig = recurrenceConfig || (recurring ? { count: 12 } : {});
+      const baseStart = new Date(startTime);
+      const baseEnd = endTime ? new Date(endTime) : null;
+      const durationMs = baseEnd ? baseEnd.getTime() - baseStart.getTime() : 0;
+      const dates = generateRecurrenceDates(baseStart, rType, rConfig);
+      const groupId = dates.length > 1 ? crypto.randomUUID() : null;
+      const ids: number[] = [];
+
+      for (let i = 0; i < dates.length; i++) {
+        const wStart = dates[i];
+        if (rType === "monthly_calendar" || rType === "monthly_weekday") {
+          wStart.setHours(baseStart.getHours(), baseStart.getMinutes(), 0, 0);
+        }
+        const wEnd = baseEnd ? new Date(wStart.getTime() + durationMs) : null;
+        const result = await pool.query(
+          `INSERT INTO community_events (title, description, location, start_time, end_time, organizer, registration_url, image_data, image_mime, is_virtual, is_featured, status, lat, lng, recurrence_group_id, recurrence_type, recurrence_config, series_index)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,false,false,'approved',$10,$11,$12,$13,$14::jsonb,$15) RETURNING id`,
+          [title, description || null, location || null, wStart, wEnd, organizer || null, registrationUrl || null, image || null, imageMime || "image/jpeg", eventLat, eventLng, groupId, rType === "none" ? null : rType, rType === "none" ? null : JSON.stringify(rConfig), i]
+        );
+        ids.push(result.rows[0].id);
+      }
+
+      res.json({ id: ids[0], count: dates.length, ids });
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to publish event: " + err.message });
+    }
+  });
+
+  app.delete("/api/metro-admin/events/:id", async (req, res) => {
+    const session = requireUnifiedRole(req, "metro_manager", "super_admin");
+    if (!session) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      await pool.query("DELETE FROM community_events WHERE id = $1", [req.params.id]);
+      res.json({ deleted: true });
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to delete event" });
+    }
+  });
+
+  // ─── Portal Stats (unified) ───────────────────────────────────────────────
+  app.get("/api/portal-admin/stats", async (req, res) => {
+    const session = getUnifiedSession(req);
+    if (!session) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const orgName = session.orgName;
+      const [followers, events] = await Promise.all([
+        pool.query("SELECT COUNT(*) as count FROM organizer_follows WHERE organizer_name = $1", [orgName]),
+        pool.query("SELECT COUNT(*) as count FROM community_events WHERE organizer = $1", [orgName]),
+      ]);
+      res.json({
+        followers: parseInt(followers.rows[0].count),
+        totalEvents: parseInt(events.rows[0].count),
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to get stats" });
+    }
+  });
+
+  // ─── Recurrence Helpers ──────────────────────────────────────────────────
+  function getNthWeekdayOfMonth(year: number, month: number, dow: number, nth: number): Date | null {
+    if (nth === -1) {
+      // Last occurrence
+      const d = new Date(year, month + 1, 0);
+      while (d.getDay() !== dow) d.setDate(d.getDate() - 1);
+      return d;
+    }
+    const d = new Date(year, month, 1);
+    while (d.getDay() !== dow) d.setDate(d.getDate() + 1);
+    d.setDate(d.getDate() + (nth - 1) * 7);
+    return d.getMonth() === month ? d : null;
+  }
+
+  function generateRecurrenceDates(baseStart: Date, type: string, config: any): Date[] {
+    if (!type || type === "none") return [baseStart];
+    const count = config?.count || 1;
+    if (type === "daily") {
+      return Array.from({ length: Math.min(count, 90) }, (_, i) =>
+        new Date(baseStart.getTime() + i * 86400000)
+      );
+    }
+    if (type === "weekly") {
+      return Array.from({ length: Math.min(count, 52) }, (_, i) =>
+        new Date(baseStart.getTime() + i * 7 * 86400000)
+      );
+    }
+    if (type === "monthly_calendar") {
+      const results: Date[] = [];
+      for (let i = 0; i < Math.min(count, 12); i++) {
+        const d = new Date(baseStart);
+        const origDay = baseStart.getDate();
+        d.setMonth(d.getMonth() + i);
+        // Clamp overflow (Jan 31 + 1 month → Feb 28)
+        if (d.getDate() !== origDay) d.setDate(0);
+        results.push(new Date(d));
+      }
+      return results;
+    }
+    if (type === "monthly_weekday") {
+      const results: Date[] = [];
+      for (let i = 0; i < Math.min(count, 12); i++) {
+        const d = new Date(baseStart);
+        d.setDate(1);
+        d.setMonth(d.getMonth() + i);
+        const occ = getNthWeekdayOfMonth(d.getFullYear(), d.getMonth(), config?.dayOfWeek ?? 0, config?.nth ?? 1);
+        if (occ) results.push(occ);
+      }
+      return results;
+    }
+    return [baseStart];
+  }
+
   app.post("/api/push-token", async (req, res) => {
     try {
       const { token, lat, lng } = req.body;
@@ -7317,7 +7716,7 @@ ${profileInfo.slice(0, 30000)}`,
   app.post("/api/admin/events/publish", async (req, res) => {
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {
-      const { title, description, location, startTime, endTime, organizer, registrationUrl, image, imageMime, additionalImages, isVirtual, isFeatured, recurring } = req.body;
+      const { title, description, location, startTime, endTime, organizer, registrationUrl, image, imageMime, additionalImages, isVirtual, isFeatured, recurring, recurrenceType, recurrenceConfig } = req.body;
       if (!title || !startTime) return res.status(400).json({ error: "Title and start time are required" });
 
       if (isFeatured) {
@@ -7345,27 +7744,36 @@ ${profileInfo.slice(0, 30000)}`,
         if (geocoded) { eventLat = geocoded.lat; eventLng = geocoded.lng; }
       }
 
-      const weeks = recurring ? 12 : 1;
+      // Resolve recurrence: support new recurrenceType/recurrenceConfig OR legacy recurring boolean
+      const rType = recurrenceType || (recurring ? "weekly" : "none");
+      const rConfig = recurrenceConfig || (recurring ? { count: 12 } : {});
+
       const baseStart = new Date(startTime);
       const baseEnd = endTime ? new Date(endTime) : null;
       const durationMs = baseEnd ? baseEnd.getTime() - baseStart.getTime() : 0;
+      const dates = generateRecurrenceDates(baseStart, rType, rConfig);
+      const addImgs = Array.isArray(additionalImages) && additionalImages.length > 0 ? JSON.stringify(additionalImages) : '[]';
+      const groupId = dates.length > 1 ? crypto.randomUUID() : null;
       const ids: number[] = [];
 
-      for (let w = 0; w < weeks; w++) {
-        const wStart = new Date(baseStart.getTime() + w * 7 * 24 * 60 * 60 * 1000);
+      for (let i = 0; i < dates.length; i++) {
+        const wStart = dates[i];
+        // Preserve original time-of-day for monthly recurrence types
+        if (rType === "monthly_calendar" || rType === "monthly_weekday") {
+          wStart.setHours(baseStart.getHours(), baseStart.getMinutes(), baseStart.getSeconds(), 0);
+        }
         const wEnd = baseEnd ? new Date(wStart.getTime() + durationMs) : null;
-        const addImgs = Array.isArray(additionalImages) && additionalImages.length > 0 ? JSON.stringify(additionalImages) : '[]';
         const result = await pool.query(
-          `INSERT INTO community_events (title, description, location, start_time, end_time, organizer, registration_url, image_data, image_mime, additional_images, is_virtual, is_featured, status, lat, lng)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12, 'approved', $13, $14)
+          `INSERT INTO community_events (title, description, location, start_time, end_time, organizer, registration_url, image_data, image_mime, additional_images, is_virtual, is_featured, status, lat, lng, recurrence_group_id, recurrence_type, recurrence_config, series_index)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12, 'approved', $13, $14, $15, $16, $17::jsonb, $18)
            RETURNING id`,
-          [title, description || null, location || null, wStart, wEnd, organizer || null, registrationUrl || null, image || null, imageMime || "image/jpeg", addImgs, !!isVirtual, !!isFeatured, eventLat, eventLng]
+          [title, description || null, location || null, wStart, wEnd, organizer || null, registrationUrl || null, image || null, imageMime || "image/jpeg", addImgs, !!isVirtual, !!isFeatured, eventLat, eventLng, groupId, rType === "none" ? null : rType, rType === "none" ? null : JSON.stringify(rConfig), i]
         );
         ids.push(result.rows[0].id);
       }
 
-      console.log(`[Community Events] Published: "${title}" (${weeks} ${recurring ? 'weekly ' : ''}event${weeks > 1 ? 's' : ''}, IDs ${ids.join(', ')})`);
-      res.json({ id: ids[0], title, start_time: baseStart, status: "approved", count: weeks });
+      console.log(`[Community Events] Published: "${title}" (${dates.length} event${dates.length > 1 ? 's' : ''}, type=${rType}, IDs ${ids.join(', ')})`);
+      res.json({ id: ids[0], title, start_time: baseStart, status: "approved", count: dates.length });
     } catch (error: any) {
       console.error("[Community Events] Publish error:", error.message);
       res.status(500).json({ error: "Failed to publish event" });
@@ -7671,7 +8079,7 @@ ${profileInfo.slice(0, 30000)}`,
     const orgName = decodeURIComponent(req.params.org);
     if (!isPortalAuthorized(req, orgName)) return res.status(401).json({ error: "Unauthorized" });
     try {
-      const { title, description, location, startTime, endTime, registrationUrl, image, imageMime, recurring } = req.body;
+      const { title, description, location, startTime, endTime, registrationUrl, image, imageMime, recurring, recurrenceType, recurrenceConfig } = req.body;
       if (!title || !startTime) return res.status(400).json({ error: "Title and start time are required" });
 
       let eventLat: number | null = null;
@@ -7684,25 +8092,33 @@ ${profileInfo.slice(0, 30000)}`,
         if (geocoded) { eventLat = geocoded.lat; eventLng = geocoded.lng; }
       }
 
-      const weeks = recurring ? 12 : 1;
+      // Resolve recurrence: support new recurrenceType/recurrenceConfig OR legacy recurring boolean
+      const rType = recurrenceType || (recurring ? "weekly" : "none");
+      const rConfig = recurrenceConfig || (recurring ? { count: 12 } : {});
+
       const baseStart = new Date(startTime);
       const baseEnd = endTime ? new Date(endTime) : null;
       const durationMs = baseEnd ? baseEnd.getTime() - baseStart.getTime() : 0;
+      const dates = generateRecurrenceDates(baseStart, rType, rConfig);
+      const groupId = dates.length > 1 ? crypto.randomUUID() : null;
       const ids: number[] = [];
 
-      for (let w = 0; w < weeks; w++) {
-        const wStart = new Date(baseStart.getTime() + w * 7 * 24 * 60 * 60 * 1000);
+      for (let i = 0; i < dates.length; i++) {
+        const wStart = dates[i];
+        if (rType === "monthly_calendar" || rType === "monthly_weekday") {
+          wStart.setHours(baseStart.getHours(), baseStart.getMinutes(), baseStart.getSeconds(), 0);
+        }
         const wEnd = baseEnd ? new Date(wStart.getTime() + durationMs) : null;
         const result = await pool.query(
-          `INSERT INTO community_events (title, description, location, start_time, end_time, organizer, registration_url, image_data, image_mime, is_virtual, is_featured, status, lat, lng)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, false, 'approved', $10, $11)
+          `INSERT INTO community_events (title, description, location, start_time, end_time, organizer, registration_url, image_data, image_mime, is_virtual, is_featured, status, lat, lng, recurrence_group_id, recurrence_type, recurrence_config, series_index)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, false, 'approved', $10, $11, $12, $13, $14::jsonb, $15)
            RETURNING id`,
-          [title, description || null, location || null, wStart, wEnd, orgName, registrationUrl || null, image || null, imageMime || "image/jpeg", eventLat, eventLng]
+          [title, description || null, location || null, wStart, wEnd, orgName, registrationUrl || null, image || null, imageMime || "image/jpeg", eventLat, eventLng, groupId, rType === "none" ? null : rType, rType === "none" ? null : JSON.stringify(rConfig), i]
         );
         ids.push(result.rows[0].id);
       }
 
-      console.log(`[Portal:${orgName}] Published: "${title}" (${weeks} event${weeks > 1 ? 's' : ''}, IDs ${ids.join(', ')})`);
+      console.log(`[Portal:${orgName}] Published: "${title}" (${dates.length} event${dates.length > 1 ? 's' : ''}, type=${rType}, IDs ${ids.join(', ')})`);
 
       try {
         const { rows: followerTokens } = await pool.query(
@@ -7721,7 +8137,7 @@ ${profileInfo.slice(0, 30000)}`,
         console.error(`[Portal:${orgName}] Auto-push error:`, pushErr.message);
       }
 
-      res.json({ id: ids[0], title, start_time: baseStart, status: "approved", count: weeks });
+      res.json({ id: ids[0], title, start_time: baseStart, status: "approved", count: dates.length });
     } catch (error: any) {
       console.error(`[Portal:${orgName}] Publish error:`, error.message);
       res.status(500).json({ error: "Failed to publish event" });
