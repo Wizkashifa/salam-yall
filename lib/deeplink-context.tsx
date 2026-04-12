@@ -50,6 +50,23 @@ export function useDeepLink() {
 
 export function parseDeepLinkUrl(url: string): DeepLinkTarget {
   try {
+    // Handle query-param format: /community?open=event&id=...
+    const queryParamTypeMap: Record<string, DeepLinkType> = {
+      event: "event",
+      restaurant: "restaurant",
+      business: "business",
+      janaza: "janaza",
+    };
+    const queryMatch = url.match(/[?&]open=([^&]+)(?:.*[?&]id=([^&]+))?/);
+    if (queryMatch) {
+      const openType = decodeURIComponent(queryMatch[1]);
+      const mappedType = queryParamTypeMap[openType];
+      if (mappedType) {
+        const id = queryMatch[2] ? decodeURIComponent(queryMatch[2]) : "";
+        return { type: mappedType, id };
+      }
+    }
+
     const patterns = [
       { regex: /\/share\/event\/([^/?#]+)/, type: "event" as const },
       { regex: /\/share\/restaurant\/([^/?#]+)/, type: "restaurant" as const },
