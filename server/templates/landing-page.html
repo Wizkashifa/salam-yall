@@ -115,6 +115,7 @@
         animation: fadeInUp 0.8s ease-out 0.3s both;
       }
       .hero-cta:hover { background: var(--emerald-hover); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(27,107,74,0.3); }
+      .hero-cta:active { background: var(--emerald); transform: translateY(0); box-shadow: none; }
       .hero-cta svg { width: 20px; height: 20px; fill: currentColor; }
       .hero-buttons { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; }
       .hero-android {
@@ -133,6 +134,7 @@
         cursor: pointer;
       }
       .hero-android:hover { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.05); transform: translateY(-2px); }
+      .hero-android:active { transform: translateY(0); border-color: rgba(255,255,255,0.25); background: transparent; }
       .hero-android svg { width: 20px; height: 20px; fill: currentColor; }
       .hero-webview {
         display: inline-flex;
@@ -147,8 +149,10 @@
         font-weight: 600;
         text-decoration: none;
         transition: all 0.2s;
+        cursor: pointer;
       }
       .hero-webview:hover { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.05); transform: translateY(-2px); }
+      .hero-webview:active { transform: translateY(0); border-color: rgba(255,255,255,0.25); background: transparent; }
       .hero-webview svg { width: 20px; height: 20px; }
       .hero-badge {
         display: inline-block;
@@ -554,7 +558,8 @@
         text-decoration: none;
         transition: all 0.2s;
       }
-      .cta-btn-primary:hover { background: var(--emerald-hover); transform: translateY(-2px); }
+      .cta-btn-primary:hover { background: var(--emerald-hover); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(27,107,74,0.3); }
+      .cta-btn-primary:active { background: var(--emerald); transform: translateY(0); box-shadow: none; }
       .cta-btn-primary svg { width: 22px; height: 22px; fill: currentColor; }
       .cta-btn-android {
         display: inline-flex;
@@ -563,7 +568,7 @@
         padding: 18px 32px;
         background: transparent;
         border: 1.5px solid rgba(255,255,255,0.25);
-        border-radius: 16px;
+        border-radius: 14px;
         color: #fff;
         font-size: 16px;
         font-weight: 600;
@@ -571,6 +576,7 @@
         transition: all 0.2s;
       }
       .cta-btn-android:hover { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.05); transform: translateY(-2px); }
+      .cta-btn-android:active { transform: translateY(0); border-color: rgba(255,255,255,0.25); background: transparent; }
       .cta-btn-android svg { width: 22px; height: 22px; fill: currentColor; }
 
       /* ANDROID WAITLIST */
@@ -627,7 +633,8 @@
         cursor: pointer;
         transition: all 0.2s;
       }
-      .waitlist-form button:hover { background: var(--emerald-hover); }
+      .waitlist-form button:hover { background: var(--emerald-hover); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(27,107,74,0.3); }
+      .waitlist-form button:active { background: var(--emerald); transform: translateY(0); box-shadow: none; }
       .waitlist-success {
         display: none;
         color: var(--emerald);
