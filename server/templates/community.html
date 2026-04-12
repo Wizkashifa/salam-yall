@@ -358,6 +358,22 @@
       transition: all 0.25s ease; letter-spacing: 0.01em;
     }
     .btn-register:hover { background: var(--emerald-light); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+    .btn-share {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 34px; height: 34px; border-radius: var(--radius-md);
+      background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-secondary);
+      cursor: pointer; transition: all 0.2s ease; flex-shrink: 0;
+    }
+    .btn-share:hover { background: var(--card-bg-hover); border-color: var(--card-border-hover); color: var(--text); transform: translateY(-1px); }
+    .btn-share svg { pointer-events: none; }
+    .share-toast {
+      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(12px);
+      background: rgba(27,107,74,0.95); color: white; font-size: 13px; font-weight: 600;
+      padding: 10px 20px; border-radius: 100px; box-shadow: var(--shadow-md);
+      opacity: 0; pointer-events: none; transition: all 0.25s ease; z-index: 9999;
+      white-space: nowrap; backdrop-filter: blur(12px);
+    }
+    .share-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
     /* RESTAURANT CARDS */
     .restaurant-card {
@@ -1547,6 +1563,7 @@
       }
       let actions = e.registrationUrl ? `<a href="${e.registrationUrl}" target="_blank" rel="noopener" class="btn-register" onclick="event.stopPropagation()">Register →</a>` : '';
       const desc = e.description ? stripHtml(e.description).substring(0, 200) : '';
+      const shareSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>`;
       card.innerHTML = `
         ${imgHtml}
         <div class="event-card-body">
@@ -1560,8 +1577,9 @@
           ${distHtml}
           ${e.location ? `<div class="event-location"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${esc(e.location)}</div>` : ''}
           ${desc ? `<div class="event-desc">${esc(desc)}</div>` : ''}
-          <div class="event-actions">${actions}</div>
+          <div class="event-actions">${actions}<button class="btn-share" title="Share">${shareSvg}</button></div>
         </div>`;
+      card.querySelector('.btn-share').addEventListener('click', function(ev) { shareItem('event', e, ev); });
       return card;
     }
 
@@ -1644,6 +1662,7 @@
       if (r.url) links += `<a href="${r.url}" target="_blank" rel="noopener" class="link-maps" onclick="event.stopPropagation()">Maps</a>`;
       if (r.website) links += `<a href="${r.website}" target="_blank" rel="noopener" class="link-website" onclick="event.stopPropagation()">Website</a>`;
       if (r.formatted_phone) links += `<a href="tel:${r.formatted_phone}" class="link-call" onclick="event.stopPropagation()">${esc(r.formatted_phone)}</a>`;
+      const rShareSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>`;
       card.innerHTML = `
         ${imgHtml}
         <div class="restaurant-card-body">
@@ -1656,8 +1675,9 @@
           </div>
           ${cuisineTags ? `<div class="cuisine-tags">${cuisineTags}</div>` : ''}
           ${r.formatted_address ? `<div class="restaurant-address">${esc(r.formatted_address)}</div>` : ''}
-          <div class="restaurant-links">${links}</div>
+          <div class="restaurant-links">${links}<button class="btn-share" title="Share">${rShareSvg}</button></div>
         </div>`;
+      card.querySelector('.btn-share').addEventListener('click', function(ev) { shareItem('restaurant', r, ev); });
       return card;
     }
 
@@ -1752,6 +1772,7 @@
       if (b.booking_url) links += `<a href="${b.booking_url}" target="_blank" rel="noopener" class="link-website" onclick="event.stopPropagation()">Book</a>`;
       if (b.instagram_url) links += `<a href="${b.instagram_url}" target="_blank" rel="noopener" class="link-website" onclick="event.stopPropagation()">Instagram</a>`;
 
+      const bShareSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>`;
       card.innerHTML = `
         <div class="business-card-body">
           <div class="business-category">${esc(b.category || 'Business')}</div>
@@ -1766,8 +1787,9 @@
           ${b.description ? `<div class="business-desc">${esc(b.description)}</div>` : ''}
           ${locationLine}
           ${tagsHtml}
-          <div class="business-links" style="margin-top:10px">${links}</div>
+          <div class="business-links" style="margin-top:10px">${links}<button class="btn-share" title="Share">${bShareSvg}</button></div>
         </div>`;
+      card.querySelector('.btn-share').addEventListener('click', function(ev) { shareItem('business', b, ev); });
       return card;
     }
 
@@ -2043,6 +2065,57 @@
           <div class="modal-actions">${actions}</div>
         </div>`);
     }
+
+    var _shareToastTimer;
+    function showShareToast(msg) {
+      var t = document.getElementById('share-toast');
+      if (!t) return;
+      t.textContent = msg;
+      t.classList.add('show');
+      clearTimeout(_shareToastTimer);
+      _shareToastTimer = setTimeout(function() { t.classList.remove('show'); }, 2200);
+    }
+
+    async function shareItem(type, data, ev) {
+      ev.stopPropagation();
+      var base = window.location.origin + '/community';
+      var title, text, url;
+      if (type === 'event') {
+        title = data.title;
+        var parts = [];
+        if (data.organizer) parts.push(data.organizer);
+        if (data.start) { var ds = new Date(data.start); parts.push(ds.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })); }
+        if (data.location) parts.push(data.location);
+        text = parts.join(' · ');
+        url = data.registrationUrl || base + '#events';
+      } else if (type === 'restaurant') {
+        title = data.name;
+        var parts = [];
+        if (data.is_halal === 'IS_HALAL') parts.push('Fully Halal'); else if (data.is_halal) parts.push('Partially Halal');
+        if (data.formatted_address) parts.push(data.formatted_address);
+        text = parts.join(' · ');
+        url = data.url || base + '#restaurants';
+      } else if (type === 'business') {
+        title = data.name;
+        var parts = [data.category, data.subcategory].filter(Boolean);
+        if (data.description) parts.push(data.description.substring(0, 120) + (data.description.length > 120 ? '…' : ''));
+        text = parts.join(' · ');
+        url = data.website || base + '#directory';
+      }
+      if (navigator.share) {
+        try { await navigator.share({ title: title, text: text, url: url }); return; }
+        catch(e) { if (e.name === 'AbortError') return; }
+      }
+      try {
+        await navigator.clipboard.writeText(url);
+        showShareToast('✓ Link copied!');
+      } catch(e) {
+        var ta = document.createElement('textarea');
+        ta.value = url; ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+        showShareToast('✓ Link copied!');
+      }
+    }
   </script>
   <script>
     document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
@@ -2053,5 +2126,6 @@
       if (e.key === 'F12') e.preventDefault();
     });
   </script>
+  <div id="share-toast" class="share-toast"></div>
 </body>
 </html>
