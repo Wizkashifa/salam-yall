@@ -515,6 +515,7 @@ body {
 
 /* ── Unified site footer ─────────────────────────────────────────────── */
 .sy-footer {
+  width: 100%;
   padding: 40px 24px;
   text-align: center;
   border-top: 1px solid rgba(var(--emerald-rgb), 0.15);
