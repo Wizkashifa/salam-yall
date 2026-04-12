@@ -1251,8 +1251,8 @@
       document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
       document.getElementById(hash + '-section').classList.add('active');
     }
-    loadSection(hash || 'events');
     initDeepLink();
+    loadSection(hash || 'events');
 
     let calendarMonth = new Date().getMonth();
     let calendarYear = new Date().getFullYear();
