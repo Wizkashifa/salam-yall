@@ -2121,20 +2121,20 @@
         if (data.start) { var ds = new Date(data.start); parts.push(ds.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })); }
         if (data.location) parts.push(data.location);
         text = parts.join(' · ');
-        url = base + '?open=event&id=' + encodeURIComponent(data.id);
+        url = window.location.origin + '/share/event/' + encodeURIComponent(data.id);
       } else if (type === 'restaurant') {
         title = data.name;
         var parts = [];
         if (data.is_halal === 'IS_HALAL') parts.push('Fully Halal'); else if (data.is_halal) parts.push('Partially Halal');
         if (data.formatted_address) parts.push(data.formatted_address);
         text = parts.join(' · ');
-        url = base + '?open=restaurant&id=' + encodeURIComponent(data.id);
+        url = window.location.origin + '/share/restaurant/' + encodeURIComponent(data.id);
       } else if (type === 'business') {
         title = data.name;
         var parts = [data.category, data.subcategory].filter(Boolean);
         if (data.description) parts.push(data.description.substring(0, 120) + (data.description.length > 120 ? '…' : ''));
         text = parts.join(' · ');
-        url = base + '?open=business&id=' + encodeURIComponent(data.id);
+        url = window.location.origin + '/share/business/' + encodeURIComponent(data.id);
       }
       if (navigator.share) {
         try { await navigator.share({ title: title, text: text, url: url }); return; }

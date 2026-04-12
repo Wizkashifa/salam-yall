@@ -6626,6 +6626,8 @@ Important notes:
     .rating{display:flex;align-items:center;gap:4px;font-size:13px;color:#D4A843;margin-bottom:12px}
     .cta{display:block;text-align:center;background:linear-gradient(135deg,#1B6B4A 0%,#15573D 100%);color:#fff;text-decoration:none;padding:14px 32px;border-radius:12px;font-weight:600;font-size:16px;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 12px rgba(27,107,74,0.3)}
     .cta:active{transform:scale(0.98)}
+    .web-cta{display:block;text-align:center;margin-top:10px;background:rgba(255,255,255,0.06);color:#D1D5DB;text-decoration:none;padding:12px 32px;border-radius:12px;font-weight:500;font-size:15px;border:1px solid rgba(255,255,255,0.1);transition:background 0.15s}
+    .web-cta:hover{background:rgba(255,255,255,0.1)}
     .get-app{display:block;text-align:center;margin-top:12px;font-size:13px;color:#6B7280;text-decoration:none}
     .get-app:hover{color:#9CA3AF}
     .footer{margin-top:24px;font-size:11px;color:#4B5563;text-align:center}
@@ -6718,6 +6720,7 @@ Important notes:
       const safeId = encodeURIComponent(id);
       const pageUrl = `https://${host}/share/event/${safeId}`;
       const deepLink = `salamyall://event/${safeId}`;
+      const webLink = `https://${host}/community?open=event&id=${safeId}`;
 
       const eventOrg = event?.organizer || "";
       const dateStr = event ? formatShareDate(event.start, eventOrg) : "";
@@ -6763,6 +6766,7 @@ Important notes:
       </div>
       ${description ? `<p class="desc">${escapeHtml(description.substring(0, 180))}${description.length > 180 ? "..." : ""}</p>` : ""}
       <a href="${deepLink}" class="cta" id="open">Open in Salam Y'all</a>
+      <a href="${webLink}" class="web-cta">View on web</a>
       <a href="https://apps.apple.com/us/app/salam-yall/id6760231963" class="get-app">Don't have the app? Get Salam Y'all</a>
     </div>
   </div>
@@ -6787,6 +6791,7 @@ Important notes:
       const safeId = encodeURIComponent(id);
       const pageUrl = `https://${host}/share/restaurant/${safeId}`;
       const deepLink = `salamyall://restaurant/${safeId}`;
+      const webLink = `https://${host}/community?open=restaurant&id=${safeId}`;
 
       const address = restaurant?.formatted_address || "";
       const rating = restaurant?.rating ? parseFloat(restaurant.rating) : 0;
@@ -6836,6 +6841,7 @@ Important notes:
       </div>
       ${description ? `<p class="desc">${escapeHtml(description.substring(0, 180))}${description.length > 180 ? "..." : ""}</p>` : ""}
       <a href="${deepLink}" class="cta" id="open">Open in Salam Y'all</a>
+      <a href="${webLink}" class="web-cta">View on web</a>
       <a href="https://apps.apple.com/us/app/salam-yall/id6760231963" class="get-app">Don't have the app? Get Salam Y'all</a>
     </div>
   </div>
@@ -6860,6 +6866,7 @@ Important notes:
       const safeId = encodeURIComponent(id);
       const pageUrl = `https://${host}/share/business/${safeId}`;
       const deepLink = `salamyall://business/${safeId}`;
+      const webLink = `https://${host}/community?open=business&id=${safeId}`;
 
       const category = business?.category || "Business";
       const address = business?.address || "";
@@ -6900,6 +6907,7 @@ Important notes:
       </div>
       ${description ? `<p class="desc">${escapeHtml(description.substring(0, 180))}${description.length > 180 ? "..." : ""}</p>` : ""}
       <a href="${deepLink}" class="cta" id="open">Open in Salam Y'all</a>
+      <a href="${webLink}" class="web-cta">View on web</a>
       <a href="https://apps.apple.com/us/app/salam-yall/id6760231963" class="get-app">Don't have the app? Get Salam Y'all</a>
     </div>
   </div>
