@@ -4947,6 +4947,10 @@ Return ONLY the description text, nothing else.`,
     res.send(privacyHtml);
   });
 
+  app.get("/privacy-policy", (_req, res) => {
+    res.redirect(301, "/privacy");
+  });
+
   app.get("/support", (_req, res) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.send(supportHtml);
