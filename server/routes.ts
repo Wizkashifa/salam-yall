@@ -6674,32 +6674,34 @@ Important notes:
 
   const sharePageStyles = `
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;min-height:100vh;background:#0A1F16;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
-    .brand{display:flex;align-items:center;gap:10px;margin-bottom:24px}
-    .brand img{width:36px;height:36px;border-radius:8px}
-    .brand-name{font-size:20px;font-weight:700;color:#D4A843;letter-spacing:0.5px}
-    .card{max-width:420px;width:100%;background:linear-gradient(145deg,#142E22 0%,#0F2A1E 100%);border-radius:20px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.4),0 0 0 1px rgba(27,107,74,0.2)}
+    body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;background:#070F0B;color:#F0F0EC;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;position:relative;overflow-x:hidden}
+    body::before{content:'';position:fixed;top:0;left:0;right:0;height:100%;background:radial-gradient(ellipse at 50% 0%,rgba(27,107,74,0.12) 0%,transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(212,168,67,0.05) 0%,transparent 40%);pointer-events:none;z-index:0}
+    .brand{display:flex;align-items:center;gap:10px;margin-bottom:24px;position:relative;z-index:1}
+    .brand img{width:34px;height:34px;border-radius:8px}
+    .brand-name{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#D4A843;letter-spacing:0.3px}
+    .card{max-width:420px;width:100%;background:rgba(14,26,19,0.9);border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);box-shadow:0 8px 32px rgba(0,0,0,0.45),0 1px 0 rgba(255,255,255,0.05);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);position:relative;z-index:1}
     .card-image{width:100%;height:200px;object-fit:cover}
     .card-image-placeholder{width:100%;height:120px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1B6B4A 0%,#0F3D2B 100%);font-size:48px}
     .card-body{padding:24px}
-    .badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px}
-    .badge-event{background:rgba(27,107,74,0.25);color:#34D399;border:1px solid rgba(27,107,74,0.4)}
-    .badge-restaurant{background:rgba(212,168,67,0.15);color:#D4A843;border:1px solid rgba(212,168,67,0.3)}
-    .badge-business{background:rgba(99,102,241,0.15);color:#A5B4FC;border:1px solid rgba(99,102,241,0.3)}
-    .badge-halal{background:rgba(34,197,94,0.15);color:#4ADE80;border:1px solid rgba(34,197,94,0.3);margin-left:6px}
-    h1{font-size:22px;font-weight:700;line-height:1.3;margin-bottom:8px;color:#F5F5F5}
+    .badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:12px}
+    .badge-event{background:rgba(27,107,74,0.15);color:#34D399;border:1px solid rgba(27,107,74,0.3)}
+    .badge-restaurant{background:rgba(212,168,67,0.1);color:#D4A843;border:1px solid rgba(212,168,67,0.25)}
+    .badge-business{background:rgba(99,102,241,0.1);color:#A5B4FC;border:1px solid rgba(99,102,241,0.2)}
+    .badge-halal{background:rgba(34,197,94,0.1);color:#4ADE80;border:1px solid rgba(34,197,94,0.2);margin-left:6px}
+    h1{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;line-height:1.3;margin-bottom:10px;color:#F0F0EC;margin-top:8px}
     .meta{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
-    .meta-row{display:flex;align-items:center;gap:8px;font-size:13px;color:#9CA3AF}
-    .meta-row svg{width:14px;height:14px;flex-shrink:0;fill:#6B7280}
-    .desc{font-size:14px;color:#9CA3AF;line-height:1.6;margin-bottom:20px}
+    .meta-row{display:flex;align-items:center;gap:8px;font-size:13px;color:rgba(255,255,255,0.6)}
+    .meta-row svg{width:14px;height:14px;flex-shrink:0;opacity:0.5}
+    .desc{font-size:14px;color:rgba(255,255,255,0.55);line-height:1.65;margin-bottom:20px}
     .rating{display:flex;align-items:center;gap:4px;font-size:13px;color:#D4A843;margin-bottom:12px}
-    .cta{display:block;text-align:center;background:linear-gradient(135deg,#1B6B4A 0%,#15573D 100%);color:#fff;text-decoration:none;padding:14px 32px;border-radius:12px;font-weight:600;font-size:16px;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 12px rgba(27,107,74,0.3)}
+    .cta{display:block;text-align:center;background:#1B6B4A;color:#fff;text-decoration:none;padding:14px 32px;border-radius:12px;font-weight:600;font-size:16px;transition:background 0.15s,transform 0.15s;letter-spacing:0.01em}
+    .cta:hover{background:#2A8C63}
     .cta:active{transform:scale(0.98)}
-    .web-cta{display:block;text-align:center;margin-top:10px;background:rgba(255,255,255,0.06);color:#D1D5DB;text-decoration:none;padding:12px 32px;border-radius:12px;font-weight:500;font-size:15px;border:1px solid rgba(255,255,255,0.1);transition:background 0.15s}
-    .web-cta:hover{background:rgba(255,255,255,0.1)}
-    .get-app{display:block;text-align:center;margin-top:12px;font-size:13px;color:#6B7280;text-decoration:none}
-    .get-app:hover{color:#9CA3AF}
-    .footer{margin-top:24px;font-size:11px;color:#4B5563;text-align:center}
+    .web-cta{display:block;text-align:center;margin-top:10px;background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.7);text-decoration:none;padding:12px 32px;border-radius:12px;font-weight:500;font-size:15px;border:1px solid rgba(255,255,255,0.08);transition:background 0.15s,border-color 0.15s}
+    .web-cta:hover{background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.12)}
+    .get-app{display:block;text-align:center;margin-top:12px;font-size:12px;color:rgba(255,255,255,0.3);text-decoration:none;letter-spacing:0.01em;transition:color 0.15s}
+    .get-app:hover{color:rgba(255,255,255,0.5)}
+    .footer{margin-top:24px;font-size:11px;color:rgba(255,255,255,0.2);text-align:center;position:relative;z-index:1;letter-spacing:0.02em}
   `;
 
   const crescentSvg = `<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 2C8.268 2 2 8.268 2 16s6.268 14 14 14 14-6.268 14-14S23.732 2 16 2z" fill="#1B6B4A"/><path d="M18.5 6C13.806 6 10 9.806 10 14.5S13.806 23 18.5 23c1.908 0 3.666-.63 5.084-1.693A10.96 10.96 0 0116 24C10.477 24 6 19.523 6 14S10.477 4 16 4c2.761 0 5.262 1.143 7.044 2.98A8.45 8.45 0 0018.5 6z" fill="#D4A843"/><circle cx="22" cy="8" r="1.5" fill="#D4A843"/></svg>`;
@@ -6818,6 +6820,9 @@ Important notes:
   <meta name="twitter:title" content="${escapeHtml(title)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
   <meta name="twitter:image" content="${imageUrl ? escapeHtml(imageUrl) : `https://${host}/assets/images/og-share.png`}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>${sharePageStyles}</style>
 </head>
 <body>
@@ -6892,6 +6897,9 @@ Important notes:
   <meta name="twitter:title" content="${escapeHtml(title)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
   <meta name="twitter:image" content="${restaurantImageUrl || `https://${host}/assets/images/og-share.png`}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>${sharePageStyles}</style>
 </head>
 <body>
@@ -6962,6 +6970,9 @@ Important notes:
   <meta name="twitter:title" content="${escapeHtml(title)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
   <meta name="twitter:image" content="${businessImageUrl || `https://${host}/assets/images/og-share.png`}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>${sharePageStyles}</style>
 </head>
 <body>
