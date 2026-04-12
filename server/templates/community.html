@@ -2105,6 +2105,12 @@
       document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
       document.getElementById(tab + '-section').classList.add('active');
       loadSection(tab);
+      var attempts = 0;
+      var dlPoll = setInterval(function() {
+        attempts++;
+        if (_dlResolved || (!_dlType && !_dlId) || attempts > 30) { clearInterval(dlPoll); return; }
+        tryResolveDeepLink();
+      }, 500);
       return tab;
     }
 
@@ -2113,13 +2119,15 @@
       else if (type === 'restaurant') openRestaurantModal(item);
       else if (type === 'business') openBusinessModal(item);
     }
+    var _dlResolved = false;
     function tryResolveDeepLink() {
-      if (!_dlType || !_dlId) return;
+      if (_dlResolved || !_dlType || !_dlId) return;
       var type = _dlType, id = String(_dlId), item = null;
       if (type === 'event') item = allEvents.find(function(e) { return String(e.id) === id; });
       else if (type === 'restaurant') item = allRestaurants.find(function(r) { return String(r.id) === id; });
       else if (type === 'business') item = allBusinesses.find(function(b) { return String(b.id) === id; });
       if (item) {
+        _dlResolved = true;
         _dlType = null; _dlId = null;
         history.replaceState(null, '', window.location.pathname + (window.location.hash || ''));
         try { _openDeepLinkItem(type, item); } catch(err) { console.error('[DeepLink] modal error:', err); }
@@ -2129,6 +2137,7 @@
         (type === 'restaurant' && dataLoaded.restaurants) ||
         (type === 'business' && dataLoaded.directory);
       if (!relevantLoaded) return;
+      _dlResolved = true;
       var dlType = _dlType, dlId = _dlId;
       _dlType = null; _dlId = null;
       history.replaceState(null, '', window.location.pathname + (window.location.hash || ''));
