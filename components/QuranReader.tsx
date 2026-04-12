@@ -1,3 +1,4 @@
+"use no memo";
 import React, { useState, useEffect, useCallback, useMemo, useRef, useImperativeHandle } from "react";
 import {
   StyleSheet,
