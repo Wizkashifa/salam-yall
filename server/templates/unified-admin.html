@@ -378,20 +378,23 @@
     <!-- Events -->
     <div class="tab-content" id="orgTabEvents">
       <div class="section">
-        <div class="section-title">📸 Add New Event</div>
+        <div class="section-title">📸 Scan Event Flyer</div>
         <div class="upload-area" id="orgFlyerUploadArea" ondragover="event.preventDefault();this.style.borderColor='var(--gold)';" ondragleave="this.style.borderColor='';" ondrop="handleFlyerDrop(event,'org')" onclick="document.getElementById('orgFlyerInput').click()">
           <div class="upload-icon">📸</div>
-          <div class="upload-text">Drop a flyer or click to upload</div>
-          <div class="upload-hint">JPG, PNG, or WebP</div>
+          <div class="upload-text">Drop, paste, or click to upload a flyer</div>
+          <div class="upload-hint">JPG, PNG, WebP · or Ctrl+V / ⌘V to paste from clipboard</div>
           <input type="file" id="orgFlyerInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleFlyerSelect(event,'org')">
         </div>
         <div id="orgFlyerPreview" style="display:none;margin-bottom:14px;text-align:center;">
           <img id="orgFlyerPreviewImg" style="max-width:100%;max-height:280px;border-radius:10px;border:1px solid var(--border-light);">
-          <button class="btn btn-sm" onclick="clearFlyer('org')" style="margin-top:8px;background:var(--surface-alt);color:var(--text-secondary);">Remove</button>
+          <button class="btn btn-sm" onclick="clearFlyer('org')" style="margin-top:8px;background:var(--surface-alt);color:var(--text-secondary);">Remove Image</button>
         </div>
-        <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <div id="orgAdditionalFlyersContainer" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;"></div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
           <button class="btn btn-gold" onclick="extractFlyer('org')" id="orgExtractBtn" disabled>✨ Extract with AI</button>
           <button class="btn btn-sm btn-outline" onclick="toggleFlyerForm('org')">Manual Entry</button>
+          <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('orgAdditionalFlyerInput').click()" style="font-size:12px;">+ Add More Flyers</button>
+          <input type="file" id="orgAdditionalFlyerInput" accept="image/jpeg,image/png,image/webp" multiple style="display:none;" onchange="handleAdditionalFlyers(event,'org')">
         </div>
         <div id="orgExtractStatus" style="display:none;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:14px;"></div>
         <div id="orgFlyerForm" style="display:none;">
@@ -407,16 +410,19 @@
           </div>
           <label>Registration URL</label>
           <input type="text" id="orgEvRegUrl" placeholder="https://...">
-          <div class="recur-box">
-            <label style="margin:0;text-transform:uppercase;letter-spacing:0.6px;font-size:11px;color:var(--text-secondary);">Recurrence</label>
-            <select id="orgEvRecurType" onchange="updateRecurUI('orgEv')" style="margin-top:8px;">
-              <option value="none">One-time event</option>
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly on same day</option>
-              <option value="monthly_calendar">Monthly — same date</option>
-              <option value="monthly_weekday">Monthly — same weekday</option>
-            </select>
-            <div class="recur-opts" id="orgEvRecurOpts"></div>
+          <div id="orgRecurringPanel" style="display:none;margin:14px 0;border:1px solid var(--emerald-bg);border-radius:10px;padding:14px;background:var(--emerald-surface);">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-size:16px;">🔁</span>
+              <span style="font-size:13px;font-weight:600;color:var(--emerald-light);">Recurring Event Detected</span>
+            </div>
+            <div id="orgRecurDesc" style="font-size:13px;color:var(--preview-value);margin-bottom:12px;"></div>
+            <label style="font-size:12px;color:var(--text-secondary);">Generate occurrences through</label>
+            <input type="date" id="orgRecurRangeEnd" style="width:100%;margin:6px 0 10px;" oninput="updateRecurringPreview('org')">
+            <div id="orgRecurPreviewCount" style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;"></div>
+            <button class="btn btn-primary" onclick="createRecurringEvents('org')" id="orgCreateRecurBtn" style="width:100%;">Create All Occurrences</button>
+            <div style="margin-top:8px;text-align:center;">
+              <button onclick="hideRecurringPanel('org')" style="background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;text-decoration:underline;">Publish as single event instead</button>
+            </div>
           </div>
           <button class="btn btn-primary" onclick="publishPortalEvent('org')" id="orgPublishBtn" style="margin-top:14px;width:100%;">Publish Event</button>
         </div>
@@ -508,20 +514,23 @@
     <!-- Events -->
     <div class="tab-content" id="masjidTabEvents">
       <div class="section">
-        <div class="section-title">📸 Add New Event</div>
+        <div class="section-title">📸 Scan Event Flyer</div>
         <div class="upload-area" id="masjidFlyerUploadArea" ondragover="event.preventDefault();this.style.borderColor='var(--gold)';" ondragleave="this.style.borderColor='';" ondrop="handleFlyerDrop(event,'masjid')" onclick="document.getElementById('masjidFlyerInput').click()">
           <div class="upload-icon">📸</div>
-          <div class="upload-text">Drop a flyer or click to upload</div>
-          <div class="upload-hint">JPG, PNG, or WebP</div>
+          <div class="upload-text">Drop, paste, or click to upload a flyer</div>
+          <div class="upload-hint">JPG, PNG, WebP · or Ctrl+V / ⌘V to paste from clipboard</div>
           <input type="file" id="masjidFlyerInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleFlyerSelect(event,'masjid')">
         </div>
         <div id="masjidFlyerPreview" style="display:none;margin-bottom:14px;text-align:center;">
           <img id="masjidFlyerPreviewImg" style="max-width:100%;max-height:280px;border-radius:10px;border:1px solid var(--border-light);">
-          <button class="btn btn-sm" onclick="clearFlyer('masjid')" style="margin-top:8px;background:var(--surface-alt);color:var(--text-secondary);">Remove</button>
+          <button class="btn btn-sm" onclick="clearFlyer('masjid')" style="margin-top:8px;background:var(--surface-alt);color:var(--text-secondary);">Remove Image</button>
         </div>
-        <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <div id="masjidAdditionalFlyersContainer" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;"></div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
           <button class="btn btn-gold" onclick="extractFlyer('masjid')" id="masjidExtractBtn" disabled>✨ Extract with AI</button>
           <button class="btn btn-sm btn-outline" onclick="toggleFlyerForm('masjid')">Manual Entry</button>
+          <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('masjidAdditionalFlyerInput').click()" style="font-size:12px;">+ Add More Flyers</button>
+          <input type="file" id="masjidAdditionalFlyerInput" accept="image/jpeg,image/png,image/webp" multiple style="display:none;" onchange="handleAdditionalFlyers(event,'masjid')">
         </div>
         <div id="masjidExtractStatus" style="display:none;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:14px;"></div>
         <div id="masjidFlyerForm" style="display:none;">
@@ -537,16 +546,19 @@
           </div>
           <label>Registration URL</label>
           <input type="text" id="masjidEvRegUrl" placeholder="https://...">
-          <div class="recur-box">
-            <label style="margin:0;text-transform:uppercase;letter-spacing:0.6px;font-size:11px;color:var(--text-secondary);">Recurrence</label>
-            <select id="masjidEvRecurType" onchange="updateRecurUI('masjidEv')" style="margin-top:8px;">
-              <option value="none">One-time event</option>
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly on same day</option>
-              <option value="monthly_calendar">Monthly — same date</option>
-              <option value="monthly_weekday">Monthly — same weekday</option>
-            </select>
-            <div class="recur-opts" id="masjidEvRecurOpts"></div>
+          <div id="masjidRecurringPanel" style="display:none;margin:14px 0;border:1px solid var(--emerald-bg);border-radius:10px;padding:14px;background:var(--emerald-surface);">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-size:16px;">🔁</span>
+              <span style="font-size:13px;font-weight:600;color:var(--emerald-light);">Recurring Event Detected</span>
+            </div>
+            <div id="masjidRecurDesc" style="font-size:13px;color:var(--preview-value);margin-bottom:12px;"></div>
+            <label style="font-size:12px;color:var(--text-secondary);">Generate occurrences through</label>
+            <input type="date" id="masjidRecurRangeEnd" style="width:100%;margin:6px 0 10px;" oninput="updateRecurringPreview('masjid')">
+            <div id="masjidRecurPreviewCount" style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;"></div>
+            <button class="btn btn-primary" onclick="createRecurringEvents('masjid')" id="masjidCreateRecurBtn" style="width:100%;">Create All Occurrences</button>
+            <div style="margin-top:8px;text-align:center;">
+              <button onclick="hideRecurringPanel('masjid')" style="background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;text-decoration:underline;">Publish as single event instead</button>
+            </div>
           </div>
           <button class="btn btn-primary" onclick="publishPortalEvent('masjid')" id="masjidPublishBtn" style="margin-top:14px;width:100%;">Publish Event</button>
         </div>
@@ -644,6 +656,8 @@
 var SESSION_KEY = 'unified_admin_session';
 var session = null; // { token, role, orgName, metro, displayName }
 var flyerData = { org: null, masjid: null }; // { base64, mime }
+var additionalFlyerImages = { org: [], masjid: [] }; // [{ data, mime }]
+var detectedRecurring = { org: null, masjid: null };
 var janazaBase64 = null, janazaMime = null;
 var cachedEvents = {};
 var cachedAccounts = [];
@@ -1153,25 +1167,169 @@ function handleFlyerSelect(e, dashKey) {
 function processFlyer(file, dashKey) {
   if (!file.type.startsWith('image/')) { showToast('Please upload an image', true); return; }
   var reader = new FileReader();
-  reader.onload = function(e) {
-    flyerData[dashKey] = { base64: e.target.result.split(',')[1], mime: file.type };
-    document.getElementById(dashKey + 'FlyerPreviewImg').src = e.target.result;
+  reader.onload = function(ev) {
+    flyerData[dashKey] = { base64: ev.target.result.split(',')[1], mime: file.type };
+    document.getElementById(dashKey + 'FlyerPreviewImg').src = ev.target.result;
     document.getElementById(dashKey + 'FlyerPreview').style.display = 'block';
     document.getElementById(dashKey + 'FlyerUploadArea').style.display = 'none';
     document.getElementById(dashKey + 'ExtractBtn').disabled = false;
   };
   reader.readAsDataURL(file);
 }
+function handleAdditionalFlyers(e, dashKey) {
+  var files = Array.from(e.target.files);
+  var pending = files.length;
+  files.forEach(function(file) {
+    if (!file.type.startsWith('image/')) { pending--; return; }
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      additionalFlyerImages[dashKey].push({ data: ev.target.result.split(',')[1], mime: file.type });
+      pending--;
+      if (pending <= 0) renderAdditionalFlyerThumbs(dashKey);
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value = '';
+}
+function renderAdditionalFlyerThumbs(dashKey) {
+  var container = document.getElementById(dashKey + 'AdditionalFlyersContainer');
+  var imgs = additionalFlyerImages[dashKey];
+  if (!imgs || !imgs.length) { container.innerHTML = ''; return; }
+  container.innerHTML = imgs.map(function(img, i) {
+    return '<div style="position:relative;display:inline-block;">' +
+      '<img src="data:' + img.mime + ';base64,' + img.data + '" style="width:60px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border-light);">' +
+      '<button onclick="removeAdditionalFlyer(\'' + dashKey + '\',' + i + ')" style="position:absolute;top:-6px;right:-6px;background:#EF4444;color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>' +
+      '</div>';
+  }).join('');
+}
+function removeAdditionalFlyer(dashKey, idx) {
+  additionalFlyerImages[dashKey].splice(idx, 1);
+  renderAdditionalFlyerThumbs(dashKey);
+}
 function clearFlyer(dashKey) {
   flyerData[dashKey] = null;
+  additionalFlyerImages[dashKey] = [];
+  detectedRecurring[dashKey] = null;
   document.getElementById(dashKey + 'FlyerPreview').style.display = 'none';
   document.getElementById(dashKey + 'FlyerUploadArea').style.display = 'block';
   document.getElementById(dashKey + 'ExtractBtn').disabled = true;
   document.getElementById(dashKey + 'FlyerInput').value = '';
+  renderAdditionalFlyerThumbs(dashKey);
 }
 function toggleFlyerForm(dashKey) {
   var form = document.getElementById(dashKey + 'FlyerForm');
   form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+// ─── Clipboard paste for flyer upload ───
+document.addEventListener('paste', function(e) {
+  if (!session) return;
+  var dashKey = session.role === 'community_org' ? 'org' : 'masjid';
+  var items = e.clipboardData && e.clipboardData.items;
+  if (!items) return;
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].type.startsWith('image/')) {
+      var file = items[i].getAsFile();
+      if (file) { processFlyer(file, dashKey); break; }
+    }
+  }
+});
+
+function updateRecurringPreview(dashKey) {
+  var rangeEndEl = document.getElementById(dashKey + 'RecurRangeEnd');
+  var previewEl = document.getElementById(dashKey + 'RecurPreviewCount');
+  var p = detectedRecurring[dashKey];
+  if (!p || !rangeEndEl.value) { previewEl.textContent = ''; return; }
+  var pfx = dashKey === 'org' ? 'orgEv' : 'masjidEv';
+  var startEl = document.getElementById(pfx + 'Start');
+  if (!startEl.value) { previewEl.textContent = ''; return; }
+  var baseStart = new Date(startEl.value);
+  var rangeEnd = new Date(rangeEndEl.value + 'T23:59:59');
+  var count = 0;
+  function getNthWD(y, m, wd, n) {
+    var d = new Date(y, m, 1), cnt = 0;
+    while (d.getMonth() === m) { if (d.getDay() === wd && ++cnt === n) return new Date(d); d.setDate(d.getDate()+1); }
+    return new Date(NaN);
+  }
+  if (p.type === 'weekly') {
+    var cur = new Date(baseStart);
+    while (cur <= rangeEnd) { count++; cur.setDate(cur.getDate()+7); }
+  } else if (p.type === 'monthly_nth_weekday') {
+    var y = baseStart.getFullYear(), mo = baseStart.getMonth();
+    while (y < rangeEnd.getFullYear() || (y === rangeEnd.getFullYear() && mo <= rangeEnd.getMonth())) {
+      var occ = getNthWD(y, mo, p.dayOfWeek, p.weekOfMonth);
+      if (!isNaN(occ.getTime())) { var s = new Date(y, mo, occ.getDate(), baseStart.getHours(), baseStart.getMinutes()); if (s >= baseStart && s <= rangeEnd) count++; }
+      mo++; if (mo > 11) { mo = 0; y++; }
+    }
+  } else if (p.type === 'bimonthly_nth_weekday') {
+    var intv = p.intervalMonths || 2;
+    var y2 = baseStart.getFullYear(), mo2 = baseStart.getMonth();
+    var weeks = p.nthWeekdays || [p.weekOfMonth];
+    while (y2 < rangeEnd.getFullYear() || (y2 === rangeEnd.getFullYear() && mo2 <= rangeEnd.getMonth())) {
+      for (var ni = 0; ni < weeks.length; ni++) {
+        var occ2 = getNthWD(y2, mo2, p.dayOfWeek, weeks[ni]);
+        if (!isNaN(occ2.getTime())) { var s2 = new Date(y2, mo2, occ2.getDate(), baseStart.getHours(), baseStart.getMinutes()); if (s2 >= baseStart && s2 <= rangeEnd) count++; }
+      }
+      mo2 += intv; if (mo2 > 11) { mo2 -= 12; y2++; }
+    }
+  }
+  previewEl.textContent = count > 0 ? 'Will create ' + count + ' occurrence' + (count !== 1 ? 's' : '') : 'No occurrences in this range';
+}
+
+function hideRecurringPanel(dashKey) {
+  document.getElementById(dashKey + 'RecurringPanel').style.display = 'none';
+  document.getElementById(dashKey + 'PublishBtn').style.display = 'block';
+  detectedRecurring[dashKey] = null;
+}
+
+async function createRecurringEvents(dashKey) {
+  if (!detectedRecurring[dashKey]) return;
+  var pfx = dashKey === 'org' ? 'orgEv' : 'masjidEv';
+  var title = document.getElementById(pfx + 'Title').value.trim();
+  var startTime = document.getElementById(pfx + 'Start').value;
+  var rangeEnd = document.getElementById(dashKey + 'RecurRangeEnd').value;
+  if (!title || !startTime) { showToast('Title and start time are required', true); return; }
+  if (!rangeEnd) { showToast('Please set a range end date', true); return; }
+  var btn = document.getElementById(dashKey + 'CreateRecurBtn');
+  btn.disabled = true; btn.textContent = 'Creating...';
+  try {
+    var fd = flyerData[dashKey];
+    var body = {
+      title: title,
+      description: document.getElementById(pfx + 'Desc').value.trim(),
+      location: document.getElementById(pfx + 'Location').value.trim(),
+      startTime: new Date(startTime).toISOString(),
+      endTime: document.getElementById(pfx + 'End').value ? new Date(document.getElementById(pfx + 'End').value).toISOString() : null,
+      registrationUrl: document.getElementById(pfx + 'RegUrl').value.trim(),
+      image: fd ? fd.base64 : null,
+      imageMime: fd ? fd.mime : null,
+      additionalImages: additionalFlyerImages[dashKey],
+      recurring: detectedRecurring[dashKey],
+      rangeEnd: rangeEnd,
+    };
+    var res = await fetch(portalPath() + '/events/publish-recurring', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
+    if (res.status === 401) { handleUnauthorized(); return; }
+    var data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Failed to create occurrences', true); return; }
+    showToast('Created ' + data.count + ' occurrences of "' + title + '"!');
+    resetFlyerForm(dashKey);
+    loadPortalEvents(dashKey);
+    loadPortalStats(dashKey);
+  } catch(e) { showToast('Connection error', true); }
+  finally { btn.disabled = false; btn.textContent = 'Create All Occurrences'; }
+}
+
+function resetFlyerForm(dashKey) {
+  var pfx = dashKey === 'org' ? 'orgEv' : 'masjidEv';
+  [pfx+'Title', pfx+'Desc', pfx+'Location', pfx+'Start', pfx+'End', pfx+'RegUrl'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById(dashKey + 'FlyerForm').style.display = 'none';
+  document.getElementById(dashKey + 'ExtractStatus').style.display = 'none';
+  document.getElementById(dashKey + 'RecurringPanel').style.display = 'none';
+  document.getElementById(dashKey + 'PublishBtn').style.display = 'block';
+  detectedRecurring[dashKey] = null;
+  clearFlyer(dashKey);
 }
 
 async function extractFlyer(dashKey) {
@@ -1181,11 +1339,14 @@ async function extractFlyer(dashKey) {
   btn.disabled = true; btn.textContent = 'Extracting...';
   statusEl.style.display = 'block';
   statusEl.style.background = 'var(--emerald-surface)'; statusEl.style.color = 'var(--emerald-light)';
-  statusEl.textContent = 'Analyzing flyer with AI...';
+  statusEl.textContent = 'Sending image(s) to AI for analysis...';
   try {
+    var fd = flyerData[dashKey];
+    var allImages = [{ data: fd.base64, mimeType: fd.mime }];
+    additionalFlyerImages[dashKey].forEach(function(img) { allImages.push({ data: img.data, mimeType: img.mime }); });
     var res = await fetch(portalPath() + '/extract-flyer', {
       method: 'POST', headers: authHeaders(),
-      body: JSON.stringify({ image: flyerData[dashKey].base64, mimeType: flyerData[dashKey].mime }),
+      body: JSON.stringify({ images: allImages }),
     });
     if (res.status === 401) { handleUnauthorized(); return; }
     var data = await res.json();
@@ -1203,8 +1364,26 @@ async function extractFlyer(dashKey) {
       if (data.endTime) document.getElementById(pfx + 'End').value = data.date + 'T' + data.endTime;
     }
     document.getElementById(dashKey + 'FlyerForm').style.display = 'block';
-    statusEl.style.background = 'var(--emerald-surface)'; statusEl.style.color = 'var(--emerald-light)';
-    statusEl.textContent = 'Details extracted! Review below and publish.';
+    var recurPanel = document.getElementById(dashKey + 'RecurringPanel');
+    var publishBtn = document.getElementById(dashKey + 'PublishBtn');
+    if (data.isRecurring && data.recurring && data.recurring.type !== 'custom') {
+      detectedRecurring[dashKey] = data.recurring;
+      document.getElementById(dashKey + 'RecurDesc').textContent = data.recurring.description || 'Recurring event';
+      var defaultEnd = data.date ? new Date(data.date) : new Date();
+      defaultEnd.setFullYear(defaultEnd.getFullYear() + 1);
+      document.getElementById(dashKey + 'RecurRangeEnd').value = defaultEnd.toISOString().split('T')[0];
+      recurPanel.style.display = 'block';
+      publishBtn.style.display = 'none';
+      updateRecurringPreview(dashKey);
+      statusEl.style.background = 'var(--emerald-surface)'; statusEl.style.color = 'var(--emerald-light)';
+      statusEl.textContent = 'Recurring event detected! Review the pattern below and set how far out to generate.';
+    } else {
+      detectedRecurring[dashKey] = null;
+      recurPanel.style.display = 'none';
+      publishBtn.style.display = 'block';
+      statusEl.style.background = 'var(--emerald-surface)'; statusEl.style.color = 'var(--emerald-light)';
+      statusEl.textContent = 'Details extracted! Review and edit below, then publish.';
+    }
   } catch(e) {
     statusEl.style.background = 'var(--red-surface)'; statusEl.style.color = 'var(--red)';
     statusEl.textContent = 'Connection error';
@@ -1219,7 +1398,6 @@ async function publishPortalEvent(dashKey) {
   if (!title || !startTime || !location) { showToast('Title, start time, and location required', true); return; }
   var btn = document.getElementById(dashKey + 'PublishBtn');
   btn.disabled = true; btn.textContent = 'Publishing...';
-  var recur = getRecurPayload(pfx);
   try {
     var fd = flyerData[dashKey];
     var body = {
@@ -1228,19 +1406,14 @@ async function publishPortalEvent(dashKey) {
       endTime: document.getElementById(pfx + 'End').value ? new Date(document.getElementById(pfx + 'End').value).toISOString() : null,
       registrationUrl: document.getElementById(pfx + 'RegUrl').value.trim(),
       image: fd ? fd.base64 : null, imageMime: fd ? fd.mime : null,
-      recurrenceType: recur.recurrenceType, recurrenceConfig: recur.recurrenceConfig,
+      additionalImages: additionalFlyerImages[dashKey],
     };
     var res = await fetch(portalPath() + '/events/publish', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
     if (res.status === 401) { handleUnauthorized(); return; }
     var data = await res.json();
     if (!res.ok) { showToast(data.error || 'Failed to publish', true); return; }
     showToast('Published ' + data.count + ' event' + (data.count > 1 ? 's' : '') + '!');
-    [pfx + 'Title', pfx + 'Desc', pfx + 'Location', pfx + 'Start', pfx + 'End', pfx + 'RegUrl'].forEach(function(id) {
-      var el = document.getElementById(id); if (el) el.value = '';
-    });
-    document.getElementById(dashKey + 'FlyerForm').style.display = 'none';
-    document.getElementById(dashKey + 'ExtractStatus').style.display = 'none';
-    clearFlyer(dashKey);
+    resetFlyerForm(dashKey);
     loadPortalEvents(dashKey);
     loadPortalStats(dashKey);
   } catch(e) { showToast('Connection error', true); }
