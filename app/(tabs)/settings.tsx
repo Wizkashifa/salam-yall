@@ -53,6 +53,8 @@ import { DHIKR_PRESETS, getDhikrCounts, incrementDhikr, resetDhikr, type DhikrDa
 import { trackEvent, trackScreenView } from "@/lib/analytics";
 import { MasjidMap } from "@/components/MasjidMap";
 import { computeBadges, BADGES, type BadgeState } from "@/lib/prayer-badges";
+import { WeeklyTrendRow } from "@/components/WeeklyTrendRow";
+import { MilestoneCelebrationModal } from "@/components/MilestoneCelebrationModal";
 import ViewShot, { captureRef } from "react-native-view-shot";
 import { useRef } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -206,6 +208,8 @@ export default function SettingsScreen() {
   const [locationRequested, setLocationRequested] = useState(false);
   const [badgeStates, setBadgeStates] = useState<BadgeState[]>([]);
   const [newBadgeKey, setNewBadgeKey] = useState<string | null>(null);
+  const [celebrationBadgeKey, setCelebrationBadgeKey] = useState<string | null>(null);
+  const [analyticsPage, setAnalyticsPage] = useState(0);
 
   const { data: followedOrgsRaw, refetch: refetchFollows } = useQuery<{ follows: string[] }>({
     queryKey: ["/api/organizer-follows"],
@@ -360,6 +364,7 @@ export default function SettingsScreen() {
         setBadgeStates(badges);
         if (newlyEarned.length > 0) {
           setNewBadgeKey(newlyEarned[0]);
+          setCelebrationBadgeKey(newlyEarned[0]);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           setTimeout(() => setNewBadgeKey(null), 3000);
         }
@@ -1482,64 +1487,99 @@ export default function SettingsScreen() {
 
         <>
             {heatmapData.length > 0 && (
-              <View style={{ backgroundColor: gcBg, borderRadius: 16, borderWidth: 1, borderColor: gcBorder, padding: 12, marginBottom: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                  <Ionicons name="grid" size={16} color={colors.emerald} />
-                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: colors.text }}>Prayer Heatmap</Text>
-                  <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: colors.textSecondary, marginLeft: "auto" }}>{heatmapData.length < 30 ? `Last ${heatmapData.length} day${heatmapData.length === 1 ? "" : "s"}` : "Last 30 days"}</Text>
-                </View>
-                {(() => {
-                  const numDots = heatmapData.length || 30;
-                  const labelW = 48;
-                  const availableW = screenWidth - 66 - 24 - labelW;
-                  const gap = 2;
-                  const dotSize = Math.floor((availableW - ((numDots - 1) * gap)) / numDots);
-                  const clampedDot = Math.min(Math.max(dotSize, 5), 10);
-                  return (["fajr", "dhuhr", "asr", "maghrib", "isha"] as const).map((prayer) => (
-                    <View key={prayer} style={{ flexDirection: "row", alignItems: "center", marginBottom: 3 }}>
-                      <Text style={{ fontFamily: "Inter_500Medium", fontSize: 10, color: colors.textSecondary, width: labelW, textTransform: "capitalize" }}>
-                        {prayer}
-                      </Text>
-                      <View style={{ flexDirection: "row", gap, flexWrap: "nowrap", flex: 1 }}>
-                        {heatmapData.map((day, di) => {
-                          const status = day[prayer];
-                          let dotColor = colors.surfaceSecondary;
-                          if (status === 1) dotColor = colors.emerald;
-                          else if (status === 2) dotColor = colors.gold;
-                          else if (status === 3) dotColor = colors.emerald + "80";
-                          else if (status === 4) dotColor = colors.surfaceSecondary;
-                          else if (status === -1) dotColor = colors.surfaceSecondary; // upcoming, not yet
-                          else if (status === 0) dotColor = "#EF4444"; // expired & untracked = missed
-                          return (
-                            <View
-                              key={di}
-                              style={{
-                                flex: 1,
-                                aspectRatio: 1,
-                                maxWidth: clampedDot,
-                                maxHeight: clampedDot,
-                                borderRadius: 1.5,
-                                backgroundColor: dotColor,
-                              }}
-                            />
-                          );
-                        })}
-                      </View>
+              <View style={{ marginBottom: 10 }}>
+                <ScrollView
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  decelerationRate="fast"
+                  onMomentumScrollEnd={(e) => {
+                    const slideWidth = screenWidth - 40;
+                    const newPage = Math.round(e.nativeEvent.contentOffset.x / slideWidth);
+                    setAnalyticsPage(newPage);
+                  }}
+                >
+                  {/* Slide 1: 7 Day Trend */}
+                  <View style={{ width: screenWidth - 40, backgroundColor: gcBg, borderRadius: 16, borderWidth: 1, borderColor: gcBorder, padding: 16, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}>
+                    <WeeklyTrendRow heatmapData={heatmapData} />
+                  </View>
+
+                  {/* Slide 2: Prayer Trends Heatmap */}
+                  <View style={{ width: screenWidth - 40, backgroundColor: gcBg, borderRadius: 16, borderWidth: 1, borderColor: gcBorder, padding: 12, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                      <Ionicons name="grid" size={16} color={colors.emerald} />
+                      <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: colors.text }}>Prayer Trends</Text>
+                      <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: colors.textSecondary, marginLeft: "auto" }}>{heatmapData.length < 30 ? `Last ${heatmapData.length} day${heatmapData.length === 1 ? "" : "s"}` : "Last 30 days"}</Text>
                     </View>
-                  ));
-                })()}
-                <View style={{ flexDirection: "row", justifyContent: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
-                  {[
-                    { color: colors.emerald, label: "On time" },
-                    { color: colors.gold, label: "Masjid" },
-                    { color: colors.emerald + "80", label: "Made up" },
-                    { color: colors.surfaceSecondary, label: "Excused" },
-                    { color: "#EF4444", label: "Missed" },
-                  ].map(l => (
-                    <View key={l.label} style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                      <View style={{ width: 6, height: 6, borderRadius: 1.5, backgroundColor: l.color }} />
-                      <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: colors.textSecondary }}>{l.label}</Text>
+                    {(() => {
+                      const numDots = heatmapData.length || 30;
+                      const labelW = 48;
+                      const availableW = screenWidth - 66 - 24 - labelW;
+                      const gap = 2;
+                      const dotSize = Math.floor((availableW - ((numDots - 1) * gap)) / numDots);
+                      const clampedDot = Math.min(Math.max(dotSize, 5), 10);
+                      return (["fajr", "dhuhr", "asr", "maghrib", "isha"] as const).map((prayer) => (
+                        <View key={prayer} style={{ flexDirection: "row", alignItems: "center", marginBottom: 3 }}>
+                          <Text style={{ fontFamily: "Inter_500Medium", fontSize: 10, color: colors.textSecondary, width: labelW, textTransform: "capitalize" }}>
+                            {prayer}
+                          </Text>
+                          <View style={{ flexDirection: "row", gap, flexWrap: "nowrap", flex: 1 }}>
+                            {heatmapData.map((day, di) => {
+                              const status = day[prayer];
+                              let dotColor = colors.surfaceSecondary;
+                              if (status === 1) dotColor = colors.emerald;
+                              else if (status === 2) dotColor = colors.gold;
+                              else if (status === 3) dotColor = colors.emerald + "80";
+                              else if (status === 4) dotColor = colors.surfaceSecondary;
+                              else if (status === -1) dotColor = colors.surfaceSecondary;
+                              else if (status === 0) dotColor = "#EF4444";
+                              return (
+                                <View
+                                  key={di}
+                                  style={{
+                                    flex: 1,
+                                    aspectRatio: 1,
+                                    maxWidth: clampedDot,
+                                    maxHeight: clampedDot,
+                                    borderRadius: 1.5,
+                                    backgroundColor: dotColor,
+                                  }}
+                                />
+                              );
+                            })}
+                          </View>
+                        </View>
+                      ));
+                    })()}
+                    <View style={{ flexDirection: "row", justifyContent: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+                      {[
+                        { color: colors.emerald, label: "On time" },
+                        { color: colors.gold, label: "Masjid" },
+                        { color: colors.emerald + "80", label: "Made up" },
+                        { color: colors.surfaceSecondary, label: "Excused" },
+                        { color: "#EF4444", label: "Missed" },
+                      ].map(l => (
+                        <View key={l.label} style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                          <View style={{ width: 6, height: 6, borderRadius: 1.5, backgroundColor: l.color }} />
+                          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: colors.textSecondary }}>{l.label}</Text>
+                        </View>
+                      ))}
                     </View>
+                  </View>
+                </ScrollView>
+
+                {/* Dot page indicators */}
+                <View style={{ flexDirection: "row", justifyContent: "center", gap: 5, marginTop: 8 }}>
+                  {[0, 1].map(i => (
+                    <View
+                      key={i}
+                      style={{
+                        height: 6,
+                        width: i === analyticsPage ? 18 : 6,
+                        borderRadius: 3,
+                        backgroundColor: i === analyticsPage ? colors.gold : colors.textTertiary + "50",
+                      }}
+                    />
                   ))}
                 </View>
               </View>
@@ -1706,6 +1746,15 @@ export default function SettingsScreen() {
                         if (selectedDay === todayKey && Platform.OS === "ios") {
                           saveWidgetCompletion(p, dayLog[p]).catch(() => {});
                         }
+                        computeBadges().then(({ badges, newlyEarned }) => {
+                          setBadgeStates(badges);
+                          if (newlyEarned.length > 0) {
+                            setNewBadgeKey(newlyEarned[0]);
+                            setCelebrationBadgeKey(newlyEarned[0]);
+                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                            setTimeout(() => setNewBadgeKey(null), 3000);
+                          }
+                        });
                         const updated = await getMonthLogs(trackerYear, trackerMonth);
                         setMonthLogs(updated);
                         getMissedPrayerCount().then(setMissedPrayerCount);
@@ -2604,6 +2653,12 @@ export default function SettingsScreen() {
           </ScrollView>
         )}
       </Animated.View>
+
+      <MilestoneCelebrationModal
+        badgeKey={celebrationBadgeKey}
+        onClose={() => setCelebrationBadgeKey(null)}
+        userName={user?.displayName}
+      />
     </View>
   );
 }
