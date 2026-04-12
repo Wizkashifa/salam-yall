@@ -89,17 +89,11 @@
  */
 @media (prefers-color-scheme: light) {
   :root {
-    --gold-rgb:      146, 113, 10;
-
     --bg:            #F9F4EB;
     --bg-elevated:   #FFFFFF;
     --surface:       #FFFFFF;
     --surface-alt:   #F3EDE0;
     --surface-hover: #EDE6D6;
-
-    --gold:          #92710A;
-    --gold-hover:    #7A5F06;
-    --gold-light:    #D4A843;
     --text:          #1A1A1A;
     --red:           #B91C1C;
     --red-bg:        #FEE2E2;
