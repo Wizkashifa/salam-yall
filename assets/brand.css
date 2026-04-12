@@ -74,7 +74,8 @@
   --shadow-lg:         0 12px 40px rgba(var(--black-rgb), 0.50);
 
   /* ── Named palette ───────────────────────────────────────────────── */
-  --forest:    #0d2b1a;
+  --forest:     #0d2b1a;
+  --forest-rgb: 13, 43, 26;
 
   /* ── Radius scale ────────────────────────────────────────────────── */
   --radius-sm: 8px;
