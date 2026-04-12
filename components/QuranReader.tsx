@@ -23,7 +23,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { GlassModalContainer } from "@/components/GlassModal";
 import * as Haptics from "expo-haptics";
-import { Audio } from "expo-av";
+// expo-av imported dynamically in playWordAudio to avoid module-level native module init
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import {
@@ -407,7 +407,7 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
   const [mushafFontSize, setMushafFontSize] = useState(22);
   const wordMapRef = useRef<Map<string, Word[]>>(new Map());
   const tajweedMapRef = useRef<Map<string, string>>(new Map());
-  const currentSoundRef = useRef<Audio.Sound | null>(null);
+  const currentSoundRef = useRef<any>(null);
   const playingWordIdRef = useRef<string | null>(null);
 
   const versesListRef = useRef<FlatList>(null);
@@ -1017,6 +1017,7 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
 
   const playWordAudio = useCallback(async (audioUrl: string, wordKey: string) => {
     try {
+      const { Audio } = await import("expo-av");
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: false,
         playsInSilentModeIOS: true,
