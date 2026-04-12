@@ -447,12 +447,6 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
     AsyncStorage.getItem(MUSHAF_FONT_SIZE_KEY).then(v => {
       if (v) setMushafFontSize(parseInt(v, 10));
     }).catch(() => {});
-    Audio.setAudioModeAsync({
-      allowsRecordingIOS: false,
-      playsInSilentModeIOS: true,
-      staysActiveInBackground: false,
-      shouldDuckAndroid: true,
-    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -1023,6 +1017,12 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
 
   const playWordAudio = useCallback(async (audioUrl: string, wordKey: string) => {
     try {
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+        shouldDuckAndroid: true,
+      }).catch(() => {});
       if (currentSoundRef.current) {
         await currentSoundRef.current.stopAsync().catch(() => {});
         await currentSoundRef.current.unloadAsync().catch(() => {});
