@@ -20,30 +20,14 @@
     <link rel="icon" type="image/png" sizes="48x48" href="/assets/images/favicon.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/apple-touch-icon.png" />
     <meta name="apple-itunes-app" content="app-id=6760231963" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/brand.css">
     <style>
-      *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
       :root {
-        --emerald: #1B6B4A;
-        --emerald-dark: #0d2b1a;
-        --gold: #D4A843;
-        --gold-light: #E8C97A;
+        /* Landing page keeps its distinctive forest green background */
         --bg: #0d2b1a;
-        --card-bg: rgba(255,255,255,0.06);
-        --card-border: rgba(255,255,255,0.1);
-        --text: #F5F5F5;
-        --text-secondary: rgba(255,255,255,0.65);
-        --text-tertiary: rgba(255,255,255,0.4);
-      }
-      html { scroll-behavior: smooth; }
-      body {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        background: var(--bg);
-        color: var(--text);
-        line-height: 1.6;
-        -webkit-font-smoothing: antialiased;
+        --bg-elevated: #0f3520;
+        /* Alias for local usage throughout this template */
+        --text-tertiary: var(--text-muted);
       }
 
       /* HERO */
@@ -120,7 +104,7 @@
         z-index: 1;
         animation: fadeInUp 0.8s ease-out 0.3s both;
       }
-      .hero-cta:hover { background: #14523A; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(27,107,74,0.3); }
+      .hero-cta:hover { background: var(--emerald-hover); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(27,107,74,0.3); }
       .hero-cta svg { width: 20px; height: 20px; fill: currentColor; }
       .hero-buttons { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; }
       .hero-android {
@@ -552,7 +536,7 @@
         text-decoration: none;
         transition: all 0.2s;
       }
-      .cta-btn-primary:hover { background: #14523A; transform: translateY(-2px); }
+      .cta-btn-primary:hover { background: var(--emerald-hover); transform: translateY(-2px); }
       .cta-btn-primary svg { width: 22px; height: 22px; fill: currentColor; }
       .cta-btn-android {
         display: inline-flex;
@@ -625,7 +609,7 @@
         cursor: pointer;
         transition: all 0.2s;
       }
-      .waitlist-form button:hover { background: #14523A; }
+      .waitlist-form button:hover { background: var(--emerald-hover); }
       .waitlist-success {
         display: none;
         color: var(--emerald);
