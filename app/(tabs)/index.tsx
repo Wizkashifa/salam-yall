@@ -261,15 +261,8 @@ function HomeEventDetailModal({ event, visible, onClose }: { event: CalendarEven
   );
 }
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+// NOTE: setNotificationHandler moved to app/_layout.tsx RootLayoutNav useEffect
+// to avoid void TurboModule call at module evaluation time (crashes on iOS 26 / New Arch)
 
 
 interface HalalRestaurant {

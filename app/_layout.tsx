@@ -114,6 +114,20 @@ function RootLayoutNav() {
   useEffect(() => {
     trackEvent("app_open");
 
+    // Set notification handler here (not at module level in tabs) to avoid
+    // void TurboModule call during module evaluation which crashes on iOS 26 New Arch
+    try {
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: false,
+          shouldShowBanner: true,
+          shouldShowList: true,
+        }),
+      });
+    } catch {}
+
     const syncWidgetData = async () => {
       if (Platform.OS !== "ios") return;
       try {
