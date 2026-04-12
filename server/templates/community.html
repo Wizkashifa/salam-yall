@@ -25,7 +25,9 @@
     :root {
       /* page-specific token */
       --popup-bg: #152019;
-      --shadow-card-hover: 0 8px 32px rgba(var(--black-rgb), 0.40);
+      /* Gold hover tokens — apply to all card types in dark mode */
+      --card-border-hover: rgba(212,168,67,0.30);
+      --shadow-card-hover: 0 8px 32px rgba(212,168,67,0.15), 0 2px 8px rgba(0,0,0,0.20);
     }
 
     /* NAV */
@@ -389,8 +391,8 @@
       overflow: hidden; transition: all 0.3s cubic-bezier(0.4,0,0.2,1); display: flex; flex-direction: column;
     }
     .business-card:hover {
-      border-color: rgba(212,168,67,0.25); transform: translateY(-4px);
-      box-shadow: 0 8px 32px rgba(212,168,67,0.08), 0 0 20px rgba(212,168,67,0.04); background: var(--card-bg-hover);
+      border-color: var(--card-border-hover); transform: translateY(-4px);
+      box-shadow: var(--shadow-card-hover); background: var(--card-bg-hover);
     }
     .business-card-body { padding: 22px; flex: 1; display: flex; flex-direction: column; }
     .business-category {
