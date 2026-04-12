@@ -2209,5 +2209,39 @@
     });
   </script>
   <div id="share-toast" class="share-toast"></div>
+  <script>
+  (function() {
+    var ps = new URLSearchParams(window.location.search);
+    var openType = ps.get('open');
+    var openId = ps.get('id');
+    if (!openType || !openId) return;
+    var tabMap = { event: 'events', restaurant: 'restaurants', business: 'directory' };
+    var tab = tabMap[openType];
+    if (!tab) return;
+    document.querySelectorAll('.nav-tabs a').forEach(function(l) { l.classList.toggle('active', l.dataset.tab === tab); });
+    document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
+    var sec = document.getElementById(tab + '-section');
+    if (sec) sec.classList.add('active');
+    var ep;
+    if (openType === 'event') ep = '/api/community-events/single/' + encodeURIComponent(openId.replace('community_', ''));
+    else if (openType === 'restaurant') ep = '/api/halal-restaurants/single/' + encodeURIComponent(openId);
+    else ep = '/api/businesses/single/' + encodeURIComponent(openId);
+    function tryOpen() {
+      if (typeof openEventModal === 'undefined') { setTimeout(tryOpen, 200); return; }
+      fetch(ep)
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(data) {
+          if (!data) return;
+          if (openType === 'event') openEventModal(data);
+          else if (openType === 'restaurant') openRestaurantModal(data);
+          else openBusinessModal(data);
+          history.replaceState(null, '', window.location.pathname + (window.location.hash || ''));
+          _dlResolved = true; _dlType = null; _dlId = null;
+        })
+        .catch(function() {});
+    }
+    tryOpen();
+  })();
+  </script>
 </body>
 </html>
