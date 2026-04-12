@@ -1971,6 +1971,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  app.get("/api/community-events/single/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { rows } = await pool.query("SELECT * FROM community_events WHERE id = $1 AND status = 'approved'", [id]);
+      if (!rows.length) return res.status(404).json({ error: "Not found" });
+      const r = rows[0];
+      const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
+      const host = req.headers["host"] || "localhost:5000";
+      const baseUrl = `${protocol}://${host}`;
+      const rawOrganizer = r.organizer || "";
+      const resolvedOrgName = resolveOrgName(rawOrganizer);
+      const organizer = resolvedOrgName || rawOrganizer;
+      const rawLocation = r.location || "";
+      const storedCoords = (r.lat && r.lng) ? { latitude: r.lat, longitude: r.lng } : null;
+      const coords = storedCoords || resolveCoordinates(organizer, rawLocation);
+      const location = resolveLocation(rawLocation) || resolveLocationFromOrganizer(organizer) || rawLocation;
+      return res.json({
+        id: `community_${r.id}`,
+        title: r.title,
+        description: r.description || "",
+        location,
+        start: r.start_time ? new Date(r.start_time).toISOString() : "",
+        end: r.end_time ? new Date(r.end_time).toISOString() : "",
+        isAllDay: false,
+        organizer,
+        imageUrl: r.image_data ? `${baseUrl}/api/events/image/${r.id}` : "",
+        registrationUrl: r.registration_url || "",
+        speaker: "",
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        isVirtual: !!r.is_virtual,
+        isFeatured: !!r.is_featured,
+      });
+    } catch (err: any) {
+      return res.status(500).json({ error: "Failed to fetch event" });
+    }
+  });
+
   app.get("/api/events/image/:id", async (req, res) => {
     try {
       const { id } = req.params;
@@ -2929,6 +2967,37 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     } catch (error: any) {
       console.error("Error fetching businesses:", error.message);
       res.status(500).json({ error: "Failed to fetch businesses" });
+    }
+  });
+
+  app.get("/api/halal-restaurants/single/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = await pool.query(
+        "SELECT id, external_id, name, formatted_address, formatted_phone, url, lat, lng, is_halal, halal_comment, cuisine_types, emoji, evidence, considerations, opening_hours, rating, user_ratings_total, website, photo_reference, place_id, instagram_url FROM halal_restaurants WHERE id = $1",
+        [id]
+      );
+      if (!result.rows.length) return res.status(404).json({ error: "Not found" });
+      return res.json(result.rows[0]);
+    } catch (error: any) {
+      return res.status(500).json({ error: "Failed to fetch restaurant" });
+    }
+  });
+
+  app.get("/api/businesses/single/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = await pool.query(
+        "SELECT id, name, category, subcategory, description, address, phone, website, place_id, rating, user_ratings_total, photo_reference, business_hours, lat, lng, filter_tags, photo_url, booking_url, search_aliases, affiliation, instagram_url, google_url, location_type, service_area_description, featured FROM businesses WHERE id = $1 AND status = 'approved'",
+        [id]
+      );
+      if (!result.rows.length) return res.status(404).json({ error: "Not found" });
+      const row = result.rows[0];
+      row.specialty = row.subcategory;
+      row.keywords = row.filter_tags;
+      return res.json(row);
+    } catch (error: any) {
+      return res.status(500).json({ error: "Failed to fetch business" });
     }
   });
 

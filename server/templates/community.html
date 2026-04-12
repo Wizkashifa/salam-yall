@@ -2102,12 +2102,38 @@
       if (type === 'event') item = allEvents.find(function(e) { return String(e.id) === id; });
       else if (type === 'restaurant') item = allRestaurants.find(function(r) { return String(r.id) === id; });
       else if (type === 'business') item = allBusinesses.find(function(b) { return String(b.id) === id; });
-      if (!item) return;
+      if (item) {
+        _dlType = null; _dlId = null;
+        history.replaceState(null, '', window.location.pathname + (window.location.hash || ''));
+        if (type === 'event') openEventModal(item);
+        else if (type === 'restaurant') openRestaurantModal(item);
+        else if (type === 'business') openBusinessModal(item);
+        return;
+      }
+      var relevantLoaded = (type === 'event' && dataLoaded.events) ||
+        (type === 'restaurant' && dataLoaded.restaurants) ||
+        (type === 'business' && dataLoaded.directory);
+      if (!relevantLoaded) return;
+      var dlType = _dlType, dlId = _dlId;
       _dlType = null; _dlId = null;
       history.replaceState(null, '', window.location.pathname + (window.location.hash || ''));
-      if (type === 'event') openEventModal(item);
-      else if (type === 'restaurant') openRestaurantModal(item);
-      else if (type === 'business') openBusinessModal(item);
+      var endpoint;
+      if (dlType === 'event') {
+        endpoint = '/api/community-events/single/' + encodeURIComponent(dlId.replace('community_', ''));
+      } else if (dlType === 'restaurant') {
+        endpoint = '/api/halal-restaurants/single/' + encodeURIComponent(dlId);
+      } else {
+        endpoint = '/api/businesses/single/' + encodeURIComponent(dlId);
+      }
+      fetch(endpoint)
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(data) {
+          if (!data) return;
+          if (dlType === 'event') openEventModal(data);
+          else if (dlType === 'restaurant') openRestaurantModal(data);
+          else openBusinessModal(data);
+        })
+        .catch(function() {});
     }
 
     async function shareItem(type, data, ev) {
