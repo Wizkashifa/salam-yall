@@ -4203,6 +4203,10 @@ Return ONLY the description text, nothing else.`,
     path.resolve(process.cwd(), "server", "templates", "admin.html"),
     "utf-8"
   );
+  const unifiedAdminHtml = fs.readFileSync(
+    path.resolve(process.cwd(), "server", "templates", "unified-admin.html"),
+    "utf-8"
+  );
   const privacyHtml = fs.readFileSync(
     path.resolve(process.cwd(), "server", "templates", "privacy-policy.html"),
     "utf-8"
@@ -4855,6 +4859,12 @@ Return ONLY the description text, nothing else.`,
   });
 
   app.get("/admin", (_req, res) => {
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.send(unifiedAdminHtml);
+  });
+
+  // Legacy full admin panel — accessible from super admin dashboard
+  app.get("/admin-full", (_req, res) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.send(adminHtml);
   });
@@ -8528,25 +8538,9 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     }
   });
 
-  const lighthouseHtml = fs.readFileSync(
-    path.resolve(process.cwd(), "server", "templates", "lighthouse-admin.html"),
-    "utf-8"
-  );
+  app.get("/lighthouse-admin", (_req, res) => res.redirect("/admin"));
 
-  app.get("/lighthouse-admin", (_req, res) => {
-    res.setHeader("Content-Type", "text/html; charset=utf-8");
-    res.send(lighthouseHtml);
-  });
-
-  const iarHtml = fs.readFileSync(
-    path.resolve(process.cwd(), "server", "templates", "iar-admin.html"),
-    "utf-8"
-  );
-
-  app.get("/iar-admin", (_req, res) => {
-    res.setHeader("Content-Type", "text/html; charset=utf-8");
-    res.send(iarHtml);
-  });
+  app.get("/iar-admin", (_req, res) => res.redirect("/admin"));
 
   setInterval(async () => {
     try {

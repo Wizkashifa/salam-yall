@@ -1,0 +1,1587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Salam Y'all — Admin Portal</title>
+  <link rel="icon" type="image/png" sizes="48x48" href="/assets/images/favicon.png" />
+  <style>
+    :root {
+      --bg: #0A0A0A; --text: #F5F5F5; --text-secondary: #9CA3AF; --text-muted: #6B7280;
+      --text-dim: #4B5563; --surface: #141414; --surface-alt: #1C1C1C; --surface-hover: #1A1A1A;
+      --border: #232323; --border-light: #2E2E2E; --gold: #D4A843; --gold-dark: #B8902E;
+      --gold-glow: rgba(212,168,67,0.08); --emerald: #10B981; --emerald-bg: #1B6B4A;
+      --emerald-bg-hover: #14523A; --emerald-light: #6EE7B7; --emerald-surface: #0F2618;
+      --emerald-glow: rgba(16,185,129,0.08); --red: #F87171; --red-bg: #7F1D1D;
+      --red-bg-hover: #991B1B; --red-surface: #2A1818; --input-bg: #181818;
+      --disabled-bg: #2A2A2A; --disabled-text: #555; --preview-value: #D1D5DB;
+      --modal-backdrop: rgba(0,0,0,0.75); --toast-text: #fff;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.4); --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.5); color-scheme: dark;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #F3F4F6; --text: #111827; --text-secondary: #374151; --text-muted: #4B5563;
+        --text-dim: #6B7280; --surface: #FFFFFF; --surface-alt: #F5F6F8; --surface-hover: #EDEEF1;
+        --border: #D1D5DB; --border-light: #B8BCC4; --gold: #92710A; --gold-dark: #7A5F06;
+        --gold-glow: rgba(146,113,10,0.10); --emerald: #047857; --emerald-bg: #047857;
+        --emerald-bg-hover: #065F46; --emerald-light: #047857; --emerald-surface: #ECFDF5;
+        --emerald-glow: rgba(4,120,87,0.08); --red: #B91C1C; --red-bg: #FEE2E2;
+        --red-bg-hover: #FECACA; --red-surface: #FEF2F2; --input-bg: #FFFFFF;
+        --disabled-bg: #D1D5DB; --disabled-text: #6B7280; --preview-value: #1F2937;
+        --modal-backdrop: rgba(0,0,0,0.40); --toast-text: #fff;
+        --shadow-sm: 0 1px 3px rgba(0,0,0,0.10); --shadow-md: 0 4px 16px rgba(0,0,0,0.10);
+        --shadow-lg: 0 8px 32px rgba(0,0,0,0.14); color-scheme: light;
+      }
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+
+    /* Login */
+    .login-wrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+    .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 48px 36px; max-width: 400px; width: 100%; text-align: center; box-shadow: var(--shadow-lg); }
+    .login-logo { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; margin-bottom: 16px; border: 3px solid var(--border); }
+    .login-card h1 { font-size: 24px; color: var(--gold); margin-bottom: 4px; }
+    .login-card .subtitle { font-size: 12px; color: var(--emerald); margin-bottom: 6px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+    .login-card p { font-size: 13px; color: var(--text-secondary); margin-bottom: 24px; }
+    .login-card input { width: 100%; padding: 12px 16px; background: var(--input-bg); border: 1px solid var(--border-light); border-radius: 12px; color: var(--text); font-size: 15px; outline: none; margin-bottom: 12px; transition: border-color 0.2s; }
+    .login-card input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-glow); }
+    .login-card button.login-btn { width: 100%; padding: 13px; background: var(--emerald-bg); color: var(--toast-text); border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    .login-card button.login-btn:hover { background: var(--emerald-bg-hover); }
+    .login-hint { font-size: 11px; color: var(--text-dim); margin-top: 12px; }
+    .login-error { color: var(--red); font-size: 13px; margin-bottom: 12px; display: none; }
+
+    /* Top bar */
+    .top-bar { position: fixed; top: 0; left: 0; right: 0; background: color-mix(in srgb, var(--surface) 85%, transparent); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); z-index: 10; padding: 12px 20px; display: none; }
+    .top-bar-inner { max-width: 900px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+    .top-bar .brand { display: flex; align-items: center; gap: 10px; }
+    .top-bar .brand-name { font-size: 15px; color: var(--gold); font-weight: 700; }
+    .top-bar .brand-sub { font-size: 11px; color: var(--emerald); font-weight: 600; letter-spacing: 0.3px; }
+    .top-bar .role-badge { font-size: 10px; padding: 3px 8px; border-radius: 6px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; background: var(--surface-alt); color: var(--text-muted); border: 1px solid var(--border-light); }
+    .top-bar .role-badge.super { color: var(--gold); border-color: var(--gold); }
+    .top-bar .role-badge.metro { color: #60A5FA; border-color: #1E3A5F; background: #0F1F33; }
+    .top-bar .top-actions { display: flex; align-items: center; gap: 8px; }
+    .top-bar button.sign-out { background: none; border: 1px solid var(--border-light); color: var(--text-secondary); padding: 6px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+    .top-bar button.sign-out:hover { color: var(--text); border-color: var(--text-muted); }
+
+    /* App wrap */
+    .app-wrap { display: none; max-width: 900px; margin: 0 auto; padding: 24px 20px; padding-top: 80px; padding-bottom: 48px; }
+
+    /* Tabs */
+    .tab-bar { display: flex; gap: 4px; margin-bottom: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow-x: auto; padding: 4px; box-shadow: var(--shadow-sm); }
+    .tab-btn { flex: 1; min-width: 70px; padding: 9px 8px; background: none; border: none; color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; text-align: center; border-radius: 10px; white-space: nowrap; }
+    .tab-btn:hover { color: var(--preview-value); background: var(--surface-hover); }
+    .tab-btn.active { color: var(--gold); background: var(--surface-alt); box-shadow: var(--shadow-sm); }
+    .tab-btn .tab-icon { display: block; font-size: 16px; margin-bottom: 2px; }
+    .tab-content { display: none; animation: fadeIn 0.2s ease; }
+    .tab-content.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Section */
+    .section { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; margin-bottom: 20px; box-shadow: var(--shadow-sm); }
+    .section-title { font-size: 15px; font-weight: 700; color: var(--gold); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+    /* Forms */
+    label { display: block; font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; margin-top: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; }
+    label:first-child { margin-top: 0; }
+    input[type="text"], input[type="datetime-local"], input[type="url"], input[type="number"], input[type="password"], textarea, select {
+      width: 100%; padding: 11px 14px; background: var(--input-bg); border: 1px solid var(--border-light); border-radius: 10px;
+      color: var(--text); font-size: 14px; outline: none; font-family: inherit; transition: border-color 0.2s;
+    }
+    input:focus, textarea:focus, select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-glow); }
+    textarea { min-height: 80px; resize: vertical; }
+    ::placeholder { color: var(--text-dim); }
+    select option { background: var(--surface-alt); }
+
+    /* Buttons */
+    .btn { padding: 10px 18px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--emerald-bg); color: var(--toast-text); }
+    .btn-primary:hover { background: var(--emerald-bg-hover); }
+    .btn-primary:disabled { background: var(--disabled-bg); color: var(--disabled-text); cursor: not-allowed; }
+    .btn-gold { background: linear-gradient(135deg, var(--gold), var(--gold-dark)); color: #000; }
+    .btn-gold:disabled { background: var(--disabled-bg); color: var(--disabled-text); cursor: not-allowed; }
+    .btn-danger { background: var(--red-bg); color: var(--red); }
+    .btn-danger:hover { background: var(--red-bg-hover); }
+    .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+    .btn-outline { background: none; border: 1px solid var(--border-light); color: var(--text-secondary); }
+    .btn-outline:hover { border-color: var(--text-muted); color: var(--text); background: var(--surface-hover); }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 500px) { .row { grid-template-columns: 1fr; } }
+
+    /* Toast */
+    .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--emerald-bg); color: var(--toast-text); padding: 12px 28px; border-radius: 12px; font-size: 14px; font-weight: 500; z-index: 9999; opacity: 0; transition: opacity 0.3s, transform 0.3s; pointer-events: none; max-width: 90%; text-align: center; box-shadow: var(--shadow-lg); }
+    .toast.error { background: var(--red-bg); color: var(--red); }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* Stats */
+    .stat-row { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    .stat-card { flex: 1; min-width: 100px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px 14px; text-align: center; position: relative; overflow: hidden; }
+    .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--gold), var(--emerald)); opacity: 0.6; }
+    .stat-card .stat-num { font-size: 28px; font-weight: 800; color: var(--gold); letter-spacing: -1px; }
+    .stat-card .stat-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px; margin-top: 4px; }
+
+    /* Cards */
+    .event-card, .biz-card, .account-card { background: var(--surface-alt); border: 1px solid var(--border-light); border-radius: 14px; padding: 16px; margin-bottom: 12px; transition: border-color 0.2s; }
+    .event-card:hover, .biz-card:hover, .account-card:hover { border-color: var(--text-dim); }
+    .event-card h3, .biz-card h3, .account-card h3 { font-size: 15px; color: var(--text); margin-bottom: 6px; font-weight: 600; }
+    .card-meta { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+    .card-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .event-card img.thumb { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; float: right; margin-left: 12px; }
+    .role-pill { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+    .role-pill.super_admin { background: rgba(212,168,67,0.15); color: var(--gold); }
+    .role-pill.metro_manager { background: rgba(96,165,250,0.15); color: #60A5FA; }
+    .role-pill.community_org { background: rgba(16,185,129,0.12); color: var(--emerald); }
+    .role-pill.masjid { background: rgba(167,139,250,0.12); color: #A78BFA; }
+    .empty-state { text-align: center; padding: 36px 20px; color: var(--text-muted); font-size: 14px; }
+
+    /* Recurrence picker */
+    .recur-box { background: var(--surface-alt); border: 1px solid var(--border-light); border-radius: 12px; padding: 16px; margin-top: 14px; }
+    .recur-opts { margin-top: 12px; display: none; }
+    .recur-opts.visible { display: block; }
+    .recur-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .recur-row label { margin: 0; text-transform: none; font-size: 13px; color: var(--text-secondary); letter-spacing: 0; font-weight: 500; }
+    .recur-row input[type="number"] { width: 70px; }
+    .recur-row select { width: auto; }
+
+    /* Modals */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--modal-backdrop); backdrop-filter: blur(4px); z-index: 1000; overflow: auto; padding: 20px; }
+    .modal-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; max-width: 520px; margin: 40px auto; padding: 28px; box-shadow: var(--shadow-lg); }
+    .modal-title { font-size: 18px; font-weight: 700; color: var(--gold); margin-bottom: 20px; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+
+    /* Profile */
+    .profile-preview { background: var(--surface-alt); border: 1px solid var(--border-light); border-radius: 14px; padding: 18px; margin-bottom: 20px; }
+    .preview-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .preview-row:last-child { border-bottom: none; }
+    .preview-icon { font-size: 16px; flex-shrink: 0; margin-top: 2px; }
+    .preview-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 3px; font-weight: 600; }
+    .preview-value { font-size: 14px; color: var(--preview-value); line-height: 1.5; word-break: break-word; }
+    .preview-value a { color: var(--gold); text-decoration: none; }
+    .preview-empty { color: var(--text-dim); font-style: italic; font-size: 13px; }
+
+    /* Flyer upload */
+    .upload-area { border: 2px dashed var(--border-light); border-radius: 12px; padding: 28px; text-align: center; cursor: pointer; margin-bottom: 14px; transition: border-color 0.2s; }
+    .upload-area:hover { border-color: var(--gold); }
+    .upload-area .upload-icon { font-size: 26px; margin-bottom: 8px; }
+    .upload-area .upload-text { font-size: 14px; color: var(--text-secondary); }
+    .upload-area .upload-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+    /* Full admin link */
+    .admin-panel-link { display: flex; align-items: center; gap: 14px; background: var(--surface-alt); border: 1px solid var(--border-light); border-radius: 14px; padding: 20px; text-decoration: none; color: var(--text); transition: border-color 0.2s, background 0.2s; margin-bottom: 20px; }
+    .admin-panel-link:hover { border-color: var(--gold); background: var(--surface-hover); }
+    .admin-panel-link .link-icon { font-size: 28px; flex-shrink: 0; }
+    .admin-panel-link .link-title { font-size: 15px; font-weight: 700; color: var(--gold); margin-bottom: 3px; }
+    .admin-panel-link .link-desc { font-size: 12px; color: var(--text-muted); }
+    .admin-panel-link .link-arrow { margin-left: auto; font-size: 18px; color: var(--text-dim); }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════ LOGIN ═══════════════════════════ -->
+<div class="login-wrap" id="loginScreen">
+  <div class="login-card">
+    <img src="/assets/images/favicon.png" class="login-logo" alt="Salam Y'all" onerror="this.style.display='none'">
+    <h1>Salam Y'all</h1>
+    <div class="subtitle">Admin Portal</div>
+    <p>Sign in to manage your organization</p>
+    <div class="login-error" id="loginError">Invalid credentials</div>
+    <input type="text" id="loginOrgName" placeholder="Organization name (leave blank for super admin)" autocomplete="username">
+    <input type="password" id="loginPassword" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()" autocomplete="current-password">
+    <button class="login-btn" onclick="doLogin()" id="loginBtn">Sign In</button>
+    <div class="login-hint">Super admins: leave organization name blank</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ TOP BAR ═══════════════════════════ -->
+<div class="top-bar" id="topBar">
+  <div class="top-bar-inner">
+    <div class="brand">
+      <div>
+        <div class="brand-name">Salam Y'all</div>
+        <div class="brand-sub" id="topBarSub">Portal</div>
+      </div>
+      <span class="role-badge" id="topBarRoleBadge">—</span>
+    </div>
+    <div class="top-actions">
+      <button class="sign-out" onclick="signOut()">Sign Out</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ APP WRAP ═══════════════════════════ -->
+<div class="app-wrap" id="appWrap">
+
+  <!-- ── SUPER ADMIN DASHBOARD ── -->
+  <div id="dash-super-admin" style="display:none;">
+    <a href="/admin-full" target="_blank" class="admin-panel-link">
+      <div class="link-icon">⚙️</div>
+      <div>
+        <div class="link-title">Full Admin Panel</div>
+        <div class="link-desc">Businesses, restaurants, analytics, masjids, comms, and more</div>
+      </div>
+      <div class="link-arrow">→</div>
+    </a>
+    <div class="tab-bar" id="superTabBar">
+      <button class="tab-btn active" onclick="switchTab('super','events')" id="superTabBtnEvents"><span class="tab-icon">🗓️</span>Events</button>
+      <button class="tab-btn" onclick="switchTab('super','accounts')" id="superTabBtnAccounts"><span class="tab-icon">👥</span>Accounts</button>
+    </div>
+    <!-- Events -->
+    <div class="tab-content active" id="superTabEvents">
+      <div class="section">
+        <div class="section-title">📸 Publish Event</div>
+        <label>Title *</label>
+        <input type="text" id="saTitle" placeholder="Event title">
+        <label>Description</label>
+        <textarea id="saDescription" placeholder="Event description..."></textarea>
+        <label>Location</label>
+        <input type="text" id="saLocation" placeholder="Venue address">
+        <label>Organizer</label>
+        <input type="text" id="saOrganizer" placeholder="Organizing group or person">
+        <div class="row">
+          <div><label>Start *</label><input type="datetime-local" id="saStartTime"></div>
+          <div><label>End</label><input type="datetime-local" id="saEndTime"></div>
+        </div>
+        <label>Registration URL</label>
+        <input type="text" id="saRegUrl" placeholder="https://...">
+        <div class="row">
+          <div><label><input type="checkbox" id="saVirtual" style="width:auto;margin-right:6px;">Virtual Event</label></div>
+          <div><label><input type="checkbox" id="saFeatured" style="width:auto;margin-right:6px;">Featured</label></div>
+        </div>
+        <div class="recur-box" id="saRecurBox">
+          <label style="margin:0;text-transform:uppercase;letter-spacing:0.6px;font-size:11px;color:var(--text-secondary);">Recurrence</label>
+          <select id="saRecurType" onchange="updateRecurUI('sa')" style="margin-top:8px;">
+            <option value="none">One-time event</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly on same day</option>
+            <option value="monthly_calendar">Monthly — same date</option>
+            <option value="monthly_weekday">Monthly — same weekday</option>
+          </select>
+          <div class="recur-opts" id="saRecurOpts"></div>
+        </div>
+        <button class="btn btn-primary" onclick="publishAdminEvent()" id="saPublishBtn" style="margin-top:14px;width:100%;">Publish Event</button>
+      </div>
+      <div class="section">
+        <div class="section-title">🗓️ Recent Events</div>
+        <div id="saEventList"><div class="empty-state">Loading...</div></div>
+      </div>
+    </div>
+    <!-- Accounts -->
+    <div class="tab-content" id="superTabAccounts">
+      <div class="section">
+        <div class="section-title" style="justify-content:space-between;">
+          <span>👥 All Accounts</span>
+          <button class="btn btn-sm btn-primary" onclick="openNewAccountModal()">+ New Account</button>
+        </div>
+        <div id="accountList"><div class="empty-state">Loading...</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── METRO MANAGER DASHBOARD ── -->
+  <div id="dash-metro-manager" style="display:none;">
+    <div class="stat-row">
+      <div class="stat-card"><div class="stat-num" id="metroEventCount">—</div><div class="stat-label">Metro Events</div></div>
+      <div class="stat-card"><div class="stat-num" id="metroBizCount">—</div><div class="stat-label">Metro Businesses</div></div>
+    </div>
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('metro','events')" id="metroTabBtnEvents"><span class="tab-icon">🗓️</span>Events</button>
+      <button class="tab-btn" onclick="switchTab('metro','businesses')" id="metroTabBtnBusinesses"><span class="tab-icon">🏪</span>Businesses</button>
+      <button class="tab-btn" onclick="switchTab('metro','accounts')" id="metroTabBtnAccounts"><span class="tab-icon">👥</span>Accounts</button>
+    </div>
+    <!-- Metro Events -->
+    <div class="tab-content active" id="metroTabEvents">
+      <div class="section">
+        <div class="section-title">📸 Publish Metro Event</div>
+        <label>Title *</label>
+        <input type="text" id="meTitle" placeholder="Event title">
+        <label>Description</label>
+        <textarea id="meDescription" placeholder="Description..."></textarea>
+        <label>Location</label>
+        <input type="text" id="meLocation" placeholder="Venue address">
+        <label>Organizer</label>
+        <input type="text" id="meOrganizer" placeholder="Organizer name">
+        <div class="row">
+          <div><label>Start *</label><input type="datetime-local" id="meStartTime"></div>
+          <div><label>End</label><input type="datetime-local" id="meEndTime"></div>
+        </div>
+        <div class="recur-box">
+          <label style="margin:0;text-transform:uppercase;letter-spacing:0.6px;font-size:11px;color:var(--text-secondary);">Recurrence</label>
+          <select id="meRecurType" onchange="updateRecurUI('me')" style="margin-top:8px;">
+            <option value="none">One-time event</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly on same day</option>
+            <option value="monthly_calendar">Monthly — same date</option>
+            <option value="monthly_weekday">Monthly — same weekday</option>
+          </select>
+          <div class="recur-opts" id="meRecurOpts"></div>
+        </div>
+        <button class="btn btn-primary" onclick="publishMetroEvent()" id="mePublishBtn" style="margin-top:14px;width:100%;">Publish Event</button>
+      </div>
+      <div class="section">
+        <div class="section-title">🗓️ Metro Events</div>
+        <div id="metroEventList"><div class="empty-state">Loading...</div></div>
+      </div>
+    </div>
+    <!-- Metro Businesses -->
+    <div class="tab-content" id="metroTabBusinesses">
+      <div class="section">
+        <div class="section-title">🏪 Metro Businesses</div>
+        <div id="metroBizList"><div class="empty-state">Loading...</div></div>
+      </div>
+    </div>
+    <!-- Metro Accounts -->
+    <div class="tab-content" id="metroTabAccounts">
+      <div class="section">
+        <div class="section-title">👥 Create Organization Account</div>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Create community_org or masjid accounts for your metro area.</p>
+        <label>Organization Name *</label>
+        <input type="text" id="metroNewOrgName" placeholder="e.g., Triangle Islamic Center">
+        <label>Display Name</label>
+        <input type="text" id="metroNewDisplayName" placeholder="Same as org name if blank">
+        <label>Role *</label>
+        <select id="metroNewRole">
+          <option value="community_org">Community Organization</option>
+          <option value="masjid">Masjid</option>
+        </select>
+        <label>Password *</label>
+        <input type="password" id="metroNewPassword" placeholder="Set a password for this account">
+        <button class="btn btn-primary" onclick="createMetroAccount()" id="metroCreateBtn" style="margin-top:14px;width:100%;">Create Account</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── COMMUNITY ORG DASHBOARD ── -->
+  <div id="dash-community-org" style="display:none;">
+    <div class="stat-row">
+      <div class="stat-card"><div class="stat-num" id="orgFollowers">—</div><div class="stat-label">Followers</div></div>
+      <div class="stat-card"><div class="stat-num" id="orgEventCount">—</div><div class="stat-label">Events</div></div>
+    </div>
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('org','updates')" id="orgTabBtnUpdates"><span class="tab-icon">📣</span>Updates</button>
+      <button class="tab-btn" onclick="switchTab('org','events')" id="orgTabBtnEvents"><span class="tab-icon">🗓️</span>Events</button>
+      <button class="tab-btn" onclick="switchTab('org','profile')" id="orgTabBtnProfile"><span class="tab-icon">🏢</span>Profile</button>
+    </div>
+    <!-- Updates -->
+    <div class="tab-content active" id="orgTabUpdates">
+      <div class="section">
+        <div class="section-title">📣 Send Update to Followers</div>
+        <label>Title *</label>
+        <input type="text" id="orgPushTitle" placeholder="e.g., Tonight's event starts at 7pm!">
+        <label>Message *</label>
+        <textarea id="orgPushBody" placeholder="Write your update..."></textarea>
+        <label>Link (optional)</label>
+        <input type="text" id="orgPushLink" placeholder="https://...">
+        <button class="btn btn-primary" onclick="sendOrgPush()" id="orgSendPushBtn" style="margin-top:14px;width:100%;">Send Notification</button>
+      </div>
+    </div>
+    <!-- Events -->
+    <div class="tab-content" id="orgTabEvents">
+      <div class="section">
+        <div class="section-title">📸 Add New Event</div>
+        <div class="upload-area" id="orgFlyerUploadArea" ondragover="event.preventDefault();this.style.borderColor='var(--gold)';" ondragleave="this.style.borderColor='';" ondrop="handleFlyerDrop(event,'org')" onclick="document.getElementById('orgFlyerInput').click()">
+          <div class="upload-icon">📸</div>
+          <div class="upload-text">Drop a flyer or click to upload</div>
+          <div class="upload-hint">JPG, PNG, or WebP</div>
+          <input type="file" id="orgFlyerInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleFlyerSelect(event,'org')">
+        </div>
+        <div id="orgFlyerPreview" style="display:none;margin-bottom:14px;text-align:center;">
+          <img id="orgFlyerPreviewImg" style="max-width:100%;max-height:280px;border-radius:10px;border:1px solid var(--border-light);">
+          <button class="btn btn-sm" onclick="clearFlyer('org')" style="margin-top:8px;background:var(--surface-alt);color:var(--text-secondary);">Remove</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <button class="btn btn-gold" onclick="extractFlyer('org')" id="orgExtractBtn" disabled>✨ Extract with AI</button>
+          <button class="btn btn-sm btn-outline" onclick="toggleFlyerForm('org')">Manual Entry</button>
+        </div>
+        <div id="orgExtractStatus" style="display:none;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:14px;"></div>
+        <div id="orgFlyerForm" style="display:none;">
+          <label>Title *</label>
+          <input type="text" id="orgEvTitle" placeholder="Event title">
+          <label>Description</label>
+          <textarea id="orgEvDesc" placeholder="Brief description..."></textarea>
+          <label>Location *</label>
+          <input type="text" id="orgEvLocation" placeholder="Full address or venue name">
+          <div class="row">
+            <div><label>Start *</label><input type="datetime-local" id="orgEvStart"></div>
+            <div><label>End</label><input type="datetime-local" id="orgEvEnd"></div>
+          </div>
+          <label>Registration URL</label>
+          <input type="text" id="orgEvRegUrl" placeholder="https://...">
+          <div class="recur-box">
+            <label style="margin:0;text-transform:uppercase;letter-spacing:0.6px;font-size:11px;color:var(--text-secondary);">Recurrence</label>
+            <select id="orgEvRecurType" onchange="updateRecurUI('orgEv')" style="margin-top:8px;">
+              <option value="none">One-time event</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly on same day</option>
+              <option value="monthly_calendar">Monthly — same date</option>
+              <option value="monthly_weekday">Monthly — same weekday</option>
+            </select>
+            <div class="recur-opts" id="orgEvRecurOpts"></div>
+          </div>
+          <button class="btn btn-primary" onclick="publishPortalEvent('org')" id="orgPublishBtn" style="margin-top:14px;width:100%;">Publish Event</button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">🗓️ Published Events</div>
+        <div id="orgEventList"><div class="empty-state">Loading...</div></div>
+      </div>
+    </div>
+    <!-- Profile -->
+    <div class="tab-content" id="orgTabProfile">
+      <div id="orgProfileContent"></div>
+    </div>
+  </div>
+
+  <!-- ── MASJID DASHBOARD ── -->
+  <div id="dash-masjid" style="display:none;">
+    <div class="stat-row">
+      <div class="stat-card"><div class="stat-num" id="masjidFollowers">—</div><div class="stat-label">Followers</div></div>
+      <div class="stat-card"><div class="stat-num" id="masjidEventCount">—</div><div class="stat-label">Events</div></div>
+    </div>
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('masjid','updates')" id="masjidTabBtnUpdates"><span class="tab-icon">📣</span>Updates</button>
+      <button class="tab-btn" onclick="switchTab('masjid','janaza')" id="masjidTabBtnJanaza"><span class="tab-icon">🕊️</span>Janaza</button>
+      <button class="tab-btn" onclick="switchTab('masjid','events')" id="masjidTabBtnEvents"><span class="tab-icon">🗓️</span>Events</button>
+      <button class="tab-btn" onclick="switchTab('masjid','profile')" id="masjidTabBtnProfile"><span class="tab-icon">🕌</span>Profile</button>
+    </div>
+    <!-- Updates -->
+    <div class="tab-content active" id="masjidTabUpdates">
+      <div class="section">
+        <div class="section-title">📣 Send Update to Followers</div>
+        <label>Title *</label>
+        <input type="text" id="masjidPushTitle" placeholder="e.g., Jumuah reminder — 1:15 PM today">
+        <label>Message *</label>
+        <textarea id="masjidPushBody" placeholder="Write your update..."></textarea>
+        <label>Link (optional)</label>
+        <input type="text" id="masjidPushLink" placeholder="https://...">
+        <button class="btn btn-primary" onclick="sendMasjidPush()" id="masjidSendPushBtn" style="margin-top:14px;width:100%;">Send Notification</button>
+      </div>
+    </div>
+    <!-- Janaza -->
+    <div class="tab-content" id="masjidTabJanaza">
+      <div class="section">
+        <div class="section-title">🕊️ New Janaza Alert</div>
+        <div class="upload-area" id="janazaUploadArea" ondragover="event.preventDefault();this.style.borderColor='var(--gold)';" ondragleave="this.style.borderColor='';" ondrop="handleJanazaDrop(event)" onclick="document.getElementById('janazaFileInput').click()">
+          <div class="upload-icon">🕊️</div>
+          <div class="upload-text">Drop a janaza announcement image or click to upload</div>
+          <div class="upload-hint">JPG, PNG, or WebP</div>
+          <input type="file" id="janazaFileInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleJanazaSelect(event)">
+        </div>
+        <div id="janazaPreview" style="display:none;margin-bottom:14px;text-align:center;">
+          <img id="janazaPreviewImg" style="max-width:100%;max-height:280px;border-radius:10px;border:1px solid var(--border-light);">
+          <button class="btn btn-sm" onclick="clearJanaza()" style="margin-top:8px;background:var(--surface-alt);color:var(--text-secondary);">Remove</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <button class="btn btn-gold" onclick="extractJanaza()" id="janazaExtractBtn" disabled>✨ Extract with AI</button>
+          <button class="btn btn-sm btn-outline" onclick="toggleJanazaForm()">Manual Entry</button>
+        </div>
+        <div id="janazaExtractStatus" style="display:none;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:14px;"></div>
+        <div id="janazaForm" style="display:none;">
+          <label>Deceased Name *</label>
+          <input type="text" id="janazaName" placeholder="e.g., Sr. Ijatu Barrie">
+          <label>Country of Origin</label>
+          <input type="text" id="janazaCountry" placeholder="e.g., Sierra Leone">
+          <label>Relatives</label>
+          <input type="text" id="janazaRelatives" placeholder="e.g., Wife of Alieu Badara Wurie">
+          <label>Prayer Time</label>
+          <input type="text" id="janazaPrayerTime" placeholder="e.g., Saturday 03/21 After Dhuhr — 1:35 PM">
+          <label>Prayer Location</label>
+          <input type="text" id="janazaPrayerLocation" placeholder="e.g., IAR Mosque — 808 Atwater St, Raleigh, NC">
+          <label>Burial Info</label>
+          <input type="text" id="janazaBurialInfo" placeholder="e.g., IAR Cemetery (6711 Hankinson Rd, Wendell, NC 27591)">
+          <div style="margin-top:16px;padding:14px;background:var(--surface-alt);border:1px solid var(--border-light);border-radius:12px;">
+            <label style="margin-top:0;">Schedule Alert (optional)</label>
+            <input type="datetime-local" id="janazaScheduleTime">
+            <p style="font-size:11px;color:var(--text-muted);margin-top:4px;">Leave blank to send immediately.</p>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:14px;">
+            <button class="btn btn-primary" onclick="publishJanaza()" id="publishJanazaBtn" style="flex:1;">Send Now</button>
+            <button class="btn btn-gold" onclick="scheduleJanaza()" id="scheduleJanazaBtn" style="flex:1;">Schedule</button>
+          </div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">📋 Janaza History</div>
+        <div id="janazaList"><div class="empty-state">Loading...</div></div>
+      </div>
+    </div>
+    <!-- Events -->
+    <div class="tab-content" id="masjidTabEvents">
+      <div class="section">
+        <div class="section-title">📸 Add New Event</div>
+        <div class="upload-area" id="masjidFlyerUploadArea" ondragover="event.preventDefault();this.style.borderColor='var(--gold)';" ondragleave="this.style.borderColor='';" ondrop="handleFlyerDrop(event,'masjid')" onclick="document.getElementById('masjidFlyerInput').click()">
+          <div class="upload-icon">📸</div>
+          <div class="upload-text">Drop a flyer or click to upload</div>
+          <div class="upload-hint">JPG, PNG, or WebP</div>
+          <input type="file" id="masjidFlyerInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleFlyerSelect(event,'masjid')">
+        </div>
+        <div id="masjidFlyerPreview" style="display:none;margin-bottom:14px;text-align:center;">
+          <img id="masjidFlyerPreviewImg" style="max-width:100%;max-height:280px;border-radius:10px;border:1px solid var(--border-light);">
+          <button class="btn btn-sm" onclick="clearFlyer('masjid')" style="margin-top:8px;background:var(--surface-alt);color:var(--text-secondary);">Remove</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <button class="btn btn-gold" onclick="extractFlyer('masjid')" id="masjidExtractBtn" disabled>✨ Extract with AI</button>
+          <button class="btn btn-sm btn-outline" onclick="toggleFlyerForm('masjid')">Manual Entry</button>
+        </div>
+        <div id="masjidExtractStatus" style="display:none;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:14px;"></div>
+        <div id="masjidFlyerForm" style="display:none;">
+          <label>Title *</label>
+          <input type="text" id="masjidEvTitle" placeholder="Event title">
+          <label>Description</label>
+          <textarea id="masjidEvDesc" placeholder="Brief description..."></textarea>
+          <label>Location *</label>
+          <input type="text" id="masjidEvLocation" placeholder="Full address or venue name">
+          <div class="row">
+            <div><label>Start *</label><input type="datetime-local" id="masjidEvStart"></div>
+            <div><label>End</label><input type="datetime-local" id="masjidEvEnd"></div>
+          </div>
+          <label>Registration URL</label>
+          <input type="text" id="masjidEvRegUrl" placeholder="https://...">
+          <div class="recur-box">
+            <label style="margin:0;text-transform:uppercase;letter-spacing:0.6px;font-size:11px;color:var(--text-secondary);">Recurrence</label>
+            <select id="masjidEvRecurType" onchange="updateRecurUI('masjidEv')" style="margin-top:8px;">
+              <option value="none">One-time event</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly on same day</option>
+              <option value="monthly_calendar">Monthly — same date</option>
+              <option value="monthly_weekday">Monthly — same weekday</option>
+            </select>
+            <div class="recur-opts" id="masjidEvRecurOpts"></div>
+          </div>
+          <button class="btn btn-primary" onclick="publishPortalEvent('masjid')" id="masjidPublishBtn" style="margin-top:14px;width:100%;">Publish Event</button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">🗓️ Published Events</div>
+        <div id="masjidEventList"><div class="empty-state">Loading...</div></div>
+      </div>
+    </div>
+    <!-- Profile -->
+    <div class="tab-content" id="masjidTabProfile">
+      <div id="masjidProfileContent"></div>
+    </div>
+  </div>
+
+</div><!-- /app-wrap -->
+
+<!-- ═══════════════════ MODALS ═══════════════════ -->
+<!-- New Account Modal -->
+<div class="modal-overlay" id="newAccountModal">
+  <div class="modal-card">
+    <div class="modal-title" id="newAccountModalTitle">New Account</div>
+    <label>Organization Name *</label>
+    <input type="text" id="naOrgName" placeholder="e.g., Triangle Islamic Center">
+    <label>Display Name</label>
+    <input type="text" id="naDisplayName" placeholder="Same as org name if blank">
+    <label>Role *</label>
+    <select id="naRole">
+      <option value="community_org">Community Organization</option>
+      <option value="masjid">Masjid</option>
+      <option value="metro_manager">Metro Manager</option>
+    </select>
+    <div id="naMetroRow">
+      <label>Metro Area</label>
+      <input type="text" id="naMetro" placeholder="e.g., Raleigh-Durham NC">
+    </div>
+    <label>Password *</label>
+    <input type="password" id="naPassword" placeholder="Set a password">
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveNewAccount()" id="saveNewAccountBtn" style="flex:1;">Create Account</button>
+      <button class="btn btn-outline" onclick="closeModal('newAccountModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Account Modal -->
+<div class="modal-overlay" id="editAccountModal">
+  <div class="modal-card">
+    <div class="modal-title">Edit Account</div>
+    <input type="hidden" id="editAccountId">
+    <label>Display Name</label>
+    <input type="text" id="eaDisplayName">
+    <label>Role</label>
+    <select id="eaRole">
+      <option value="community_org">Community Organization</option>
+      <option value="masjid">Masjid</option>
+      <option value="metro_manager">Metro Manager</option>
+    </select>
+    <label>Metro Area</label>
+    <input type="text" id="eaMetro" placeholder="e.g., Raleigh-Durham NC">
+    <label>New Password (leave blank to keep)</label>
+    <input type="password" id="eaPassword" placeholder="New password...">
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveEditAccount()" id="saveEditAccountBtn" style="flex:1;">Save Changes</button>
+      <button class="btn btn-outline" onclick="closeModal('editAccountModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Event Modal (portal) -->
+<div class="modal-overlay" id="editEventModal">
+  <div class="modal-card">
+    <div class="modal-title">Edit Event</div>
+    <input type="hidden" id="editEventId">
+    <input type="hidden" id="editEventOrg">
+    <label>Title *</label><input type="text" id="editEvTitle">
+    <label>Description</label><textarea id="editEvDesc"></textarea>
+    <label>Location</label><input type="text" id="editEvLocation">
+    <div class="row">
+      <div><label>Start</label><input type="datetime-local" id="editEvStart"></div>
+      <div><label>End</label><input type="datetime-local" id="editEvEnd"></div>
+    </div>
+    <label>Registration URL</label><input type="text" id="editEvRegUrl" placeholder="https://...">
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveEventEdit()" id="saveEventEditBtn" style="flex:1;">Save</button>
+      <button class="btn btn-outline" onclick="closeModal('editEventModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── State ──────────────────────────────────────────────────────────────────
+var SESSION_KEY = 'unified_admin_session';
+var session = null; // { token, role, orgName, metro, displayName }
+var flyerData = { org: null, masjid: null }; // { base64, mime }
+var janazaBase64 = null, janazaMime = null;
+var cachedEvents = {};
+var cachedAccounts = [];
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+(function init() {
+  try {
+    var saved = localStorage.getItem(SESSION_KEY);
+    if (saved) {
+      session = JSON.parse(saved);
+      verifyAndShow();
+    }
+  } catch(e) {}
+})();
+
+async function verifyAndShow() {
+  try {
+    var res = await fetch('/api/auth/admin-verify', { headers: { 'Authorization': 'Bearer ' + session.token } });
+    if (res.ok) {
+      var data = await res.json();
+      session = Object.assign(session, data);
+      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      showDashboard();
+    } else {
+      clearSession();
+    }
+  } catch(e) { clearSession(); }
+}
+
+// ─── Login ───────────────────────────────────────────────────────────────────
+async function doLogin() {
+  var orgName = document.getElementById('loginOrgName').value.trim();
+  var password = document.getElementById('loginPassword').value;
+  if (!password) return;
+  var btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = 'Signing in...';
+  document.getElementById('loginError').style.display = 'none';
+  try {
+    var res = await fetch('/api/auth/admin-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orgName: orgName || null, password: password }),
+    });
+    var data = await res.json();
+    if (!res.ok) {
+      document.getElementById('loginError').textContent = data.error || 'Invalid credentials';
+      document.getElementById('loginError').style.display = 'block';
+      return;
+    }
+    session = data;
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    showDashboard();
+  } catch(e) {
+    document.getElementById('loginError').textContent = 'Connection error';
+    document.getElementById('loginError').style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Sign In';
+  }
+}
+
+// ─── Show Dashboard ──────────────────────────────────────────────────────────
+function showDashboard() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('topBar').style.display = 'block';
+  document.getElementById('appWrap').style.display = 'block';
+
+  // Top bar
+  var roleLabelMap = { super_admin: 'Super Admin', metro_manager: 'Metro Manager', community_org: 'Community Org', masjid: 'Masjid' };
+  document.getElementById('topBarSub').textContent = session.displayName || session.orgName;
+  var badge = document.getElementById('topBarRoleBadge');
+  badge.textContent = roleLabelMap[session.role] || session.role;
+  badge.className = 'role-badge' + (session.role === 'super_admin' ? ' super' : session.role === 'metro_manager' ? ' metro' : '');
+
+  // Show correct dashboard
+  ['super-admin','metro-manager','community-org','masjid'].forEach(function(r) {
+    document.getElementById('dash-' + r).style.display = 'none';
+  });
+  var dashId = { super_admin: 'dash-super-admin', metro_manager: 'dash-metro-manager', community_org: 'dash-community-org', masjid: 'dash-masjid' }[session.role];
+  if (dashId) document.getElementById(dashId).style.display = 'block';
+
+  // Load data
+  if (session.role === 'super_admin') {
+    loadAdminEvents();
+    loadAccounts();
+  } else if (session.role === 'metro_manager') {
+    loadMetroEvents();
+    loadMetroBusinesses();
+  } else if (session.role === 'community_org') {
+    loadPortalStats('org');
+    loadPortalEvents('org');
+    loadOrgProfile('org');
+  } else if (session.role === 'masjid') {
+    loadPortalStats('masjid');
+    loadPortalEvents('masjid');
+    loadOrgProfile('masjid');
+    loadJanazaHistory();
+  }
+}
+
+function clearSession() {
+  session = null;
+  localStorage.removeItem(SESSION_KEY);
+}
+
+function signOut() {
+  if (session) {
+    fetch('/api/auth/admin-logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + session.token } }).catch(function(){});
+  }
+  clearSession();
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('topBar').style.display = 'none';
+  document.getElementById('appWrap').style.display = 'none';
+  document.getElementById('loginPassword').value = '';
+}
+
+function handleUnauthorized() {
+  showToast('Session expired — please sign in again', true);
+  signOut();
+}
+
+// ─── Tab switching ────────────────────────────────────────────────────────────
+function switchTab(prefix, name) {
+  var capName = name.charAt(0).toUpperCase() + name.slice(1);
+  var capPrefix = prefix.charAt(0).toUpperCase() + prefix.slice(1);
+  document.querySelectorAll('#dash-' + prefix.replace('_','-') + ' .tab-btn, #dash-' + (prefix === 'super' ? 'super-admin' : prefix === 'metro' ? 'metro-manager' : prefix === 'org' ? 'community-org' : 'masjid') + ' .tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('#dash-' + (prefix === 'super' ? 'super-admin' : prefix === 'metro' ? 'metro-manager' : prefix === 'org' ? 'community-org' : 'masjid') + ' .tab-content').forEach(function(c) { c.classList.remove('active'); });
+  var btnId = prefix + 'TabBtn' + capName;
+  var contentId = prefix + 'Tab' + capName;
+  var btn = document.getElementById(btnId);
+  var content = document.getElementById(contentId);
+  if (btn) btn.classList.add('active');
+  if (content) content.classList.add('active');
+}
+
+// ─── Toast ───────────────────────────────────────────────────────────────────
+function showToast(msg, isError) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  setTimeout(function() { t.className = 'toast'; }, 3200);
+}
+
+// ─── Recurrence UI ───────────────────────────────────────────────────────────
+function updateRecurUI(prefix) {
+  var typeEl = document.getElementById(prefix + 'RecurType');
+  var optsEl = document.getElementById(prefix + 'RecurOpts');
+  if (!typeEl || !optsEl) return;
+  var type = typeEl.value;
+  if (type === 'none') { optsEl.innerHTML = ''; optsEl.classList.remove('visible'); return; }
+  optsEl.classList.add('visible');
+  var html = '';
+  if (type === 'daily') {
+    html = '<div class="recur-row"><label>Repeat for</label><input type="number" id="' + prefix + 'RecurCount" value="7" min="1" max="90"><label>days</label></div>';
+  } else if (type === 'weekly') {
+    html = '<div class="recur-row"><label>Day:</label><select id="' + prefix + 'RecurDow"><option value="0">Sun</option><option value="1">Mon</option><option value="2">Tue</option><option value="3">Wed</option><option value="4">Thu</option><option value="5">Fri</option><option value="6">Sat</option></select><label>for</label><input type="number" id="' + prefix + 'RecurCount" value="12" min="1" max="52"><label>weeks</label></div>';
+  } else if (type === 'monthly_calendar') {
+    html = '<div class="recur-row"><label>Repeat for</label><input type="number" id="' + prefix + 'RecurCount" value="6" min="1" max="12"><label>months (same date)</label></div>';
+  } else if (type === 'monthly_weekday') {
+    html = '<div class="recur-row"><select id="' + prefix + 'RecurNth"><option value="1">1st</option><option value="2">2nd</option><option value="3">3rd</option><option value="4">4th</option><option value="-1">Last</option></select><select id="' + prefix + 'RecurDow"><option value="0">Sun</option><option value="1">Mon</option><option value="2">Tue</option><option value="3">Wed</option><option value="4">Thu</option><option value="5">Fri</option><option value="6">Sat</option></select><label>for</label><input type="number" id="' + prefix + 'RecurCount" value="6" min="1" max="12"><label>months</label></div>';
+  }
+  optsEl.innerHTML = html;
+}
+
+function getRecurPayload(prefix) {
+  var typeEl = document.getElementById(prefix + 'RecurType');
+  if (!typeEl) return { recurrenceType: 'none', recurrenceConfig: {} };
+  var type = typeEl.value;
+  if (type === 'none') return { recurrenceType: 'none', recurrenceConfig: {} };
+  var countEl = document.getElementById(prefix + 'RecurCount');
+  var count = countEl ? parseInt(countEl.value) || 1 : 1;
+  if (type === 'daily') return { recurrenceType: 'daily', recurrenceConfig: { count: count } };
+  if (type === 'weekly') {
+    var dowEl = document.getElementById(prefix + 'RecurDow');
+    return { recurrenceType: 'weekly', recurrenceConfig: { count: count, dayOfWeek: dowEl ? parseInt(dowEl.value) : 0 } };
+  }
+  if (type === 'monthly_calendar') return { recurrenceType: 'monthly_calendar', recurrenceConfig: { count: count } };
+  if (type === 'monthly_weekday') {
+    var nthEl = document.getElementById(prefix + 'RecurNth');
+    var dowEl2 = document.getElementById(prefix + 'RecurDow');
+    return { recurrenceType: 'monthly_weekday', recurrenceConfig: { count: count, nth: nthEl ? parseInt(nthEl.value) : 1, dayOfWeek: dowEl2 ? parseInt(dowEl2.value) : 0 } };
+  }
+  return { recurrenceType: 'none', recurrenceConfig: {} };
+}
+
+// ─── Auth helper ─────────────────────────────────────────────────────────────
+function authHeaders() { return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.token }; }
+
+// ─── SUPER ADMIN — Events ─────────────────────────────────────────────────────
+async function loadAdminEvents() {
+  var list = document.getElementById('saEventList');
+  try {
+    var res = await fetch('/api/community-events?limit=50', { headers: { 'Authorization': 'Bearer ' + session.token } });
+    var data = await res.json();
+    var events = Array.isArray(data) ? data : (data.events || []);
+    if (!events.length) { list.innerHTML = '<div class="empty-state">No events yet</div>'; return; }
+    list.innerHTML = '';
+    events.slice(0, 30).forEach(function(ev) {
+      var d = new Date(ev.start_time);
+      var el = document.createElement('div');
+      el.className = 'event-card';
+      el.innerHTML = (ev.image_url ? '<img class="thumb" src="' + ev.image_url + '">' : '') +
+        '<h3>' + escHtml(ev.title) + '</h3>' +
+        '<div class="card-meta">📅 ' + d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) + ' ' + d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) + '</div>' +
+        (ev.location ? '<div class="card-meta">📍 ' + escHtml(ev.location) + '</div>' : '') +
+        '<div class="card-actions"><button class="btn btn-sm btn-danger" onclick="deleteAdminEvent(' + ev.id + ')">Delete</button></div>';
+      list.appendChild(el);
+    });
+  } catch(e) { list.innerHTML = '<div class="empty-state">Failed to load</div>'; }
+}
+
+async function publishAdminEvent() {
+  var title = document.getElementById('saTitle').value.trim();
+  var startTime = document.getElementById('saStartTime').value;
+  if (!title || !startTime) { showToast('Title and start time required', true); return; }
+  var btn = document.getElementById('saPublishBtn');
+  btn.disabled = true; btn.textContent = 'Publishing...';
+  var recur = getRecurPayload('sa');
+  try {
+    var body = {
+      title: title,
+      description: document.getElementById('saDescription').value.trim(),
+      location: document.getElementById('saLocation').value.trim(),
+      organizer: document.getElementById('saOrganizer').value.trim(),
+      startTime: new Date(startTime).toISOString(),
+      endTime: document.getElementById('saEndTime').value ? new Date(document.getElementById('saEndTime').value).toISOString() : null,
+      registrationUrl: document.getElementById('saRegUrl').value.trim(),
+      isVirtual: document.getElementById('saVirtual').checked,
+      isFeatured: document.getElementById('saFeatured').checked,
+      recurrenceType: recur.recurrenceType,
+      recurrenceConfig: recur.recurrenceConfig,
+    };
+    var res = await fetch('/api/admin/events/publish', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
+    if (res.status === 401) { handleUnauthorized(); return; }
+    var data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Failed to publish', true); return; }
+    showToast('Published ' + data.count + ' event' + (data.count > 1 ? 's' : '') + '!');
+    ['saTitle','saDescription','saLocation','saOrganizer','saRegUrl','saStartTime','saEndTime'].forEach(function(id) { document.getElementById(id).value = ''; });
+    document.getElementById('saRecurType').value = 'none'; updateRecurUI('sa');
+    loadAdminEvents();
+  } catch(e) { showToast('Connection error', true); }
+  finally { btn.disabled = false; btn.textContent = 'Publish Event'; }
+}
+
+async function deleteAdminEvent(id) {
+  if (!confirm('Delete this event?')) return;
+  try {
+    await fetch('/api/admin/events/' + id, { method: 'DELETE', headers: authHeaders() });
+    showToast('Event deleted');
+    loadAdminEvents();
+  } catch(e) { showToast('Failed to delete', true); }
+}
+
+// ─── SUPER ADMIN — Accounts ───────────────────────────────────────────────────
+async function loadAccounts() {
+  var list = document.getElementById('accountList');
+  try {
+    var res = await fetch('/api/admin/accounts', { headers: authHeaders() });
+    if (res.status === 401) { handleUnauthorized(); return; }
+    cachedAccounts = await res.json();
+    if (!cachedAccounts.length) { list.innerHTML = '<div class="empty-state">No accounts yet</div>'; return; }
+    list.innerHTML = '';
+    cachedAccounts.forEach(function(acc) {
+      var el = document.createElement('div');
+      el.className = 'account-card';
+      el.innerHTML = '<h3>' + escHtml(acc.display_name || acc.org_name) + ' <span class="role-pill ' + acc.role + '">' + acc.role.replace('_',' ') + '</span></h3>' +
+        '<div class="card-meta">@' + escHtml(acc.org_name) + (acc.metro ? ' · ' + escHtml(acc.metro) : '') + '</div>' +
+        '<div class="card-actions">' +
+          '<button class="btn btn-sm btn-outline" onclick="openEditAccountModal(' + acc.id + ')">Edit</button>' +
+          '<button class="btn btn-sm btn-danger" onclick="deleteAccount(' + acc.id + ', \'' + escHtml(acc.org_name) + '\')">Delete</button>' +
+        '</div>';
+      list.appendChild(el);
+    });
+  } catch(e) { list.innerHTML = '<div class="empty-state">Failed to load accounts</div>'; }
+}
+
+function openNewAccountModal() {
+  document.getElementById('naOrgName').value = '';
+  document.getElementById('naDisplayName').value = '';
+  document.getElementById('naRole').value = 'community_org';
+  document.getElementById('naMetro').value = '';
+  document.getElementById('naPassword').value = '';
+  document.getElementById('newAccountModal').style.display = 'block';
+}
+
+async function saveNewAccount() {
+  var orgName = document.getElementById('naOrgName').value.trim();
+  var password = document.getElementById('naPassword').value;
+  var role = document.getElementById('naRole').value;
+  if (!orgName || !password) { showToast('Org name and password required', true); return; }
+  var btn = document.getElementById('saveNewAccountBtn');
+  btn.disabled = true; btn.textContent = 'Creating...';
+  try {
+    var res = await fetch('/api/admin/accounts', {
+      method: 'POST', headers: authHeaders(),
+      body: JSON.stringify({ orgName: orgName, password: password, role: role, metro: document.getElementById('naMetro').value.trim(), displayName: document.getElementById('naDisplayName').value.trim() }),
+    });
+    var data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Failed', true); return; }
+    showToast('Account created!');
+    closeModal('newAccountModal');
+    loadAccounts();
+  } catch(e) { showToast('Connection error', true); }
+  finally { btn.disabled = false; btn.textContent = 'Create Account'; }
+}
+
+function openEditAccountModal(id) {
+  var acc = cachedAccounts.find(function(a) { return a.id === id; });
+  if (!acc) return;
+  document.getElementById('editAccountId').value = id;
+  document.getElementById('eaDisplayName').value = acc.display_name || '';
+  document.getElementById('eaRole').value = acc.role;
+  document.getElementById('eaMetro').value = acc.metro || '';
+  document.getElementById('eaPassword').value = '';
+  document.getElementById('editAccountModal').style.display = 'block';
+}
+
+async function saveEditAccount() {
+  var id = document.getElementById('editAccountId').value;
+  var btn = document.getElementById('saveEditAccountBtn');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  try {
+    var body = { role: document.getElementById('eaRole').value, metro: document.getElementById('eaMetro').value.trim(), displayName: document.getElementById('eaDisplayName').value.trim() };
+    var pw = document.getElementById('eaPassword').value;
+    if (pw) body.password = pw;
+    var res = await fetch('/api/admin/accounts/' + id, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(body) });
+    if (!res.ok) { showToast('Failed to update', true); return; }
+    showToast('Account updated');
+    closeModal('editAccountModal');
+    loadAccounts();
+  } catch(e) { showToast('Connection error', true); }
+  finally { btn.disabled = false; btn.textContent = 'Save Changes'; }
+}
+
+async function deleteAccount(id, orgName) {
+  if (!confirm('Delete account "' + orgName + '"? This cannot be undone.')) return;
+  try {
+    var res = await fetch('/api/admin/accounts/' + id, { method: 'DELETE', headers: authHeaders() });
+    var data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Failed', true); return; }
+    showToast('Account deleted');
+    loadAccounts();
+  } catch(e) { showToast('Connection error', true); }
+}
+
+// ─── METRO MANAGER ────────────────────────────────────────────────────────────
+async function loadMetroEvents() {
+  var list = document.getElementById('metroEventList');
+  try {
+    var res = await fetch('/api/metro-admin/events', { headers: authHeaders() });
+    if (res.status === 401) { handleUnauthorized(); return; }
+    var events = await res.json();
+    document.getElementById('metroEventCount').textContent = events.length;
+    if (!events.length) { list.innerHTML = '<div class="empty-state">No events in your metro</div>'; return; }
+    list.innerHTML = '';
+    events.forEach(function(ev) {
+      var d = new Date(ev.start_time);
+      var el = document.createElement('div');
+      el.className = 'event-card';
+      el.innerHTML = '<h3>' + escHtml(ev.title) + '</h3>' +
+        '<div class="card-meta">📅 ' + d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) + ' ' + d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) + '</div>' +
+        (ev.location ? '<div class="card-meta">📍 ' + escHtml(ev.location) + '</div>' : '') +
+        '<div class="card-actions"><button class="btn btn-sm btn-danger" onclick="deleteMetroEvent(' + ev.id + ')">Delete</button></div>';
+      list.appendChild(el);
+    });
+  } catch(e) { list.innerHTML = '<div class="empty-state">Failed to load</div>'; }
+}
+
+async function publishMetroEvent() {
+  var title = document.getElementById('meTitle').value.trim();
+  var startTime = document.getElementById('meStartTime').value;
+  if (!title || !startTime) { showToast('Title and start time required', true); return; }
+  var btn = document.getElementById('mePublishBtn');
+  btn.disabled = true; btn.textContent = 'Publishing...';
+  var recur = getRecurPayload('me');
+  try {
+    var body = {
+      title: title, description: document.getElementById('meDescription').value.trim(),
+      location: document.getElementById('meLocation').value.trim(), organizer: document.getElementById('meOrganizer').value.trim(),
+      startTime: new Date(startTime).toISOString(),
+      endTime: document.getElementById('meEndTime').value ? new Date(document.getElementById('meEndTime').value).toISOString() : null,
+      recurrenceType: recur.recurrenceType, recurrenceConfig: recur.recurrenceConfig,
+    };
+    var res = await fetch('/api/metro-admin/events/publish', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
+    if (res.status === 401) { handleUnauthorized(); return; }
+    var data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Failed', true); return; }
+    showToast('Published ' + data.count + ' event' + (data.count > 1 ? 's' : '') + '!');
+    ['meTitle','meDescription','meLocation','meOrganizer','meStartTime','meEndTime'].forEach(function(id) { document.getElementById(id).value = ''; });
+    document.getElementById('meRecurType').value = 'none'; updateRecurUI('me');
+    loadMetroEvents();
+  } catch(e) { showToast('Connection error', true); }
+  finally { btn.disabled = false; btn.textContent = 'Publish Event'; }
+}
+
+async function deleteMetroEvent(id) {
+  if (!confirm('Delete this event?')) return;
+  try {
+    await fetch('/api/metro-admin/events/' + id, { method: 'DELETE', headers: authHeaders() });
+    showToast('Event deleted'); loadMetroEvents();
+  } catch(e) { showToast('Failed to delete', true); }
+}
+
+async function loadMetroBusinesses() {
+  var list = document.getElementById('metroBizList');
+  try {
+    var res = await fetch('/api/metro-admin/businesses', { headers: authHeaders() });
+    if (res.status === 401) { handleUnauthorized(); return; }
+    var businesses = await res.json();
+    document.getElementById('metroBizCount').textContent = businesses.length;
+    if (!businesses.length) { list.innerHTML = '<div class="empty-state">No businesses in your metro</div>'; return; }
+    list.innerHTML = '';
+    businesses.forEach(function(biz) {
+      var el = document.createElement('div');
+      el.className = 'biz-card';
+      el.innerHTML = '<h3>' + escHtml(biz.name) + '</h3>' +
+        '<div class="card-meta">' + escHtml(biz.category) + (biz.address ? ' · ' + escHtml(biz.address) : '') + '</div>' +
+        '<div class="card-actions">' +
+          '<button class="btn btn-sm btn-danger" onclick="deleteMetroBiz(' + biz.id + ')">Delete</button>' +
+        '</div>';
+      list.appendChild(el);
+    });
+  } catch(e) { list.innerHTML = '<div class="empty-state">Failed to load</div>'; }
+}
+
+async function deleteMetroBiz(id) {
+  if (!confirm('Delete this business?')) return;
+  try {
+    await fetch('/api/metro-admin/businesses/' + id, { method: 'DELETE', headers: authHeaders() });
+    showToast('Business deleted'); loadMetroBusinesses();
+  } catch(e) { showToast('Failed to delete', true); }
+}
+
+async function createMetroAccount() {
+  var orgName = document.getElementById('metroNewOrgName').value.trim();
+  var password = document.getElementById('metroNewPassword').value;
+  var role = document.getElementById('metroNewRole').value;
+  if (!orgName || !password) { showToast('Org name and password required', true); return; }
+  var btn = document.getElementById('metroCreateBtn');
+  btn.disabled = true; btn.textContent = 'Creating...';
+  try {
+    var res = await fetch('/api/metro-admin/accounts', {
+      method: 'POST', headers: authHeaders(),
+      body: JSON.stringify({ orgName: orgName, password: password, role: role, displayName: document.getElementById('metroNewDisplayName').value.trim() }),
+    });
+    var data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Failed', true); return; }
+    showToast('Account created!');
+    document.getElementById('metroNewOrgName').value = '';
+    document.getElementById('metroNewDisplayName').value = '';
+    document.getElementById('metroNewPassword').value = '';
+  } catch(e) { showToast('Connection error', true); }
+  finally { btn.disabled = false; btn.textContent = 'Create Account'; }
+}
+
+// ─── PORTAL (community_org + masjid) ─────────────────────────────────────────
+function portalPath() { return '/api/portal/' + encodeURIComponent(session.orgName); }
+
+async function loadPortalStats(dashKey) {
+  try {
+    var res = await fetch('/api/portal-admin/stats', { headers: authHeaders() });
+    if (res.ok) {
+      var data = await res.json();
+      var prefix = dashKey === 'org' ? 'org' : 'masjid';
+      document.getElementById(prefix + 'Followers').textContent = data.followers;
+      document.getElementById(prefix + 'EventCount').textContent = data.totalEvents;
+    }
+  } catch(e) {}
+}
+
+async function loadPortalEvents(dashKey) {
+  var listId = dashKey === 'org' ? 'orgEventList' : 'masjidEventList';
+  var list = document.getElementById(listId);
+  try {
+    var res = await fetch(portalPath() + '/events', { headers: authHeaders() });
+    if (res.status === 401) { handleUnauthorized(); return; }
+    var events = await res.json();
+    cachedEvents[dashKey] = events;
+    if (!events.length) { list.innerHTML = '<div class="empty-state">No events yet. Upload a flyer to get started!</div>'; return; }
+    list.innerHTML = '';
+    events.forEach(function(ev) {
+      var d = new Date(ev.start_time);
+      var el = document.createElement('div');
+      el.className = 'event-card';
+      el.innerHTML = (ev.image_url ? '<img class="thumb" src="' + ev.image_url + '">' : '') +
+        '<h3>' + escHtml(ev.title) + '</h3>' +
+        '<div class="card-meta">📅 ' + d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) + ' ' + d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) + '</div>' +
+        (ev.location ? '<div class="card-meta">📍 ' + escHtml(ev.location) + '</div>' : '') +
+        '<div class="card-actions">' +
+          '<button class="btn btn-sm btn-outline" onclick="openEditEvent(' + ev.id + ',\'' + dashKey + '\')">Edit</button>' +
+          '<button class="btn btn-sm btn-danger" onclick="deletePortalEvent(' + ev.id + ',\'' + dashKey + '\')">Delete</button>' +
+        '</div>';
+      list.appendChild(el);
+    });
+  } catch(e) { list.innerHTML = '<div class="empty-state">Failed to load</div>'; }
+}
+
+// Flyer upload helpers
+function handleFlyerDrop(e, dashKey) {
+  e.preventDefault();
+  var file = e.dataTransfer.files[0];
+  if (file) processFlyer(file, dashKey);
+}
+function handleFlyerSelect(e, dashKey) {
+  var file = e.target.files[0];
+  if (file) processFlyer(file, dashKey);
+}
+function processFlyer(file, dashKey) {
+  if (!file.type.startsWith('image/')) { showToast('Please upload an image', true); return; }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    flyerData[dashKey] = { base64: e.target.result.split(',')[1], mime: file.type };
+    document.getElementById(dashKey + 'FlyerPreviewImg').src = e.target.result;
+    document.getElementById(dashKey + 'FlyerPreview').style.display = 'block';
+    document.getElementById(dashKey + 'FlyerUploadArea').style.display = 'none';
+    document.getElementById(dashKey + 'ExtractBtn').disabled = false;
+  };
+  reader.readAsDataURL(file);
+}
+function clearFlyer(dashKey) {
+  flyerData[dashKey] = null;
+  document.getElementById(dashKey + 'FlyerPreview').style.display = 'none';
+  document.getElementById(dashKey + 'FlyerUploadArea').style.display = 'block';
+  document.getElementById(dashKey + 'ExtractBtn').disabled = true;
+  document.getElementById(dashKey + 'FlyerInput').value = '';
+}
+function toggleFlyerForm(dashKey) {
+  var form = document.getElementById(dashKey + 'FlyerForm');
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+async function extractFlyer(dashKey) {
+  if (!flyerData[dashKey]) { showToast('Upload a flyer first', true); return; }
+  var btn = document.getElementById(dashKey + 'ExtractBtn');
+  var statusEl = document.getElementById(dashKey + 'ExtractStatus');
+  btn.disabled = true; btn.textContent = 'Extracting...';
+  statusEl.style.display = 'block';
+  statusEl.style.background = 'var(--emerald-surface)'; statusEl.style.color = 'var(--emerald-light)';
+  statusEl.textContent = 'Analyzing flyer with AI...';
+  try {
+    var res = await fetch(portalPath() + '/extract-flyer', {
+      method: 'POST', headers: authHeaders(),
+      body: JSON.stringify({ image: flyerData[dashKey].base64, mimeType: flyerData[dashKey].mime }),
+    });
+    if (res.status === 401) { handleUnauthorized(); return; }
+    var data = await res.json();
+    if (!res.ok) {
+      statusEl.style.background = 'var(--red-surface)'; statusEl.style.color = 'var(--red)';
+      statusEl.textContent = data.error || 'Extraction failed'; return;
+    }
+    var pfx = dashKey === 'org' ? 'orgEv' : 'masjidEv';
+    document.getElementById(pfx + 'Title').value = data.title || '';
+    document.getElementById(pfx + 'Desc').value = data.description || '';
+    document.getElementById(pfx + 'Location').value = data.location || '';
+    document.getElementById(pfx + 'RegUrl').value = data.registrationUrl || '';
+    if (data.date) {
+      document.getElementById(pfx + 'Start').value = data.date + 'T' + (data.startTime || '00:00');
+      if (data.endTime) document.getElementById(pfx + 'End').value = data.date + 'T' + data.endTime;
+    }
+    document.getElementById(dashKey + 'FlyerForm').style.display = 'block';
+    statusEl.style.background = 'var(--emerald-surface)'; statusEl.style.color = 'var(--emerald-light)';
+    statusEl.textContent = 'Details extracted! Review below and publish.';
+  } catch(e) {
+    statusEl.style.background = 'var(--red-surface)'; statusEl.style.color = 'var(--red)';
+    statusEl.textContent = 'Connection error';
+  } finally { btn.disabled = false; btn.textContent = '✨ Extract with AI'; }
+}
+
+async function publishPortalEvent(dashKey) {
+  var pfx = dashKey === 'org' ? 'orgEv' : 'masjidEv';
+  var title = document.getElementById(pfx + 'Title').value.trim();
+  var startTime = document.getElementById(pfx + 'Start').value;
+  var location = document.getElementById(pfx + 'Location').value.trim();
+  if (!title || !startTime || !location) { showToast('Title, start time, and location required', true); return; }
+  var btn = document.getElementById(dashKey + 'PublishBtn');
+  btn.disabled = true; btn.textContent = 'Publishing...';
+  var recur = getRecurPayload(pfx);
+  try {
+    var fd = flyerData[dashKey];
+    var body = {
+      title: title, description: document.getElementById(pfx + 'Desc').value.trim(),
+      location: location, startTime: new Date(startTime).toISOString(),
+      endTime: document.getElementById(pfx + 'End').value ? new Date(document.getElementById(pfx + 'End').value).toISOString() : null,
+      registrationUrl: document.getElementById(pfx + 'RegUrl').value.trim(),
+      image: fd ? fd.base64 : null, imageMime: fd ? fd.mime : null,
+      recurrenceType: recur.recurrenceType, recurrenceConfig: recur.recurrenceConfig,
+    };
+    var res = await fetch(portalPath() + '/events/publish', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
+    if (res.status === 401) { handleUnauthorized(); return; }
+    var data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Failed to publish', true); return; }
+    showToast('Published ' + data.count + ' event' + (data.count > 1 ? 's' : '') + '!');
+    [pfx + 'Title', pfx + 'Desc', pfx + 'Location', pfx + 'Start', pfx + 'End', pfx + 'RegUrl'].forEach(function(id) {
+      var el = document.getElementById(id); if (el) el.value = '';
+    });
+    document.getElementById(dashKey + 'FlyerForm').style.display = 'none';
+    document.getElementById(dashKey + 'ExtractStatus').style.display = 'none';
+    clearFlyer(dashKey);
+    loadPortalEvents(dashKey);
+    loadPortalStats(dashKey);
+  } catch(e) { showToast('Connection error', true); }
+  finally { btn.disabled = false; btn.textContent = 'Publish Event'; }
+}
+
+function openEditEvent(id, dashKey) {
+  var events = cachedEvents[dashKey] || [];
+  var ev = events.find(function(e) { return e.id === id; });
+  if (!ev) return;
+  document.getElementById('editEventId').value = id;
+  document.getElementById('editEventOrg').value = dashKey;
+  document.getElementById('editEvTitle').value = ev.title || '';
+  document.getElementById('editEvDesc').value = ev.description || '';
+  document.getElementById('editEvLocation').value = ev.location || '';
+  document.getElementById('editEvRegUrl').value = ev.registration_url || '';
+  if (ev.start_time) document.getElementById('editEvStart').value = toLocalDT(new Date(ev.start_time));
+  if (ev.end_time) document.getElementById('editEvEnd').value = toLocalDT(new Date(ev.end_time));
+  document.getElementById('editEventModal').style.display = 'block';
+}
+
+async function saveEventEdit() {
+  var id = document.getElementById('editEventId').value;
+  var dashKey = document.getElementById('editEventOrg').value;
+  var btn = document.getElementById('saveEventEditBtn');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  try {
+    var body = {
+      title: document.getElementById('editEvTitle').value.trim(),
+      description: document.getElementById('editEvDesc').value.trim(),
+      location: document.getElementById('editEvLocation').value.trim(),
+      registrationUrl: document.getElementById('editEvRegUrl').value.trim(),
+      startTime: document.getElementById('editEvStart').value ? new Date(document.getElementById('editEvStart').value).toISOString() : undefined,
+      endTime: document.getElementById('editEvEnd').value ? new Date(document.getElementById('editEvEnd').value).toISOString() : undefined,
+    };
+    var res = await fetch(portalPath() + '/events/' + id, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(body) });
+    if (res.status === 401) { handleUnauthorized(); return; }
+    if (!res.ok) { showToast('Failed to save', true); return; }
+    showToast('Event updated');
+    closeModal('editEventModal');
+    loadPortalEvents(dashKey);
+  } catch(e) { showToast('Connection error', true); }
+  finally { btn.disabled = false; btn.textContent = 'Save'; }
+}
+
+async function deletePortalEvent(id, dashKey) {
+  if (!confirm('Delete this event?')) return;
+  try {
+    var res = await fetch(portalPath() + '/events/' + id, { method: 'DELETE', headers: authHeaders() });
+    if (res.status === 401) { handleUnauthorized(); return; }
+    showToast('Event deleted');
+    loadPortalEvents(dashKey);
+    loadPortalStats(dashKey);
+  } catch(e) { showToast('Connection error', true); }
+}
+
+// Push notifications
+async function sendOrgPush() { await sendPush('orgPushTitle', 'orgPushBody', 'orgPushLink', 'orgSendPushBtn'); }
+async function sendMasjidPush() { await sendPush('masjidPushTitle', 'masjidPushBody', 'masjidPushLink', 'masjidSendPushBtn'); }
+async function sendPush(titleId, bodyId, linkId, btnId) {
+  var title = document.getElementById(titleId).value.trim();
+  var body = document.getElementById(bodyId).value.trim();
+  var link = document.getElementById(linkId).value.trim();
+  if (!title || !body) { showToast('Title and message required', true); return; }
+  var btn = document.getElementById(btnId);
+  btn.disabled = true; btn.textContent = 'Sending...';
+  try {
+    var payload = { title: title, body: body }; if (link) payload.link = link;
+    var res = await fetch(portalPath() + '/push', { method: 'POST', headers: authHeaders(), body: JSON.stringify(payload) });
+    if (res.status === 401) { handleUnauthorized(); return; }
+    var data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Failed', true); return; }
+    showToast(data.sent ? 'Sent to ' + data.sent + ' follower' + (data.sent !== 1 ? 's' : '') + '!' : 'No followers to notify');
+    document.getElementById(titleId).value = '';
+    document.getElementById(bodyId).value = '';
+    document.getElementById(linkId).value = '';
+  } catch(e) { showToast('Connection error', true); }
+  finally { btn.disabled = false; btn.textContent = 'Send Notification'; }
+}
+
+// ─── Profile (community_org + masjid) ────────────────────────────────────────
+async function loadOrgProfile(dashKey) {
+  var containerEl = document.getElementById(dashKey === 'org' ? 'orgProfileContent' : 'masjidProfileContent');
+  var label = dashKey === 'org' ? 'organization' : 'masjid';
+  containerEl.innerHTML = buildProfileHTML(dashKey, label);
+  try {
+    var res = await fetch('/api/org-profiles/' + encodeURIComponent(session.orgName));
+    var profile = res.ok ? await res.json() : {};
+    if (profile) {
+      var d = dashKey;
+      setVal(d + 'ProfDesc', profile.description);
+      setVal(d + 'ProfWebsite', profile.website);
+      setVal(d + 'ProfAddress', profile.address);
+      setVal(d + 'ProfDonation', profile.donation_url);
+      updateProfilePreview(dashKey, profile);
+      if (profile.logo_url) {
+        document.getElementById(d + 'LogoImg').src = profile.logo_url;
+        document.getElementById(d + 'LogoPreview').style.display = 'block';
+      }
+    }
+  } catch(e) {}
+}
+
+function buildProfileHTML(dashKey, label) {
+  var d = dashKey;
+  return '<div class="section"><div class="section-title">👁️ Current Profile</div>' +
+    '<div class="profile-preview">' +
+      '<div class="preview-row"><span class="preview-icon">📝</span><div style="flex:1"><div class="preview-label">Description</div><div class="preview-value" id="' + d + 'PrevDesc"><span class="preview-empty">Not set</span></div></div></div>' +
+      '<div class="preview-row"><span class="preview-icon">🌐</span><div style="flex:1"><div class="preview-label">Website</div><div class="preview-value" id="' + d + 'PrevWebsite"><span class="preview-empty">Not set</span></div></div></div>' +
+      '<div class="preview-row"><span class="preview-icon">📍</span><div style="flex:1"><div class="preview-label">Address</div><div class="preview-value" id="' + d + 'PrevAddress"><span class="preview-empty">Not set</span></div></div></div>' +
+      '<div class="preview-row"><span class="preview-icon">💝</span><div style="flex:1"><div class="preview-label">Donation Link</div><div class="preview-value" id="' + d + 'PrevDonation"><span class="preview-empty">Not set</span></div></div></div>' +
+    '</div></div>' +
+    '<div class="section"><div class="section-title">🖼️ Logo</div>' +
+      '<div id="' + d + 'LogoPreview" style="display:none;text-align:center;margin-bottom:12px;"><img id="' + d + 'LogoImg" style="max-width:100px;max-height:100px;border-radius:10px;border:1px solid var(--border);"></div>' +
+      '<div class="upload-area" onclick="document.getElementById(\'' + d + 'LogoInput\').click()" ondragover="event.preventDefault();" ondrop="handleLogoDrop(event,\'' + d + '\')">' +
+        '<div class="upload-icon">🖼️</div><div class="upload-text">Drop logo or click to upload</div><div class="upload-hint">PNG, JPG, or WebP — square recommended</div>' +
+      '</div>' +
+      '<input type="file" id="' + d + 'LogoInput" accept="image/png,image/jpeg,image/webp" style="display:none;" onchange="handleLogoSelect(event,\'' + d + '\')">' +
+      '<div style="display:flex;gap:8px;margin-top:10px;">' +
+        '<button class="btn btn-primary" onclick="uploadLogo(\'' + d + '\')" id="' + d + 'UploadLogoBtn" disabled style="flex:1;">Upload Logo</button>' +
+        '<button class="btn btn-outline" onclick="removeLogo(\'' + d + '\')">Remove</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="section"><div class="section-title">✏️ Edit Profile</div>' +
+      '<label>Description</label><textarea id="' + d + 'ProfDesc" placeholder="Brief description..."></textarea>' +
+      '<label>Website</label><input type="text" id="' + d + 'ProfWebsite" placeholder="https://">' +
+      '<label>Address</label><input type="text" id="' + d + 'ProfAddress" placeholder="Full address">' +
+      '<label>Donation Link</label><input type="text" id="' + d + 'ProfDonation" placeholder="https://...">' +
+      '<button class="btn btn-primary" onclick="saveProfile(\'' + d + '\')" id="' + d + 'SaveProfileBtn" style="margin-top:14px;width:100%;">Save Profile</button>' +
+    '</div>';
+}
+
+function updateProfilePreview(dashKey, p) {
+  var d = dashKey;
+  setPreview(d + 'PrevDesc', p.description);
+  setPreview(d + 'PrevWebsite', p.website, true);
+  setPreview(d + 'PrevAddress', p.address);
+  setPreview(d + 'PrevDonation', p.donation_url, true);
+}
+
+function setPreview(id, val, isLink) {
+  var el = document.getElementById(id); if (!el) return;
+  if (!val) { el.innerHTML = '<span class="preview-empty">Not set</span>'; return; }
+  if (isLink) { el.innerHTML = '<a href="' + escHtml(val) + '" target="_blank">' + escHtml(val.replace(/^https?:\/\/(www\.)?/,'')) + '</a>'; }
+  else { el.textContent = val; }
+}
+
+function setVal(id, val) { var el = document.getElementById(id); if (el && val) el.value = val; }
+
+var pendingLogos = {};
+function handleLogoDrop(e, dashKey) {
+  e.preventDefault(); e.stopPropagation();
+  var file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) processLogoFile(file, dashKey);
+}
+function handleLogoSelect(e, dashKey) { var file = e.target.files[0]; if (file) processLogoFile(file, dashKey); }
+function processLogoFile(file, dashKey) {
+  if (file.size > 5 * 1024 * 1024) { showToast('Logo must be under 5MB', true); return; }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    pendingLogos[dashKey] = { data: e.target.result.split(',')[1], mime: file.type };
+    document.getElementById(dashKey + 'LogoImg').src = e.target.result;
+    document.getElementById(dashKey + 'LogoPreview').style.display = 'block';
+    document.getElementById(dashKey + 'UploadLogoBtn').disabled = false;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function uploadLogo(dashKey) {
+  var logo = pendingLogos[dashKey]; if (!logo) return;
+  var btn = document.getElementById(dashKey + 'UploadLogoBtn');
+  btn.disabled = true; btn.textContent = 'Uploading...';
+  try {
+    var res = await fetch(portalPath() + '/logo', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ image: logo.data, imageMime: logo.mime }) });
+    if (res.status === 401) { handleUnauthorized(); return; }
+    if (res.ok) { showToast('Logo uploaded!'); pendingLogos[dashKey] = null; btn.disabled = true; }
+    else { showToast('Failed to upload logo', true); }
+  } catch(e) { showToast('Connection error', true); }
+  finally { btn.textContent = 'Upload Logo'; }
+}
+
+async function removeLogo(dashKey) {
+  if (!confirm('Remove logo?')) return;
+  try {
+    var res = await fetch(portalPath() + '/logo', { method: 'DELETE', headers: authHeaders() });
+    if (res.status === 401) { handleUnauthorized(); return; }
+    if (res.ok) { showToast('Logo removed'); document.getElementById(dashKey + 'LogoPreview').style.display = 'none'; }
+  } catch(e) { showToast('Connection error', true); }
+}
+
+async function saveProfile(dashKey) {
+  var d = dashKey;
+  var btn = document.getElementById(d + 'SaveProfileBtn');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  try {
+    var body = {
+      description: document.getElementById(d + 'ProfDesc').value.trim(),
+      website: document.getElementById(d + 'ProfWebsite').value.trim(),
+      address: document.getElementById(d + 'ProfAddress').value.trim(),
+      donationUrl: document.getElementById(d + 'ProfDonation').value.trim(),
+    };
+    var res = await fetch(portalPath() + '/organization', { method: 'PUT', headers: authHeaders(), body: JSON.stringify(body) });
+    if (res.status === 401) { handleUnauthorized(); return; }
+    if (res.ok) { showToast('Profile saved!'); updateProfilePreview(dashKey, Object.assign({}, body, { donation_url: body.donationUrl })); }
+    else { showToast('Failed to save', true); }
+  } catch(e) { showToast('Connection error', true); }
+  finally { btn.disabled = false; btn.textContent = 'Save Profile'; }
+}
+
+// ─── Janaza ───────────────────────────────────────────────────────────────────
+function handleJanazaDrop(e) { e.preventDefault(); var file = e.dataTransfer.files[0]; if (file) processJanaza(file); }
+function handleJanazaSelect(e) { var file = e.target.files[0]; if (file) processJanaza(file); }
+function processJanaza(file) {
+  if (!file.type.startsWith('image/')) { showToast('Please upload an image', true); return; }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    janazaBase64 = e.target.result.split(',')[1]; janazaMime = file.type;
+    document.getElementById('janazaPreviewImg').src = e.target.result;
+    document.getElementById('janazaPreview').style.display = 'block';
+    document.getElementById('janazaUploadArea').style.display = 'none';
+    document.getElementById('janazaExtractBtn').disabled = false;
+  };
+  reader.readAsDataURL(file);
+}
+function clearJanaza() {
+  janazaBase64 = null; janazaMime = null;
+  document.getElementById('janazaPreview').style.display = 'none';
+  document.getElementById('janazaUploadArea').style.display = 'block';
+  document.getElementById('janazaExtractBtn').disabled = true;
+  document.getElementById('janazaFileInput').value = '';
+}
+function toggleJanazaForm() { var f = document.getElementById('janazaForm'); f.style.display = f.style.display === 'none' ? 'block' : 'none'; }
+
+async function extractJanaza() {
+  if (!janazaBase64) return;
+  var btn = document.getElementById('janazaExtractBtn');
+  var statusEl = document.getElementById('janazaExtractStatus');
+  btn.disabled = true; btn.textContent = 'Extracting...';
+  statusEl.style.display = 'block'; statusEl.style.background = 'var(--emerald-surface)'; statusEl.style.color = 'var(--emerald-light)';
+  statusEl.textContent = 'Analyzing with AI...';
+  try {
+    var res = await fetch(portalPath() + '/extract-janaza', {
+      method: 'POST', headers: authHeaders(),
+      body: JSON.stringify({ image: janazaBase64, mimeType: janazaMime }),
+    });
+    if (res.status === 401) { handleUnauthorized(); return; }
+    var data = await res.json();
+    if (!res.ok) {
+      statusEl.style.background = 'var(--red-surface)'; statusEl.style.color = 'var(--red)';
+      statusEl.textContent = data.error || 'Extraction failed'; return;
+    }
+    if (data.deceasedName) document.getElementById('janazaName').value = data.deceasedName;
+    if (data.country) document.getElementById('janazaCountry').value = data.country;
+    if (data.relatives) document.getElementById('janazaRelatives').value = data.relatives;
+    if (data.prayerTime) document.getElementById('janazaPrayerTime').value = data.prayerTime;
+    if (data.prayerLocation) document.getElementById('janazaPrayerLocation').value = data.prayerLocation;
+    if (data.burialInfo) document.getElementById('janazaBurialInfo').value = data.burialInfo;
+    document.getElementById('janazaForm').style.display = 'block';
+    statusEl.textContent = 'Details extracted! Review and send.';
+  } catch(e) {
+    statusEl.style.background = 'var(--red-surface)'; statusEl.style.color = 'var(--red)';
+    statusEl.textContent = 'Connection error';
+  } finally { btn.disabled = false; btn.textContent = '✨ Extract with AI'; }
+}
+
+async function publishJanaza() { await submitJanaza(false); }
+async function scheduleJanaza() { await submitJanaza(true); }
+async function submitJanaza(schedule) {
+  var name = document.getElementById('janazaName').value.trim();
+  if (!name) { showToast('Deceased name is required', true); return; }
+  var btnId = schedule ? 'scheduleJanazaBtn' : 'publishJanazaBtn';
+  var btn = document.getElementById(btnId);
+  btn.disabled = true; btn.textContent = schedule ? 'Scheduling...' : 'Sending...';
+  try {
+    var body = {
+      deceasedName: name,
+      country: document.getElementById('janazaCountry').value.trim(),
+      relatives: document.getElementById('janazaRelatives').value.trim(),
+      prayerTime: document.getElementById('janazaPrayerTime').value.trim(),
+      prayerLocation: document.getElementById('janazaPrayerLocation').value.trim(),
+      burialInfo: document.getElementById('janazaBurialInfo').value.trim(),
+      image: janazaBase64, imageMime: janazaMime,
+    };
+    if (schedule) {
+      var st = document.getElementById('janazaScheduleTime').value;
+      if (!st) { showToast('Set a schedule time', true); return; }
+      body.scheduledFor = new Date(st).toISOString();
+    }
+    var res = await fetch(portalPath() + '/janaza', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
+    if (res.status === 401) { handleUnauthorized(); return; }
+    var data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Failed', true); return; }
+    showToast(schedule ? 'Janaza alert scheduled!' : 'Janaza alert sent!');
+    ['janazaName','janazaCountry','janazaRelatives','janazaPrayerTime','janazaPrayerLocation','janazaBurialInfo','janazaScheduleTime'].forEach(function(id) { document.getElementById(id).value = ''; });
+    document.getElementById('janazaForm').style.display = 'none';
+    document.getElementById('janazaExtractStatus').style.display = 'none';
+    clearJanaza();
+    loadJanazaHistory();
+  } catch(e) { showToast('Connection error', true); }
+  finally { btn.disabled = false; btn.textContent = schedule ? 'Schedule' : 'Send Now'; }
+}
+
+async function loadJanazaHistory() {
+  var list = document.getElementById('janazaList');
+  try {
+    var res = await fetch(portalPath() + '/janaza', { headers: authHeaders() });
+    if (!res.ok) { list.innerHTML = '<div class="empty-state">Failed to load</div>'; return; }
+    var items = await res.json();
+    if (!items.length) { list.innerHTML = '<div class="empty-state">No janaza alerts sent yet</div>'; return; }
+    list.innerHTML = '';
+    items.forEach(function(j) {
+      var el = document.createElement('div');
+      el.className = 'event-card';
+      var d = new Date(j.created_at || j.scheduled_for);
+      el.innerHTML = '<h3>' + escHtml(j.deceased_name || j.deceasedName || 'Unknown') + '</h3>' +
+        '<div class="card-meta">📅 ' + d.toLocaleDateString() + '</div>' +
+        (j.prayer_time ? '<div class="card-meta">🕌 ' + escHtml(j.prayer_time) + '</div>' : '');
+      list.appendChild(el);
+    });
+  } catch(e) { list.innerHTML = '<div class="empty-state">Failed to load</div>'; }
+}
+
+// ─── Modals ───────────────────────────────────────────────────────────────────
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+window.addEventListener('click', function(e) {
+  ['newAccountModal','editAccountModal','editEventModal'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (e.target === el) el.style.display = 'none';
+  });
+});
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function toLocalDT(d) {
+  var yr = d.getFullYear(), mo = String(d.getMonth()+1).padStart(2,'0'), dy = String(d.getDate()).padStart(2,'0');
+  var hr = String(d.getHours()).padStart(2,'0'), mn = String(d.getMinutes()).padStart(2,'0');
+  return yr + '-' + mo + '-' + dy + 'T' + hr + ':' + mn;
+}
+</script>
+</body>
+</html>
