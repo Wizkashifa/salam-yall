@@ -1252,6 +1252,7 @@
       document.getElementById(hash + '-section').classList.add('active');
     }
     loadSection(hash || 'events');
+    initDeepLink();
 
     let calendarMonth = new Date().getMonth();
     let calendarYear = new Date().getFullYear();
@@ -1508,6 +1509,7 @@
         document.getElementById('events-loading').style.display = 'none';
         eventsPage = 1;
         renderEvents();
+        tryResolveDeepLink();
       } catch { document.getElementById('events-loading').innerHTML = 'Failed to load events.'; }
     }
 
@@ -1599,6 +1601,7 @@
         document.getElementById('restaurants-loading').style.display = 'none';
         restaurantsPage = 1;
         renderRestaurants();
+        tryResolveDeepLink();
       } catch { document.getElementById('restaurants-loading').innerHTML = 'Failed to load restaurants.'; }
     }
 
@@ -1707,6 +1710,7 @@
         const banner = document.getElementById('directory-location-banner');
         if (banner) banner.style.display = (hasLocBiz && !userLat) ? 'flex' : 'none';
         renderBusinesses();
+        tryResolveDeepLink();
       } catch { document.getElementById('directory-loading').innerHTML = 'Failed to load businesses.'; }
     }
 
@@ -2076,6 +2080,36 @@
       _shareToastTimer = setTimeout(function() { t.classList.remove('show'); }, 2200);
     }
 
+    var _dlType = null, _dlId = null;
+    function initDeepLink() {
+      var params = new URLSearchParams(window.location.search);
+      var open = params.get('open');
+      var id = params.get('id');
+      if (!open || !id) return;
+      _dlType = open; _dlId = id;
+      var tabMap = { event: 'events', restaurant: 'restaurants', business: 'directory' };
+      var tab = tabMap[open];
+      if (!tab) return;
+      document.querySelectorAll('.nav-tabs a').forEach(function(l) { l.classList.toggle('active', l.dataset.tab === tab); });
+      document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
+      document.getElementById(tab + '-section').classList.add('active');
+      loadSection(tab);
+    }
+
+    function tryResolveDeepLink() {
+      if (!_dlType || !_dlId) return;
+      var type = _dlType, id = String(_dlId), item = null;
+      if (type === 'event') item = allEvents.find(function(e) { return String(e.id) === id; });
+      else if (type === 'restaurant') item = allRestaurants.find(function(r) { return String(r.id) === id; });
+      else if (type === 'business') item = allBusinesses.find(function(b) { return String(b.id) === id; });
+      if (!item) return;
+      _dlType = null; _dlId = null;
+      history.replaceState(null, '', window.location.pathname + (window.location.hash || ''));
+      if (type === 'event') openEventModal(item);
+      else if (type === 'restaurant') openRestaurantModal(item);
+      else if (type === 'business') openBusinessModal(item);
+    }
+
     async function shareItem(type, data, ev) {
       ev.stopPropagation();
       var base = window.location.origin + '/community';
@@ -2087,20 +2121,20 @@
         if (data.start) { var ds = new Date(data.start); parts.push(ds.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })); }
         if (data.location) parts.push(data.location);
         text = parts.join(' · ');
-        url = data.registrationUrl || base + '#events';
+        url = base + '?open=event&id=' + encodeURIComponent(data.id);
       } else if (type === 'restaurant') {
         title = data.name;
         var parts = [];
         if (data.is_halal === 'IS_HALAL') parts.push('Fully Halal'); else if (data.is_halal) parts.push('Partially Halal');
         if (data.formatted_address) parts.push(data.formatted_address);
         text = parts.join(' · ');
-        url = data.url || base + '#restaurants';
+        url = base + '?open=restaurant&id=' + encodeURIComponent(data.id);
       } else if (type === 'business') {
         title = data.name;
         var parts = [data.category, data.subcategory].filter(Boolean);
         if (data.description) parts.push(data.description.substring(0, 120) + (data.description.length > 120 ? '…' : ''));
         text = parts.join(' · ');
-        url = data.website || base + '#directory';
+        url = base + '?open=business&id=' + encodeURIComponent(data.id);
       }
       if (navigator.share) {
         try { await navigator.share({ title: title, text: text, url: url }); return; }
