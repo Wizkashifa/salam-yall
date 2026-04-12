@@ -5,7 +5,8 @@
       "name": "Backend (Express)",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "server:dev"],
-      "port": 5000
+      "port": 5000,
+      "autoPort": true
     },
     {
       "name": "Expo (Metro bundler)",

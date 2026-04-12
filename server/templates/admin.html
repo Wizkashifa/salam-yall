@@ -6,44 +6,12 @@
   <title>Salam Y'all Admin</title>
   <link rel="icon" type="image/png" sizes="48x48" href="/assets/images/favicon.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/apple-touch-icon.png" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/brand.css">
   <style>
     :root {
-      --bg: #070F0B;
-      --bg-elevated: #0E1A13;
-      --card-bg: rgba(255,255,255,0.04);
-      --card-bg-hover: rgba(255,255,255,0.07);
-      --card-border: rgba(255,255,255,0.08);
-      --card-border-hover: rgba(255,255,255,0.15);
-      --emerald: #1B6B4A;
-      --emerald-light: #2A8C63;
-      --emerald-dark: #0d2b1a;
-      --gold: #D4A843;
-      --gold-subtle: rgba(212,168,67,0.1);
-      --text: #F0F0EC;
-      --text-secondary: rgba(255,255,255,0.6);
-      --text-tertiary: rgba(255,255,255,0.35);
-      --divider: rgba(255,255,255,0.06);
-      --input-bg: rgba(255,255,255,0.05);
-      --input-border: rgba(255,255,255,0.1);
-      --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
-      --shadow-md: 0 4px 16px rgba(0,0,0,0.3);
+      /* page-specific tokens */
+      --popup-bg: #152019;
     }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; }
-
-    /* LOGIN */
-    .login-wrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
-    .login-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 40px; max-width: 360px; width: 100%; text-align: center; }
-    .login-card h1 { font-family: 'Playfair Display', serif; font-size: 22px; color: var(--gold); margin-bottom: 8px; }
-    .login-card p { font-size: 13px; color: var(--text-secondary); margin-bottom: 24px; }
-    .login-card input { width: 100%; padding: 12px 16px; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 10px; color: var(--text); font-size: 15px; outline: none; margin-bottom: 16px; font-family: inherit; }
-    .login-card input:focus { border-color: var(--emerald); box-shadow: 0 0 0 3px rgba(27,107,74,0.15); }
-    .login-card button { width: 100%; padding: 12px; background: var(--emerald); color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; }
-    .login-card button:hover { background: var(--emerald-light); }
-    .login-error { color: #F87171; font-size: 13px; margin-bottom: 12px; display: none; }
 
     /* APP LAYOUT */
     .app-wrap { display: none; width: 100%; margin: 0 auto; padding: 20px; padding-top: 110px; padding-bottom: 40px; max-width: 100%; }
@@ -94,7 +62,7 @@
       color: var(--text); font-size: 15px; font-family: inherit; outline: none; margin-bottom: 14px;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
-    select { background-color: #0E1A13; }
+    select { background-color: var(--bg-elevated); }
     textarea { resize: vertical; min-height: 80px; }
     textarea:focus, input:focus, select:focus { border-color: var(--emerald); box-shadow: 0 0 0 3px rgba(27,107,74,0.15); }
 
@@ -233,7 +201,7 @@
       <p>Admin Dashboard</p>
       <div class="login-error" id="loginError">Incorrect password</div>
       <input type="password" id="passwordInput" placeholder="Enter admin password" autocomplete="current-password">
-      <button onclick="doLogin()">Sign In</button>
+      <button class="login-btn" onclick="doLogin()">Sign In</button>
     </div>
   </div>
 

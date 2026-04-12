@@ -7085,37 +7085,6 @@ Important notes:
     }
   });
 
-  const sharePageStyles = `
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;background:#070F0B;color:#F0F0EC;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;position:relative;overflow-x:hidden}
-    body::before{content:'';position:fixed;top:0;left:0;right:0;height:100%;background:radial-gradient(ellipse at 50% 0%,rgba(27,107,74,0.12) 0%,transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(212,168,67,0.05) 0%,transparent 40%);pointer-events:none;z-index:0}
-    .brand{display:flex;align-items:center;gap:10px;margin-bottom:24px;position:relative;z-index:1}
-    .brand img{width:34px;height:34px;border-radius:8px}
-    .brand-name{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#D4A843;letter-spacing:0.3px}
-    .card{max-width:420px;width:100%;background:rgba(14,26,19,0.9);border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);box-shadow:0 8px 32px rgba(0,0,0,0.45),0 1px 0 rgba(255,255,255,0.05);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);position:relative;z-index:1}
-    .card-image{width:100%;height:200px;object-fit:cover}
-    .card-image-placeholder{width:100%;height:120px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1B6B4A 0%,#0F3D2B 100%);font-size:48px}
-    .card-body{padding:24px}
-    .badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:12px}
-    .badge-event{background:rgba(27,107,74,0.15);color:#34D399;border:1px solid rgba(27,107,74,0.3)}
-    .badge-restaurant{background:rgba(212,168,67,0.1);color:#D4A843;border:1px solid rgba(212,168,67,0.25)}
-    .badge-business{background:rgba(99,102,241,0.1);color:#A5B4FC;border:1px solid rgba(99,102,241,0.2)}
-    .badge-halal{background:rgba(34,197,94,0.1);color:#4ADE80;border:1px solid rgba(34,197,94,0.2);margin-left:6px}
-    h1{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;line-height:1.3;margin-bottom:10px;color:#F0F0EC;margin-top:8px}
-    .meta{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
-    .meta-row{display:flex;align-items:center;gap:8px;font-size:13px;color:rgba(255,255,255,0.6)}
-    .meta-row svg{width:14px;height:14px;flex-shrink:0;opacity:0.5}
-    .desc{font-size:14px;color:rgba(255,255,255,0.55);line-height:1.65;margin-bottom:20px}
-    .rating{display:flex;align-items:center;gap:4px;font-size:13px;color:#D4A843;margin-bottom:12px}
-    .cta{display:block;text-align:center;background:#1B6B4A;color:#fff;text-decoration:none;padding:14px 32px;border-radius:12px;font-weight:600;font-size:16px;transition:background 0.15s,transform 0.15s;letter-spacing:0.01em}
-    .cta:hover{background:#2A8C63}
-    .cta:active{transform:scale(0.98)}
-    .web-cta{display:block;text-align:center;margin-top:10px;background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.7);text-decoration:none;padding:12px 32px;border-radius:12px;font-weight:500;font-size:15px;border:1px solid rgba(255,255,255,0.08);transition:background 0.15s,border-color 0.15s}
-    .web-cta:hover{background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.12)}
-    .get-app{display:block;text-align:center;margin-top:12px;font-size:12px;color:rgba(255,255,255,0.3);text-decoration:none;letter-spacing:0.01em;transition:color 0.15s}
-    .get-app:hover{color:rgba(255,255,255,0.5)}
-    .footer{margin-top:24px;font-size:11px;color:rgba(255,255,255,0.2);text-align:center;position:relative;z-index:1;letter-spacing:0.02em}
-  `;
 
   const crescentSvg = `<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 2C8.268 2 2 8.268 2 16s6.268 14 14 14 14-6.268 14-14S23.732 2 16 2z" fill="#1B6B4A"/><path d="M18.5 6C13.806 6 10 9.806 10 14.5S13.806 23 18.5 23c1.908 0 3.666-.63 5.084-1.693A10.96 10.96 0 0116 24C10.477 24 6 19.523 6 14S10.477 4 16 4c2.761 0 5.262 1.143 7.044 2.98A8.45 8.45 0 0018.5 6z" fill="#D4A843"/><circle cx="22" cy="8" r="1.5" fill="#D4A843"/></svg>`;
 
@@ -7233,31 +7202,28 @@ Important notes:
   <meta name="twitter:title" content="${escapeHtml(title)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
   <meta name="twitter:image" content="${imageUrl ? escapeHtml(imageUrl) : `https://${host}/assets/images/og-share.png`}">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>${sharePageStyles}</style>
+  <link rel="stylesheet" href="/assets/brand.css">
 </head>
-<body>
-  <div class="brand"><img src="/assets/images/icon.png" alt="Salam Y'all"><span class="brand-name">Salam Y'all</span></div>
-  <div class="card">
-    ${imageUrl ? `<img class="card-image" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}">` : `<div class="card-image-placeholder">📅</div>`}
-    <div class="card-body">
-      <span class="badge badge-event">Event</span>
+<body class="sy-share-page">
+  <div class="sy-share-brand"><img src="/assets/images/icon.png" alt="Salam Y'all"><span class="sy-share-brand-name">Salam Y'all</span></div>
+  <div class="sy-share-card">
+    ${imageUrl ? `<img class="sy-share-card-image" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}">` : `<div class="sy-share-card-placeholder">📅</div>`}
+    <div class="sy-share-card-body">
+      <span class="sy-share-badge sy-share-badge-event">Event</span>
       <h1>${escapeHtml(title)}</h1>
-      <div class="meta">
-        ${dateStr ? `<div class="meta-row">${calendarSvg}<span>${escapeHtml(dateStr)}</span></div>` : ""}
-        ${timeStr ? `<div class="meta-row">${clockSvg}<span>${escapeHtml(timeStr)}</span></div>` : ""}
-        ${location ? `<div class="meta-row">${pinSvg}<span>${escapeHtml(location)}</span></div>` : ""}
-        ${organizer ? `<div class="meta-row">${personSvg}<span>${escapeHtml(organizer)}</span></div>` : ""}
+      <div class="sy-share-meta">
+        ${dateStr ? `<div class="sy-share-meta-row">${calendarSvg}<span>${escapeHtml(dateStr)}</span></div>` : ""}
+        ${timeStr ? `<div class="sy-share-meta-row">${clockSvg}<span>${escapeHtml(timeStr)}</span></div>` : ""}
+        ${location ? `<div class="sy-share-meta-row">${pinSvg}<span>${escapeHtml(location)}</span></div>` : ""}
+        ${organizer ? `<div class="sy-share-meta-row">${personSvg}<span>${escapeHtml(organizer)}</span></div>` : ""}
       </div>
-      ${description ? `<p class="desc">${escapeHtml(description.substring(0, 180))}${description.length > 180 ? "..." : ""}</p>` : ""}
-      <a href="${deepLink}" class="cta" id="open">Open in Salam Y'all</a>
-      <a href="${webLink}" class="web-cta">View on web</a>
-      <a href="https://apps.apple.com/us/app/salam-yall/id6760231963" class="get-app">Don't have the app? Get Salam Y'all</a>
+      ${description ? `<p class="sy-share-desc">${escapeHtml(description.substring(0, 180))}${description.length > 180 ? "..." : ""}</p>` : ""}
+      <a href="${deepLink}" class="sy-share-cta" id="open">Open in Salam Y'all</a>
+      <a href="${webLink}" class="sy-share-web-cta">View on web</a>
+      <a href="https://apps.apple.com/us/app/salam-yall/id6760231963" class="sy-share-get-app">Don't have the app? Get Salam Y'all</a>
     </div>
   </div>
-  <div class="footer">Salam Y'all — Your Triangle Muslim Community App</div>
+  <div class="sy-share-footer">Salam Y'all — Your Muslim Community App</div>
 </body>
 </html>`);
     } catch (error: any) {
@@ -7310,32 +7276,29 @@ Important notes:
   <meta name="twitter:title" content="${escapeHtml(title)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
   <meta name="twitter:image" content="${restaurantImageUrl || `https://${host}/assets/images/og-share.png`}">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>${sharePageStyles}</style>
+  <link rel="stylesheet" href="/assets/brand.css">
 </head>
-<body>
-  <div class="brand"><img src="/assets/images/icon.png" alt="Salam Y'all"><span class="brand-name">Salam Y'all</span></div>
-  <div class="card">
-    ${restaurantImageUrl ? `<img class="card-image" src="${restaurantImageUrl}" alt="${escapeHtml(title)}">` : `<div class="card-image-placeholder">${escapeHtml(emoji)}</div>`}
-    <div class="card-body">
+<body class="sy-share-page">
+  <div class="sy-share-brand"><img src="/assets/images/icon.png" alt="Salam Y'all"><span class="sy-share-brand-name">Salam Y'all</span></div>
+  <div class="sy-share-card">
+    ${restaurantImageUrl ? `<img class="sy-share-card-image" src="${restaurantImageUrl}" alt="${escapeHtml(title)}">` : `<div class="sy-share-card-placeholder">${escapeHtml(emoji)}</div>`}
+    <div class="sy-share-card-body">
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-        <span class="badge badge-restaurant">${escapeHtml(cuisineLabel || "Restaurant")}</span>
-        ${isHalal ? `<span class="badge badge-halal">Halal</span>` : ""}
+        <span class="sy-share-badge sy-share-badge-restaurant">${escapeHtml(cuisineLabel || "Restaurant")}</span>
+        ${isHalal ? `<span class="sy-share-badge sy-share-badge-halal">Halal</span>` : ""}
       </div>
       <h1>${escapeHtml(title)}</h1>
-      ${rating > 0 ? `<div class="rating">${starSvg}<span>${rating.toFixed(1)}</span><span style="color:#6B7280">(${totalRatings})</span></div>` : ""}
-      <div class="meta">
-        ${address ? `<div class="meta-row">${pinSvg}<span>${escapeHtml(address)}</span></div>` : ""}
+      ${rating > 0 ? `<div class="sy-share-rating">${starSvg}<span>${rating.toFixed(1)}</span><span style="color:var(--text-muted)">(${totalRatings})</span></div>` : ""}
+      <div class="sy-share-meta">
+        ${address ? `<div class="sy-share-meta-row">${pinSvg}<span>${escapeHtml(address)}</span></div>` : ""}
       </div>
-      ${description ? `<p class="desc">${escapeHtml(description.substring(0, 180))}${description.length > 180 ? "..." : ""}</p>` : ""}
-      <a href="${deepLink}" class="cta" id="open">Open in Salam Y'all</a>
-      <a href="${webLink}" class="web-cta">View on web</a>
-      <a href="https://apps.apple.com/us/app/salam-yall/id6760231963" class="get-app">Don't have the app? Get Salam Y'all</a>
+      ${description ? `<p class="sy-share-desc">${escapeHtml(description.substring(0, 180))}${description.length > 180 ? "..." : ""}</p>` : ""}
+      <a href="${deepLink}" class="sy-share-cta" id="open">Open in Salam Y'all</a>
+      <a href="${webLink}" class="sy-share-web-cta">View on web</a>
+      <a href="https://apps.apple.com/us/app/salam-yall/id6760231963" class="sy-share-get-app">Don't have the app? Get Salam Y'all</a>
     </div>
   </div>
-  <div class="footer">Salam Y'all — Your Triangle Muslim Community App</div>
+  <div class="sy-share-footer">Salam Y'all — Your Muslim Community App</div>
 </body>
 </html>`);
     } catch (error: any) {
@@ -7383,28 +7346,25 @@ Important notes:
   <meta name="twitter:title" content="${escapeHtml(title)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
   <meta name="twitter:image" content="${businessImageUrl || `https://${host}/assets/images/og-share.png`}">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>${sharePageStyles}</style>
+  <link rel="stylesheet" href="/assets/brand.css">
 </head>
-<body>
-  <div class="brand"><img src="/assets/images/icon.png" alt="Salam Y'all"><span class="brand-name">Salam Y'all</span></div>
-  <div class="card">
-    ${businessImageUrl ? `<img class="card-image" src="${escapeHtml(businessImageUrl)}" alt="${escapeHtml(title)}">` : `<div class="card-image-placeholder">🏢</div>`}
-    <div class="card-body">
-      <span class="badge badge-business">${escapeHtml(category)}</span>
+<body class="sy-share-page">
+  <div class="sy-share-brand"><img src="/assets/images/icon.png" alt="Salam Y'all"><span class="sy-share-brand-name">Salam Y'all</span></div>
+  <div class="sy-share-card">
+    ${businessImageUrl ? `<img class="sy-share-card-image" src="${escapeHtml(businessImageUrl)}" alt="${escapeHtml(title)}">` : `<div class="sy-share-card-placeholder">🏢</div>`}
+    <div class="sy-share-card-body">
+      <span class="sy-share-badge sy-share-badge-business">${escapeHtml(category)}</span>
       <h1>${escapeHtml(title)}</h1>
-      <div class="meta">
-        ${address ? `<div class="meta-row">${pinSvg}<span>${escapeHtml(address)}</span></div>` : ""}
+      <div class="sy-share-meta">
+        ${address ? `<div class="sy-share-meta-row">${pinSvg}<span>${escapeHtml(address)}</span></div>` : ""}
       </div>
-      ${description ? `<p class="desc">${escapeHtml(description.substring(0, 180))}${description.length > 180 ? "..." : ""}</p>` : ""}
-      <a href="${deepLink}" class="cta" id="open">Open in Salam Y'all</a>
-      <a href="${webLink}" class="web-cta">View on web</a>
-      <a href="https://apps.apple.com/us/app/salam-yall/id6760231963" class="get-app">Don't have the app? Get Salam Y'all</a>
+      ${description ? `<p class="sy-share-desc">${escapeHtml(description.substring(0, 180))}${description.length > 180 ? "..." : ""}</p>` : ""}
+      <a href="${deepLink}" class="sy-share-cta" id="open">Open in Salam Y'all</a>
+      <a href="${webLink}" class="sy-share-web-cta">View on web</a>
+      <a href="https://apps.apple.com/us/app/salam-yall/id6760231963" class="sy-share-get-app">Don't have the app? Get Salam Y'all</a>
     </div>
   </div>
-  <div class="footer">Salam Y'all — Your Triangle Muslim Community App</div>
+  <div class="sy-share-footer">Salam Y'all — Your Muslim Community App</div>
 </body>
 </html>`);
     } catch (error: any) {
