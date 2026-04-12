@@ -8,7 +8,7 @@
  *   2. Global reset
  *   3. Design tokens (dark default + light override)
  *   4. Typography base
- *   5. Shared components: nav, login, page header, share page, buttons
+ *   5. Shared components: nav, login, page header, share page, buttons, footer
  */
 
 /* ─── 1. Fonts ──────────────────────────────────────────────────────── */
@@ -511,4 +511,61 @@ body {
   position: relative;
   z-index: 1;
   letter-spacing: 0.02em;
+}
+
+/* ── Unified site footer ─────────────────────────────────────────────── */
+.sy-footer {
+  padding: 40px 24px;
+  text-align: center;
+  border-top: 1px solid rgba(var(--emerald-rgb), 0.15);
+  position: relative;
+}
+.sy-footer::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 50%; transform: translateX(-50%);
+  width: 200px; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--gold-rgb), 0.30), transparent);
+  pointer-events: none;
+}
+.sy-footer-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  margin-bottom: 16px;
+}
+.sy-footer-brand img {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+.sy-footer-brand-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 0.2px;
+}
+.sy-footer-links {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 16px;
+}
+.sy-footer-links a {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.sy-footer-links a:hover { color: var(--text-secondary); }
+.sy-footer-copy {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+@media (max-width: 640px) {
+  .sy-footer-links { gap: 14px; }
 }

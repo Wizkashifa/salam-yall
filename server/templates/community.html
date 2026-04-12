@@ -485,26 +485,7 @@
     }
     .app-banner-cta:hover { background: var(--gold-light); transform: translateY(-2px); box-shadow: 0 4px 20px rgba(212,168,67,0.25); }
 
-    /* FOOTER */
-    .site-footer {
-      border-top: 1px solid rgba(27,107,74,0.15); padding: 40px 32px; text-align: center;
-      max-width: 1280px; margin: 0 auto; position: relative;
-    }
-    .site-footer::before {
-      content: '';
-      position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-      width: 200px; height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(212,168,67,0.25), transparent);
-      pointer-events: none;
-    }
-    .footer-brand {
-      font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700;
-      color: var(--gold); margin-bottom: 12px;
-    }
-    .footer-links { display: flex; justify-content: center; gap: 24px; margin-bottom: 16px; }
-    .footer-links a { color: var(--text-secondary); text-decoration: none; font-size: 13px; font-weight: 500; transition: color 0.2s; }
-    .footer-links a:hover { color: var(--gold); }
-    .footer-copy { color: var(--text-tertiary); font-size: 12px; }
+    /* FOOTER — uses .sy-footer from brand.css */
 
     /* RESPONSIVE */
     @media (max-width: 768px) {
@@ -996,15 +977,19 @@
     </div>
   </main>
 
-  <footer class="site-footer">
-    <div class="footer-brand">Salam Y'all</div>
-    <div class="footer-links">
+  <footer class="sy-footer">
+    <a href="/" class="sy-footer-brand">
+      <img src="/assets/images/icon.png" alt="Salam Y'all">
+      <span class="sy-footer-brand-name">Salam Y'all</span>
+    </a>
+    <nav class="sy-footer-links">
       <a href="/">Home</a>
-      <a href="/privacy">Privacy</a>
+      <a href="/community">Community</a>
+      <a href="/privacy">Privacy Policy</a>
       <a href="/support">Support</a>
       <a href="/download">Download</a>
-    </div>
-    <p class="footer-copy">&copy; 2025 Salam Y'all. Made with love for the Muslim community.</p>
+    </nav>
+    <p class="sy-footer-copy">&copy; 2026 Salam Y'all. Made for the Muslim community.</p>
   </footer>
 
   <div class="metro-selector-overlay" id="metro-selector-overlay" onclick="if(event.target===this)closeMetroSelector()">

@@ -41,14 +41,6 @@
     .faq-item:last-child { border-bottom: none; }
     .faq-item h3 { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
     .faq-item p { font-size: 14px; color: var(--text-secondary); margin: 0; }
-    .footer {
-      text-align: center;
-      padding: 32px 24px;
-      border-top: 1px solid var(--border);
-      margin-top: 32px;
-    }
-    .footer p { font-size: 13px; color: var(--text-muted); }
-    .footer a { color: var(--emerald); }
   </style>
 </head>
 <body>
@@ -146,9 +138,20 @@
       <p>This app is a community project and is provided free of charge.</p>
     </div>
 
-    <div class="footer">
-      <p>&copy; 2026 Salam Y'all. All rights reserved. | <a href="/privacy">Privacy Policy</a></p>
-    </div>
   </div>
+  <footer class="sy-footer">
+    <a href="/" class="sy-footer-brand">
+      <img src="/assets/images/icon.png" alt="Salam Y'all">
+      <span class="sy-footer-brand-name">Salam Y'all</span>
+    </a>
+    <nav class="sy-footer-links">
+      <a href="/">Home</a>
+      <a href="/community">Community</a>
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/support">Support</a>
+      <a href="/download">Download</a>
+    </nav>
+    <p class="sy-footer-copy">&copy; 2026 Salam Y'all. Made for the Muslim community.</p>
+  </footer>
 </body>
 </html>

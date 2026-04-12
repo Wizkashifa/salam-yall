@@ -644,54 +644,6 @@
       }
 
       /* FOOTER */
-      .footer {
-        padding: 40px 24px;
-        text-align: center;
-        border-top: 1px solid rgba(27,107,74,0.15);
-        position: relative;
-      }
-      .footer::before {
-        content: '';
-        position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-        width: 200px; height: 1px;
-        background: linear-gradient(90deg, transparent, rgba(212,168,67,0.3), transparent);
-        pointer-events: none;
-      }
-      .footer-logo {
-        width: 48px;
-        height: 48px;
-        margin: 0 auto 16px;
-      }
-      .footer-links {
-        display: flex;
-        justify-content: center;
-        gap: 24px;
-        margin-bottom: 16px;
-      }
-      .footer-links a {
-        font-size: 14px;
-        color: var(--text-tertiary);
-        text-decoration: none;
-        transition: color 0.2s;
-      }
-      .footer-links a:hover { color: var(--text-secondary); }
-      .footer-copy {
-        font-size: 12px;
-        color: var(--text-tertiary);
-      }
-
-      .footer-upload-link {
-        font-size: 12px;
-        color: var(--gold);
-        opacity: 0.5;
-        text-decoration: none;
-        cursor: pointer;
-        transition: opacity 0.3s;
-        margin-top: 8px;
-        display: inline-block;
-        letter-spacing: 0.5px;
-      }
-      .footer-upload-link:hover { opacity: 1; }
 
       .upload-overlay {
         display: none;
@@ -1192,6 +1144,10 @@
             <svg viewBox="0 0 24 24"><path d="M17.6 9.48l1.84-3.18c.16-.31.04-.69-.26-.85-.29-.15-.65-.06-.83.22l-1.88 3.24a11.463 11.463 0 00-8.94 0L5.65 5.67c-.19-.29-.58-.38-.87-.2-.28.18-.37.54-.22.83L6.4 9.48A10.78 10.78 0 002 18h20a10.78 10.78 0 00-4.4-8.52zM7 15.25a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5zm10 0a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5z"/></svg>
             Android Waitlist
           </a>
+          <a onclick="openUploadModal()" role="button" class="cta-btn-android" style="cursor:pointer;">
+            <svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:currentColor;"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
+            Submit an Event
+          </a>
         </div>
         <a href="https://testflight.apple.com/join/4ApBN4mJ" class="beta-link">Or try the latest beta on TestFlight</a>
       </div>
@@ -1210,15 +1166,19 @@
     </section>
 
     <!-- FOOTER -->
-    <footer class="footer">
-      <img src="/assets/images/favicon.png" alt="Salam Y'all" class="footer-logo" />
-      <div class="footer-links">
+    <footer class="sy-footer">
+      <a href="/" class="sy-footer-brand">
+        <img src="/assets/images/icon.png" alt="Salam Y'all">
+        <span class="sy-footer-brand-name">Salam Y'all</span>
+      </a>
+      <nav class="sy-footer-links">
+        <a href="/">Home</a>
         <a href="/community">Community</a>
         <a href="/privacy">Privacy Policy</a>
         <a href="/support">Support</a>
-        <a onclick="openUploadModal()" role="button" tabindex="0" style="cursor:pointer;">Submit an Event</a>
-      </div>
-      <p class="footer-copy">Salam Y'all. Made for the Muslim community.</p>
+        <a href="/download">Download</a>
+      </nav>
+      <p class="sy-footer-copy">&copy; 2026 Salam Y'all. Made for the Muslim community.</p>
     </footer>
 
     <div class="upload-overlay" id="upload-overlay" onclick="if(event.target===this)closeUploadModal()">

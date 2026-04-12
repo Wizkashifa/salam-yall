@@ -30,14 +30,6 @@
       h1 { font-size: 22px; font-weight: 600; margin-bottom: 10px; }
       .subtitle { font-size: 15px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 40px; }
       .links { display: flex; flex-direction: column; gap: 10px; margin-bottom: 40px; }
-      .footer {
-        font-size: 12px;
-        color: var(--text-muted);
-        padding-top: 24px;
-        border-top: 1px solid var(--divider);
-      }
-      .footer a { color: var(--text-secondary); text-decoration: none; margin: 0 8px; }
-      .footer a:hover { color: var(--text); }
     </style>
   </head>
   <body>
@@ -54,10 +46,20 @@
         <a href="/download" class="btn-secondary">Download the App</a>
       </div>
 
-      <div class="footer">
+    </div>
+    <footer class="sy-footer">
+      <a href="/" class="sy-footer-brand">
+        <img src="/assets/images/icon.png" alt="Salam Y'all">
+        <span class="sy-footer-brand-name">Salam Y'all</span>
+      </a>
+      <nav class="sy-footer-links">
+        <a href="/">Home</a>
+        <a href="/community">Community</a>
         <a href="/privacy">Privacy Policy</a>
         <a href="/support">Support</a>
-      </div>
-    </div>
+        <a href="/download">Download</a>
+      </nav>
+      <p class="sy-footer-copy">&copy; 2026 Salam Y'all. Made for the Muslim community.</p>
+    </footer>
   </body>
 </html>
