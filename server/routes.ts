@@ -1668,6 +1668,10 @@ async function ensureOrgPortalsTable(pool: pg.Pool) {
   await pool.query(`ALTER TABLE org_profiles ADD COLUMN IF NOT EXISTS logo_data TEXT`).catch(() => {});
   await pool.query(`ALTER TABLE org_profiles ADD COLUMN IF NOT EXISTS logo_mime VARCHAR(100)`).catch(() => {});
 
+  // Rename org_names to use underscores (login handles)
+  await pool.query(`UPDATE org_portals SET org_name = 'The_Light_House_Project', display_name = 'The Light House Project' WHERE org_name = 'The Light House Project'`).catch(() => {});
+  await pool.query(`UPDATE org_portals SET org_name = 'Islamic_Association_of_Raleigh', display_name = 'Islamic Association of Raleigh' WHERE org_name = 'Islamic Association of Raleigh'`).catch(() => {});
+
   const lhpKey = process.env.LIGHTHOUSE_ADMIN_KEY;
   if (lhpKey) {
     const crypto = await import("crypto");
@@ -1675,8 +1679,8 @@ async function ensureOrgPortalsTable(pool: pg.Pool) {
     await pool.query(
       `INSERT INTO org_portals (org_name, password_hash, role, display_name)
        VALUES ($1, $2, 'community_org', 'The Light House Project')
-       ON CONFLICT (org_name) DO UPDATE SET password_hash = $2, role = 'community_org'`,
-      ["The Light House Project", hash]
+       ON CONFLICT (org_name) DO UPDATE SET password_hash = $2, role = 'community_org', display_name = 'The Light House Project'`,
+      ["The_Light_House_Project", hash]
     );
   }
 
@@ -1687,14 +1691,14 @@ async function ensureOrgPortalsTable(pool: pg.Pool) {
     await pool.query(
       `INSERT INTO org_portals (org_name, password_hash, role, display_name)
        VALUES ($1, $2, 'masjid', 'Islamic Association of Raleigh')
-       ON CONFLICT (org_name) DO UPDATE SET password_hash = $2, role = 'masjid'`,
-      ["Islamic Association of Raleigh", hash]
+       ON CONFLICT (org_name) DO UPDATE SET password_hash = $2, role = 'masjid', display_name = 'Islamic Association of Raleigh'`,
+      ["Islamic_Association_of_Raleigh", hash]
     );
   }
 
   // Migrate existing records that don't have a role set
   await pool.query(`UPDATE org_portals SET role = 'community_org', display_name = org_name WHERE role = 'community_org' AND display_name IS NULL`).catch(() => {});
-  await pool.query(`UPDATE org_portals SET role = 'masjid' WHERE org_name = 'Islamic Association of Raleigh' AND role = 'community_org'`).catch(() => {});
+  await pool.query(`UPDATE org_portals SET role = 'masjid' WHERE org_name = 'Islamic_Association_of_Raleigh' AND role = 'community_org'`).catch(() => {});
 }
 
 async function ensureOrganizerFollowsTable(pool: pg.Pool) {
@@ -5652,8 +5656,8 @@ Return ONLY the description text, nothing else.`,
         displayName: rows[0].display_name || rows[0].org_name,
       };
       unifiedSessions.set(tok, session);
-      // Also add to legacy portalSessions so existing /api/portal/:org/* routes still work
-      portalSessions.set(tok, rows[0].org_name);
+      // Also add to legacy portalSessions using display_name so portal data routes query correctly
+      portalSessions.set(tok, rows[0].display_name || rows[0].org_name);
       return res.json({ token: tok, ...session });
     } catch (err: any) {
       console.error("[UnifiedAuth] Login error:", err.message);
@@ -5923,7 +5927,7 @@ Return ONLY the description text, nothing else.`,
     const session = getUnifiedSession(req);
     if (!session) return res.status(401).json({ error: "Unauthorized" });
     try {
-      const orgName = session.orgName;
+      const orgName = session.displayName || session.orgName;
       const [followers, events] = await Promise.all([
         pool.query("SELECT COUNT(*) as count FROM organizer_follows WHERE organizer_name = $1", [orgName]),
         pool.query("SELECT COUNT(*) as count FROM community_events WHERE organizer = $1", [orgName]),
@@ -8076,13 +8080,14 @@ ${profileInfo.slice(0, 30000)}`,
     const { password } = req.body;
     if (!password) return res.status(401).json({ error: "Password required" });
     try {
-      const { rows } = await pool.query("SELECT password_hash FROM org_portals WHERE org_name = $1", [orgName]);
+      const { rows } = await pool.query("SELECT password_hash, display_name FROM org_portals WHERE org_name = $1", [orgName]);
       if (!rows.length) return res.status(401).json({ error: "Organization not found" });
       const crypto = await import("crypto");
       const hash = crypto.createHash("sha256").update(password).digest("hex");
       if (hash !== rows[0].password_hash) return res.status(401).json({ error: "Invalid password" });
       const sessionToken = crypto.randomBytes(32).toString("hex");
-      portalSessions.set(sessionToken, orgName);
+      const displayName = rows[0].display_name || orgName;
+      portalSessions.set(sessionToken, displayName);
       res.json({ token: sessionToken, org: orgName });
     } catch (error: any) {
       console.error(`[Portal] Login error for ${orgName}:`, error.message);

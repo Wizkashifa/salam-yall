@@ -1099,7 +1099,7 @@ async function createMetroAccount() {
 }
 
 // ─── PORTAL (community_org + masjid) ─────────────────────────────────────────
-function portalPath() { return '/api/portal/' + encodeURIComponent(session.orgName); }
+function portalPath() { return '/api/portal/' + encodeURIComponent(session.displayName || session.orgName); }
 
 async function loadPortalStats(dashKey) {
   try {
@@ -1327,7 +1327,7 @@ async function loadOrgProfile(dashKey) {
   var label = dashKey === 'org' ? 'organization' : 'masjid';
   containerEl.innerHTML = buildProfileHTML(dashKey, label);
   try {
-    var res = await fetch('/api/org-profiles/' + encodeURIComponent(session.orgName));
+    var res = await fetch('/api/org-profiles/' + encodeURIComponent(session.displayName || session.orgName));
     var profile = res.ok ? await res.json() : {};
     if (profile) {
       var d = dashKey;
