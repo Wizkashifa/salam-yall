@@ -22,6 +22,9 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { GlassModalContainer } from "@/components/GlassModal";
 import * as Haptics from "expo-haptics";
+import { Audio } from "expo-av";
+import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
 import {
   logQuranRead,
   markSurahRead,
@@ -42,6 +45,26 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const VERSES_PER_PAGE = 50;
 const API_BASE = "https://api.quran.com/api/v4";
 const BANNER_COLLAPSE_THRESHOLD = 30;
+
+const MUSHAF_FONT_SIZE_KEY = "quran_mushaf_font_size";
+
+const TAJWEED_COLORS: Record<string, string> = {
+  qalaqah: "#E67E22",
+  qalb: "#E67E22",
+  ikhfa: "#27AE60",
+  ikhfa_shafawi: "#27AE60",
+  idgham_w_ghunna: "#1E8449",
+  idgham_shafawi: "#1E8449",
+  idgham_wo_ghunna: "#17A589",
+  ghunna: "#145A32",
+  madd_2: "#2E86AB",
+  madd_6: "#2E86AB",
+  madd_munfasil: "#2E86AB",
+  madd_muttasil: "#2E86AB",
+  iqlab: "#E74C3C",
+  ham_wasl: "#7F8C8D",
+  silent: "#7F8C8D",
+};
 
 const TRANSLATIONS: { id: number; label: string }[] = [
   { id: 20, label: "Sahih International" },
@@ -96,7 +119,19 @@ interface SearchResult {
 }
 
 interface ApiWord {
+  id?: number;
+  position?: number;
+  text_uthmani?: string;
+  audio_url?: string;
   transliteration?: { text?: string };
+}
+
+interface Word {
+  id: number;
+  position: number;
+  text_uthmani: string;
+  audio_url: string;
+  transliteration?: string;
 }
 
 interface ApiVerse {
@@ -104,6 +139,7 @@ interface ApiVerse {
   verse_number: number;
   verse_key: string;
   text_uthmani: string;
+  text_uthmani_tajweed?: string;
   words?: ApiWord[];
   translations?: Array<{ resource_id?: number; text?: string }>;
 }
@@ -124,6 +160,192 @@ interface MushafVerse {
   verse_key: string;
   text_uthmani: string;
   page_number: number;
+}
+
+// ─── Tajweed helpers ────────────────────────────────────────────────────────
+
+function decodeHtmlEntities(s: string): string {
+  return s
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(parseInt(n)));
+}
+
+interface TajweedSegment {
+  text: string;
+  color: string | null;
+}
+
+function parseTajweedText(rawHtml: string): TajweedSegment[] {
+  const segments: TajweedSegment[] = [];
+  const spanRegex = /<span[^>]+class="([^"]+)"[^>]*>([\s\S]*?)<\/span>|([^<]+)/g;
+  let match: RegExpExecArray | null;
+  while ((match = spanRegex.exec(rawHtml)) !== null) {
+    if (match[3] !== undefined) {
+      const text = decodeHtmlEntities(match[3]);
+      if (text) segments.push({ text, color: null });
+    } else {
+      const rule = match[1];
+      const text = decodeHtmlEntities(match[2]);
+      if (text) segments.push({ text, color: TAJWEED_COLORS[rule] ?? null });
+    }
+  }
+  return segments;
+}
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+interface TajweedInlineTextProps {
+  tajweedHtml: string;
+  defaultColor: string;
+  fontSize?: number;
+}
+
+function TajweedInlineText({ tajweedHtml, defaultColor, fontSize = 24 }: TajweedInlineTextProps) {
+  const segments = parseTajweedText(tajweedHtml);
+  return (
+    <Text
+      style={{
+        fontSize,
+        lineHeight: fontSize * 1.75,
+        textAlign: "right",
+        writingDirection: "rtl",
+        marginBottom: 12,
+      }}
+    >
+      {segments.map((seg, i) => (
+        <Text key={i} style={{ color: seg.color ?? defaultColor }}>
+          {seg.text}
+        </Text>
+      ))}
+    </Text>
+  );
+}
+
+interface WordTapRowProps {
+  words: Word[];
+  tajweedHtml: string | null;
+  showTajweed: boolean;
+  playingWordId: string | null;
+  verseKey: string;
+  onWordTap: (audioUrl: string, wordKey: string) => void;
+  defaultTextColor: string;
+  goldColor: string;
+  fontSize?: number;
+}
+
+function WordTapRow({
+  words, tajweedHtml, showTajweed, playingWordId, verseKey,
+  onWordTap, defaultTextColor, goldColor, fontSize = 24,
+}: WordTapRowProps) {
+  // Pre-parse tajweed segments for dominant-rule lookup
+  const tajweedSegments = showTajweed && tajweedHtml ? parseTajweedText(tajweedHtml) : null;
+
+  const getWordColor = (word: Word): string => {
+    const wKey = `${verseKey}:${word.position}`;
+    if (playingWordId === wKey) return goldColor;
+    if (tajweedSegments) {
+      // Find the first tajweed segment whose text appears in this word
+      const seg = tajweedSegments.find(s => s.color && word.text_uthmani.includes(s.text));
+      if (seg?.color) return seg.color;
+    }
+    return defaultTextColor;
+  };
+
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        flexWrap: "wrap",
+        justifyContent: "flex-end",
+        alignItems: "center",
+        marginBottom: 12,
+      }}
+    >
+      {words.map((word) => {
+        const wKey = `${verseKey}:${word.position}`;
+        const isPlaying = playingWordId === wKey;
+        const wordColor = getWordColor(word);
+        return (
+          <Pressable
+            key={wKey}
+            onPress={() => onWordTap(word.audio_url, wKey)}
+            style={({ pressed }) => ({
+              backgroundColor: pressed || isPlaying ? goldColor + "25" : "transparent",
+              borderRadius: 6,
+              paddingHorizontal: 3,
+              paddingVertical: 2,
+              margin: 1,
+            })}
+          >
+            <Text
+              style={{
+                fontSize,
+                lineHeight: fontSize * 1.75,
+                color: wordColor,
+                writingDirection: "rtl",
+                fontFamily: Platform.OS === "web" ? "serif" : undefined,
+              }}
+            >
+              {word.text_uthmani}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+interface VerseCardProps {
+  children: React.ReactNode;
+  isHighlighted: boolean;
+  isDark: boolean;
+  colors: ThemeColors;
+}
+
+function VerseCard({ children, isHighlighted, isDark, colors }: VerseCardProps) {
+  if (Platform.OS === "ios") {
+    return (
+      <View
+        style={{
+          borderRadius: 14,
+          borderWidth: 1,
+          borderColor: isHighlighted ? colors.emerald + "60" : colors.border,
+          marginBottom: 10,
+          overflow: "hidden",
+        }}
+      >
+        <BlurView
+          intensity={isDark ? 22 : 12}
+          tint={isDark ? "dark" : "light"}
+          style={StyleSheet.absoluteFill}
+        />
+        <LinearGradient
+          colors={[
+            (isDark ? "#FFFFFF" : "#000000") + "05",
+            (isDark ? "#FFFFFF" : "#000000") + "02",
+          ]}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={{ padding: 16 }}>{children}</View>
+      </View>
+    );
+  }
+  return (
+    <View
+      style={{
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: isHighlighted ? colors.emerald + "60" : colors.border,
+        backgroundColor: isHighlighted ? colors.emerald + "15" : colors.surface,
+        marginBottom: 10,
+        padding: 16,
+      }}
+    >
+      {children}
+    </View>
+  );
 }
 
 export interface QuranReaderHandle {
@@ -177,6 +399,16 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
   const [surahPickerSearch, setSurahPickerSearch] = useState("");
   const mushafFetchId = useRef(0);
 
+  // Word-tap + Tajweed feature state
+  const [showWordTap, setShowWordTap] = useState(true);
+  const [showTajweed, setShowTajweed] = useState(true);
+  const [playingWordId, setPlayingWordId] = useState<string | null>(null);
+  const [mushafFontSize, setMushafFontSize] = useState(22);
+  const wordMapRef = useRef<Map<string, Word[]>>(new Map());
+  const tajweedMapRef = useRef<Map<string, string>>(new Map());
+  const currentSoundRef = useRef<Audio.Sound | null>(null);
+  const playingWordIdRef = useRef<string | null>(null);
+
   const versesListRef = useRef<FlatList>(null);
   const fetchIdRef = useRef(0);
   const readUpToRef = useRef(-1);
@@ -211,6 +443,15 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
     AsyncStorage.getItem(VIEW_MODE_KEY).then(v => {
       if (v === "mushaf") setViewMode("mushaf");
     }).catch(() => {});
+    AsyncStorage.getItem(MUSHAF_FONT_SIZE_KEY).then(v => {
+      if (v) setMushafFontSize(parseInt(v, 10));
+    }).catch(() => {});
+    Audio.setAudioModeAsync({
+      allowsRecordingIOS: false,
+      playsInSilentModeIOS: true,
+      staysActiveInBackground: false,
+      shouldDuckAndroid: true,
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -232,6 +473,17 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
           verseNumber: lastVerse.number,
           totalVerses: surah.verses_count,
         }).catch(() => {});
+      }
+    };
+  }, []);
+
+  // Audio cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (currentSoundRef.current) {
+        currentSoundRef.current.stopAsync().catch(() => {});
+        currentSoundRef.current.unloadAsync().catch(() => {});
+        currentSoundRef.current = null;
       }
     };
   }, []);
@@ -269,12 +521,17 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
     try {
       setVersesLoading(true);
       setErrorMsg(null);
-      const fields = "text_uthmani";
+      const fields = "text_uthmani,text_uthmani_tajweed";
       const translationParam = transIds.join(",");
+
+      if (!append) {
+        wordMapRef.current.clear();
+        tajweedMapRef.current.clear();
+      }
 
       const [translitRes, translitMapRes] = await Promise.all([
         fetch(`${API_BASE}/verses/by_chapter/${surahId}?language=en&fields=${fields}&translation_fields=text,resource_id&translations=${translationParam}&per_page=${VERSES_PER_PAGE}&page=${page}`),
-        fetch(`${API_BASE}/verses/by_chapter/${surahId}?language=en&per_page=${VERSES_PER_PAGE}&page=${page}&word_fields=transliteration&words=true`),
+        fetch(`${API_BASE}/verses/by_chapter/${surahId}?language=en&per_page=${VERSES_PER_PAGE}&page=${page}&word_fields=transliteration,audio_url,text_uthmani&words=true`),
       ]);
 
       if (thisId !== fetchIdRef.current) return;
@@ -286,10 +543,28 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
         const translitMapData = await translitMapRes.json();
         if (translitMapData.verses) {
           for (const v of translitMapData.verses) {
-            const words = v.words || [];
+            const words: ApiWord[] = v.words || [];
             const translit = words.map((w: ApiWord) => w.transliteration?.text || "").filter(Boolean).join(" ");
             translitMap[v.verse_key] = translit;
+            // Store per-word data for audio + tajweed
+            const wordList: Word[] = words
+              .filter((w: ApiWord) => w.text_uthmani && w.audio_url)
+              .map((w: ApiWord, idx: number) => ({
+                id: w.id ?? idx,
+                position: w.position ?? idx + 1,
+                text_uthmani: w.text_uthmani!,
+                audio_url: w.audio_url!,
+                transliteration: w.transliteration?.text,
+              }));
+            wordMapRef.current.set(v.verse_key, wordList);
           }
+        }
+      }
+
+      // Store tajweed HTML per verse
+      for (const v of (translitData.verses || [])) {
+        if (v.text_uthmani_tajweed) {
+          tajweedMapRef.current.set(v.verse_key, v.text_uthmani_tajweed);
         }
       }
 
@@ -354,6 +629,17 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
   }, []);
 
   const handleSelectSurah = useCallback((surah: Surah, resumePage?: number, resumeVerseKey?: string) => {
+    // Stop any playing audio and clear maps for previous surah
+    if (currentSoundRef.current) {
+      currentSoundRef.current.stopAsync().catch(() => {});
+      currentSoundRef.current.unloadAsync().catch(() => {});
+      currentSoundRef.current = null;
+    }
+    setPlayingWordId(null);
+    playingWordIdRef.current = null;
+    wordMapRef.current.clear();
+    tajweedMapRef.current.clear();
+
     setSelectedSurah(surah);
     setQSection("verseView");
     setVerses([]);
@@ -433,10 +719,41 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
     try {
       setMushafLoading(true);
       setMushafError(false);
-      const res = await fetch(`${API_BASE}/verses/by_page/${page}?language=en&fields=text_uthmani,page_number`);
+      wordMapRef.current.clear();
+      tajweedMapRef.current.clear();
+
+      const [res, wordsRes] = await Promise.all([
+        fetch(`${API_BASE}/verses/by_page/${page}?language=en&fields=text_uthmani,text_uthmani_tajweed,page_number`),
+        fetch(`${API_BASE}/verses/by_page/${page}?language=en&words=true&word_fields=audio_url,text_uthmani`),
+      ]);
+
       if (!res.ok) throw new Error("Failed");
       if (thisId !== mushafFetchId.current) return;
       const data = await res.json();
+
+      // Populate word map from words response
+      if (wordsRes.ok) {
+        const wordsData = await wordsRes.json();
+        for (const v of (wordsData.verses || [])) {
+          const wordList: Word[] = (v.words || [])
+            .filter((w: ApiWord) => w.text_uthmani && w.audio_url)
+            .map((w: ApiWord, idx: number) => ({
+              id: w.id ?? idx,
+              position: w.position ?? idx + 1,
+              text_uthmani: w.text_uthmani!,
+              audio_url: w.audio_url!,
+            }));
+          wordMapRef.current.set(v.verse_key, wordList);
+        }
+      }
+
+      // Populate tajweed map from main response
+      for (const v of (data.verses || [])) {
+        if (v.text_uthmani_tajweed) {
+          tajweedMapRef.current.set(v.verse_key, v.text_uthmani_tajweed);
+        }
+      }
+
       const parsed: MushafVerse[] = (data.verses || []).map((v: any) => ({
         id: v.id,
         verse_number: v.verse_number,
@@ -498,6 +815,14 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
     try {
       saveCurrentPosition();
     } catch {}
+    // Stop audio and clear maps
+    if (currentSoundRef.current) {
+      currentSoundRef.current.stopAsync().catch(() => {});
+      currentSoundRef.current.unloadAsync().catch(() => {});
+      currentSoundRef.current = null;
+    }
+    setPlayingWordId(null);
+    playingWordIdRef.current = null;
     setBannerCollapsed(false);
     bannerCollapsedRef.current = false;
     bannerAnim.setValue(1);
@@ -695,45 +1020,107 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
     );
   }, [colors, handleSelectSurah, khatam, resumePos]);
 
+  const playWordAudio = useCallback(async (audioUrl: string, wordKey: string) => {
+    try {
+      if (currentSoundRef.current) {
+        await currentSoundRef.current.stopAsync().catch(() => {});
+        await currentSoundRef.current.unloadAsync().catch(() => {});
+        currentSoundRef.current = null;
+      }
+      setPlayingWordId(wordKey);
+      playingWordIdRef.current = wordKey;
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: audioUrl },
+        { shouldPlay: true }
+      );
+      currentSoundRef.current = sound;
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          if (playingWordIdRef.current === wordKey) {
+            setPlayingWordId(null);
+            playingWordIdRef.current = null;
+          }
+          sound.unloadAsync().catch(() => {});
+          if (currentSoundRef.current === sound) currentSoundRef.current = null;
+        }
+      });
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {
+      setPlayingWordId(null);
+      playingWordIdRef.current = null;
+    }
+  }, []);
+
+  const handleMushafFontSize = useCallback((delta: number) => {
+    setMushafFontSize(prev => {
+      const next = Math.min(36, Math.max(16, prev + delta));
+      AsyncStorage.setItem(MUSHAF_FONT_SIZE_KEY, String(next)).catch(() => {});
+      return next;
+    });
+  }, []);
+
   const renderVerseItem = useCallback(({ item, index }: { item: Verse; index: number }) => {
     const isHighlighted = scrollToVerse === item.verse_key;
     const isRead = index <= readUpToIndex;
     const isCurrent = !isRead && index === readUpToIndex + 1;
     const dotColor = isRead ? colors.emerald : isCurrent ? colors.gold : "transparent";
+
+    const words = wordMapRef.current.get(item.verse_key) ?? [];
+    const tajweedHtml = tajweedMapRef.current.get(item.verse_key) ?? null;
+    const hasWords = words.length > 0;
+    const useWordTap = showWordTap && hasWords;
+    const useTajweed = showTajweed && tajweedHtml !== null;
+    const arabicMarginBottom = showTransliteration && item.transliteration ? 6 : 12;
+
     return (
-      <View
-        style={[
-          qStyles.verseItem,
-          {
-            backgroundColor: isHighlighted ? colors.emerald + "15" : colors.surface,
-            borderColor: colors.border,
-          },
-        ]}
-        testID={`verse-${item.verse_key}`}
-      >
-        <View style={qStyles.verseHeader}>
-          <View style={[qStyles.verseNumBadge, { backgroundColor: colors.prayerIconBg }]}>
-            <Text style={[qStyles.verseNumText, { color: colors.emerald }]}>{item.verse_number}</Text>
-          </View>
-          {(isRead || isCurrent) && (
-            <View style={[qStyles.readDot, { backgroundColor: dotColor }]} />
-          )}
-        </View>
-        <Text style={[qStyles.arabicText, { color: colors.text, marginBottom: showTransliteration && item.transliteration ? 6 : 12 }]}>{item.text_uthmani}</Text>
-        {showTransliteration && item.transliteration ? (
-          <Text style={[qStyles.translitText, { color: colors.textSecondary }]}>{item.transliteration}</Text>
-        ) : null}
-        {item.translations.map((t) => (
-          <View key={t.id} style={qStyles.translationBlock}>
-            {item.translations.length > 1 && (
-              <Text style={[qStyles.translationLabel, { color: colors.textTertiary }]}>{t.label}</Text>
+      <VerseCard isHighlighted={isHighlighted} isDark={isDark} colors={colors}>
+        <View testID={`verse-${item.verse_key}`}>
+          <View style={qStyles.verseHeader}>
+            <View style={[qStyles.verseNumCircle, { backgroundColor: colors.gold + "18", borderColor: colors.gold + "55" }]}>
+              <Text style={[qStyles.verseNumText, { color: colors.gold }]}>{item.verse_number}</Text>
+            </View>
+            {(isRead || isCurrent) && (
+              <View style={[qStyles.readDot, { backgroundColor: dotColor }]} />
             )}
-            <Text style={[qStyles.translationText, { color: colors.textSecondary }]}>{t.text}</Text>
           </View>
-        ))}
-      </View>
+
+          {useWordTap ? (
+            <WordTapRow
+              words={words}
+              tajweedHtml={tajweedHtml}
+              showTajweed={useTajweed}
+              playingWordId={playingWordId}
+              verseKey={item.verse_key}
+              onWordTap={playWordAudio}
+              defaultTextColor={colors.text}
+              goldColor={colors.gold}
+            />
+          ) : useTajweed ? (
+            <TajweedInlineText
+              tajweedHtml={tajweedHtml!}
+              defaultColor={colors.text}
+            />
+          ) : (
+            <Text style={[qStyles.arabicText, { color: colors.text, marginBottom: arabicMarginBottom }]}>
+              {item.text_uthmani}
+            </Text>
+          )}
+
+          {showTransliteration && item.transliteration ? (
+            <Text style={[qStyles.translitText, { color: colors.textSecondary }]}>{item.transliteration}</Text>
+          ) : null}
+          {item.translations.map((t) => (
+            <View key={t.id} style={qStyles.translationBlock}>
+              {item.translations.length > 1 && (
+                <Text style={[qStyles.translationLabel, { color: colors.textTertiary }]}>{t.label}</Text>
+              )}
+              <Text style={[qStyles.translationText, { color: colors.textSecondary }]}>{t.text}</Text>
+            </View>
+          ))}
+        </View>
+      </VerseCard>
     );
-  }, [colors, showTransliteration, scrollToVerse, readUpToIndex]);
+  }, [colors, isDark, showTransliteration, scrollToVerse, readUpToIndex, showWordTap, showTajweed, playingWordId, playWordAudio]);
 
   const bannerHeight = bannerAnim.interpolate({
     inputRange: [0, 1],
@@ -980,6 +1367,42 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
               </Text>
             </Pressable>
 
+            <View style={[qStyles.dropdownDivider, { backgroundColor: colors.border }]} />
+
+            <Pressable
+              style={[qStyles.dropdownOption, showWordTap && { backgroundColor: colors.gold + "10" }]}
+              onPress={() => {
+                setShowWordTap(prev => !prev);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+            >
+              <Ionicons
+                name={showWordTap ? "volume-high" : "volume-high-outline"}
+                size={20}
+                color={showWordTap ? colors.gold : colors.textTertiary}
+              />
+              <Text style={[qStyles.dropdownOptionText, { color: showWordTap ? colors.gold : colors.text }]}>
+                Word Audio
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={[qStyles.dropdownOption, showTajweed && { backgroundColor: "#E67E2210" }]}
+              onPress={() => {
+                setShowTajweed(prev => !prev);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+            >
+              <Ionicons
+                name={showTajweed ? "color-palette" : "color-palette-outline"}
+                size={20}
+                color={showTajweed ? "#E67E22" : colors.textTertiary}
+              />
+              <Text style={[qStyles.dropdownOptionText, { color: showTajweed ? "#E67E22" : colors.text }]}>
+                Tajweed Colors
+              </Text>
+            </Pressable>
+
             <Pressable
               style={[qStyles.applyBtn, { backgroundColor: colors.emerald }]}
               onPress={handleApplyTranslations}
@@ -991,7 +1414,7 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
 
         <View style={qStyles.activeFiltersRow}>
           <Text style={[qStyles.activeFiltersText, { color: colors.textTertiary }]} numberOfLines={1}>
-            {selectedTranslationLabels.join(", ")}{showTransliteration ? " + Transliteration" : ""}
+            {selectedTranslationLabels.join(", ")}{showTransliteration ? " + Transliteration" : ""}{showWordTap ? " + Word Audio" : ""}{showTajweed ? " + Tajweed" : ""}
           </Text>
         </View>
 
@@ -1081,7 +1504,7 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
           </View>
         </View>
 
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 12, paddingVertical: 8, marginBottom: 4 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 12, paddingVertical: 8, marginBottom: 4, gap: 6 }}>
           <Pressable
             style={{ opacity: mushafPage <= 1 ? 0.3 : 1, padding: 8, backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1, borderColor: colors.border }}
             onPress={() => { if (mushafPage > 1) fetchMushafPage(mushafPage - 1); }}
@@ -1092,6 +1515,24 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
           <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: colors.textSecondary }}>
             {mushafPage} / {TOTAL_MUSHAF_PAGES}
           </Text>
+          {/* Font size controls */}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <Pressable
+              style={{ paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.surface, borderRadius: 8, borderWidth: 1, borderColor: colors.border, opacity: mushafFontSize <= 16 ? 0.4 : 1 }}
+              onPress={() => handleMushafFontSize(-2)}
+              disabled={mushafFontSize <= 16}
+            >
+              <Text style={{ fontFamily: "Inter_700Bold", fontSize: 13, color: colors.text }}>A−</Text>
+            </Pressable>
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: colors.textTertiary, minWidth: 28, textAlign: "center" }}>{mushafFontSize}</Text>
+            <Pressable
+              style={{ paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.surface, borderRadius: 8, borderWidth: 1, borderColor: colors.border, opacity: mushafFontSize >= 36 ? 0.4 : 1 }}
+              onPress={() => handleMushafFontSize(2)}
+              disabled={mushafFontSize >= 36}
+            >
+              <Text style={{ fontFamily: "Inter_700Bold", fontSize: 13, color: colors.text }}>A+</Text>
+            </Pressable>
+          </View>
           <Pressable
             style={{ opacity: mushafPage >= TOTAL_MUSHAF_PAGES ? 0.3 : 1, padding: 8, backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1, borderColor: colors.border }}
             onPress={() => { if (mushafPage < TOTAL_MUSHAF_PAGES) fetchMushafPage(mushafPage + 1); }}
@@ -1158,14 +1599,67 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
                       </Text>
                     </View>
                   )}
-                  <Text style={{ fontSize: 24, lineHeight: 52, textAlign: "right", color: colors.text, writingDirection: "rtl" }}>
-                    {group.verses.map((v, vi) => (
-                      <React.Fragment key={v.id}>
-                        <Text>{v.text_uthmani}</Text>
-                        <Text style={{ fontSize: 18, color: colors.emerald }}>{" \uFD3F" + toArabicNumeral(v.verse_number) + "\uFD3E "}</Text>
-                      </React.Fragment>
-                    ))}
-                  </Text>
+                  {showWordTap ? (
+                    // Word-tap mode: per-verse word rows with verse number ornament after each
+                    <View>
+                      {group.verses.map((v) => {
+                        const vWords = wordMapRef.current.get(v.verse_key) ?? [];
+                        const vTajweed = tajweedMapRef.current.get(v.verse_key) ?? null;
+                        return (
+                          <View key={v.id} style={{ marginBottom: 4 }}>
+                            {vWords.length > 0 ? (
+                              <WordTapRow
+                                words={vWords}
+                                tajweedHtml={vTajweed}
+                                showTajweed={showTajweed}
+                                playingWordId={playingWordId}
+                                verseKey={v.verse_key}
+                                onWordTap={playWordAudio}
+                                defaultTextColor={colors.text}
+                                goldColor={colors.gold}
+                                fontSize={mushafFontSize}
+                              />
+                            ) : (
+                              <Text style={{ fontSize: mushafFontSize, lineHeight: mushafFontSize * 1.9, textAlign: "right", color: colors.text, writingDirection: "rtl" }}>
+                                {v.text_uthmani}
+                              </Text>
+                            )}
+                            <Text style={{ fontSize: mushafFontSize * 0.75, color: colors.emerald, textAlign: "right" }}>
+                              {"\uFD3F" + toArabicNumeral(v.verse_number) + "\uFD3E"}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  ) : showTajweed ? (
+                    // Tajweed-only: inline colored spans, preserves continuous flow
+                    <Text style={{ fontSize: mushafFontSize, lineHeight: mushafFontSize * 1.9, textAlign: "right", writingDirection: "rtl" }}>
+                      {group.verses.map((v) => {
+                        const vTajweed = tajweedMapRef.current.get(v.verse_key);
+                        const segments = vTajweed ? parseTajweedText(vTajweed) : null;
+                        return (
+                          <React.Fragment key={v.id}>
+                            {segments ? segments.map((seg, si) => (
+                              <Text key={si} style={{ color: seg.color ?? colors.text }}>{seg.text}</Text>
+                            )) : (
+                              <Text style={{ color: colors.text }}>{v.text_uthmani}</Text>
+                            )}
+                            <Text style={{ fontSize: mushafFontSize * 0.75, color: colors.emerald }}>{" \uFD3F" + toArabicNumeral(v.verse_number) + "\uFD3E "}</Text>
+                          </React.Fragment>
+                        );
+                      })}
+                    </Text>
+                  ) : (
+                    // Default: single flowing text block
+                    <Text style={{ fontSize: mushafFontSize, lineHeight: mushafFontSize * 1.9, textAlign: "right", color: colors.text, writingDirection: "rtl" }}>
+                      {group.verses.map((v, vi) => (
+                        <React.Fragment key={v.id}>
+                          <Text>{v.text_uthmani}</Text>
+                          <Text style={{ fontSize: mushafFontSize * 0.75, color: colors.emerald }}>{" \uFD3F" + toArabicNumeral(v.verse_number) + "\uFD3E "}</Text>
+                        </React.Fragment>
+                      ))}
+                    </Text>
+                  )}
                 </View>
               ));
             })()}
@@ -1745,6 +2239,14 @@ const qStyles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
+  },
+  verseNumCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
   },
   verseCircle: {
     width: 32,
