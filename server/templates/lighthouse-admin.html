@@ -297,12 +297,6 @@
           </div>
           <label>Registration / RSVP URL (optional)</label>
           <input type="text" id="flyerRegUrl" placeholder="https://...">
-          <div style="display:flex;align-items:center;gap:8px;margin:12px 0;">
-            <label style="margin:0;cursor:pointer;display:flex;align-items:center;gap:6px;">
-              <input type="checkbox" id="flyerRecurring" style="width:16px;height:16px;accent-color:var(--emerald);">
-              <span style="font-size:13px;color:var(--preview-value);">Repeat weekly for 12 weeks</span>
-            </label>
-          </div>
           <button class="btn btn-primary" onclick="publishEvent()" id="publishEventBtn" style="margin-top:8px;width:100%;">Publish Event</button>
         </div>
       </div>
@@ -813,7 +807,6 @@
       btn.disabled = true;
       btn.textContent = 'Publishing...';
       try {
-        var isRecurring = document.getElementById('flyerRecurring').checked;
         var body = {
           title: title,
           description: document.getElementById('flyerDescription').value.trim(),
@@ -823,7 +816,6 @@
           registrationUrl: document.getElementById('flyerRegUrl').value.trim(),
           image: flyerBase64,
           imageMime: flyerMime,
-          recurring: isRecurring,
         };
         var res = await fetch(ORG_PATH + '/events/publish', {
           method: 'POST',
@@ -833,15 +825,13 @@
         if (res.status === 401) { handleUnauthorized(); return; }
         var data = await res.json();
         if (!res.ok) { showToast(data.error || 'Failed to publish', true); return; }
-        var msg = isRecurring ? 'Published ' + (data.count || 12) + ' weekly events!' : 'Event published!';
-        showToast(msg);
+        showToast('Event published! It will appear in the app immediately.');
         document.getElementById('flyerTitle').value = '';
         document.getElementById('flyerDescription').value = '';
         document.getElementById('flyerLocation').value = '';
         document.getElementById('flyerStartTime').value = '';
         document.getElementById('flyerEndTime').value = '';
         document.getElementById('flyerRegUrl').value = '';
-        document.getElementById('flyerRecurring').checked = false;
         document.getElementById('flyerForm').style.display = 'none';
         document.getElementById('extractStatus').style.display = 'none';
         clearFlyer();
