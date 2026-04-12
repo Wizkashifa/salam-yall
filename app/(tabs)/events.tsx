@@ -994,7 +994,7 @@ function EventImageGallery({ event, colors, isDark, getOrgLogo }: { event: Calen
 export default function EventsScreen() {
   const { colors, isDark } = useTheme();
   const queryClient = useQueryClient();
-  const { user, getAuthHeaders } = useAuth();
+  const { user, signInWithApple, getAuthHeaders } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -1202,7 +1202,17 @@ export default function EventsScreen() {
           </View>
           <View style={{ flexDirection: "row" as const, alignItems: "center" as const, gap: 8 }}>
             <Pressable
-              onPress={() => { setShowSubmitModal(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); }}
+              onPress={async () => {
+                if (!user) {
+                  if (Platform.OS === "web") {
+                    Alert.alert("Sign In Required", "Please sign in on the mobile app to add an event.");
+                    return;
+                  }
+                  try { await signInWithApple(); } catch { return; }
+                }
+                setShowSubmitModal(true);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              }}
               style={({ pressed }) => ({
                 width: 36,
                 height: 36,
