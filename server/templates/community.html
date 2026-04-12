@@ -1251,8 +1251,8 @@
       document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
       document.getElementById(hash + '-section').classList.add('active');
     }
-    initDeepLink();
-    loadSection(hash || 'events');
+    var _dlTab = initDeepLink();
+    if (!_dlTab) loadSection(hash || 'events');
 
     let calendarMonth = new Date().getMonth();
     let calendarYear = new Date().getFullYear();
@@ -1488,7 +1488,10 @@
       if (bounds.length > 0) restaurantsMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 13 });
     }
 
+    var _eventsFetching = false;
     async function fetchEvents() {
+      if (_eventsFetching) return;
+      _eventsFetching = true;
       try {
         const res = await fetch('/api/events', { headers: { 'X-Community-Token': window.__st || '' } });
         const data = await res.json();
@@ -1509,8 +1512,9 @@
         document.getElementById('events-loading').style.display = 'none';
         eventsPage = 1;
         renderEvents();
-        tryResolveDeepLink();
       } catch { document.getElementById('events-loading').innerHTML = 'Failed to load events.'; }
+      _eventsFetching = false;
+      try { tryResolveDeepLink(); } catch(err) { console.error('[DeepLink] resolve error:', err); }
     }
 
     function getFilteredEvents() {
@@ -1585,7 +1589,10 @@
       return card;
     }
 
+    var _restaurantsFetching = false;
     async function fetchRestaurants() {
+      if (_restaurantsFetching) return;
+      _restaurantsFetching = true;
       try {
         const res = await fetch('/api/halal-restaurants', { headers: { 'X-Community-Token': window.__st || '' } });
         const data = await res.json();
@@ -1601,8 +1608,9 @@
         document.getElementById('restaurants-loading').style.display = 'none';
         restaurantsPage = 1;
         renderRestaurants();
-        tryResolveDeepLink();
       } catch { document.getElementById('restaurants-loading').innerHTML = 'Failed to load restaurants.'; }
+      _restaurantsFetching = false;
+      try { tryResolveDeepLink(); } catch(err) { console.error('[DeepLink] resolve error:', err); }
     }
 
     function sortRestaurants() {
@@ -1694,7 +1702,10 @@
       return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
+    var _businessesFetching = false;
     async function fetchBusinesses() {
+      if (_businessesFetching) return;
+      _businessesFetching = true;
       try {
         const res = await fetch('/api/businesses', { headers: { 'X-Community-Token': window.__st || '' } });
         const data = await res.json();
@@ -1705,13 +1716,13 @@
         refreshCustomDropdown(sel);
         dataLoaded.directory = true;
         document.getElementById('directory-loading').style.display = 'none';
-        // Show location banner if there are service-area/popup businesses and no metro selected
         const hasLocBiz = allBusinesses.some(b => b.location_type === 'service_area' || b.location_type === 'popup');
         const banner = document.getElementById('directory-location-banner');
         if (banner) banner.style.display = (hasLocBiz && !userLat) ? 'flex' : 'none';
         renderBusinesses();
-        tryResolveDeepLink();
       } catch { document.getElementById('directory-loading').innerHTML = 'Failed to load businesses.'; }
+      _businessesFetching = false;
+      try { tryResolveDeepLink(); } catch(err) { console.error('[DeepLink] resolve error:', err); }
     }
 
     function getFilteredBusinesses() {
@@ -2085,17 +2096,23 @@
       var params = new URLSearchParams(window.location.search);
       var open = params.get('open');
       var id = params.get('id');
-      if (!open || !id) return;
+      if (!open || !id) return null;
       _dlType = open; _dlId = id;
       var tabMap = { event: 'events', restaurant: 'restaurants', business: 'directory' };
       var tab = tabMap[open];
-      if (!tab) return;
+      if (!tab) return null;
       document.querySelectorAll('.nav-tabs a').forEach(function(l) { l.classList.toggle('active', l.dataset.tab === tab); });
       document.querySelectorAll('.section').forEach(function(s) { s.classList.remove('active'); });
       document.getElementById(tab + '-section').classList.add('active');
       loadSection(tab);
+      return tab;
     }
 
+    function _openDeepLinkItem(type, item) {
+      if (type === 'event') openEventModal(item);
+      else if (type === 'restaurant') openRestaurantModal(item);
+      else if (type === 'business') openBusinessModal(item);
+    }
     function tryResolveDeepLink() {
       if (!_dlType || !_dlId) return;
       var type = _dlType, id = String(_dlId), item = null;
@@ -2105,9 +2122,7 @@
       if (item) {
         _dlType = null; _dlId = null;
         history.replaceState(null, '', window.location.pathname + (window.location.hash || ''));
-        if (type === 'event') openEventModal(item);
-        else if (type === 'restaurant') openRestaurantModal(item);
-        else if (type === 'business') openBusinessModal(item);
+        try { _openDeepLinkItem(type, item); } catch(err) { console.error('[DeepLink] modal error:', err); }
         return;
       }
       var relevantLoaded = (type === 'event' && dataLoaded.events) ||
@@ -2129,11 +2144,9 @@
         .then(function(r) { return r.ok ? r.json() : null; })
         .then(function(data) {
           if (!data) return;
-          if (dlType === 'event') openEventModal(data);
-          else if (dlType === 'restaurant') openRestaurantModal(data);
-          else openBusinessModal(data);
+          try { _openDeepLinkItem(dlType, data); } catch(err) { console.error('[DeepLink] modal error:', err); }
         })
-        .catch(function() {});
+        .catch(function(err) { console.error('[DeepLink] fetch error:', err); });
     }
 
     async function shareItem(type, data, ev) {
