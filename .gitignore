@@ -9,6 +9,7 @@ server/photo-cache/
 # Expo
 .expo/
 dist/
+server_dist/
 web-build/
 expo-env.d.ts
 

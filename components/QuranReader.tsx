@@ -19,6 +19,7 @@ import {
   ScrollView,
   Dimensions,
   Keyboard,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { GlassModalContainer } from "@/components/GlassModal";
@@ -45,26 +46,47 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const VERSES_PER_PAGE = 50;
 const API_BASE = "https://api.quran.com/api/v4";
+const WORD_AUDIO_BASE = "https://audio.qurancdn.com/";
+
+const resolveWordAudioUrl = (url: string) =>
+  url.startsWith("http") ? url : `${WORD_AUDIO_BASE}${url}`;
 const BANNER_COLLAPSE_THRESHOLD = 30;
 
 const MUSHAF_FONT_SIZE_KEY = "quran_mushaf_font_size";
 
 const TAJWEED_COLORS: Record<string, string> = {
-  qalaqah: "#E67E22",
-  qalb: "#E67E22",
-  ikhfa: "#27AE60",
-  ikhfa_shafawi: "#27AE60",
-  idgham_w_ghunna: "#1E8449",
-  idgham_shafawi: "#1E8449",
-  idgham_wo_ghunna: "#17A589",
-  ghunna: "#145A32",
-  madd_2: "#2E86AB",
-  madd_6: "#2E86AB",
-  madd_munfasil: "#2E86AB",
-  madd_muttasil: "#2E86AB",
-  iqlab: "#E74C3C",
-  ham_wasl: "#7F8C8D",
-  silent: "#7F8C8D",
+  // Qalqalah
+  qalaqah: "#DD6611",
+  qalb: "#DD6611",
+  // Ikhfa
+  ikhfa: "#408080",
+  ikhfa_shafawi: "#408080",
+  // Idgham
+  idgham_w_ghunna: "#1DAC4A",
+  idgham_ghunna: "#1DAC4A",
+  idgham_shafawi: "#1DAC4A",
+  idgham_wo_ghunna: "#009000",
+  idgham_mutajanisayn: "#26A65B",
+  idgham_mutaqaribayn: "#26A65B",
+  // Ghunnah
+  ghunna: "#228B22",
+  ghunnah: "#228B22",
+  // Madd / prolongation
+  madd_2: "#537FFF",
+  madd_6: "#000EBC",
+  madd_munfasil: "#4050FF",
+  madd_muttasil: "#2144C1",
+  madda_normal: "#537FFF",
+  madda_permissible: "#4050FF",
+  madda_necessary: "#000EBC",
+  madda_obligatory: "#2144C1",
+  // Iqlab
+  iqlab: "#BB2288",
+  // Silent / light letters (grey)
+  ham_wasl: "#AAAAAA",
+  laam_shamsiyah: "#AAAAAA",
+  silent: "#AAAAAA",
+  slnt: "#AAAAAA",
 };
 
 const TRANSLATIONS: { id: number; label: string }[] = [
@@ -151,7 +173,7 @@ interface ApiSearchResult {
 }
 
 type QuranSection = "surahList" | "verseView" | "search" | "mushafView";
-type ViewMode = "verses" | "mushaf";
+type ViewMode = "verses" | "quranText" | "mushaf";
 const VIEW_MODE_KEY = "quran_view_mode";
 const TOTAL_MUSHAF_PAGES = 604;
 
@@ -164,6 +186,11 @@ interface MushafVerse {
 }
 
 // ─── Tajweed helpers ────────────────────────────────────────────────────────
+
+function toArabicNumeral(n: number): string {
+  const digits = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+  return n.toString().split('').map(d => digits[parseInt(d)]).join('');
+}
 
 function decodeHtmlEntities(s: string): string {
   return s
@@ -180,15 +207,23 @@ interface TajweedSegment {
 
 function parseTajweedText(rawHtml: string): TajweedSegment[] {
   const segments: TajweedSegment[] = [];
-  const spanRegex = /<span[^>]+class="([^"]+)"[^>]*>([\s\S]*?)<\/span>|([^<]+)/g;
+  // Quran.com API v4 uses <tajweed class=rulename> (unquoted) custom elements
+  const tagRegex = /<tajweed[^>]*class=["']?([^"'\s>]+)["']?[^>]*>([\s\S]*?)<\/tajweed>|<span[^>]+class="([^"]+)"[^>]*>([\s\S]*?)<\/span>|([^<]+)/g;
   let match: RegExpExecArray | null;
-  while ((match = spanRegex.exec(rawHtml)) !== null) {
-    if (match[3] !== undefined) {
-      const text = decodeHtmlEntities(match[3]);
+  while ((match = tagRegex.exec(rawHtml)) !== null) {
+    if (match[5] !== undefined) {
+      // Plain text between tags
+      const text = decodeHtmlEntities(match[5]);
       if (text) segments.push({ text, color: null });
-    } else {
+    } else if (match[1] !== undefined) {
+      // <tajweed class=...> match
       const rule = match[1];
       const text = decodeHtmlEntities(match[2]);
+      if (text) segments.push({ text, color: TAJWEED_COLORS[rule] ?? null });
+    } else if (match[3] !== undefined) {
+      // <span class="..."> match (fallback)
+      const rule = match[3];
+      const text = decodeHtmlEntities(match[4]);
       if (text) segments.push({ text, color: TAJWEED_COLORS[rule] ?? null });
     }
   }
@@ -349,6 +384,82 @@ function VerseCard({ children, isHighlighted, isDark, colors }: VerseCardProps) 
   );
 }
 
+// ─── MushafPageImage ─────────────────────────────────────────────────────────
+// Renders a pre-rendered Quran page image from the Quran.com CDN.
+// Supports swipe-left / swipe-right for page navigation.
+
+const MUSHAF_CDN = (page: number) =>
+  `https://cdn.jsdelivr.net/gh/quran/quran-images/pages/p${page}.png`;
+
+interface MushafPageImageProps {
+  page: number;
+  isDark: boolean;
+  onSwipeLeft: () => void;
+  onSwipeRight: () => void;
+}
+
+function MushafPageImage({ page, isDark, onSwipeLeft, onSwipeRight }: MushafPageImageProps) {
+  const [imageLoading, setImageLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
+  const screenWidth = Dimensions.get("window").width;
+  // Quran page images are 1196×1694 (roughly 1:1.416 ratio)
+  const imageHeight = screenWidth * 1.416;
+
+  const swipeStartX = useRef<number | null>(null);
+
+  return (
+    <View
+      style={{ flex: 1 }}
+      onStartShouldSetResponder={() => true}
+      onResponderGrant={(e) => { swipeStartX.current = e.nativeEvent.pageX; }}
+      onResponderRelease={(e) => {
+        if (swipeStartX.current === null) return;
+        const dx = e.nativeEvent.pageX - swipeStartX.current;
+        if (Math.abs(dx) > 50) {
+          // In RTL Quran reading: swipe right → previous page, swipe left → next page
+          if (dx < 0) onSwipeLeft();
+          else onSwipeRight();
+        }
+        swipeStartX.current = null;
+      }}
+    >
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ flexGrow: 1 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {imageLoading && !imageError && (
+          <ActivityIndicator
+            size="small"
+            color="#27AE60"
+            style={{ position: "absolute", top: imageHeight / 2 - 10, left: screenWidth / 2 - 10, zIndex: 1 }}
+          />
+        )}
+        {imageError ? (
+          <View style={{ height: imageHeight, alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <Ionicons name="image-outline" size={32} color="#666" />
+            <Text style={{ color: "#666", fontFamily: "Inter_400Regular", fontSize: 13 }}>Image unavailable</Text>
+          </View>
+        ) : (
+          <Image
+            key={page}
+            source={{ uri: MUSHAF_CDN(page) }}
+            style={{
+              width: screenWidth,
+              height: imageHeight,
+              tintColor: isDark ? "#FFFFFF" : undefined,
+            }}
+            resizeMode="contain"
+            onLoadStart={() => { setImageLoading(true); setImageError(false); }}
+            onLoad={() => setImageLoading(false)}
+            onError={() => { setImageLoading(false); setImageError(true); }}
+          />
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
 export interface QuranReaderHandle {
   goBack: () => boolean;
 }
@@ -443,6 +554,7 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
     getReadingPosition().then(setResumePos).catch(() => {});
     AsyncStorage.getItem(VIEW_MODE_KEY).then(v => {
       if (v === "mushaf") setViewMode("mushaf");
+      else if (v === "quranText") setViewMode("quranText");
     }).catch(() => {});
     AsyncStorage.getItem(MUSHAF_FONT_SIZE_KEY).then(v => {
       if (v) setMushafFontSize(parseInt(v, 10));
@@ -548,7 +660,7 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
                 id: w.id ?? idx,
                 position: w.position ?? idx + 1,
                 text_uthmani: w.text_uthmani!,
-                audio_url: w.audio_url!,
+                audio_url: resolveWordAudioUrl(w.audio_url!),
                 transliteration: w.transliteration?.text,
               }));
             wordMapRef.current.set(v.verse_key, wordList);
@@ -702,12 +814,11 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
     }
   }, [versesHasMore, versesLoading, selectedSurah, versesPage, selectedTranslationIds, fetchVerses]);
 
-  const toggleViewMode = useCallback(() => {
-    const newMode = viewMode === "verses" ? "mushaf" : "verses";
-    setViewMode(newMode);
-    AsyncStorage.setItem(VIEW_MODE_KEY, newMode).catch(() => {});
+  const selectViewMode = useCallback((mode: ViewMode) => {
+    setViewMode(mode);
+    AsyncStorage.setItem(VIEW_MODE_KEY, mode).catch(() => {});
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  }, [viewMode]);
+  }, []);
 
   const fetchMushafPage = useCallback(async (page: number) => {
     const thisId = ++mushafFetchId.current;
@@ -736,7 +847,7 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
               id: w.id ?? idx,
               position: w.position ?? idx + 1,
               text_uthmani: w.text_uthmani!,
-              audio_url: w.audio_url!,
+              audio_url: resolveWordAudioUrl(w.audio_url!),
             }));
           wordMapRef.current.set(v.verse_key, wordList);
         }
@@ -1052,13 +1163,6 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
     }
   }, []);
 
-  const handleMushafFontSize = useCallback((delta: number) => {
-    setMushafFontSize(prev => {
-      const next = Math.min(36, Math.max(16, prev + delta));
-      AsyncStorage.setItem(MUSHAF_FONT_SIZE_KEY, String(next)).catch(() => {});
-      return next;
-    });
-  }, []);
 
   const renderVerseItem = useCallback(({ item, index }: { item: Verse; index: number }) => {
     const isHighlighted = scrollToVerse === item.verse_key;
@@ -1404,6 +1508,34 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
               </Text>
             </Pressable>
 
+            {viewMode === "quranText" && (
+              <>
+                <View style={[qStyles.dropdownDivider, { backgroundColor: colors.border }]} />
+                <View style={{ paddingHorizontal: 4, paddingVertical: 8 }}>
+                  <Text style={[qStyles.dropdownSectionTitle, { color: colors.textTertiary, marginBottom: 8 }]}>Font Size — Quranic Arabic</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                    <Text style={{ fontSize: 13, color: colors.textSecondary, fontFamily: "Inter_500Medium" }}>اللّٰه</Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                      <Pressable
+                        onPress={() => { const v = Math.max(18, mushafFontSize - 2); setMushafFontSize(v); AsyncStorage.setItem(MUSHAF_FONT_SIZE_KEY, String(v)).catch(() => {}); }}
+                        style={{ width: 32, height: 32, borderRadius: 8, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" }}
+                      >
+                        <Text style={{ fontSize: 18, color: colors.text, lineHeight: 22 }}>−</Text>
+                      </Pressable>
+                      <Text style={{ fontFamily: "Inter_500Medium", fontSize: 14, color: colors.text, minWidth: 28, textAlign: "center" }}>{mushafFontSize}</Text>
+                      <Pressable
+                        onPress={() => { const v = Math.min(42, mushafFontSize + 2); setMushafFontSize(v); AsyncStorage.setItem(MUSHAF_FONT_SIZE_KEY, String(v)).catch(() => {}); }}
+                        style={{ width: 32, height: 32, borderRadius: 8, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" }}
+                      >
+                        <Text style={{ fontSize: 18, color: colors.text, lineHeight: 22 }}>+</Text>
+                      </Pressable>
+                    </View>
+                    <Text style={{ fontSize: 22, color: colors.textSecondary, fontFamily: "Inter_500Medium" }}>اللّٰه</Text>
+                  </View>
+                </View>
+              </>
+            )}
+
             <Pressable
               style={[qStyles.applyBtn, { backgroundColor: colors.emerald }]}
               onPress={handleApplyTranslations}
@@ -1421,6 +1553,34 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
 
         {versesLoading && verses.length === 0 ? (
           <ActivityIndicator size="small" color={colors.emerald} style={{ marginTop: 24 }} />
+        ) : viewMode === "quranText" ? (
+          <ScrollView
+            contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, paddingTop: 8 }}
+            showsVerticalScrollIndicator={false}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            onMomentumScrollEnd={() => { if (versesHasMore) handleLoadMore(); }}
+          >
+            <Text style={{ fontSize: mushafFontSize, lineHeight: mushafFontSize * 1.9, textAlign: "right", writingDirection: "rtl" }}>
+              {verses.map((verse) => {
+                const vTajweed = tajweedMapRef.current.get(verse.verse_key);
+                const segments = showTajweed && vTajweed ? parseTajweedText(vTajweed) : null;
+                return (
+                  <React.Fragment key={verse.verse_key}>
+                    {segments ? segments.map((seg, si) => (
+                      <Text key={si} style={{ color: seg.color ?? colors.text }}>{seg.text}</Text>
+                    )) : (
+                      <Text style={{ color: colors.text }}>{verse.text_uthmani}</Text>
+                    )}
+                    <Text style={{ fontSize: mushafFontSize * 0.75, color: colors.emerald }}>{" \uFD3F" + toArabicNumeral(verse.verse_number) + "\uFD3E "}</Text>
+                  </React.Fragment>
+                );
+              })}
+            </Text>
+            {versesLoading && verses.length > 0 && (
+              <ActivityIndicator size="small" color={colors.emerald} style={{ marginVertical: 16 }} />
+            )}
+          </ScrollView>
         ) : (
           <FlatList
             ref={versesListRef}
@@ -1516,24 +1676,6 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
           <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: colors.textSecondary }}>
             {mushafPage} / {TOTAL_MUSHAF_PAGES}
           </Text>
-          {/* Font size controls */}
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-            <Pressable
-              style={{ paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.surface, borderRadius: 8, borderWidth: 1, borderColor: colors.border, opacity: mushafFontSize <= 16 ? 0.4 : 1 }}
-              onPress={() => handleMushafFontSize(-2)}
-              disabled={mushafFontSize <= 16}
-            >
-              <Text style={{ fontFamily: "Inter_700Bold", fontSize: 13, color: colors.text }}>A−</Text>
-            </Pressable>
-            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: colors.textTertiary, minWidth: 28, textAlign: "center" }}>{mushafFontSize}</Text>
-            <Pressable
-              style={{ paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.surface, borderRadius: 8, borderWidth: 1, borderColor: colors.border, opacity: mushafFontSize >= 36 ? 0.4 : 1 }}
-              onPress={() => handleMushafFontSize(2)}
-              disabled={mushafFontSize >= 36}
-            >
-              <Text style={{ fontFamily: "Inter_700Bold", fontSize: 13, color: colors.text }}>A+</Text>
-            </Pressable>
-          </View>
           <Pressable
             style={{ opacity: mushafPage >= TOTAL_MUSHAF_PAGES ? 0.3 : 1, padding: 8, backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1, borderColor: colors.border }}
             onPress={() => { if (mushafPage < TOTAL_MUSHAF_PAGES) fetchMushafPage(mushafPage + 1); }}
@@ -1543,9 +1685,7 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
           </Pressable>
         </View>
 
-        {mushafLoading ? (
-          <ActivityIndicator size="small" color={colors.emerald} style={{ marginTop: 24 }} />
-        ) : mushafError ? (
+        {mushafError ? (
           <View style={{ alignItems: "center", marginTop: 40, gap: 12 }}>
             <Ionicons name="cloud-offline-outline" size={32} color={colors.textSecondary} />
             <Text style={{ fontFamily: "Inter_500Medium", fontSize: 14, color: colors.textSecondary }}>Failed to load page</Text>
@@ -1554,117 +1694,12 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
             </Pressable>
           </View>
         ) : (
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40, paddingHorizontal: 20 }}>
-            {(() => {
-              const toArabicNumeral = (n: number): string => {
-                const digits = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
-                return n.toString().split('').map(d => digits[parseInt(d)]).join('');
-              };
-              const groups: { surahId: number; surahName: string; startsNewSurah: boolean; verses: typeof mushafVerses }[] = [];
-              let currentSurahId = -1;
-              for (const v of mushafVerses) {
-                const sid = parseInt(v.verse_key.split(":")[0]);
-                if (sid !== currentSurahId) {
-                  const surah = surahs.find(s => s.id === sid);
-                  groups.push({ surahId: sid, surahName: surah?.name_arabic || "", startsNewSurah: v.verse_number === 1, verses: [v] });
-                  currentSurahId = sid;
-                } else {
-                  groups[groups.length - 1].verses.push(v);
-                }
-              }
-              return groups.map((group, gi) => (
-                <View key={`group-${gi}`}>
-                  {group.startsNewSurah && group.surahId !== 1 && (
-                    <View style={{ alignItems: "center", marginTop: gi > 0 ? 24 : 16, marginBottom: 16 }}>
-                      <View style={{ width: "100%", borderWidth: 1.5, borderColor: colors.emerald + "30", borderRadius: 12, paddingVertical: 14, paddingHorizontal: 20, alignItems: "center", backgroundColor: colors.emerald + "08" }}>
-                        <Text style={{ fontSize: 28, color: colors.text, textAlign: "center" }}>
-                          {group.surahName}
-                        </Text>
-                      </View>
-                      {group.surahId !== 9 && (
-                        <Text style={{ fontSize: 22, color: colors.text, textAlign: "center", marginTop: 16, lineHeight: 40 }}>
-                          بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
-                        </Text>
-                      )}
-                    </View>
-                  )}
-                  {group.startsNewSurah && group.surahId === 1 && (
-                    <View style={{ alignItems: "center", marginTop: 16, marginBottom: 16 }}>
-                      <View style={{ width: "100%", borderWidth: 1.5, borderColor: colors.emerald + "30", borderRadius: 12, paddingVertical: 14, paddingHorizontal: 20, alignItems: "center", backgroundColor: colors.emerald + "08" }}>
-                        <Text style={{ fontSize: 28, color: colors.text, textAlign: "center" }}>
-                          {group.surahName}
-                        </Text>
-                      </View>
-                      <Text style={{ fontSize: 22, color: colors.text, textAlign: "center", marginTop: 16, lineHeight: 40 }}>
-                        بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
-                      </Text>
-                    </View>
-                  )}
-                  {showWordTap ? (
-                    // Word-tap mode: per-verse word rows with verse number ornament after each
-                    <View>
-                      {group.verses.map((v) => {
-                        const vWords = wordMapRef.current.get(v.verse_key) ?? [];
-                        const vTajweed = tajweedMapRef.current.get(v.verse_key) ?? null;
-                        return (
-                          <View key={v.id} style={{ marginBottom: 4 }}>
-                            {vWords.length > 0 ? (
-                              <WordTapRow
-                                words={vWords}
-                                tajweedHtml={vTajweed}
-                                showTajweed={showTajweed}
-                                playingWordId={playingWordId}
-                                verseKey={v.verse_key}
-                                onWordTap={playWordAudio}
-                                defaultTextColor={colors.text}
-                                goldColor={colors.gold}
-                                fontSize={mushafFontSize}
-                              />
-                            ) : (
-                              <Text style={{ fontSize: mushafFontSize, lineHeight: mushafFontSize * 1.9, textAlign: "right", color: colors.text, writingDirection: "rtl" }}>
-                                {v.text_uthmani}
-                              </Text>
-                            )}
-                            <Text style={{ fontSize: mushafFontSize * 0.75, color: colors.emerald, textAlign: "right" }}>
-                              {"\uFD3F" + toArabicNumeral(v.verse_number) + "\uFD3E"}
-                            </Text>
-                          </View>
-                        );
-                      })}
-                    </View>
-                  ) : showTajweed ? (
-                    // Tajweed-only: inline colored spans, preserves continuous flow
-                    <Text style={{ fontSize: mushafFontSize, lineHeight: mushafFontSize * 1.9, textAlign: "right", writingDirection: "rtl" }}>
-                      {group.verses.map((v) => {
-                        const vTajweed = tajweedMapRef.current.get(v.verse_key);
-                        const segments = vTajweed ? parseTajweedText(vTajweed) : null;
-                        return (
-                          <React.Fragment key={v.id}>
-                            {segments ? segments.map((seg, si) => (
-                              <Text key={si} style={{ color: seg.color ?? colors.text }}>{seg.text}</Text>
-                            )) : (
-                              <Text style={{ color: colors.text }}>{v.text_uthmani}</Text>
-                            )}
-                            <Text style={{ fontSize: mushafFontSize * 0.75, color: colors.emerald }}>{" \uFD3F" + toArabicNumeral(v.verse_number) + "\uFD3E "}</Text>
-                          </React.Fragment>
-                        );
-                      })}
-                    </Text>
-                  ) : (
-                    // Default: single flowing text block
-                    <Text style={{ fontSize: mushafFontSize, lineHeight: mushafFontSize * 1.9, textAlign: "right", color: colors.text, writingDirection: "rtl" }}>
-                      {group.verses.map((v, vi) => (
-                        <React.Fragment key={v.id}>
-                          <Text>{v.text_uthmani}</Text>
-                          <Text style={{ fontSize: mushafFontSize * 0.75, color: colors.emerald }}>{" \uFD3F" + toArabicNumeral(v.verse_number) + "\uFD3E "}</Text>
-                        </React.Fragment>
-                      ))}
-                    </Text>
-                  )}
-                </View>
-              ));
-            })()}
-          </ScrollView>
+          <MushafPageImage
+            page={mushafPage}
+            isDark={isDark}
+            onSwipeLeft={() => { if (mushafPage < TOTAL_MUSHAF_PAGES) fetchMushafPage(mushafPage + 1); }}
+            onSwipeRight={() => { if (mushafPage > 1) fetchMushafPage(mushafPage - 1); }}
+          />
         )}
       </View>
     );
@@ -1872,30 +1907,54 @@ export const QuranReader = React.forwardRef<QuranReaderHandle, QuranReaderProps>
         <Text style={[qStyles.searchPlaceholder, { color: colors.textTertiary }]}>Search verses...</Text>
       </Pressable>
 
-      <View style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}>
-        <Pressable
-          style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: viewMode === "mushaf" ? colors.emerald + "18" : colors.surface, borderRadius: 10, paddingVertical: 9, borderWidth: 1, borderColor: viewMode === "mushaf" ? colors.emerald + "40" : colors.border }}
-          onPress={() => {
-            toggleViewMode();
-            if (viewMode === "verses") {
-              setQSection("mushafView");
-              fetchMushafPage(mushafPage || 1);
-            }
-          }}
-        >
-          <Ionicons name={viewMode === "mushaf" ? "book" : "book-outline"} size={15} color={viewMode === "mushaf" ? colors.emerald : colors.textSecondary} />
-          <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: viewMode === "mushaf" ? colors.emerald : colors.textSecondary }}>
-            {viewMode === "mushaf" ? "Mushaf View" : "Mushaf View"}
-          </Text>
-        </Pressable>
-        <Pressable
-          style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: colors.gold + "12", borderRadius: 10, paddingVertical: 9, borderWidth: 1, borderColor: colors.gold + "30" }}
-          onPress={() => setShowPhysicalModal(true)}
-        >
-          <Ionicons name="add-circle-outline" size={15} color={colors.gold} />
-          <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: colors.gold }}>Physical Reading</Text>
-        </Pressable>
+      {/* Reading Layout selector */}
+      <View style={{ backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, marginBottom: 10, overflow: "hidden" }}>
+        {(
+          [
+            { mode: "verses" as ViewMode, icon: "chatbubble-ellipses-outline", activeIcon: "chatbubble-ellipses", label: "Translation / Transliteration" },
+            { mode: "quranText" as ViewMode, icon: "text-outline", activeIcon: "text", label: "Quran Text" },
+            { mode: "mushaf" as ViewMode, icon: "book-outline", activeIcon: "book", label: "Mushaf (Book)" },
+          ] as { mode: ViewMode; icon: any; activeIcon: any; label: string }[]
+        ).map(({ mode, icon, activeIcon, label }, idx, arr) => {
+          const isActive = viewMode === mode;
+          return (
+            <Pressable
+              key={mode}
+              style={({ pressed }) => ({
+                flexDirection: "row", alignItems: "center", gap: 12,
+                paddingVertical: 13, paddingHorizontal: 16,
+                backgroundColor: isActive ? colors.emerald + "14" : pressed ? colors.border + "40" : "transparent",
+                borderBottomWidth: idx < arr.length - 1 ? 1 : 0,
+                borderBottomColor: colors.border,
+              })}
+              onPress={() => {
+                selectViewMode(mode);
+                if (mode === "mushaf") {
+                  setQSection("mushafView");
+                  fetchMushafPage(mushafPage || 1);
+                }
+              }}
+            >
+              <Ionicons name={isActive ? activeIcon : icon} size={18} color={isActive ? colors.emerald : colors.textSecondary} />
+              <Text style={{ flex: 1, fontFamily: "Inter_500Medium", fontSize: 14, color: isActive ? colors.emerald : colors.text }}>{label}</Text>
+              <View style={{
+                width: 20, height: 20, borderRadius: 10,
+                borderWidth: 2, borderColor: isActive ? colors.emerald : colors.border,
+                alignItems: "center", justifyContent: "center",
+              }}>
+                {isActive && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: colors.emerald }} />}
+              </View>
+            </Pressable>
+          );
+        })}
       </View>
+      <Pressable
+        style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: colors.gold + "12", borderRadius: 10, paddingVertical: 9, borderWidth: 1, borderColor: colors.gold + "30", marginBottom: 10 }}
+        onPress={() => setShowPhysicalModal(true)}
+      >
+        <Ionicons name="add-circle-outline" size={15} color={colors.gold} />
+        <Text style={{ fontFamily: "Inter_500Medium", fontSize: 13, color: colors.gold }}>Physical Reading</Text>
+      </Pressable>
 
       {viewMode === "mushaf" ? (
         <View style={{ flex: 1 }}>
