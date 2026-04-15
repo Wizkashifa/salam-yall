@@ -1696,8 +1696,8 @@ async function ensureOrgPortalsTable(pool: pg.Pool) {
     );
   }
 
-  // Dev test accounts (password: "password")
-  {
+  // Dev test accounts (password: "password") — skipped in production
+  if (process.env.NODE_ENV !== "production") {
     const crypto = await import("crypto");
     const testHash = crypto.createHash("sha256").update("password").digest("hex");
     await pool.query(
