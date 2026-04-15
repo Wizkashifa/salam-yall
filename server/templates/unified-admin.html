@@ -224,58 +224,349 @@
 
   <!-- ── SUPER ADMIN DASHBOARD ── -->
   <div id="dash-super-admin" style="display:none;">
-    <a href="/admin-full" target="_blank" class="admin-panel-link">
-      <div class="link-icon">⚙️</div>
-      <div>
-        <div class="link-title">Full Admin Panel</div>
-        <div class="link-desc">Businesses, restaurants, analytics, masjids, comms, and more</div>
-      </div>
-      <div class="link-arrow">→</div>
-    </a>
     <div class="tab-bar" id="superTabBar">
-      <button class="tab-btn active" onclick="switchTab('super','events')" id="superTabBtnEvents"><span class="tab-icon">🗓️</span>Events</button>
+      <button class="tab-btn active" onclick="switchTab('super','dashboard')" id="superTabBtnDashboard"><span class="tab-icon">📊</span>Dashboard</button>
+      <button class="tab-btn" onclick="switchTab('super','comms')" id="superTabBtnComms"><span class="tab-icon">📣</span>Comms</button>
+      <button class="tab-btn" onclick="switchTab('super','events')" id="superTabBtnEvents"><span class="tab-icon">🗓️</span>Events</button>
+      <button class="tab-btn" onclick="switchTab('super','businesses')" id="superTabBtnBusinesses"><span class="tab-icon">🏪</span>Businesses</button>
+      <button class="tab-btn" onclick="switchTab('super','restaurants')" id="superTabBtnRestaurants"><span class="tab-icon">🍽️</span>Restaurants</button>
+      <button class="tab-btn" onclick="switchTab('super','analytics')" id="superTabBtnAnalytics"><span class="tab-icon">📈</span>Analytics</button>
       <button class="tab-btn" onclick="switchTab('super','accounts')" id="superTabBtnAccounts"><span class="tab-icon">👥</span>Accounts</button>
     </div>
-    <!-- Events -->
-    <div class="tab-content active" id="superTabEvents">
-      <div class="section">
-        <div class="section-title">📸 Publish Event</div>
-        <label>Title *</label>
-        <input type="text" id="saTitle" placeholder="Event title">
-        <label>Description</label>
-        <textarea id="saDescription" placeholder="Event description..."></textarea>
-        <label>Location</label>
-        <input type="text" id="saLocation" placeholder="Venue address">
-        <label>Organizer</label>
-        <input type="text" id="saOrganizer" placeholder="Organizing group or person">
-        <div class="row">
-          <div><label>Start *</label><input type="datetime-local" id="saStartTime"></div>
-          <div><label>End</label><input type="datetime-local" id="saEndTime"></div>
-        </div>
-        <label>Registration URL</label>
-        <input type="text" id="saRegUrl" placeholder="https://...">
-        <div class="row">
-          <div><label><input type="checkbox" id="saVirtual" style="width:auto;margin-right:6px;">Virtual Event</label></div>
-          <div><label><input type="checkbox" id="saFeatured" style="width:auto;margin-right:6px;">Featured</label></div>
-        </div>
-        <div class="recur-box" id="saRecurBox">
-          <label style="margin:0;text-transform:uppercase;letter-spacing:0.6px;font-size:11px;color:var(--text-secondary);">Recurrence</label>
-          <select id="saRecurType" onchange="updateRecurUI('sa')" style="margin-top:8px;">
-            <option value="none">One-time event</option>
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly on same day</option>
-            <option value="monthly_calendar">Monthly — same date</option>
-            <option value="monthly_weekday">Monthly — same weekday</option>
-          </select>
-          <div class="recur-opts" id="saRecurOpts"></div>
-        </div>
-        <button class="btn btn-primary" onclick="publishAdminEvent()" id="saPublishBtn" style="margin-top:14px;width:100%;">Publish Event</button>
-      </div>
-      <div class="section">
-        <div class="section-title">🗓️ Recent Events</div>
-        <div id="saEventList"><div class="empty-state">Loading...</div></div>
+
+    <!-- Dashboard -->
+    <div class="tab-content active" id="superTabDashboard">
+      <div class="stat-row" id="saDashCards">
+        <div class="stat-card" onclick="switchSuperTab('Events')" style="cursor:pointer;" title="Go to Events"><div class="stat-num" id="saDashEvents">—</div><div class="stat-label">Total Events</div></div>
+        <div class="stat-card" onclick="saDeepLinkPendingEvents()" style="cursor:pointer;border-color:var(--gold);" title="Review pending events"><div class="stat-num" id="saDashPendingEv" style="color:var(--gold);">—</div><div class="stat-label">Pending Events</div></div>
+        <div class="stat-card" onclick="switchSuperTab('Accounts')" style="cursor:pointer;" title="Go to Accounts"><div class="stat-num" id="saDashAccounts">—</div><div class="stat-label">Accounts</div></div>
+        <div class="stat-card" onclick="switchSuperTab('Businesses')" style="cursor:pointer;" title="Go to Businesses"><div class="stat-num" id="saDashBiz">—</div><div class="stat-label">Total Businesses</div></div>
+        <div class="stat-card" onclick="saDeepLinkPendingBiz()" style="cursor:pointer;border-color:var(--gold);" title="Review pending business submissions"><div class="stat-num" id="saDashPendingBiz" style="color:var(--gold);">—</div><div class="stat-label">Pending Businesses</div></div>
+        <div class="stat-card" onclick="saDeepLinkPendingRest()" style="cursor:pointer;border-color:var(--gold);" title="Review pending restaurant submissions"><div class="stat-num" id="saDashPendingRest" style="color:var(--gold);">—</div><div class="stat-label">Pending Restaurants</div></div>
       </div>
     </div>
+
+    <!-- Comms -->
+    <div class="tab-content" id="superTabComms">
+      <div class="section">
+        <div class="section-title">📣 Push Notification</div>
+        <div style="display:flex;gap:8px;margin-bottom:16px;">
+          <button class="btn btn-sm btn-outline" id="pushTypeGeneral" onclick="saSwitchPushType('general')" style="border-color:var(--gold);color:var(--gold);">General</button>
+          <button class="btn btn-sm btn-outline" id="pushTypeJanaza" onclick="saSwitchPushType('janaza')">Janaza</button>
+          <button class="btn btn-sm btn-outline" id="pushTypeEvent" onclick="saSwitchPushType('event')">Event</button>
+        </div>
+        <div id="saPushGeneral">
+          <label>Title *</label>
+          <input type="text" id="saPushTitle" placeholder="Notification title">
+          <label>Message *</label>
+          <textarea id="saPushBody" placeholder="Notification message..."></textarea>
+          <label>Link (optional)</label>
+          <input type="text" id="saPushLink" placeholder="https://...">
+          <button class="btn btn-primary" onclick="saSendGeneralPush()" id="saSendPushBtn" style="margin-top:14px;width:100%;">Send to All Users</button>
+        </div>
+        <div id="saPushJanaza" style="display:none;">
+          <label>Select Masjid</label>
+          <select id="saPushJzMasjid"></select>
+          <label>Deceased Name *</label>
+          <input type="text" id="saPushJzName" placeholder="Full name of deceased">
+          <label>Prayer Time</label>
+          <input type="text" id="saPushJzTime" placeholder="e.g., Saturday 2:00 PM">
+          <label>Prayer Location</label>
+          <input type="text" id="saPushJzLocation" placeholder="Masjid name or address">
+          <button class="btn btn-primary" onclick="saSendJanazaPush()" id="saSendJzBtn" style="margin-top:14px;width:100%;">Send Janaza Alert</button>
+        </div>
+        <div id="saPushEvent" style="display:none;">
+          <label>Event</label>
+          <select id="saPushEventId"></select>
+          <label>Message (optional)</label>
+          <textarea id="saPushEventMsg" placeholder="Extra context..."></textarea>
+          <button class="btn btn-primary" onclick="saSendEventPush()" id="saSendEventPushBtn" style="margin-top:14px;width:100%;">Send Event Notification</button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">📢 Announcement Tickers</div>
+        <input type="text" id="saTickerText" placeholder="Announcement text...">
+        <div class="row" style="margin-top:8px;">
+          <div>
+            <label>Type</label>
+            <select id="saTickerType">
+              <option value="info">Info</option>
+              <option value="urgent">Urgent</option>
+              <option value="event">Event</option>
+              <option value="reminder">Reminder</option>
+            </select>
+          </div>
+          <div>
+            <label>Expires (optional)</label>
+            <input type="datetime-local" id="saTickerExpires">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="saPostTicker()" style="margin-top:10px;width:100%;">Post Announcement</button>
+        <div id="saTickerList" style="margin-top:14px;"><div class="empty-state">Loading...</div></div>
+      </div>
+      <div class="section">
+        <div class="section-title">🎯 Community Goal</div>
+        <label>Monthly Target (prayers + Quran readings)</label>
+        <input type="number" id="saGoalTarget" placeholder="50000" min="100" max="100000">
+        <button class="btn btn-primary" onclick="saSaveCommunityGoal()" id="saSaveGoalBtn" style="margin-top:14px;width:100%;">Save Goal</button>
+      </div>
+    </div>
+
+    <!-- Events -->
+    <div class="tab-content" id="superTabEvents">
+      <div class="section">
+        <div class="section-title">📸 Scan Event Flyer</div>
+        <div class="upload-area" id="saFlyerUploadArea" ondragover="event.preventDefault();this.style.borderColor='var(--gold)';" ondragleave="this.style.borderColor='';" ondrop="handleFlyerDrop(event,'sa')" onclick="document.getElementById('saFlyerInput').click()">
+          <div class="upload-icon">📸</div>
+          <div class="upload-text">Drop, paste, or click to upload a flyer</div>
+          <div class="upload-hint">JPG, PNG, WebP · or Ctrl+V / ⌘V to paste from clipboard</div>
+          <input type="file" id="saFlyerInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleFlyerSelect(event,'sa')">
+        </div>
+        <div id="saFlyerPreview" style="display:none;margin-bottom:14px;text-align:center;">
+          <img id="saFlyerPreviewImg" style="max-width:100%;max-height:280px;border-radius:10px;border:1px solid var(--border-light);">
+          <button class="btn btn-sm" onclick="clearFlyer('sa')" style="margin-top:8px;background:var(--surface-alt);color:var(--text-secondary);">Remove Image</button>
+        </div>
+        <div id="saAdditionalFlyersContainer" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;"></div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+          <button class="btn btn-gold" onclick="extractFlyer('sa')" id="saExtractBtn" disabled>✨ Extract with AI</button>
+          <button class="btn btn-sm btn-outline" onclick="toggleFlyerForm('sa')">Manual Entry</button>
+          <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('saAdditionalFlyerInput').click()" style="font-size:12px;">+ Add More Flyers</button>
+          <input type="file" id="saAdditionalFlyerInput" accept="image/jpeg,image/png,image/webp" multiple style="display:none;" onchange="handleAdditionalFlyers(event,'sa')">
+        </div>
+        <div id="saExtractStatus" style="display:none;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:14px;"></div>
+        <div id="saFlyerForm" style="display:none;">
+          <label>Title *</label>
+          <input type="text" id="saEvTitle" placeholder="Event title">
+          <label>Description</label>
+          <textarea id="saEvDesc" placeholder="Brief description..."></textarea>
+          <label>Location *</label>
+          <input type="text" id="saEvLocation" placeholder="Full address or venue name">
+          <label>Organizer</label>
+          <select id="saOrganizer" style="margin-bottom:6px;">
+            <option value="">-- Select organizer --</option>
+          </select>
+          <input type="text" id="saOrganizerCustom" placeholder="Or type organizer name manually" style="margin-bottom:0;">
+          <div class="row">
+            <div><label>Start *</label><input type="datetime-local" id="saEvStart"></div>
+            <div><label>End</label><input type="datetime-local" id="saEvEnd"></div>
+          </div>
+          <label>Registration URL</label>
+          <input type="text" id="saEvRegUrl" placeholder="https://...">
+          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+            <label style="margin:0;display:flex;align-items:center;gap:6px;"><input type="checkbox" id="saEvFeatured" style="width:auto;">Featured</label>
+            <label style="margin:0;display:flex;align-items:center;gap:6px;"><input type="checkbox" id="saEvVirtual" style="width:auto;">Virtual</label>
+          </div>
+          <div id="saRecurringPanel" style="display:none;margin:14px 0;border:1px solid var(--emerald-bg);border-radius:10px;padding:14px;background:var(--emerald-surface);">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-size:16px;">🔁</span>
+              <span style="font-size:13px;font-weight:600;color:var(--emerald-light);">Recurring Event Detected</span>
+            </div>
+            <div id="saRecurDesc" style="font-size:13px;color:var(--preview-value);margin-bottom:12px;"></div>
+            <label style="font-size:12px;color:var(--text-secondary);">Generate occurrences through</label>
+            <input type="date" id="saRecurRangeEnd" style="width:100%;margin:6px 0 10px;" oninput="updateRecurringPreview('sa')">
+            <div id="saRecurPreviewCount" style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;"></div>
+            <button class="btn btn-primary" onclick="createRecurringEvents('sa')" id="saCreateRecurBtn" style="width:100%;">Create All Occurrences</button>
+            <div style="margin-top:8px;text-align:center;">
+              <button onclick="hideRecurringPanel('sa')" style="background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;text-decoration:underline;">Publish as single event instead</button>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="publishPortalEvent('sa')" id="saFlyerPublishBtn" style="margin-top:14px;width:100%;">Publish Event</button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">📅 Import from Configured Calendars</div>
+        <p style="font-size:13px;color:var(--text-secondary);margin:0 0 14px;">Imports events from all configured iCal sources (MCC, SRVIC, ICF Bay Area, etc.) and deduplicates automatically.</p>
+        <button class="btn btn-primary" onclick="saImportCalendar()" id="saImportCalBtn" style="width:100%;">Import Events</button>
+        <div id="saCalStatus" style="display:none;margin-top:10px;font-size:13px;padding:8px 12px;border-radius:8px;"></div>
+      </div>
+      <div class="section">
+        <div class="section-title" style="justify-content:space-between;">
+          <span>⏳ Pending Events</span>
+          <span id="saPendingEvBadge" style="font-size:11px;background:var(--emerald-surface);color:var(--emerald-light);padding:2px 8px;border-radius:20px;"></span>
+        </div>
+        <div id="saPendingEventList"><div class="empty-state">Loading...</div></div>
+      </div>
+      <div class="section">
+        <div class="section-title" style="justify-content:space-between;">
+          <span>🗓️ All Events</span>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input type="text" id="saEvSearch" placeholder="Search..." style="width:140px;padding:6px 10px;font-size:12px;" oninput="filterSaEvents()">
+            <select id="saEvFilter" style="width:auto;padding:6px 8px;font-size:12px;" onchange="filterSaEvents()">
+              <option value="all">All</option>
+              <option value="approved">Approved</option>
+              <option value="pending">Pending</option>
+            </select>
+          </div>
+        </div>
+        <div id="saEventList"><div class="empty-state">Loading...</div></div>
+        <div id="saEvPaginator" style="display:none;gap:8px;align-items:center;justify-content:center;margin-top:14px;flex-wrap:wrap;">
+          <button class="btn btn-sm btn-outline" id="saEvPrevBtn" onclick="saEvChangePage(-1)">← Prev</button>
+          <span id="saEvPageLabel" style="font-size:13px;color:var(--text-secondary);"></span>
+          <button class="btn btn-sm btn-outline" id="saEvNextBtn" onclick="saEvChangePage(1)">Next →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Businesses -->
+    <div class="tab-content" id="superTabBusinesses">
+      <div class="section">
+        <div class="section-title">🔍 Add Business via Google Maps</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <input type="text" id="saBizPlaceInput" placeholder="Google Maps URL or Place ID" style="flex:1;">
+          <button class="btn btn-primary btn-sm" onclick="saLookupBiz()" id="saLookupBizBtn">Look Up</button>
+        </div>
+        <div id="saBizLookupResult" style="display:none;margin-top:12px;padding:12px;background:var(--surface-alt);border-radius:10px;border:1px solid var(--border-light);">
+          <div id="saBizLookupName" style="font-weight:600;margin-bottom:6px;"></div>
+          <div id="saBizLookupAddr" style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;"></div>
+          <button class="btn btn-primary btn-sm" onclick="saAddBiz()" id="saAddBizBtn">Add Business</button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title" style="justify-content:space-between;">
+          <span>🏪 Businesses</span>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="btn btn-sm btn-outline" id="saBizFilterAll" onclick="saBizSetFilter('all')" style="border-color:var(--gold);color:var(--gold);">All</button>
+            <button class="btn btn-sm btn-outline" id="saBizFilterPending" onclick="saBizSetFilter('pending')">Pending</button>
+            <button class="btn btn-sm btn-outline" id="saBizFilterApproved" onclick="saBizSetFilter('approved')">Approved</button>
+            <button class="btn btn-sm btn-outline" id="saBizFilterRejected" onclick="saBizSetFilter('rejected')">Rejected</button>
+          </div>
+        </div>
+        <input type="text" id="saBizSearch" placeholder="Search by name, category, or metro..." oninput="filterSaBiz()" style="margin-bottom:12px;">
+        <div id="saBizList"><div class="empty-state">Loading...</div></div>
+      </div>
+    </div>
+
+    <!-- Restaurants -->
+    <div class="tab-content" id="superTabRestaurants">
+      <div class="section">
+        <div class="section-title">🔍 Add Restaurant via Google Maps</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <input type="text" id="saRestPlaceInput" placeholder="Google Maps URL or Place ID" style="flex:1;">
+          <button class="btn btn-primary btn-sm" onclick="saLookupRest()" id="saLookupRestBtn">Look Up</button>
+        </div>
+        <div id="saRestLookupResult" style="display:none;margin-top:12px;padding:12px;background:var(--surface-alt);border-radius:10px;border:1px solid var(--border-light);">
+          <div id="saRestLookupName" style="font-weight:600;margin-bottom:6px;"></div>
+          <div id="saRestLookupAddr" style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;"></div>
+          <div class="row" style="margin-bottom:10px;">
+            <div>
+              <label style="font-size:12px;margin-bottom:4px;">Halal Status</label>
+              <select id="saRestHalal" style="padding:6px 8px;font-size:13px;width:100%;">
+                <option value="IS_HALAL">Halal</option>
+                <option value="PARTIALLY_HALAL">Partially Halal</option>
+                <option value="NOT_HALAL">Not Halal</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:12px;margin-bottom:4px;">Cuisine Type (optional)</label>
+              <input type="text" id="saRestCuisine" placeholder="e.g. Pakistani, Lebanese..." style="padding:6px 8px;font-size:13px;width:100%;">
+            </div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saAddRest()" id="saAddRestBtn">Add Restaurant</button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">🗺️ Metro Bulk Import</div>
+        <p style="font-size:12px;color:var(--text-secondary);margin:0 0 14px;">Fetch halal restaurants from Google Places for an entire metro — searches both the metro area and each sub-city individually.</p>
+        <datalist id="metroNameList"></datalist>
+        <label>Metro Name</label>
+        <input type="text" id="metroImportName" placeholder="e.g. Bay Area CA" list="metroNameList" oninput="onMetroNameInput()" style="margin-bottom:10px;">
+        <div class="row" style="margin-bottom:10px;">
+          <div><label>Lat</label><input type="text" id="metroImportLat" placeholder="37.5485"></div>
+          <div><label>Lng</label><input type="text" id="metroImportLng" placeholder="-121.9886"></div>
+        </div>
+        <label>Sub-Cities to Search</label>
+        <div id="metroImportCitiesWrap" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;min-height:32px;padding:6px 0;"></div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <input type="text" id="metroImportCityInput" placeholder="Add a city..." style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault();addMetroCity();}">
+          <button class="btn btn-sm btn-outline" onclick="addMetroCity()">Add</button>
+        </div>
+        <button class="btn btn-gold" onclick="runMetroImport()" id="metroImportBtn">Run Import</button>
+        <div id="metroImportStatus" style="font-size:12px;color:var(--text-secondary);margin-top:10px;"></div>
+      </div>
+      <div class="section">
+        <div class="section-title">⏳ Restaurants Waiting Approval</div>
+        <div id="saRestPendingList"><div class="empty-state">Loading...</div></div>
+      </div>
+      <div class="section">
+        <div class="section-title">🍽️ Restaurant Hours Overrides</div>
+        <p style="font-size:12px;color:var(--text-secondary);margin:0 0 14px;">Search for a restaurant and override its opening hours. Overrides persist across Google Places syncs.</p>
+        <input type="text" id="restaurantSearch" placeholder="Search by name or address..." style="margin-bottom:14px;" oninput="debounceRestaurantSearch()">
+        <div id="restaurantList"><div class="empty-state">Type to search for restaurants</div></div>
+      </div>
+      <div class="section">
+        <div class="section-title">🍽️ All Restaurants</div>
+        <input type="text" id="saRestSearch" placeholder="Search restaurants..." oninput="filterSaRest()" style="margin-bottom:12px;">
+        <div id="saRestList"><div class="empty-state">Loading...</div></div>
+      </div>
+    </div>
+
+    <!-- Analytics -->
+    <div class="tab-content" id="superTabAnalytics">
+      <div class="section">
+        <div class="section-title">📊 Date Range</div>
+        <div class="row">
+          <div><label>From</label><input type="date" id="saAnalyticsFrom" onchange="saLoadAnalytics()"></div>
+          <div><label>To</label><input type="date" id="saAnalyticsTo" onchange="saLoadAnalytics()"></div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">👤 Daily Active Users</div>
+        <div id="dauStats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;"><div class="empty-state">Loading...</div></div>
+        <div style="margin-top:14px;background:var(--surface-alt);border-radius:12px;padding:16px;min-height:160px;">
+          <canvas id="dauCanvas" style="width:100%;height:140px;"></canvas>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">📈 Overview</div>
+        <div id="saAnalyticsOverview" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;"><div class="empty-state">Loading...</div></div>
+      </div>
+      <div class="section">
+        <div class="section-title">👥 Community Stats</div>
+        <div id="saAnalyticsCommunity" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;"><div class="empty-state">Loading...</div></div>
+      </div>
+      <div class="section">
+        <div class="section-title">📱 Screen Views</div>
+        <div id="analyticsScreenViews"><div class="empty-state">Loading...</div></div>
+      </div>
+      <div class="section">
+        <div class="section-title">🍽️ Top 10 Restaurants Viewed</div>
+        <div id="analyticsTopRestaurants"><div class="empty-state">Loading...</div></div>
+      </div>
+      <div class="section">
+        <div class="section-title">📅 Top 10 Event Clicks</div>
+        <div id="analyticsTopEvents"><div class="empty-state">Loading...</div></div>
+      </div>
+      <div class="section">
+        <div class="section-title">🔍 Top Searches</div>
+        <div id="analyticsTopSearches"><div class="empty-state">Loading...</div></div>
+      </div>
+      <div class="section">
+        <div class="section-title">🕌 Prayer Tracker Stats</div>
+        <div id="analyticsPrayerStats"><div class="empty-state">Loading...</div></div>
+      </div>
+      <div class="section">
+        <div class="section-title">👤 User Activity</div>
+        <div style="margin-bottom:12px;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-secondary);">
+            <input type="checkbox" id="excludeDemoToggle" onchange="loadUserStats()" style="width:auto;">
+            Exclude demo data (my devices)
+          </label>
+          <div id="demoDevicesConfig" style="display:none;margin-top:8px;">
+            <input type="text" id="demoDeviceIds" placeholder="Comma-separated device IDs to exclude" onchange="saveDemoDevices(); loadUserStats()">
+          </div>
+        </div>
+        <div id="analyticsUserList"><div class="empty-state">Loading...</div></div>
+      </div>
+      <div class="section">
+        <div class="section-title">⚙️ Feature Adoption</div>
+        <div id="analyticsFeatureAdoption"><div class="empty-state">Loading...</div></div>
+      </div>
+      <div class="section">
+        <div class="section-title">📊 Event Breakdown</div>
+        <div id="analyticsEventBreakdown"><div class="empty-state">Loading...</div></div>
+      </div>
+    </div>
+
     <!-- Accounts -->
     <div class="tab-content" id="superTabAccounts">
       <div class="section">
@@ -283,6 +574,7 @@
           <span>👥 All Accounts</span>
           <button class="btn btn-sm btn-primary" onclick="openNewAccountModal()">+ New Account</button>
         </div>
+        <input type="text" id="saAccountSearch" placeholder="Search accounts..." oninput="filterSaAccounts()" style="margin-bottom:12px;">
         <div id="accountList"><div class="empty-state">Loading...</div></div>
       </div>
     </div>
@@ -302,7 +594,66 @@
     <!-- Metro Events -->
     <div class="tab-content active" id="metroTabEvents">
       <div class="section">
-        <div class="section-title">📸 Publish Metro Event</div>
+        <div class="section-title">📸 Scan Event Flyer</div>
+        <div class="upload-area" id="meFlyerUploadArea" ondragover="event.preventDefault();this.style.borderColor='var(--gold)';" ondragleave="this.style.borderColor='';" ondrop="handleFlyerDrop(event,'me')" onclick="document.getElementById('meFlyerInput').click()">
+          <div class="upload-icon">📸</div>
+          <div class="upload-text">Drop, paste, or click to upload a flyer</div>
+          <div class="upload-hint">JPG, PNG, WebP · or Ctrl+V / ⌘V to paste from clipboard</div>
+          <input type="file" id="meFlyerInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleFlyerSelect(event,'me')">
+        </div>
+        <div id="meFlyerPreview" style="display:none;margin-bottom:14px;text-align:center;">
+          <img id="meFlyerPreviewImg" style="max-width:100%;max-height:280px;border-radius:10px;border:1px solid var(--border-light);">
+          <button class="btn btn-sm" onclick="clearFlyer('me')" style="margin-top:8px;background:var(--surface-alt);color:var(--text-secondary);">Remove Image</button>
+        </div>
+        <div id="meAdditionalFlyersContainer" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;"></div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+          <button class="btn btn-gold" onclick="extractFlyer('me')" id="meExtractBtn" disabled>✨ Extract with AI</button>
+          <button class="btn btn-sm btn-outline" onclick="toggleFlyerForm('me')">Manual Entry</button>
+          <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('meAdditionalFlyerInput').click()" style="font-size:12px;">+ Add More Flyers</button>
+          <input type="file" id="meAdditionalFlyerInput" accept="image/jpeg,image/png,image/webp" multiple style="display:none;" onchange="handleAdditionalFlyers(event,'me')">
+        </div>
+        <div id="meExtractStatus" style="display:none;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:14px;"></div>
+        <div id="meFlyerForm" style="display:none;">
+          <label>Title *</label>
+          <input type="text" id="meEvTitle" placeholder="Event title">
+          <label>Description</label>
+          <textarea id="meEvDesc" placeholder="Brief description..."></textarea>
+          <label>Location *</label>
+          <input type="text" id="meEvLocation" placeholder="Full address or venue name">
+          <label>Organizer</label>
+          <select id="meEvOrganizer" style="margin-bottom:6px;">
+            <option value="">-- Select organizer --</option>
+          </select>
+          <input type="text" id="meEvOrganizerCustom" placeholder="Or type organizer name manually" style="margin-bottom:0;">
+          <div class="row">
+            <div><label>Start *</label><input type="datetime-local" id="meEvStart"></div>
+            <div><label>End</label><input type="datetime-local" id="meEvEnd"></div>
+          </div>
+          <label>Registration URL</label>
+          <input type="text" id="meEvRegUrl" placeholder="https://...">
+          <div id="meRecurringPanel" style="display:none;margin:14px 0;border:1px solid var(--emerald-bg);border-radius:10px;padding:14px;background:var(--emerald-surface);">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-size:16px;">🔁</span>
+              <span style="font-size:13px;font-weight:600;color:var(--emerald-light);">Recurring Event Detected</span>
+            </div>
+            <div id="meRecurDesc" style="font-size:13px;color:var(--preview-value);margin-bottom:12px;"></div>
+            <label style="font-size:12px;color:var(--text-secondary);">Generate occurrences through</label>
+            <input type="date" id="meRecurRangeEnd" style="width:100%;margin:6px 0 10px;" oninput="updateRecurringPreview('me')">
+            <div id="meRecurPreviewCount" style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;"></div>
+            <button class="btn btn-primary" onclick="createRecurringEvents('me')" id="meCreateRecurBtn" style="width:100%;">Create All Occurrences</button>
+            <div style="margin-top:8px;text-align:center;">
+              <button onclick="hideRecurringPanel('me')" style="background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;text-decoration:underline;">Publish as single event instead</button>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="publishPortalEvent('me')" id="meFlyerPublishBtn" style="margin-top:14px;width:100%;">Publish Event</button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">⏳ Pending Events (from Metro Orgs)</div>
+        <div id="mePendingEventList"><div class="empty-state">Loading...</div></div>
+      </div>
+      <div class="section">
+        <div class="section-title">📸 Publish Metro Event (Manual)</div>
         <label>Title *</label>
         <input type="text" id="meTitle" placeholder="Event title">
         <label>Description</label>
@@ -310,7 +661,10 @@
         <label>Location</label>
         <input type="text" id="meLocation" placeholder="Venue address">
         <label>Organizer</label>
-        <input type="text" id="meOrganizer" placeholder="Organizer name">
+        <select id="meOrganizer" style="margin-bottom:6px;">
+          <option value="">— Select or type below —</option>
+        </select>
+        <input type="text" id="meOrganizerCustom" placeholder="Or type organizer name manually" style="margin-bottom:0;">
         <div class="row">
           <div><label>Start *</label><input type="datetime-local" id="meStartTime"></div>
           <div><label>End</label><input type="datetime-local" id="meEndTime"></div>
@@ -335,6 +689,10 @@
     </div>
     <!-- Metro Businesses -->
     <div class="tab-content" id="metroTabBusinesses">
+      <div class="section">
+        <div class="section-title">⏳ Pending Businesses</div>
+        <div id="mePendingBizList"><div class="empty-state">Loading...</div></div>
+      </div>
       <div class="section">
         <div class="section-title">🏪 Metro Businesses</div>
         <div id="metroBizList"><div class="empty-state">Loading...</div></div>
@@ -652,9 +1010,143 @@
       <div><label>End</label><input type="datetime-local" id="editEvEnd"></div>
     </div>
     <label>Registration URL</label><input type="text" id="editEvRegUrl" placeholder="https://...">
+    <div id="editEvImageSection" style="display:none;margin-top:12px;">
+      <label>Primary Image (optional — replaces existing)</label>
+      <div id="editEvImgPreview" style="margin-bottom:8px;display:none;"><img id="editEvImgThumb" style="max-width:100%;max-height:180px;border-radius:8px;border:1px solid var(--border-light);"></div>
+      <input type="file" id="editEvImgInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="handleEditEvImage(event)">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+        <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('editEvImgInput').click()">Upload Image</button>
+        <button type="button" class="btn btn-sm btn-outline" id="editEvImgClearBtn" style="display:none;" onclick="clearEditEvImage()">Remove</button>
+      </div>
+      <label>Additional Images (optional)</label>
+      <div id="editEvAddlPreview" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;"></div>
+      <input type="file" id="editEvAddlInput" accept="image/jpeg,image/png,image/webp" multiple style="display:none;" onchange="handleEditEvAddlImages(event)">
+      <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('editEvAddlInput').click()">+ Add More Images</button>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="saveEventEdit()" id="saveEventEditBtn" style="flex:1;">Save</button>
       <button class="btn btn-outline" onclick="closeModal('editEventModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Restaurant Hours Override Modal -->
+<div id="editRestaurantModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card" style="max-width:560px;">
+    <div class="modal-title">Edit Restaurant Hours</div>
+    <div id="editRestaurantName" style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;"></div>
+    <input type="hidden" id="editingRestaurantId">
+    <div id="periodsEditor"></div>
+    <button class="btn btn-sm btn-outline" style="margin-bottom:16px;" onclick="addPeriodRow()">+ Add Period</button>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveRestaurantOverride()" style="flex:1;">Save Override</button>
+      <button class="btn btn-outline" onclick="closeRestaurantEditor()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Full Business Edit Modal -->
+<div id="editMetroBizModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card" style="max-width:560px;max-height:90vh;overflow-y:auto;">
+    <div class="modal-title">Edit Business</div>
+    <input type="hidden" id="editMetroBizId">
+
+    <div class="section-title" style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:0 0 8px;">Basic Info</div>
+    <label>Name</label>
+    <input type="text" id="editMetroBizName">
+    <div class="row">
+      <div>
+        <label>Category</label>
+        <select id="editMetroBizCategory" onchange="renderKeywordChips(this.value, editSelectedKeywords=[])">
+          <option>Food &amp; Drink</option>
+          <option>Grocery</option>
+          <option>Retail</option>
+          <option>Automotive</option>
+          <option>Real Estate</option>
+          <option>Healthcare</option>
+          <option>Services</option>
+          <option>Events</option>
+          <option>Creator</option>
+        </select>
+      </div>
+      <div>
+        <label>Subcategory (optional)</label>
+        <input type="text" id="editMetroBizSubcategory">
+      </div>
+    </div>
+    <label>Description</label>
+    <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:14px;">
+      <textarea id="editMetroBizDesc" style="flex:1;margin-bottom:0;min-height:80px;"></textarea>
+      <button type="button" onclick="generateBizDescription()" style="background:#7c3aed;color:#fff;border:none;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:12px;white-space:nowrap;font-family:inherit;" title="AI generate">✨ AI</button>
+    </div>
+
+    <div class="section-title" style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:0 0 8px;">Location &amp; Contact</div>
+    <label>Address</label>
+    <input type="text" id="editMetroBizAddr">
+    <div class="row">
+      <div><label>Phone</label><input type="text" id="editMetroBizPhone"></div>
+      <div><label>Website</label><input type="text" id="editMetroBizWeb" placeholder="https://..."></div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Location Type</label>
+        <select id="editMetroBizLocationType">
+          <option value="physical">Physical Location</option>
+          <option value="service_area">Service Area</option>
+          <option value="virtual">Virtual / Online</option>
+          <option value="popup">Pop-up</option>
+        </select>
+      </div>
+      <div>
+        <label>Service Area / Metro</label>
+        <select id="editMetroBizServiceArea">
+          <option value="">-- Select Metro --</option>
+          <option>Triangle NC</option><option>Charlotte NC</option>
+          <option>Bay Area CA</option><option>Los Angeles CA</option><option>Sacramento CA</option><option>San Diego CA</option>
+          <option>DFW TX</option><option>Houston TX</option><option>San Antonio TX</option><option>Austin TX</option>
+          <option>Chicago IL</option><option>NYC Metro</option><option>DMV</option><option>Baltimore MD</option>
+          <option>Philadelphia PA</option><option>Boston MA</option><option>Detroit MI</option><option>Atlanta GA</option>
+          <option>Orlando FL</option><option>Tampa FL</option><option>Miami FL</option>
+          <option>Minneapolis MN</option><option>Columbus OH</option><option>Indianapolis IN</option>
+          <option>Nashville TN</option><option>St. Louis MO</option><option>Phoenix AZ</option>
+          <option>Las Vegas NV</option><option>Seattle WA</option><option>Denver CO</option>
+          <option>Nationwide / Remote</option><option>Virtual</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section-title" style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:0 0 8px;">Links</div>
+    <div class="row">
+      <div><label>Affiliation (optional)</label><input type="text" id="editMetroBizAffiliation"></div>
+      <div><label>Instagram URL (optional)</label><input type="text" id="editMetroBizInstagram" placeholder="https://instagram.com/..."></div>
+    </div>
+    <label>Booking / Appointment URL (optional)</label>
+    <input type="text" id="editMetroBizBooking" placeholder="https://calendly.com/...">
+    <label>Search Aliases (comma-separated, optional)</label>
+    <input type="text" id="editMetroBizAliases">
+
+    <label>Tags</label>
+    <div id="editKeywordsChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;"></div>
+
+    <div class="section-title" style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:0 0 8px;">Settings</div>
+    <label>Status</label>
+    <select id="editMetroBizStatus" style="margin-bottom:10px;">
+      <option value="approved">Approved</option>
+      <option value="pending">Pending</option>
+      <option value="rejected">Rejected</option>
+    </select>
+    <label>Enrichment</label>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+      <div id="enrichToggle" onclick="toggleEnrichment()" style="width:50px;height:28px;border-radius:14px;background:var(--surface-alt);cursor:pointer;position:relative;transition:background 0.2s;">
+        <div id="enrichToggleKnob" style="width:22px;height:22px;border-radius:11px;background:#fff;position:absolute;top:3px;left:3px;transition:left 0.2s;"></div>
+      </div>
+      <span id="enrichToggleLabel" style="font-size:14px;color:var(--text-secondary);">Enrichment disabled</span>
+      <input type="hidden" id="editDisableEnrichment" value="false">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveMetroBizEdit()" id="saveMetroBizBtn" style="flex:1;">Save Changes</button>
+      <button class="btn btn-outline" onclick="closeModal('editMetroBizModal')">Cancel</button>
     </div>
   </div>
 </div>
@@ -665,9 +1157,9 @@
 // ─── State ──────────────────────────────────────────────────────────────────
 var SESSION_KEY = 'unified_admin_session';
 var session = null; // { token, role, orgName, metro, displayName }
-var flyerData = { org: null, masjid: null }; // { base64, mime }
-var additionalFlyerImages = { org: [], masjid: [] }; // [{ data, mime }]
-var detectedRecurring = { org: null, masjid: null };
+var flyerData = { org: null, masjid: null, me: null, sa: null }; // { base64, mime }
+var additionalFlyerImages = { org: [], masjid: [], me: [], sa: [] }; // [{ data, mime }]
+var detectedRecurring = { org: null, masjid: null, me: null, sa: null };
 var janazaBase64 = null, janazaMime = null;
 var cachedEvents = {};
 var cachedAccounts = [];
@@ -750,11 +1242,22 @@ function showDashboard() {
 
   // Load data
   if (session.role === 'super_admin') {
-    loadAdminEvents();
+    loadAdminEventsNew();
     loadAccounts();
+    loadSaDashboard();
+    loadSaTickers();
+    loadSaGoal();
+    loadSaPendingEvents();
+    loadSaBusinesses();
+    loadSaRestaurants();
+    loadSaOrganizers();
+    loadMetroAreasForImport();
   } else if (session.role === 'metro_manager') {
     loadMetroEvents();
     loadMetroBusinesses();
+    loadMePendingEvents();
+    loadMePendingBiz();
+    loadMeOrganizers();
   } else if (session.role === 'community_org') {
     loadPortalStats('org');
     loadPortalEvents('org');
@@ -791,15 +1294,22 @@ function handleUnauthorized() {
 // ─── Tab switching ────────────────────────────────────────────────────────────
 function switchTab(prefix, name) {
   var capName = name.charAt(0).toUpperCase() + name.slice(1);
-  var capPrefix = prefix.charAt(0).toUpperCase() + prefix.slice(1);
-  document.querySelectorAll('#dash-' + prefix.replace('_','-') + ' .tab-btn, #dash-' + (prefix === 'super' ? 'super-admin' : prefix === 'metro' ? 'metro-manager' : prefix === 'org' ? 'community-org' : 'masjid') + ' .tab-btn').forEach(function(b) { b.classList.remove('active'); });
-  document.querySelectorAll('#dash-' + (prefix === 'super' ? 'super-admin' : prefix === 'metro' ? 'metro-manager' : prefix === 'org' ? 'community-org' : 'masjid') + ' .tab-content').forEach(function(c) { c.classList.remove('active'); });
+  var dashSuffix = prefix === 'super' ? 'super-admin' : prefix === 'metro' ? 'metro-manager' : prefix === 'org' ? 'community-org' : 'masjid';
+  document.querySelectorAll('#dash-' + dashSuffix + ' .tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('#dash-' + dashSuffix + ' .tab-content').forEach(function(c) { c.classList.remove('active'); });
   var btnId = prefix + 'TabBtn' + capName;
   var contentId = prefix + 'Tab' + capName;
   var btn = document.getElementById(btnId);
   var content = document.getElementById(contentId);
   if (btn) btn.classList.add('active');
   if (content) content.classList.add('active');
+  if (prefix === 'super' && name === 'analytics') {
+    saInitAnalyticsDateRange();
+    saLoadDAU();
+    saLoadAnalytics();
+    loadUserStats();
+    initDemoDevices();
+  }
 }
 
 // ─── Toast ───────────────────────────────────────────────────────────────────
@@ -859,7 +1369,7 @@ function authHeaders() { return { 'Content-Type': 'application/json', 'Authoriza
 async function loadAdminEvents() {
   var list = document.getElementById('saEventList');
   try {
-    var res = await fetch('/api/community-events?limit=50', { headers: { 'Authorization': 'Bearer ' + session.token } });
+    var res = await fetch('/api/admin/community-events', { headers: { 'Authorization': 'Bearer ' + session.token } });
     var data = await res.json();
     var events = Array.isArray(data) ? data : (data.events || []);
     if (!events.length) { list.innerHTML = '<div class="empty-state">No events yet</div>'; return; }
@@ -1019,6 +1529,7 @@ async function loadMetroEvents() {
     var res = await fetch('/api/metro-admin/events', { headers: authHeaders() });
     if (res.status === 401) { handleUnauthorized(); return; }
     var events = await res.json();
+    cachedEvents['me'] = events;
     document.getElementById('metroEventCount').textContent = events.length;
     if (!events.length) { list.innerHTML = '<div class="empty-state">No events in your metro</div>'; return; }
     list.innerHTML = '';
@@ -1029,7 +1540,11 @@ async function loadMetroEvents() {
       el.innerHTML = '<h3>' + escHtml(ev.title) + '</h3>' +
         '<div class="card-meta">📅 ' + d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) + ' ' + d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) + '</div>' +
         (ev.location ? '<div class="card-meta">📍 ' + escHtml(ev.location) + '</div>' : '') +
-        '<div class="card-actions"><button class="btn btn-sm btn-danger" onclick="deleteMetroEvent(' + ev.id + ')">Delete</button></div>';
+        '<div class="card-meta" style="color:var(--text-secondary);">Status: ' + (ev.status || 'approved') + (ev.organizer ? ' · ' + escHtml(ev.organizer) : '') + '</div>' +
+        '<div class="card-actions">' +
+          '<button class="btn btn-sm btn-outline" onclick="openEditEvent(' + ev.id + ',\'me\')">Edit</button>' +
+          '<button class="btn btn-sm btn-danger" onclick="deleteMetroEvent(' + ev.id + ')">Delete</button>' +
+        '</div>';
       list.appendChild(el);
     });
   } catch(e) { list.innerHTML = '<div class="empty-state">Failed to load</div>'; }
@@ -1045,7 +1560,7 @@ async function publishMetroEvent() {
   try {
     var body = {
       title: title, description: document.getElementById('meDescription').value.trim(),
-      location: document.getElementById('meLocation').value.trim(), organizer: document.getElementById('meOrganizer').value.trim(),
+      location: document.getElementById('meLocation').value.trim(), organizer: (document.getElementById('meOrganizer').value || document.getElementById('meOrganizerCustom').value).trim(),
       startTime: new Date(startTime).toISOString(),
       endTime: document.getElementById('meEndTime').value ? new Date(document.getElementById('meEndTime').value).toISOString() : null,
       recurrenceType: recur.recurrenceType, recurrenceConfig: recur.recurrenceConfig,
@@ -1055,7 +1570,8 @@ async function publishMetroEvent() {
     var data = await res.json();
     if (!res.ok) { showToast(data.error || 'Failed', true); return; }
     showToast('Published ' + data.count + ' event' + (data.count > 1 ? 's' : '') + '!');
-    ['meTitle','meDescription','meLocation','meOrganizer','meStartTime','meEndTime'].forEach(function(id) { document.getElementById(id).value = ''; });
+    ['meTitle','meDescription','meLocation','meStartTime','meEndTime','meOrganizerCustom'].forEach(function(id) { document.getElementById(id).value = ''; });
+    document.getElementById('meOrganizer').value = '';
     document.getElementById('meRecurType').value = 'none'; updateRecurUI('me');
     loadMetroEvents();
   } catch(e) { showToast('Connection error', true); }
@@ -1070,26 +1586,122 @@ async function deleteMetroEvent(id) {
   } catch(e) { showToast('Failed to delete', true); }
 }
 
+var cachedMetroBiz = [];
 async function loadMetroBusinesses() {
   var list = document.getElementById('metroBizList');
   try {
     var res = await fetch('/api/metro-admin/businesses', { headers: authHeaders() });
     if (res.status === 401) { handleUnauthorized(); return; }
     var businesses = await res.json();
+    cachedMetroBiz = businesses;
     document.getElementById('metroBizCount').textContent = businesses.length;
     if (!businesses.length) { list.innerHTML = '<div class="empty-state">No businesses in your metro</div>'; return; }
     list.innerHTML = '';
     businesses.forEach(function(biz) {
       var el = document.createElement('div');
       el.className = 'biz-card';
-      el.innerHTML = '<h3>' + escHtml(biz.name) + '</h3>' +
-        '<div class="card-meta">' + escHtml(biz.category) + (biz.address ? ' · ' + escHtml(biz.address) : '') + '</div>' +
+      el.innerHTML = '<h3>' + escHtml(biz.name) + (biz.featured ? ' ⭐' : '') + '</h3>' +
+        '<div class="card-meta">' + escHtml(biz.category || '') + (biz.address ? ' · ' + escHtml(biz.address) : '') + '</div>' +
+        '<div class="card-meta">Status: ' + (biz.status || 'approved') + '</div>' +
         '<div class="card-actions">' +
+          '<button class="btn btn-sm btn-outline" onclick="openEditMetroBiz(' + biz.id + ')">Edit</button>' +
           '<button class="btn btn-sm btn-danger" onclick="deleteMetroBiz(' + biz.id + ')">Delete</button>' +
         '</div>';
       list.appendChild(el);
     });
   } catch(e) { list.innerHTML = '<div class="empty-state">Failed to load</div>'; }
+}
+
+var editingBizSource = 'metro';
+function openEditMetroBiz(id, source) {
+  editingBizSource = source || 'metro';
+  var biz = editingBizSource === 'sa'
+    ? cachedSaBusinesses.find(function(b) { return b.id === id; })
+    : cachedMetroBiz.find(function(b) { return b.id === id; });
+  if (!biz) return;
+  editSelectedKeywords = Array.isArray(biz.filter_tags) ? biz.filter_tags.slice() : [];
+  document.getElementById('editMetroBizId').value = id;
+  document.getElementById('editMetroBizName').value = biz.name || '';
+  var catEl = document.getElementById('editMetroBizCategory');
+  if (catEl) catEl.value = biz.category || 'Services';
+  var subEl = document.getElementById('editMetroBizSubcategory');
+  if (subEl) subEl.value = biz.subcategory || '';
+  var descEl = document.getElementById('editMetroBizDesc');
+  if (descEl) descEl.value = biz.description || '';
+  document.getElementById('editMetroBizAddr').value = biz.address || '';
+  document.getElementById('editMetroBizPhone').value = biz.phone || '';
+  document.getElementById('editMetroBizWeb').value = biz.website || '';
+  var ltEl = document.getElementById('editMetroBizLocationType');
+  if (ltEl) ltEl.value = biz.location_type || 'physical';
+  var saEl = document.getElementById('editMetroBizServiceArea');
+  if (saEl) saEl.value = biz.service_area_description || biz.service_area || '';
+  var affEl = document.getElementById('editMetroBizAffiliation');
+  if (affEl) affEl.value = biz.affiliation || '';
+  var igEl = document.getElementById('editMetroBizInstagram');
+  if (igEl) igEl.value = biz.instagram_url || '';
+  var bookEl = document.getElementById('editMetroBizBooking');
+  if (bookEl) bookEl.value = biz.booking_url || '';
+  var aliasEl = document.getElementById('editMetroBizAliases');
+  if (aliasEl) aliasEl.value = Array.isArray(biz.search_aliases) ? biz.search_aliases.join(', ') : (biz.search_aliases || '');
+  document.getElementById('editMetroBizStatus').value = biz.status || 'approved';
+  renderKeywordChips(biz.category || '_default', editSelectedKeywords);
+  setEnrichToggle(biz.place_id !== 'none');
+  document.getElementById('editMetroBizModal').style.display = 'block';
+}
+
+async function generateBizDescription() {
+  var id = document.getElementById('editMetroBizId').value;
+  if (!id) return;
+  var btn = event.target;
+  btn.disabled = true; btn.textContent = '...';
+  try {
+    var res = await fetch('/api/admin/businesses/' + id + '/generate-description', { method: 'POST', headers: authHeaders() });
+    var data = await res.json();
+    if (data.description) {
+      document.getElementById('editMetroBizDesc').value = data.description;
+      showToast('Description generated!');
+    } else { showToast('Could not generate', true); }
+  } catch(e) { showToast('Error', true); }
+  finally { btn.disabled = false; btn.textContent = '✨ AI'; }
+}
+
+async function saveMetroBizEdit() {
+  var id = document.getElementById('editMetroBizId').value;
+  var btn = document.getElementById('saveMetroBizBtn');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  try {
+    var aliases = (document.getElementById('editMetroBizAliases').value || '').split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+    var body = {
+      name: document.getElementById('editMetroBizName').value.trim(),
+      category: document.getElementById('editMetroBizCategory').value,
+      subcategory: document.getElementById('editMetroBizSubcategory').value.trim(),
+      description: document.getElementById('editMetroBizDesc').value.trim(),
+      address: document.getElementById('editMetroBizAddr').value.trim(),
+      phone: document.getElementById('editMetroBizPhone').value.trim(),
+      website: document.getElementById('editMetroBizWeb').value.trim(),
+      location_type: document.getElementById('editMetroBizLocationType').value,
+      service_area_description: document.getElementById('editMetroBizServiceArea').value,
+      affiliation: document.getElementById('editMetroBizAffiliation').value.trim(),
+      instagram_url: document.getElementById('editMetroBizInstagram').value.trim(),
+      booking_url: document.getElementById('editMetroBizBooking').value.trim(),
+      search_aliases: aliases,
+      filter_tags: editSelectedKeywords.slice(),
+      status: document.getElementById('editMetroBizStatus').value,
+      disable_enrichment: document.getElementById('editDisableEnrichment').value === 'true',
+    };
+    var url, method;
+    if (editingBizSource === 'sa') {
+      url = '/api/admin/businesses/' + id; method = 'PUT';
+    } else {
+      url = '/api/metro-admin/businesses/' + id; method = 'PATCH';
+    }
+    var res = await fetch(url, { method: method, headers: authHeaders(), body: JSON.stringify(body) });
+    if (!res.ok) { var d = await res.json(); showToast(d.error || 'Failed to save', true); return; }
+    showToast('Business updated!');
+    closeModal('editMetroBizModal');
+    if (editingBizSource === 'sa') loadSaBusinesses(); else loadMetroBusinesses();
+  } catch(e) { showToast('Connection error', true); }
+  finally { btn.disabled = false; btn.textContent = 'Save Changes'; }
 }
 
 async function deleteMetroBiz(id) {
@@ -1123,7 +1735,12 @@ async function createMetroAccount() {
 }
 
 // ─── PORTAL (community_org + masjid) ─────────────────────────────────────────
-function portalPath() { return '/api/portal/' + encodeURIComponent(session.displayName || session.orgName); }
+function portalPath(suffix) {
+  var base = session.role === 'metro_manager' ? '/api/metro-admin'
+    : session.role === 'super_admin' ? '/api/admin'
+    : '/api/portal/' + encodeURIComponent(session.displayName || session.orgName);
+  return suffix ? base + '/' + suffix : base;
+}
 
 async function loadPortalStats(dashKey) {
   try {
@@ -1138,6 +1755,8 @@ async function loadPortalStats(dashKey) {
 }
 
 async function loadPortalEvents(dashKey) {
+  if (dashKey === 'me') { loadMetroEvents(); return; }
+  if (dashKey === 'sa') { loadAdminEventsNew(); return; }
   var listId = dashKey === 'org' ? 'orgEventList' : 'masjidEventList';
   var list = document.getElementById(listId);
   try {
@@ -1234,7 +1853,7 @@ function toggleFlyerForm(dashKey) {
 // ─── Clipboard paste for flyer upload ───
 document.addEventListener('paste', function(e) {
   if (!session) return;
-  var dashKey = session.role === 'community_org' ? 'org' : 'masjid';
+  var dashKey = session.role === 'community_org' ? 'org' : session.role === 'metro_manager' ? 'me' : session.role === 'super_admin' ? 'sa' : 'masjid';
   var items = e.clipboardData && e.clipboardData.items;
   if (!items) return;
   for (var i = 0; i < items.length; i++) {
@@ -1250,7 +1869,7 @@ function updateRecurringPreview(dashKey) {
   var previewEl = document.getElementById(dashKey + 'RecurPreviewCount');
   var p = detectedRecurring[dashKey];
   if (!p || !rangeEndEl.value) { previewEl.textContent = ''; return; }
-  var pfx = dashKey === 'org' ? 'orgEv' : 'masjidEv';
+  var pfx = dashKey === 'org' ? 'orgEv' : dashKey === 'me' ? 'meEv' : dashKey === 'sa' ? 'saEv' : 'masjidEv';
   var startEl = document.getElementById(pfx + 'Start');
   if (!startEl.value) { previewEl.textContent = ''; return; }
   var baseStart = new Date(startEl.value);
@@ -1286,15 +1905,19 @@ function updateRecurringPreview(dashKey) {
   previewEl.textContent = count > 0 ? 'Will create ' + count + ' occurrence' + (count !== 1 ? 's' : '') : 'No occurrences in this range';
 }
 
+function getPublishBtnEl(dashKey) {
+  return document.getElementById(dashKey + 'FlyerPublishBtn') || document.getElementById(dashKey + 'PublishBtn');
+}
+
 function hideRecurringPanel(dashKey) {
   document.getElementById(dashKey + 'RecurringPanel').style.display = 'none';
-  document.getElementById(dashKey + 'PublishBtn').style.display = 'block';
+  var pb = getPublishBtnEl(dashKey); if (pb) pb.style.display = 'block';
   detectedRecurring[dashKey] = null;
 }
 
 async function createRecurringEvents(dashKey) {
   if (!detectedRecurring[dashKey]) return;
-  var pfx = dashKey === 'org' ? 'orgEv' : 'masjidEv';
+  var pfx = dashKey === 'org' ? 'orgEv' : dashKey === 'me' ? 'meEv' : dashKey === 'sa' ? 'saEv' : 'masjidEv';
   var title = document.getElementById(pfx + 'Title').value.trim();
   var startTime = document.getElementById(pfx + 'Start').value;
   var rangeEnd = document.getElementById(dashKey + 'RecurRangeEnd').value;
@@ -1304,6 +1927,16 @@ async function createRecurringEvents(dashKey) {
   btn.disabled = true; btn.textContent = 'Creating...';
   try {
     var fd = flyerData[dashKey];
+    var recurOrg = '';
+    if (dashKey === 'me') {
+      var roSel = document.getElementById('meEvOrganizer');
+      var roCust = document.getElementById('meEvOrganizerCustom');
+      recurOrg = (roSel && roSel.value ? roSel.value : (roCust ? roCust.value : '')).trim();
+    } else if (dashKey === 'sa') {
+      var roSel2 = document.getElementById('saOrganizer');
+      var roCust2 = document.getElementById('saOrganizerCustom');
+      recurOrg = (roSel2 && roSel2.value ? roSel2.value : (roCust2 ? roCust2.value : '')).trim();
+    }
     var body = {
       title: title,
       description: document.getElementById(pfx + 'Desc').value.trim(),
@@ -1317,27 +1950,30 @@ async function createRecurringEvents(dashKey) {
       recurring: detectedRecurring[dashKey],
       rangeEnd: rangeEnd,
     };
-    var res = await fetch(portalPath() + '/events/publish-recurring', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
+    if (recurOrg) body.organizer = recurOrg;
+    var recurUrl = dashKey === 'me' ? '/api/metro-admin/events/publish-recurring' : dashKey === 'sa' ? '/api/admin/events/publish-recurring' : portalPath() + '/events/publish-recurring';
+    var res = await fetch(recurUrl, { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
     if (res.status === 401) { handleUnauthorized(); return; }
     var data = await res.json();
     if (!res.ok) { showToast(data.error || 'Failed to create occurrences', true); return; }
     showToast('Created ' + data.count + ' occurrences of "' + title + '"!');
     resetFlyerForm(dashKey);
-    loadPortalEvents(dashKey);
-    loadPortalStats(dashKey);
+    if (dashKey === 'me') { loadMetroEvents(); }
+    else if (dashKey === 'sa') { loadAdminEvents(); }
+    else { loadPortalEvents(dashKey); loadPortalStats(dashKey); }
   } catch(e) { showToast('Connection error', true); }
   finally { btn.disabled = false; btn.textContent = 'Create All Occurrences'; }
 }
 
 function resetFlyerForm(dashKey) {
-  var pfx = dashKey === 'org' ? 'orgEv' : 'masjidEv';
+  var pfx = dashKey === 'org' ? 'orgEv' : dashKey === 'me' ? 'meEv' : dashKey === 'sa' ? 'saEv' : 'masjidEv';
   [pfx+'Title', pfx+'Desc', pfx+'Location', pfx+'Start', pfx+'End', pfx+'RegUrl'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.value = '';
   });
-  document.getElementById(dashKey + 'FlyerForm').style.display = 'none';
-  document.getElementById(dashKey + 'ExtractStatus').style.display = 'none';
-  document.getElementById(dashKey + 'RecurringPanel').style.display = 'none';
-  document.getElementById(dashKey + 'PublishBtn').style.display = 'block';
+  var flyerForm = document.getElementById(dashKey + 'FlyerForm'); if (flyerForm) flyerForm.style.display = 'none';
+  var statusEl = document.getElementById(dashKey + 'ExtractStatus'); if (statusEl) statusEl.style.display = 'none';
+  var recurPanel = document.getElementById(dashKey + 'RecurringPanel'); if (recurPanel) recurPanel.style.display = 'none';
+  var pb = getPublishBtnEl(dashKey); if (pb) pb.style.display = 'block';
   detectedRecurring[dashKey] = null;
   clearFlyer(dashKey);
 }
@@ -1354,7 +1990,8 @@ async function extractFlyer(dashKey) {
     var fd = flyerData[dashKey];
     var allImages = [{ data: fd.base64, mimeType: fd.mime }];
     additionalFlyerImages[dashKey].forEach(function(img) { allImages.push({ data: img.data, mimeType: img.mime }); });
-    var res = await fetch(portalPath() + '/extract-flyer', {
+    var extractUrl = (dashKey === 'me' || dashKey === 'sa') ? '/api/admin/events/extract-flyer' : portalPath() + '/extract-flyer';
+    var res = await fetch(extractUrl, {
       method: 'POST', headers: authHeaders(),
       body: JSON.stringify({ images: allImages }),
     });
@@ -1364,7 +2001,7 @@ async function extractFlyer(dashKey) {
       statusEl.style.background = 'var(--red-surface)'; statusEl.style.color = 'var(--red)';
       statusEl.textContent = data.error || 'Extraction failed'; return;
     }
-    var pfx = dashKey === 'org' ? 'orgEv' : 'masjidEv';
+    var pfx = dashKey === 'org' ? 'orgEv' : dashKey === 'me' ? 'meEv' : dashKey === 'sa' ? 'saEv' : 'masjidEv';
     document.getElementById(pfx + 'Title').value = data.title || '';
     document.getElementById(pfx + 'Desc').value = data.description || '';
     document.getElementById(pfx + 'Location').value = data.location || '';
@@ -1373,9 +2010,31 @@ async function extractFlyer(dashKey) {
       document.getElementById(pfx + 'Start').value = data.date + 'T' + (data.startTime || '00:00');
       if (data.endTime) document.getElementById(pfx + 'End').value = data.date + 'T' + data.endTime;
     }
+    if (data.organizer) {
+      if (dashKey === 'me') {
+        var meEvOrgSel = document.getElementById('meEvOrganizer');
+        var meEvOrgCustom = document.getElementById('meEvOrganizerCustom');
+        if (meEvOrgSel) {
+          var meOpts = Array.from(meEvOrgSel.options).map(function(o) { return o.value; });
+          if (meOpts.includes(data.organizer)) { meEvOrgSel.value = data.organizer; if (meEvOrgCustom) meEvOrgCustom.value = ''; }
+          else { meEvOrgSel.value = ''; if (meEvOrgCustom) meEvOrgCustom.value = data.organizer || ''; }
+        }
+      } else if (dashKey === 'sa') {
+        var saOrgSel2 = document.getElementById('saOrganizer');
+        var saOrgCustom2 = document.getElementById('saOrganizerCustom');
+        if (saOrgSel2) {
+          var saOrgOpts = Array.from(saOrgSel2.options).map(function(o) { return o.value; });
+          if (saOrgOpts.includes(data.organizer)) { saOrgSel2.value = data.organizer; if (saOrgCustom2) saOrgCustom2.value = ''; }
+          else { saOrgSel2.value = ''; if (saOrgCustom2) saOrgCustom2.value = data.organizer; }
+        }
+      } else {
+        var orgField = document.getElementById(pfx + 'Organizer');
+        if (orgField) orgField.value = data.organizer;
+      }
+    }
     document.getElementById(dashKey + 'FlyerForm').style.display = 'block';
     var recurPanel = document.getElementById(dashKey + 'RecurringPanel');
-    var publishBtn = document.getElementById(dashKey + 'PublishBtn');
+    var publishBtn = getPublishBtnEl(dashKey);
     if (data.isRecurring && data.recurring && data.recurring.type !== 'custom') {
       detectedRecurring[dashKey] = data.recurring;
       document.getElementById(dashKey + 'RecurDesc').textContent = data.recurring.description || 'Recurring event';
@@ -1401,15 +2060,26 @@ async function extractFlyer(dashKey) {
 }
 
 async function publishPortalEvent(dashKey) {
-  var pfx = dashKey === 'org' ? 'orgEv' : 'masjidEv';
+  var pfx = dashKey === 'org' ? 'orgEv' : dashKey === 'me' ? 'meEv' : dashKey === 'sa' ? 'saEv' : 'masjidEv';
   var title = document.getElementById(pfx + 'Title').value.trim();
   var startTime = document.getElementById(pfx + 'Start').value;
   var location = document.getElementById(pfx + 'Location').value.trim();
   if (!title || !startTime || !location) { showToast('Title, start time, and location required', true); return; }
-  var btn = document.getElementById(dashKey + 'PublishBtn');
+  var btn = getPublishBtnEl(dashKey);
+  if (!btn) { showToast('UI error: publish button not found', true); return; }
   btn.disabled = true; btn.textContent = 'Publishing...';
   try {
     var fd = flyerData[dashKey];
+    var organizer = '';
+    if (dashKey === 'me') {
+      var orgSel = document.getElementById('meEvOrganizer');
+      var orgCustom = document.getElementById('meEvOrganizerCustom');
+      organizer = (orgSel && orgSel.value ? orgSel.value : (orgCustom ? orgCustom.value : '')).trim();
+    } else if (dashKey === 'sa') {
+      var saOrgSel = document.getElementById('saOrganizer');
+      var saOrgCustomEl = document.getElementById('saOrganizerCustom');
+      organizer = (saOrgSel && saOrgSel.value ? saOrgSel.value : (saOrgCustomEl ? saOrgCustomEl.value : '')).trim();
+    }
     var body = {
       title: title, description: document.getElementById(pfx + 'Desc').value.trim(),
       location: location, startTime: new Date(startTime).toISOString(),
@@ -1418,16 +2088,66 @@ async function publishPortalEvent(dashKey) {
       image: fd ? fd.base64 : null, imageMime: fd ? fd.mime : null,
       additionalImages: additionalFlyerImages[dashKey],
     };
-    var res = await fetch(portalPath() + '/events/publish', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
+    if (organizer) body.organizer = organizer;
+    var publishUrl = dashKey === 'me' ? '/api/metro-admin/events/publish' : dashKey === 'sa' ? '/api/admin/events/publish' : portalPath() + '/events/publish';
+    var res = await fetch(publishUrl, { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
     if (res.status === 401) { handleUnauthorized(); return; }
     var data = await res.json();
     if (!res.ok) { showToast(data.error || 'Failed to publish', true); return; }
     showToast('Published ' + data.count + ' event' + (data.count > 1 ? 's' : '') + '!');
     resetFlyerForm(dashKey);
-    loadPortalEvents(dashKey);
-    loadPortalStats(dashKey);
+    if (dashKey === 'me') { loadMetroEvents(); }
+    else if (dashKey === 'sa') { loadAdminEvents(); }
+    else { loadPortalEvents(dashKey); loadPortalStats(dashKey); }
   } catch(e) { showToast('Connection error', true); }
   finally { btn.disabled = false; btn.textContent = 'Publish Event'; }
+}
+
+var editEvImageData = null;
+var editEvImageMime = null;
+var editEvAdditionalImages = [];
+
+function handleEditEvImage(event) {
+  var file = event.target.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    editEvImageData = e.target.result.split(',')[1];
+    editEvImageMime = file.type;
+    var thumb = document.getElementById('editEvImgThumb');
+    var preview = document.getElementById('editEvImgPreview');
+    var clearBtn = document.getElementById('editEvImgClearBtn');
+    if (thumb) { thumb.src = e.target.result; preview.style.display = 'block'; }
+    if (clearBtn) clearBtn.style.display = 'inline-block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function handleEditEvAddlImages(event) {
+  var files = Array.from(event.target.files);
+  var container = document.getElementById('editEvAddlPreview');
+  files.forEach(function(file) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var b64 = e.target.result.split(',')[1];
+      editEvAdditionalImages.push({ base64: b64, mime: file.type });
+      var img = document.createElement('img');
+      img.src = e.target.result;
+      img.style.cssText = 'width:60px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border-light);';
+      if (container) container.appendChild(img);
+    };
+    reader.readAsDataURL(file);
+  });
+  if (event.target) event.target.value = '';
+}
+
+function clearEditEvImage() {
+  editEvImageData = null; editEvImageMime = null;
+  editEvAdditionalImages = [];
+  var input = document.getElementById('editEvImgInput'); if (input) input.value = '';
+  var addlInput = document.getElementById('editEvAddlInput'); if (addlInput) addlInput.value = '';
+  var preview = document.getElementById('editEvImgPreview'); if (preview) preview.style.display = 'none';
+  var clearBtn = document.getElementById('editEvImgClearBtn'); if (clearBtn) clearBtn.style.display = 'none';
+  var addlPreview = document.getElementById('editEvAddlPreview'); if (addlPreview) addlPreview.innerHTML = '';
 }
 
 function openEditEvent(id, dashKey) {
@@ -1442,6 +2162,9 @@ function openEditEvent(id, dashKey) {
   document.getElementById('editEvRegUrl').value = ev.registration_url || '';
   if (ev.start_time) document.getElementById('editEvStart').value = toLocalDT(new Date(ev.start_time));
   if (ev.end_time) document.getElementById('editEvEnd').value = toLocalDT(new Date(ev.end_time));
+  clearEditEvImage();
+  var imgSection = document.getElementById('editEvImageSection');
+  if (imgSection) imgSection.style.display = dashKey === 'sa' ? 'block' : 'none';
   document.getElementById('editEventModal').style.display = 'block';
 }
 
@@ -1451,19 +2174,37 @@ async function saveEventEdit() {
   var btn = document.getElementById('saveEventEditBtn');
   btn.disabled = true; btn.textContent = 'Saving...';
   try {
-    var body = {
-      title: document.getElementById('editEvTitle').value.trim(),
-      description: document.getElementById('editEvDesc').value.trim(),
-      location: document.getElementById('editEvLocation').value.trim(),
-      registrationUrl: document.getElementById('editEvRegUrl').value.trim(),
-      startTime: document.getElementById('editEvStart').value ? new Date(document.getElementById('editEvStart').value).toISOString() : undefined,
-      endTime: document.getElementById('editEvEnd').value ? new Date(document.getElementById('editEvEnd').value).toISOString() : undefined,
-    };
-    var res = await fetch(portalPath() + '/events/' + id, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(body) });
+    var title = document.getElementById('editEvTitle').value.trim();
+    var description = document.getElementById('editEvDesc').value.trim();
+    var location = document.getElementById('editEvLocation').value.trim();
+    var regUrl = document.getElementById('editEvRegUrl').value.trim();
+    var startVal = document.getElementById('editEvStart').value;
+    var endVal = document.getElementById('editEvEnd').value;
+    var startISO = startVal ? new Date(startVal).toISOString() : undefined;
+    var endISO = endVal ? new Date(endVal).toISOString() : undefined;
+    var body;
+    var evUrl, evMethod;
+    if (dashKey === 'me') {
+      body = { title: title, description: description, location: location,
+               registration_url: regUrl, start_time: startISO, end_time: endISO };
+      evUrl = '/api/metro-admin/events/' + id; evMethod = 'PATCH';
+    } else if (dashKey === 'sa') {
+      body = { title: title, description: description, location: location,
+               registration_url: regUrl, start_time: startISO, end_time: endISO };
+      if (editEvImageData) { body.image_data = editEvImageData; body.image_mime = editEvImageMime; }
+      if (editEvAdditionalImages.length) { body.additional_images = editEvAdditionalImages; }
+      evUrl = '/api/admin/community-events/' + id; evMethod = 'PUT';
+    } else {
+      body = { title: title, description: description, location: location,
+               registrationUrl: regUrl, startTime: startISO, endTime: endISO };
+      evUrl = portalPath() + '/events/' + id; evMethod = 'PUT';
+    }
+    var res = await fetch(evUrl, { method: evMethod, headers: authHeaders(), body: JSON.stringify(body) });
     if (res.status === 401) { handleUnauthorized(); return; }
     if (!res.ok) { showToast('Failed to save', true); return; }
     showToast('Event updated');
     closeModal('editEventModal');
+    clearEditEvImage();
     loadPortalEvents(dashKey);
   } catch(e) { showToast('Connection error', true); }
   finally { btn.disabled = false; btn.textContent = 'Save'; }
@@ -1472,7 +2213,10 @@ async function saveEventEdit() {
 async function deletePortalEvent(id, dashKey) {
   if (!confirm('Delete this event?')) return;
   try {
-    var res = await fetch(portalPath() + '/events/' + id, { method: 'DELETE', headers: authHeaders() });
+    var delUrl = dashKey === 'me' ? '/api/metro-admin/events/' + id :
+                 dashKey === 'sa' ? '/api/admin/community-events/' + id :
+                 portalPath() + '/events/' + id;
+    var res = await fetch(delUrl, { method: 'DELETE', headers: authHeaders() });
     if (res.status === 401) { handleUnauthorized(); return; }
     showToast('Event deleted');
     loadPortalEvents(dashKey);
@@ -1746,10 +2490,1164 @@ async function loadJanazaHistory() {
   } catch(e) { list.innerHTML = '<div class="empty-state">Failed to load</div>'; }
 }
 
+function switchSuperTab(name) { switchTab('super', name.toLowerCase()); }
+
+// ─── SA Dashboard ─────────────────────────────────────────────────────────────
+var cachedSaAllEvents = [];
+var cachedSaBusinesses = [];
+var cachedSaRestaurants = [];
+var saBizFilter = 'all';
+var saBizPlaceData = null;
+var saRestPlaceData = null;
+
+async function loadSaDashboard() {
+  try {
+    var [evRes, pendRes, acRes, pendBizRes, allBizRes, pendRestRes] = await Promise.all([
+      fetch('/api/admin/community-events', { headers: authHeaders() }),
+      fetch('/api/admin/community-events/pending', { headers: authHeaders() }),
+      fetch('/api/admin/accounts', { headers: authHeaders() }),
+      fetch('/api/admin/businesses?status=pending', { headers: authHeaders() }),
+      fetch('/api/admin/businesses?status=approved', { headers: authHeaders() }),
+      fetch('/api/admin/restaurant-submissions?status=pending', { headers: authHeaders() }),
+    ]);
+    var evData = evRes.ok ? await evRes.json() : [];
+    var pendData = pendRes.ok ? await pendRes.json() : [];
+    var acData = acRes.ok ? await acRes.json() : [];
+    var pendBizData = pendBizRes.ok ? await pendBizRes.json() : [];
+    var allBizData = allBizRes.ok ? await allBizRes.json() : [];
+    var pendRestData = pendRestRes.ok ? await pendRestRes.json() : [];
+    var el = document.getElementById('saDashEvents'); if (el) el.textContent = Array.isArray(evData) ? evData.length : '—';
+    var pl = document.getElementById('saDashPendingEv'); if (pl) pl.textContent = Array.isArray(pendData) ? pendData.length : '—';
+    var al = document.getElementById('saDashAccounts'); if (al) al.textContent = Array.isArray(acData) ? acData.length : '—';
+    var bl = document.getElementById('saDashBiz'); if (bl) bl.textContent = Array.isArray(allBizData) ? allBizData.length : '—';
+    var pbl = document.getElementById('saDashPendingBiz'); if (pbl) pbl.textContent = Array.isArray(pendBizData) ? pendBizData.length : '—';
+    var prl = document.getElementById('saDashPendingRest'); if (prl) prl.textContent = Array.isArray(pendRestData) ? pendRestData.length : '—';
+  } catch(e) {}
+}
+
+function saDeepLinkPendingEvents() {
+  switchSuperTab('Events');
+  var sel = document.getElementById('saEvFilter');
+  if (sel) { sel.value = 'pending'; filterSaEvents(); }
+}
+
+function saDeepLinkPendingBiz() {
+  switchSuperTab('Businesses');
+  saBizSetFilter('pending');
+}
+
+function saDeepLinkPendingRest() {
+  switchSuperTab('Restaurants');
+  setTimeout(function() {
+    var el = document.getElementById('saRestPendingList');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 100);
+}
+
+// ─── SA Comms ─────────────────────────────────────────────────────────────────
+function saSwitchPushType(type) {
+  ['general','janaza','event'].forEach(function(t) {
+    var btn = document.getElementById('pushType' + t.charAt(0).toUpperCase() + t.slice(1));
+    var panel = document.getElementById('saPush' + t.charAt(0).toUpperCase() + t.slice(1));
+    if (btn) { btn.style.borderColor = t === type ? 'var(--gold)' : ''; btn.style.color = t === type ? 'var(--gold)' : ''; }
+    if (panel) panel.style.display = t === type ? 'block' : 'none';
+  });
+  if (type === 'janaza') loadSaJanazaMasjids();
+  if (type === 'event') loadSaEventPushDropdown();
+}
+
+async function loadSaJanazaMasjids() {
+  var sel = document.getElementById('saPushJzMasjid'); if (!sel) return;
+  try {
+    var res = await fetch('/api/masjids', { headers: authHeaders() });
+    if (!res.ok) return;
+    var masjids = await res.json();
+    sel.innerHTML = '<option value="">Select masjid...</option>';
+    masjids.forEach(function(m) {
+      var opt = document.createElement('option');
+      opt.value = m.display_name || m.org_name;
+      opt.textContent = m.display_name || m.org_name;
+      if (m.lat != null) opt.dataset.lat = m.lat;
+      if (m.lng != null) opt.dataset.lng = m.lng;
+      sel.appendChild(opt);
+    });
+  } catch(e) {}
+}
+
+async function loadSaEventPushDropdown() {
+  var sel = document.getElementById('saPushEventId'); if (!sel) return;
+  try {
+    var res = await fetch('/api/admin/community-events', { headers: authHeaders() });
+    if (!res.ok) return;
+    var data = await res.json();
+    var events = Array.isArray(data) ? data : (data.events || []);
+    var future = events.filter(function(e) { return new Date(e.start_time) > new Date(); }).slice(0, 30);
+    sel.innerHTML = '<option value="">Select event...</option>' +
+      future.map(function(e) { return '<option value="' + e.id + '">' + escHtml(e.title) + ' — ' + new Date(e.start_time).toLocaleDateString() + '</option>'; }).join('');
+  } catch(e) {}
+}
+
+async function saSendGeneralPush() {
+  var title = document.getElementById('saPushTitle').value.trim();
+  var body = document.getElementById('saPushBody').value.trim();
+  var link = document.getElementById('saPushLink').value.trim();
+  if (!title || !body) { showToast('Title and message required', true); return; }
+  var btn = document.getElementById('saSendPushBtn');
+  btn.disabled = true; btn.textContent = 'Sending...';
+  try {
+    var payload = { title: title, body: body, type: 'general' }; if (link) payload.link = link;
+    var res = await fetch('/api/admin/push', { method: 'POST', headers: authHeaders(), body: JSON.stringify(payload) });
+    if (!res.ok) { var d = await res.json(); showToast(d.error || 'Failed', true); return; }
+    var d = await res.json();
+    showToast(d.sent ? 'Sent to ' + d.sent + ' users!' : 'Sent!');
+    ['saPushTitle','saPushBody','saPushLink'].forEach(function(id) { document.getElementById(id).value = ''; });
+  } catch(e) { showToast('Connection error', true); }
+  finally { btn.disabled = false; btn.textContent = 'Send to All Users'; }
+}
+
+async function saSendJanazaPush() {
+  var name = document.getElementById('saPushJzName').value.trim();
+  var sel = document.getElementById('saPushJzMasjid');
+  var prayerTime = document.getElementById('saPushJzTime').value.trim();
+  var prayerLocation = document.getElementById('saPushJzLocation').value.trim();
+  if (!name) { showToast('Deceased name required', true); return; }
+  var masjidName = sel ? sel.value : '';
+  var selectedOpt = sel ? sel.options[sel.selectedIndex] : null;
+  var masjidLat = selectedOpt && selectedOpt.dataset.lat ? parseFloat(selectedOpt.dataset.lat) : null;
+  var masjidLng = selectedOpt && selectedOpt.dataset.lng ? parseFloat(selectedOpt.dataset.lng) : null;
+  if (!masjidName || masjidLat == null || masjidLng == null) {
+    showToast('Please select a masjid from the dropdown (coordinates required)', true); return;
+  }
+  var detailsParts = ['Janaza prayer for ' + name];
+  if (prayerTime) detailsParts.push('Time: ' + prayerTime);
+  if (prayerLocation) detailsParts.push('Location: ' + prayerLocation);
+  var btn = document.getElementById('saSendJzBtn');
+  btn.disabled = true; btn.textContent = 'Sending...';
+  try {
+    var payload = {
+      masjidName: masjidName,
+      masjidLat: masjidLat,
+      masjidLng: masjidLng,
+      details: detailsParts.join(' · '),
+    };
+    var res = await fetch('/api/admin/push/janaza', { method: 'POST', headers: authHeaders(), body: JSON.stringify(payload) });
+    if (!res.ok) { var d = await res.json(); showToast(d.error || 'Failed', true); return; }
+    showToast('Janaza alert sent!');
+    ['saPushJzName','saPushJzTime','saPushJzLocation'].forEach(function(id) { document.getElementById(id).value = ''; });
+    if (sel) sel.value = '';
+  } catch(e) { showToast('Connection error', true); }
+  finally { btn.disabled = false; btn.textContent = 'Send Janaza Alert'; }
+}
+
+async function saSendEventPush() {
+  var evId = document.getElementById('saPushEventId').value;
+  if (!evId) { showToast('Select an event', true); return; }
+  var btn = document.getElementById('saSendEventPushBtn');
+  btn.disabled = true; btn.textContent = 'Sending...';
+  try {
+    var payload = { eventId: evId, message: document.getElementById('saPushEventMsg').value.trim() };
+    var res = await fetch('/api/admin/push/event', { method: 'POST', headers: authHeaders(), body: JSON.stringify(payload) });
+    if (!res.ok) { var d = await res.json(); showToast(d.error || 'Failed', true); return; }
+    showToast('Event notification sent!');
+    document.getElementById('saPushEventMsg').value = '';
+  } catch(e) { showToast('Connection error', true); }
+  finally { btn.disabled = false; btn.textContent = 'Send Event Notification'; }
+}
+
+async function loadSaTickers() {
+  var list = document.getElementById('saTickerList'); if (!list) return;
+  try {
+    var res = await fetch('/api/ticker');
+    if (!res.ok) { list.innerHTML = '<div class="empty-state">Failed to load</div>'; return; }
+    var items = await res.json();
+    if (!items.length) { list.innerHTML = '<div class="empty-state">No tickers yet</div>'; return; }
+    list.innerHTML = items.map(function(t) {
+      return '<div class="event-card" style="display:flex;align-items:center;gap:10px;">' +
+        '<span style="flex:1;font-size:13px;">' + escHtml(t.message || t.text || t.content || '') + '</span>' +
+        '<button class="btn btn-sm btn-danger" onclick="saRemoveTicker(' + t.id + ')">×</button></div>';
+    }).join('');
+  } catch(e) { list.innerHTML = '<div class="empty-state">Failed to load</div>'; }
+}
+
+async function saPostTicker() {
+  var text = document.getElementById('saTickerText').value.trim();
+  if (!text) { showToast('Message required', true); return; }
+  var typeEl = document.getElementById('saTickerType');
+  var expiresEl = document.getElementById('saTickerExpires');
+  var payload = { message: text, type: typeEl ? typeEl.value : 'info' };
+  if (expiresEl && expiresEl.value) payload.expires_at = new Date(expiresEl.value).toISOString();
+  try {
+    var res = await fetch('/api/ticker', { method: 'POST', headers: authHeaders(), body: JSON.stringify(payload) });
+    if (!res.ok) { showToast('Failed to post', true); return; }
+    showToast('Ticker posted!');
+    document.getElementById('saTickerText').value = '';
+    if (typeEl) typeEl.value = 'info';
+    if (expiresEl) expiresEl.value = '';
+    loadSaTickers();
+  } catch(e) { showToast('Connection error', true); }
+}
+
+async function saRemoveTicker(id) {
+  if (!confirm('Remove this ticker?')) return;
+  try {
+    await fetch('/api/ticker/' + id, { method: 'DELETE', headers: authHeaders() });
+    loadSaTickers();
+  } catch(e) { showToast('Failed', true); }
+}
+
+async function loadSaGoal() {
+  try {
+    var res = await fetch('/api/community-goal');
+    if (!res.ok) return;
+    var g = await res.json();
+    if (g) {
+      var targetEl = document.getElementById('saGoalTarget'); if (targetEl) targetEl.value = g.target || g.monthly_target || '';
+    }
+  } catch(e) {}
+}
+
+async function saSaveCommunityGoal() {
+  var btn = document.getElementById('saSaveGoalBtn');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  try {
+    var target = parseFloat(document.getElementById('saGoalTarget').value) || 0;
+    var res = await fetch('/api/community-goal', { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ target: target }) });
+    if (!res.ok) { showToast('Failed to save', true); return; }
+    showToast('Community goal saved!');
+  } catch(e) { showToast('Connection error', true); }
+  finally { btn.disabled = false; btn.textContent = 'Save Goal'; }
+}
+
+// ─── SA Events ────────────────────────────────────────────────────────────────
+async function loadSaPendingEvents() {
+  var list = document.getElementById('saPendingEventList'); if (!list) return;
+  try {
+    var res = await fetch('/api/admin/community-events/pending', { headers: authHeaders() });
+    if (!res.ok) { list.innerHTML = '<div class="empty-state">Failed to load</div>'; return; }
+    var events = await res.json();
+    var badge = document.getElementById('saPendingEvBadge');
+    if (badge) badge.textContent = events.length ? events.length + ' pending' : '';
+    var el = document.getElementById('saDashPendingEv'); if (el) el.textContent = events.length;
+    if (!events.length) { list.innerHTML = '<div class="empty-state">No pending events</div>'; return; }
+    list.innerHTML = '';
+    events.forEach(function(ev) {
+      var d = new Date(ev.start_time);
+      var card = document.createElement('div');
+      card.className = 'event-card';
+      card.innerHTML = '<h3>' + escHtml(ev.title) + '</h3>' +
+        '<div class="card-meta">📅 ' + d.toLocaleDateString() + ' · ' + (ev.organizer ? escHtml(ev.organizer) : 'Unknown') + '</div>' +
+        (ev.location ? '<div class="card-meta">📍 ' + escHtml(ev.location) + '</div>' : '') +
+        '<div class="card-actions">' +
+          '<button class="btn btn-sm btn-primary" onclick="saApproveEvent(' + ev.id + ')">Approve</button>' +
+          '<button class="btn btn-sm btn-danger" onclick="saRejectEvent(' + ev.id + ')">Reject</button>' +
+        '</div>';
+      list.appendChild(card);
+    });
+  } catch(e) { list.innerHTML = '<div class="empty-state">Failed to load</div>'; }
+}
+
+async function saApproveEvent(id) {
+  try {
+    var res = await fetch('/api/admin/community-events/' + id, { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ status: 'approved' }) });
+    if (!res.ok) { showToast('Failed to approve', true); return; }
+    showToast('Event approved!'); loadSaPendingEvents(); loadAdminEventsNew();
+  } catch(e) { showToast('Connection error', true); }
+}
+
+async function saRejectEvent(id) {
+  if (!confirm('Reject and delete this event?')) return;
+  try {
+    await fetch('/api/admin/community-events/' + id, { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ status: 'rejected' }) });
+    showToast('Event rejected'); loadSaPendingEvents();
+  } catch(e) { showToast('Connection error', true); }
+}
+
+async function saImportCalendar() {
+  var btn = document.getElementById('saImportCalBtn');
+  btn.disabled = true; btn.textContent = 'Importing...';
+  var status = document.getElementById('saCalStatus');
+  status.style.display = 'block'; status.style.background = 'var(--emerald-surface)'; status.style.color = 'var(--emerald-light)';
+  status.textContent = 'Fetching and parsing all configured calendars...';
+  try {
+    var res = await fetch('/api/admin/import-calendar-events', { method: 'POST', headers: authHeaders() });
+    var data = await res.json();
+    if (!res.ok) { status.style.background = 'var(--red-surface)'; status.style.color = 'var(--red)'; status.textContent = data.error || 'Import failed'; return; }
+    status.textContent = 'Imported ' + (data.imported || 0) + ' event(s), skipped ' + (data.skipped || 0) + ' duplicates.';
+    loadAdminEventsNew();
+  } catch(e) { status.style.background = 'var(--red-surface)'; status.style.color = 'var(--red)'; status.textContent = 'Connection error'; }
+  finally { btn.disabled = false; btn.textContent = 'Import Events'; }
+}
+
+var saEvAllEvents = [];
+var saEvPage = 0;
+var saEvPerPage = 25;
+var saEvFiltered = [];
+
+function filterSaEvents() {
+  var search = (document.getElementById('saEvSearch').value || '').toLowerCase();
+  var filter = document.getElementById('saEvFilter').value;
+  saEvFiltered = saEvAllEvents.filter(function(ev) {
+    var matchStatus = filter === 'all' || ev.status === filter;
+    var matchSearch = !search || (ev.title || '').toLowerCase().includes(search) || (ev.organizer || '').toLowerCase().includes(search);
+    return matchStatus && matchSearch;
+  });
+  saEvPage = 0;
+  renderSaEventsPage();
+}
+
+function renderSaEventsPage() {
+  var list = document.getElementById('saEventList');
+  var paginator = document.getElementById('saEvPaginator');
+  var pageLabel = document.getElementById('saEvPageLabel');
+  var prevBtn = document.getElementById('saEvPrevBtn');
+  var nextBtn = document.getElementById('saEvNextBtn');
+  if (!saEvFiltered.length) { list.innerHTML = '<div class="empty-state">No events found</div>'; if (paginator) paginator.style.display = 'none'; return; }
+  var totalPages = Math.ceil(saEvFiltered.length / saEvPerPage);
+  var start = saEvPage * saEvPerPage;
+  var page = saEvFiltered.slice(start, start + saEvPerPage);
+  list.innerHTML = '';
+  page.forEach(function(ev) {
+    var d = new Date(ev.start_time);
+    var el = document.createElement('div');
+    el.className = 'event-card';
+    el.innerHTML = (ev.image_url ? '<img class="thumb" src="' + ev.image_url + '">' : '') +
+      '<h3>' + escHtml(ev.title) + '</h3>' +
+      '<div class="card-meta">📅 ' + d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) + ' · ' + (ev.status || 'approved') + '</div>' +
+      (ev.location ? '<div class="card-meta">📍 ' + escHtml(ev.location) + '</div>' : '') +
+      '<div class="card-actions">' +
+        '<button class="btn btn-sm btn-outline" onclick="openEditEvent(' + ev.id + ',\'sa\')">Edit</button>' +
+        '<button class="btn btn-sm btn-danger" onclick="deletePortalEvent(' + ev.id + ',\'sa\')">Delete</button>' +
+      '</div>';
+    list.appendChild(el);
+  });
+  if (totalPages > 1) {
+    paginator.style.display = 'flex';
+    pageLabel.textContent = 'Page ' + (saEvPage + 1) + ' of ' + totalPages + ' (' + saEvFiltered.length + ' total)';
+    if (prevBtn) prevBtn.disabled = saEvPage === 0;
+    if (nextBtn) nextBtn.disabled = saEvPage >= totalPages - 1;
+  } else {
+    paginator.style.display = 'none';
+  }
+}
+
+function saEvChangePage(delta) {
+  var totalPages = Math.ceil(saEvFiltered.length / saEvPerPage);
+  saEvPage = Math.max(0, Math.min(totalPages - 1, saEvPage + delta));
+  renderSaEventsPage();
+  document.getElementById('saEventList').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function loadAdminEventsNew() {
+  try {
+    var res = await fetch('/api/admin/community-events', { headers: { 'Authorization': 'Bearer ' + session.token } });
+    var data = await res.json();
+    saEvAllEvents = Array.isArray(data) ? data : (data.events || []);
+    cachedEvents['sa'] = saEvAllEvents;
+    filterSaEvents();
+  } catch(e) { var list = document.getElementById('saEventList'); if (list) list.innerHTML = '<div class="empty-state">Failed to load</div>'; }
+}
+
+function filterSaAccounts() {
+  var search = (document.getElementById('saAccountSearch').value || '').toLowerCase();
+  var list = document.getElementById('accountList');
+  var filtered = cachedAccounts.filter(function(acc) {
+    return !search || (acc.org_name || '').toLowerCase().includes(search) || (acc.display_name || '').toLowerCase().includes(search) || (acc.metro || '').toLowerCase().includes(search);
+  });
+  list.innerHTML = '';
+  if (!filtered.length) { list.innerHTML = '<div class="empty-state">No accounts found</div>'; return; }
+  filtered.forEach(function(acc) {
+    var el = document.createElement('div');
+    el.className = 'account-card';
+    el.innerHTML = '<h3>' + escHtml(acc.display_name || acc.org_name) + ' <span class="role-pill ' + acc.role + '">' + acc.role.replace('_',' ') + '</span></h3>' +
+      '<div class="card-meta">@' + escHtml(acc.org_name) + (acc.metro ? ' · ' + escHtml(acc.metro) : '') + '</div>' +
+      '<div class="card-actions">' +
+        '<button class="btn btn-sm btn-outline" onclick="openEditAccountModal(' + acc.id + ')">Edit</button>' +
+        '<button class="btn btn-sm btn-danger" onclick="deleteAccount(' + acc.id + ', \'' + escAttr(acc.org_name) + '\')">Delete</button>' +
+      '</div>';
+    list.appendChild(el);
+  });
+}
+
+// ─── SA Businesses ────────────────────────────────────────────────────────────
+async function saLookupBiz() {
+  var input = document.getElementById('saBizPlaceInput').value.trim();
+  if (!input) { showToast('Enter a Google Maps URL or Place ID', true); return; }
+  var btn = document.getElementById('saLookupBizBtn');
+  btn.disabled = true; btn.textContent = 'Looking up...';
+  try {
+    var res = await fetch('/api/admin/businesses/lookup', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ place_id: input }) });
+    var data = await res.json();
+    if (!res.ok || !data.name) { showToast(data.error || 'Not found', true); return; }
+    saBizPlaceData = data;
+    document.getElementById('saBizLookupName').textContent = data.name;
+    document.getElementById('saBizLookupAddr').textContent = data.address || '';
+    document.getElementById('saBizLookupResult').style.display = 'block';
+  } catch(e) { showToast('Connection error', true); }
+  finally { btn.disabled = false; btn.textContent = 'Look Up'; }
+}
+
+async function saAddBiz() {
+  if (!saBizPlaceData) return;
+  var btn = document.getElementById('saAddBizBtn');
+  btn.disabled = true; btn.textContent = 'Adding...';
+  try {
+    var bizBody = Object.assign({}, saBizPlaceData);
+    if (!bizBody.category) bizBody.category = 'Services';
+    var res = await fetch('/api/admin/businesses/add', { method: 'POST', headers: authHeaders(), body: JSON.stringify(bizBody) });
+    var data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Failed to add', true); return; }
+    showToast('Business added!');
+    document.getElementById('saBizLookupResult').style.display = 'none';
+    document.getElementById('saBizPlaceInput').value = '';
+    saBizPlaceData = null;
+    loadSaBusinesses();
+  } catch(e) { showToast('Connection error', true); }
+  finally { btn.disabled = false; btn.textContent = 'Add Business'; }
+}
+
+async function loadSaBusinesses() {
+  try {
+    var res = await fetch('/api/admin/businesses', { headers: authHeaders() });
+    if (!res.ok) return;
+    var data = await res.json();
+    cachedSaBusinesses = Array.isArray(data) ? data : (data.businesses || data.results || []);
+    filterSaBiz();
+  } catch(e) {}
+}
+
+function saBizSetFilter(status) {
+  saBizFilter = status;
+  var ids = ['All','Pending','Approved','Rejected'];
+  ids.forEach(function(s) {
+    var btn = document.getElementById('saBizFilter' + s);
+    if (!btn) return;
+    var active = s.toLowerCase() === status;
+    btn.style.borderColor = active ? 'var(--gold)' : '';
+    btn.style.color = active ? 'var(--gold)' : '';
+  });
+  filterSaBiz();
+}
+
+function filterSaBiz() {
+  var list = document.getElementById('saBizList'); if (!list) return;
+  var search = (document.getElementById('saBizSearch').value || '').toLowerCase();
+  var filtered = cachedSaBusinesses.filter(function(b) {
+    var st = b.status || 'approved';
+    var matchFilter = saBizFilter === 'all' || st === saBizFilter;
+    var matchSearch = !search || (b.name || '').toLowerCase().includes(search)
+      || (b.address || '').toLowerCase().includes(search)
+      || (b.category || '').toLowerCase().includes(search)
+      || (b.subcategory || '').toLowerCase().includes(search)
+      || (b.metro || '').toLowerCase().includes(search);
+    return matchFilter && matchSearch;
+  });
+  if (!filtered.length) { list.innerHTML = '<div class="empty-state">No businesses found</div>'; return; }
+  list.innerHTML = '';
+  filtered.slice(0, 50).forEach(function(b) {
+    var el = document.createElement('div');
+    el.className = 'biz-card';
+    el.innerHTML = '<h3>' + escHtml(b.name) + (b.is_featured ? ' ⭐' : '') + '</h3>' +
+      (b.address ? '<div class="card-meta">📍 ' + escHtml(b.address) + '</div>' : '') +
+      '<div class="card-meta">Status: ' + (b.status || 'approved') + (b.category ? ' · ' + escHtml(b.category) : '') + '</div>' +
+      '<div class="card-actions">' +
+        (b.status === 'pending' ? '<button class="btn btn-sm btn-primary" onclick="saApproveBiz(' + b.id + ')">Approve</button>' : '') +
+        '<button class="btn btn-sm btn-outline" onclick="openEditMetroBiz(' + b.id + ',\'sa\')">Edit</button>' +
+        (b.is_featured
+          ? '<button class="btn btn-sm btn-outline" onclick="saToggleFeatured(' + b.id + ',false)">★ Unfeature</button>'
+          : '<button class="btn btn-sm btn-outline" onclick="saToggleFeatured(' + b.id + ',true)">☆ Feature</button>') +
+        '<button class="btn btn-sm btn-danger" onclick="saDeleteBiz(' + b.id + ')">Delete</button>' +
+      '</div>';
+    list.appendChild(el);
+  });
+}
+
+async function saToggleFeatured(id, featured) {
+  try {
+    var res = await fetch('/api/admin/businesses/' + id + '/featured', { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ featured: featured }) });
+    if (!res.ok) { showToast('Failed', true); return; }
+    showToast(featured ? '⭐ Featured!' : 'Unfeatured');
+    loadSaBusinesses();
+  } catch(e) { showToast('Error', true); }
+}
+
+async function saApproveBiz(id) {
+  try {
+    var res = await fetch('/api/admin/businesses/' + id, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ status: 'approved' }) });
+    if (!res.ok) { showToast('Failed', true); return; }
+    showToast('Approved!'); loadSaBusinesses();
+  } catch(e) { showToast('Error', true); }
+}
+
+async function saDeleteBiz(id) {
+  if (!confirm('Delete this business?')) return;
+  try {
+    await fetch('/api/admin/businesses/' + id, { method: 'DELETE', headers: authHeaders() });
+    showToast('Deleted'); loadSaBusinesses();
+  } catch(e) { showToast('Error', true); }
+}
+
+// ─── SA Restaurants ───────────────────────────────────────────────────────────
+async function saLookupRest() {
+  var input = document.getElementById('saRestPlaceInput').value.trim();
+  if (!input) { showToast('Enter a Google Maps URL or Place ID', true); return; }
+  var btn = document.getElementById('saLookupRestBtn');
+  btn.disabled = true; btn.textContent = 'Looking up...';
+  try {
+    var res = await fetch('/api/admin/restaurants/lookup', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ place_id: input }) });
+    var data = await res.json();
+    if (!res.ok || !data.name) { showToast(data.error || 'Not found', true); return; }
+    saRestPlaceData = data;
+    document.getElementById('saRestLookupName').textContent = data.name;
+    document.getElementById('saRestLookupAddr').textContent = data.formatted_address || '';
+    document.getElementById('saRestLookupResult').style.display = 'block';
+  } catch(e) { showToast('Connection error', true); }
+  finally { btn.disabled = false; btn.textContent = 'Look Up'; }
+}
+
+async function saAddRest() {
+  if (!saRestPlaceData) return;
+  var btn = document.getElementById('saAddRestBtn');
+  btn.disabled = true; btn.textContent = 'Adding...';
+  try {
+    var halalSel = document.getElementById('saRestHalal');
+    var cuisineIn = document.getElementById('saRestCuisine');
+    var body = Object.assign({}, saRestPlaceData);
+    if (halalSel) body.is_halal = halalSel.value;
+    if (cuisineIn && cuisineIn.value.trim()) {
+      body.cuisine_types = cuisineIn.value.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+    }
+    var res = await fetch('/api/admin/restaurants', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
+    var data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Failed to add', true); return; }
+    showToast('Restaurant added!');
+    document.getElementById('saRestLookupResult').style.display = 'none';
+    document.getElementById('saRestPlaceInput').value = '';
+    if (halalSel) halalSel.value = 'IS_HALAL';
+    if (cuisineIn) cuisineIn.value = '';
+    saRestPlaceData = null;
+    loadSaRestaurants();
+  } catch(e) { showToast('Connection error', true); }
+  finally { btn.disabled = false; btn.textContent = 'Add Restaurant'; }
+}
+
+async function loadSaRestaurants() {
+  try {
+    var [restRes, pendRes] = await Promise.all([
+      fetch('/api/admin/restaurants', { headers: authHeaders() }),
+      fetch('/api/admin/restaurant-submissions', { headers: authHeaders() }),
+    ]);
+    if (restRes.ok) {
+      var data = await restRes.json();
+      cachedSaRestaurants = Array.isArray(data) ? data : (data.restaurants || data.results || []);
+      filterSaRest();
+    }
+    if (pendRes.ok) {
+      var pending = await pendRes.json();
+      renderSaRestPending(pending);
+    }
+  } catch(e) {}
+}
+
+function filterSaRest() {
+  var list = document.getElementById('saRestList'); if (!list) return;
+  var search = (document.getElementById('saRestSearch').value || '').toLowerCase();
+  var filtered = cachedSaRestaurants.filter(function(r) {
+    return !search || (r.name || '').toLowerCase().includes(search) || (r.formatted_address || '').toLowerCase().includes(search);
+  });
+  if (!filtered.length) { list.innerHTML = '<div class="empty-state">No restaurants found</div>'; return; }
+  list.innerHTML = '';
+  filtered.slice(0, 50).forEach(function(r) {
+    var el = document.createElement('div');
+    el.className = 'biz-card';
+    el.innerHTML = '<h3>' + escHtml(r.name) + '</h3>' +
+      (r.formatted_address ? '<div class="card-meta">📍 ' + escHtml(r.formatted_address) + '</div>' : '') +
+      '<div class="card-actions">' +
+        '<button class="btn btn-sm btn-danger" onclick="saDeleteRest(' + r.id + ')">Delete</button>' +
+      '</div>';
+    list.appendChild(el);
+  });
+}
+
+function renderSaRestPending(items) {
+  var list = document.getElementById('saRestPendingList'); if (!list) return;
+  if (!items || !items.length) { list.innerHTML = '<div class="empty-state">No pending submissions</div>'; return; }
+  list.innerHTML = '';
+  items.forEach(function(r) {
+    var el = document.createElement('div');
+    el.className = 'biz-card';
+    el.innerHTML = '<h3>' + escHtml(r.name) + '</h3>' +
+      (r.address ? '<div class="card-meta">📍 ' + escHtml(r.address) + '</div>' : '') +
+      (r.submitter_name ? '<div class="card-meta">👤 ' + escHtml(r.submitter_name) + '</div>' : '') +
+      '<div class="card-actions">' +
+        '<button class="btn btn-sm btn-primary" onclick="saApproveRest(' + r.id + ')">Approve</button>' +
+        '<button class="btn btn-sm btn-danger" onclick="saRejectRest(' + r.id + ')">Reject</button>' +
+      '</div>';
+    list.appendChild(el);
+  });
+}
+
+async function saApproveRest(id) {
+  try {
+    var res = await fetch('/api/admin/restaurant-submissions/' + id + '/approve', { method: 'POST', headers: authHeaders() });
+    if (!res.ok) { showToast('Failed', true); return; }
+    showToast('Approved!'); loadSaRestaurants();
+  } catch(e) { showToast('Error', true); }
+}
+
+async function saRejectRest(id) {
+  if (!confirm('Reject this submission?')) return;
+  try {
+    await fetch('/api/admin/restaurant-submissions/' + id + '/reject', { method: 'POST', headers: authHeaders() });
+    showToast('Rejected'); loadSaRestaurants();
+  } catch(e) { showToast('Error', true); }
+}
+
+async function saDeleteRest(id) {
+  if (!confirm('Delete this restaurant?')) return;
+  try {
+    await fetch('/api/admin/restaurants/' + id, { method: 'DELETE', headers: authHeaders() });
+    showToast('Deleted'); loadSaRestaurants();
+  } catch(e) { showToast('Error', true); }
+}
+
+// ─── Business Keywords ────────────────────────────────────────────────────────
+var editSelectedKeywords = [];
+var UNIVERSAL_TAGS = ['Women-owned', 'Arabic-speaking', 'Urdu-speaking', 'Spanish-speaking'];
+var BUSINESS_KEYWORDS = {
+  Healthcare: ['Female provider', 'Male provider', 'Accepts insurance', 'Cash / self-pay', 'Sliding scale', 'Telehealth available', 'Walk-ins welcome', 'By appointment only', 'Pediatric', 'Halal medications', 'Mental health', "Women's health", 'Sports medicine'].concat(UNIVERSAL_TAGS),
+  Grocery: ['Halal meat', 'Zabiha', 'Imported goods', 'Middle Eastern', 'South Asian', 'African', 'Bakery'].concat(UNIVERSAL_TAGS),
+  Automotive: ['Mechanic / Repair', 'Dealership', 'Car rental'].concat(UNIVERSAL_TAGS),
+  Events: UNIVERSAL_TAGS.slice(),
+  Creator: UNIVERSAL_TAGS.slice(),
+  _default: UNIVERSAL_TAGS.concat(['Veteran-owned', 'By appointment only', 'Walk-ins welcome', 'Islamic finance', 'Halal investing', 'Financial planning'])
+};
+
+function renderKeywordChips(category, selected) {
+  var keywords = BUSINESS_KEYWORDS[category] || BUSINESS_KEYWORDS._default;
+  var container = document.getElementById('editKeywordsChips'); if (!container) return;
+  container.innerHTML = keywords.map(function(kw) {
+    var isSel = selected.includes(kw);
+    return '<button type="button" onclick="toggleEditKeyword(\'' + kw.replace(/'/g, "\\'") + '\')" style="padding:6px 12px;border-radius:14px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid ' + (isSel ? '#1B6B4A' : '#333') + ';background:' + (isSel ? '#1B6B4A' : '#1E1E1E') + ';color:' + (isSel ? '#fff' : '#9CA3AF') + ';">' + (isSel ? '✓ ' : '') + escHtml(kw) + '</button>';
+  }).join('');
+}
+
+function toggleEditKeyword(kw) {
+  if (editSelectedKeywords.includes(kw)) { editSelectedKeywords = editSelectedKeywords.filter(function(k) { return k !== kw; }); }
+  else { editSelectedKeywords.push(kw); }
+  var cat = document.getElementById('editMetroBizCategory'); renderKeywordChips(cat ? cat.value : '_default', editSelectedKeywords);
+}
+
+function setEnrichToggle(enabled) {
+  var toggle = document.getElementById('enrichToggle'); var knob = document.getElementById('enrichToggleKnob'); var label = document.getElementById('enrichToggleLabel'); var hidden = document.getElementById('editDisableEnrichment');
+  if (!toggle) return;
+  if (enabled) { toggle.style.background = '#4CAF50'; if (knob) knob.style.left = '25px'; if (label) { label.textContent = 'Enrichment enabled'; label.style.color = '#4CAF50'; } if (hidden) hidden.value = 'false'; }
+  else { toggle.style.background = '#333'; if (knob) knob.style.left = '3px'; if (label) { label.textContent = 'Enrichment disabled'; label.style.color = '#9CA3AF'; } if (hidden) hidden.value = 'true'; }
+}
+
+function toggleEnrichment() {
+  var current = document.getElementById('editDisableEnrichment').value === 'true'; setEnrichToggle(current);
+}
+
+// ─── SA Organizers ────────────────────────────────────────────────────────────
+async function loadSaOrganizers() {
+  var sel = document.getElementById('saOrganizer'); if (!sel) return;
+  try {
+    var res = await fetch('/api/metro-admin/organizers', { headers: authHeaders() });
+    if (!res.ok) return;
+    var orgs = await res.json();
+    var current = sel.value;
+    sel.innerHTML = '<option value="">-- Select organizer --</option>';
+    orgs.forEach(function(o) {
+      var opt = document.createElement('option');
+      opt.value = o.display_name || o.org_name;
+      opt.textContent = (o.display_name || o.org_name) + (o.role === 'masjid' ? ' 🕌' : '');
+      sel.appendChild(opt);
+    });
+    if (current) sel.value = current;
+  } catch(e) {}
+}
+
+// ─── Metro Bulk Import ────────────────────────────────────────────────────────
+var metroImportCities = [];
+var cachedMetroAreas = null;
+
+async function loadMetroAreasForImport() {
+  if (cachedMetroAreas) return cachedMetroAreas;
+  try {
+    var res = await fetch('/api/geo/metros');
+    cachedMetroAreas = await res.json();
+    var dl = document.getElementById('metroNameList');
+    if (dl) dl.innerHTML = cachedMetroAreas.map(function(m) { return '<option value="' + m.name + '">'; }).join('');
+  } catch(e) { cachedMetroAreas = []; }
+  return cachedMetroAreas;
+}
+
+function renderMetroCities() {
+  var wrap = document.getElementById('metroImportCitiesWrap'); if (!wrap) return;
+  wrap.innerHTML = metroImportCities.map(function(c, i) {
+    return '<span style="display:inline-flex;align-items:center;gap:4px;background:var(--surface-alt);border:1px solid var(--border-light);border-radius:16px;padding:3px 10px;font-size:12px;">' + escHtml(c) + '<button onclick="removeMetroCity(' + i + ')" style="background:none;border:none;color:var(--text-dim);cursor:pointer;padding:0 0 0 4px;font-size:14px;line-height:1;">×</button></span>';
+  }).join('');
+}
+
+function removeMetroCity(idx) { metroImportCities.splice(idx, 1); renderMetroCities(); }
+
+function addMetroCity() {
+  var input = document.getElementById('metroImportCityInput');
+  var val = (input.value || '').trim();
+  if (val && !metroImportCities.includes(val)) { metroImportCities.push(val); renderMetroCities(); }
+  input.value = ''; input.focus();
+}
+
+async function onMetroNameInput() {
+  var metros = await loadMetroAreasForImport();
+  var val = document.getElementById('metroImportName').value.trim();
+  var match = metros.find(function(m) { return m.name.toLowerCase() === val.toLowerCase(); });
+  if (match) {
+    document.getElementById('metroImportLat').value = match.lat || '';
+    document.getElementById('metroImportLng').value = match.lng || '';
+    metroImportCities = (match.cities || []).slice();
+    renderMetroCities();
+  }
+}
+
+async function runMetroImport() {
+  var metro = document.getElementById('metroImportName').value.trim();
+  var lat = parseFloat(document.getElementById('metroImportLat').value.trim());
+  var lng = parseFloat(document.getElementById('metroImportLng').value.trim());
+  var status = document.getElementById('metroImportStatus');
+  var btn = document.getElementById('metroImportBtn');
+  if (!metro) { showToast('Enter a metro name', true); return; }
+  if (isNaN(lat) || isNaN(lng)) { showToast('Enter valid lat/lng', true); return; }
+  btn.disabled = true; btn.textContent = 'Importing...';
+  status.textContent = 'Searching Google Places in ' + metro + (metroImportCities.length ? ' + ' + metroImportCities.length + ' sub-cities' : '') + '... (this may take a minute)';
+  try {
+    var res = await fetch('/api/admin/restaurants/metro-import', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ metro: metro, lat: lat, lng: lng, cities: metroImportCities }) });
+    var data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Import failed', true); status.textContent = ''; }
+    else {
+      status.textContent = '✅ Done! Found ' + data.found + ' places across metro + ' + (data.cities_searched || 0) + ' cities — inserted ' + data.inserted + ' new, skipped ' + data.skipped + ' duplicates.';
+      showToast('Metro import complete: ' + data.inserted + ' restaurants added');
+      loadSaRestaurants();
+    }
+  } catch(e) { showToast('Import failed', true); status.textContent = ''; }
+  btn.disabled = false; btn.textContent = 'Run Import';
+}
+
+// ─── Restaurant Hours Override ────────────────────────────────────────────────
+var DAY_NAMES = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+var DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+var restaurantSearchTimer = null;
+var cachedRestaurantOverrideList = [];
+
+function debounceRestaurantSearch() {
+  if (restaurantSearchTimer) clearTimeout(restaurantSearchTimer);
+  restaurantSearchTimer = setTimeout(loadRestaurantsForOverride, 300);
+}
+
+async function loadRestaurantsForOverride() {
+  var q = (document.getElementById('restaurantSearch').value || '').trim();
+  var list = document.getElementById('restaurantList'); if (!list) return;
+  if (!q) { list.innerHTML = '<div class="empty-state">Type to search for restaurants</div>'; return; }
+  list.innerHTML = '<div class="empty-state">Searching...</div>';
+  try {
+    var res = await fetch('/api/admin/restaurants?search=' + encodeURIComponent(q), { headers: authHeaders() });
+    if (!res.ok) { list.innerHTML = '<div class="empty-state">Failed to load</div>'; return; }
+    var data = await res.json();
+    var rests = Array.isArray(data) ? data : (data.restaurants || data.results || []);
+    cachedRestaurantOverrideList = rests;
+    if (!rests.length) { list.innerHTML = '<div class="empty-state">No restaurants found</div>'; return; }
+    list.innerHTML = '';
+    rests.slice(0, 20).forEach(function(r) {
+      var el = document.createElement('div');
+      el.className = 'biz-card';
+      el.innerHTML = '<h3>' + escHtml(r.name) + (r.has_override ? ' <span style="color:var(--gold);font-size:11px;">OVERRIDDEN</span>' : '') + '</h3>' +
+        (r.address ? '<div class="card-meta">📍 ' + escHtml(r.address) + '</div>' : '') +
+        '<div class="card-actions">' +
+          '<button class="btn btn-sm btn-outline" onclick="openRestaurantEditor(' + r.id + ')">Edit Hours</button>' +
+          (r.has_override ? '<button class="btn btn-sm btn-danger" onclick="removeRestaurantOverride(' + r.id + ')">Remove Override</button>' : '') +
+        '</div>' +
+        '<div style="margin-top:8px;display:flex;gap:8px;align-items:center;">' +
+          '<input type="text" id="igUrl_' + r.id + '" value="' + escHtml(r.instagram_url || '') + '" placeholder="Instagram URL" style="flex:1;font-size:12px;padding:6px 10px;">' +
+          '<button class="btn btn-sm btn-outline" onclick="saveRestaurantIg(' + r.id + ')">Save IG</button>' +
+        '</div>';
+      list.appendChild(el);
+    });
+  } catch(e) { list.innerHTML = '<div class="empty-state">Failed to load</div>'; }
+}
+
+function openRestaurantEditor(id) {
+  var r = cachedRestaurantOverrideList.find(function(x) { return x.id === id; });
+  if (!r) return;
+  document.getElementById('editingRestaurantId').value = id;
+  document.getElementById('editRestaurantName').textContent = r.name + (r.address ? ' — ' + r.address : '');
+  var ed = document.getElementById('periodsEditor');
+  ed.innerHTML = '';
+  var periods = (r.override_periods && r.override_periods.length) ? r.override_periods : (r.opening_hours && r.opening_hours.periods ? r.opening_hours.periods : []);
+  if (periods.length) {
+    periods.forEach(function(p) { addPeriodRow(p); });
+  } else { addPeriodRow(); }
+  document.getElementById('editRestaurantModal').style.display = 'block';
+}
+
+function addPeriodRow(period) {
+  var ed = document.getElementById('periodsEditor'); if (!ed) return;
+  var dayOpts = DAY_NAMES.map(function(d, i) { return '<option value="' + d + '"' + (period && period.open && period.open.day === i ? ' selected' : '') + '>' + DAY_LABELS[i] + '</option>'; }).join('');
+  var row = document.createElement('div');
+  row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:center;';
+  row.innerHTML = '<select style="padding:6px 8px;font-size:12px;">' + dayOpts + '</select>' +
+    '<input type="text" value="' + (period && period.open ? period.open.time || '' : '') + '" placeholder="Open (e.g. 1100)" style="padding:6px 8px;font-size:12px;">' +
+    '<input type="text" value="' + (period && period.close ? period.close.time || '' : '') + '" placeholder="Close (e.g. 2200)" style="padding:6px 8px;font-size:12px;">' +
+    '<button type="button" onclick="this.parentElement.remove()" style="background:none;border:1px solid #444;color:#888;border-radius:6px;padding:6px 8px;cursor:pointer;font-size:13px;">✕</button>';
+  ed.appendChild(row);
+}
+
+function collectPeriods() {
+  var rows = document.querySelectorAll('#periodsEditor > div');
+  var periods = [];
+  rows.forEach(function(row) {
+    var inputs = row.querySelectorAll('select, input');
+    var day = inputs[0].value; var openTime = inputs[1].value.trim(); var closeTime = inputs[2].value.trim();
+    var dayIdx = DAY_NAMES.indexOf(day);
+    if (dayIdx >= 0 && openTime) {
+      periods.push({ open: { day: dayIdx, time: openTime }, close: closeTime ? { day: dayIdx, time: closeTime } : null });
+    }
+  });
+  return periods;
+}
+
+function closeRestaurantEditor() {
+  document.getElementById('editRestaurantModal').style.display = 'none';
+}
+
+async function saveRestaurantOverride() {
+  var id = document.getElementById('editingRestaurantId').value; if (!id) return;
+  var periods = collectPeriods();
+  if (!periods.length) { showToast('Add at least one period', true); return; }
+  try {
+    var res = await fetch('/api/admin/restaurants/' + id, { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ periods: periods }) });
+    if (res.ok) { showToast('Restaurant hours override saved'); closeRestaurantEditor(); loadRestaurantsForOverride(); }
+    else { var d = await res.json(); showToast(d.error || 'Failed to save', true); }
+  } catch(e) { showToast('Connection error', true); }
+}
+
+async function saveRestaurantIg(id) {
+  var igUrl = document.getElementById('igUrl_' + id).value.trim();
+  try {
+    var res = await fetch('/api/admin/restaurants/' + id, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ instagram_url: igUrl }) });
+    if (res.ok) showToast('Instagram URL saved'); else showToast('Failed to save', true);
+  } catch(e) { showToast('Connection error', true); }
+}
+
+async function removeRestaurantOverride(id) {
+  if (!confirm('Reset this restaurant to its Google Places hours?')) return;
+  try {
+    var res = await fetch('/api/admin/restaurants/' + id, { method: 'DELETE', headers: authHeaders() });
+    if (res.ok) { showToast('Override removed'); loadRestaurantsForOverride(); }
+    else showToast('Failed to remove override', true);
+  } catch(e) { showToast('Connection error', true); }
+}
+
+// ─── SA Analytics ─────────────────────────────────────────────────────────────
+function saInitAnalyticsDateRange() {
+  var to = new Date();
+  var from = new Date(Date.now() - 6 * 86400000);
+  var fromEl = document.getElementById('saAnalyticsFrom');
+  var toEl = document.getElementById('saAnalyticsTo');
+  if (fromEl) fromEl.value = from.toISOString().slice(0, 10);
+  if (toEl) toEl.value = to.toISOString().slice(0, 10);
+}
+
+function saGetDateRange() {
+  var fromEl = document.getElementById('saAnalyticsFrom');
+  var toEl = document.getElementById('saAnalyticsTo');
+  return { from: fromEl ? fromEl.value : '', to: toEl ? toEl.value : '' };
+}
+
+async function saLoadDAU() {
+  var statsEl = document.getElementById('dauStats'); var canvas = document.getElementById('dauCanvas');
+  if (!statsEl || !canvas) return;
+  try {
+    var res = await fetch('/api/admin/analytics/dau?days=30', { headers: authHeaders() });
+    if (!res.ok) { statsEl.innerHTML = '<div class="empty-state">Analytics not yet available</div>'; return; }
+    var data = await res.json();
+    var arr = Array.isArray(data) ? data : [];
+    var today = arr.length ? (arr[arr.length - 1].count || 0) : 0;
+    var avg = arr.length ? Math.round(arr.reduce(function(s, d) { return s + (d.count || 0); }, 0) / arr.length) : 0;
+    var peak = arr.length ? Math.max.apply(null, arr.map(function(d) { return d.count || 0; })) : 0;
+    statsEl.innerHTML = [
+      { label: 'Today', val: today }, { label: '30-Day Avg', val: avg }, { label: 'Peak', val: peak }
+    ].map(function(s) {
+      return '<div style="background:var(--surface-alt);border-radius:10px;padding:14px;text-align:center;"><div style="font-size:24px;font-weight:700;color:var(--gold);">' + s.val + '</div><div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">' + s.label + '</div></div>';
+    }).join('');
+    renderDAUChart(canvas, arr);
+  } catch(e) { if (statsEl) statsEl.innerHTML = '<div class="empty-state">Failed to load</div>'; }
+}
+
+function renderDAUChart(canvas, arr) {
+  var ctx = canvas.getContext('2d'); if (!ctx) return;
+  var labels = arr.map(function(d) { return d.date || d.day || ''; });
+  var values = arr.map(function(d) { return d.count || d.dau || 0; });
+  var w = canvas.parentElement.clientWidth || 300;
+  var h = 140;
+  canvas.width = w * window.devicePixelRatio;
+  canvas.height = h * window.devicePixelRatio;
+  canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  var maxVal = Math.max.apply(null, values) || 1;
+  ctx.clearRect(0, 0, w, h);
+  var pl = 30, pr = 10, pt = 10, pb = 24;
+  var barW = (w - pl - pr) / Math.max(labels.length, 1);
+  values.forEach(function(v, i) {
+    var barH = (v / maxVal) * (h - pt - pb);
+    ctx.fillStyle = 'rgba(212,168,67,0.75)';
+    ctx.fillRect(pl + i * barW + barW * 0.1, h - pb - barH, barW * 0.8, barH);
+  });
+  ctx.fillStyle = '#888'; ctx.font = '9px system-ui'; ctx.textAlign = 'center';
+  if (labels.length <= 14) {
+    labels.forEach(function(l, i) { ctx.fillText(l.slice(-5), pl + i * barW + barW / 2, h - 6); });
+  } else {
+    [0, Math.floor(labels.length / 2), labels.length - 1].forEach(function(i) {
+      if (labels[i]) ctx.fillText(labels[i].slice(-5), pl + i * barW + barW / 2, h - 6);
+    });
+  }
+  ctx.fillStyle = '#888'; ctx.font = '9px system-ui'; ctx.textAlign = 'right';
+  [0, Math.round(maxVal / 2), maxVal].forEach(function(v) {
+    var y = h - pb - (v / maxVal) * (h - pt - pb);
+    ctx.fillText(v, pl - 4, y + 3);
+  });
+}
+
+async function saLoadAnalytics() {
+  var dr = saGetDateRange();
+  var qs = (dr.from ? '&from=' + dr.from : '') + (dr.to ? '&to=' + dr.to : '');
+  await Promise.all([saLoadAnalyticsSummary(qs), saLoadAnalyticsTop(qs)]);
+}
+
+async function saLoadAnalyticsSummary(qs) {
+  var overviewEl = document.getElementById('saAnalyticsOverview');
+  var communityEl = document.getElementById('saAnalyticsCommunity');
+  try {
+    var [ovRes, comRes] = await Promise.all([
+      fetch('/api/admin/analytics/overview' + (qs ? '?' + qs.replace(/^&/, '') : ''), { headers: authHeaders() }),
+      fetch('/api/admin/analytics/community', { headers: authHeaders() }),
+    ]);
+    if (ovRes.ok && overviewEl) {
+      var ovData = await ovRes.json();
+      overviewEl.innerHTML = Object.entries(ovData).map(function(kv) {
+        return '<div style="background:var(--surface-alt);border-radius:10px;padding:14px;"><div style="font-size:20px;font-weight:700;color:var(--gold);">' + escHtml(String(kv[1])) + '</div><div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">' + escHtml(String(kv[0]).replace(/_/g, ' ')) + '</div></div>';
+      }).join('');
+    }
+    if (comRes.ok && communityEl) {
+      var comData = await comRes.json();
+      communityEl.innerHTML = Object.entries(comData).map(function(kv) {
+        return '<div style="background:var(--surface-alt);border-radius:10px;padding:14px;"><div style="font-size:20px;font-weight:700;color:var(--gold);">' + escHtml(String(kv[1])) + '</div><div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">' + escHtml(String(kv[0]).replace(/_/g, ' ')) + '</div></div>';
+      }).join('');
+    }
+    var sumRes = await fetch('/api/admin/analytics/summary' + (qs ? '?' + qs.replace(/^&/, '') : ''), { headers: authHeaders() });
+    if (sumRes.ok) {
+      var sumData = await sumRes.json();
+      renderScreenViews(sumData.screen_views);
+      renderEventBreakdown(sumData.event_breakdown);
+    }
+  } catch(e) { if (overviewEl) overviewEl.innerHTML = '<div class="empty-state">Failed to load</div>'; }
+}
+
+async function saLoadAnalyticsTop(qs) {
+  try {
+    var res = await fetch('/api/admin/analytics/top' + (qs ? '?' + qs.replace(/^&/, '') : ''), { headers: authHeaders() });
+    if (!res.ok) return;
+    var data = await res.json();
+    renderTopList('analyticsTopRestaurants', data.top_restaurants, 'Restaurant', 'views');
+    renderTopList('analyticsTopEvents', data.top_events, 'Event', 'clicks');
+    renderTopList('analyticsTopSearches', data.top_searches, 'Query', 'count');
+    renderPrayerStats(data.prayer_stats);
+    renderFeatureAdoption(data.feature_adoption);
+  } catch(e) {}
+}
+
+function renderScreenViews(views) {
+  var el = document.getElementById('analyticsScreenViews'); if (!el) return;
+  if (!views || !Object.keys(views).length) { el.innerHTML = '<div class="empty-state">No data</div>'; return; }
+  el.innerHTML = Object.entries(views).sort(function(a, b) { return b[1] - a[1]; }).map(function(kv) {
+    return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-secondary);">' + escHtml(kv[0]) + '</span><span style="font-weight:600;color:var(--text);">' + kv[1] + '</span></div>';
+  }).join('');
+}
+
+function renderTopList(elId, items, labelKey, countKey) {
+  var el = document.getElementById(elId); if (!el) return;
+  if (!items || !items.length) { el.innerHTML = '<div class="empty-state">No data</div>'; return; }
+  el.innerHTML = items.map(function(item, i) {
+    var label = item.name || item.title || item.query || item[labelKey] || String(item);
+    var count = item.count || item[countKey] || item.views || item.clicks || 0;
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-dim);font-size:11px;min-width:20px;">' + (i+1) + '.</span><span style="flex:1;color:var(--text);">' + escHtml(label) + '</span><span style="font-weight:600;color:var(--gold);">' + count + '</span></div>';
+  }).join('');
+}
+
+function renderPrayerStats(stats) {
+  var el = document.getElementById('analyticsPrayerStats'); if (!el) return;
+  if (!stats || !Object.keys(stats).length) { el.innerHTML = '<div class="empty-state">No data</div>'; return; }
+  el.innerHTML = Object.entries(stats).map(function(kv) {
+    return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-secondary);">' + escHtml(String(kv[0]).replace(/_/g, ' ')) + '</span><span style="font-weight:600;color:var(--text);">' + escHtml(String(kv[1])) + '</span></div>';
+  }).join('');
+}
+
+function renderFeatureAdoption(data) {
+  var el = document.getElementById('analyticsFeatureAdoption'); if (!el) return;
+  if (!data || !Object.keys(data).length) { el.innerHTML = '<div class="empty-state">No data</div>'; return; }
+  el.innerHTML = Object.entries(data).map(function(kv) {
+    return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-secondary);">' + escHtml(String(kv[0]).replace(/_/g, ' ')) + '</span><span style="font-weight:600;color:var(--text);">' + escHtml(String(kv[1])) + '</span></div>';
+  }).join('');
+}
+
+function renderEventBreakdown(data) {
+  var el = document.getElementById('analyticsEventBreakdown'); if (!el) return;
+  if (!data || !Object.keys(data).length) { el.innerHTML = '<div class="empty-state">No data</div>'; return; }
+  el.innerHTML = Object.entries(data).map(function(kv) {
+    return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-secondary);">' + escHtml(String(kv[0]).replace(/_/g, ' ')) + '</span><span style="font-weight:600;color:var(--text);">' + escHtml(String(kv[1])) + '</span></div>';
+  }).join('');
+}
+
+async function loadUserStats() {
+  var el = document.getElementById('analyticsUserList'); if (!el) return;
+  var exclude = document.getElementById('excludeDemoToggle') && document.getElementById('excludeDemoToggle').checked;
+  var demoIds = exclude ? (localStorage.getItem('demoDeviceIds') || '').split(',').map(function(s) { return s.trim(); }).filter(Boolean) : [];
+  var qs = demoIds.length ? '?exclude=' + encodeURIComponent(demoIds.join(',')) : '';
+  try {
+    var res = await fetch('/api/admin/analytics/users' + qs, { headers: authHeaders() });
+    if (!res.ok) { el.innerHTML = '<div class="empty-state">Failed to load</div>'; return; }
+    var data = await res.json();
+    renderUserList(el, data);
+  } catch(e) { el.innerHTML = '<div class="empty-state">Failed to load</div>'; }
+}
+
+function renderUserList(el, users) {
+  if (!users || !users.length) { el.innerHTML = '<div class="empty-state">No user data</div>'; return; }
+  el.innerHTML = users.slice(0, 50).map(function(u) {
+    return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-secondary);font-family:monospace;font-size:11px;">' + escHtml(u.device_id || u.id || '?') + '</span><span style="color:var(--text);">' + (u.last_seen ? new Date(u.last_seen).toLocaleDateString() : '') + ' · ' + (u.session_count || 0) + ' sessions</span></div>';
+  }).join('');
+}
+
+function initDemoDevices() {
+  var stored = localStorage.getItem('demoDeviceIds') || '';
+  var el = document.getElementById('demoDeviceIds');
+  var toggle = document.getElementById('excludeDemoToggle');
+  if (el) el.value = stored;
+  if (stored && toggle) { toggle.checked = true; var cfg = document.getElementById('demoDevicesConfig'); if (cfg) cfg.style.display = 'block'; }
+}
+
+function saveDemoDevices() {
+  var el = document.getElementById('demoDeviceIds');
+  if (el) localStorage.setItem('demoDeviceIds', el.value);
+}
+
+// ─── Metro Pending ─────────────────────────────────────────────────────────────
+async function loadMePendingEvents() {
+  var list = document.getElementById('mePendingEventList'); if (!list) return;
+  try {
+    var res = await fetch('/api/metro-admin/events/pending', { headers: authHeaders() });
+    if (!res.ok) { list.innerHTML = '<div class="empty-state">Failed to load</div>'; return; }
+    var events = await res.json();
+    if (!events.length) { list.innerHTML = '<div class="empty-state">No pending events</div>'; return; }
+    list.innerHTML = '';
+    events.forEach(function(ev) {
+      var d = new Date(ev.start_time);
+      var card = document.createElement('div');
+      card.className = 'event-card';
+      card.innerHTML = '<h3>' + escHtml(ev.title) + '</h3>' +
+        '<div class="card-meta">📅 ' + d.toLocaleDateString() + (ev.organizer ? ' · ' + escHtml(ev.organizer) : '') + '</div>' +
+        (ev.location ? '<div class="card-meta">📍 ' + escHtml(ev.location) + '</div>' : '') +
+        '<div class="card-actions">' +
+          '<button class="btn btn-sm btn-primary" onclick="meApproveEvent(' + ev.id + ')">Approve</button>' +
+          '<button class="btn btn-sm btn-danger" onclick="meRejectEvent(' + ev.id + ')">Reject</button>' +
+        '</div>';
+      list.appendChild(card);
+    });
+  } catch(e) { list.innerHTML = '<div class="empty-state">Failed to load</div>'; }
+}
+
+async function meApproveEvent(id) {
+  try {
+    var res = await fetch('/api/metro-admin/events/' + id, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ status: 'approved' }) });
+    if (!res.ok) { showToast('Failed to approve', true); return; }
+    showToast('Event approved!'); loadMePendingEvents(); loadMetroEvents();
+  } catch(e) { showToast('Connection error', true); }
+}
+
+async function meRejectEvent(id) {
+  if (!confirm('Reject and delete this event?')) return;
+  try {
+    await fetch('/api/metro-admin/events/' + id, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ status: 'rejected' }) });
+    showToast('Event rejected'); loadMePendingEvents();
+  } catch(e) { showToast('Connection error', true); }
+}
+
+async function loadMeOrganizers() {
+  try {
+    var res = await fetch('/api/metro-admin/organizers', { headers: authHeaders() });
+    if (!res.ok) return;
+    var orgs = await res.json();
+    function populateOrgSel(sel, placeholder) {
+      if (!sel) return;
+      var current = sel.value;
+      sel.innerHTML = '<option value="">' + placeholder + '</option>';
+      orgs.forEach(function(o) {
+        var opt = document.createElement('option');
+        opt.value = o.display_name || o.org_name;
+        opt.textContent = (o.display_name || o.org_name) + (o.role === 'masjid' ? ' 🕌' : '');
+        sel.appendChild(opt);
+      });
+      if (current) sel.value = current;
+    }
+    populateOrgSel(document.getElementById('meOrganizer'), '— Select or type below —');
+    populateOrgSel(document.getElementById('meEvOrganizer'), '-- Select organizer --');
+  } catch(e) {}
+}
+
+async function loadMePendingBiz() {
+  var list = document.getElementById('mePendingBizList'); if (!list) return;
+  try {
+    var res = await fetch('/api/metro-admin/businesses', { headers: authHeaders() });
+    if (!res.ok) { list.innerHTML = '<div class="empty-state">No pending businesses</div>'; return; }
+    var all = await res.json();
+    var items = all.filter(function(b) { return b.status === 'pending'; });
+    if (!items.length) { list.innerHTML = '<div class="empty-state">No pending businesses</div>'; return; }
+    list.innerHTML = '';
+    items.forEach(function(b) {
+      var el = document.createElement('div');
+      el.className = 'biz-card';
+      el.innerHTML = '<h3>' + escHtml(b.name) + '</h3>' +
+        (b.address ? '<div class="card-meta">📍 ' + escHtml(b.address) + '</div>' : '') +
+        '<div class="card-actions">' +
+          '<button class="btn btn-sm btn-primary" onclick="meApproveBiz(' + b.id + ')">Approve</button>' +
+          '<button class="btn btn-sm btn-danger" onclick="meRejectBiz(' + b.id + ')">Reject</button>' +
+        '</div>';
+      list.appendChild(el);
+    });
+  } catch(e) { list.innerHTML = '<div class="empty-state">No pending businesses</div>'; }
+}
+
+async function meApproveBiz(id) {
+  try {
+    var res = await fetch('/api/metro-admin/businesses/' + id, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ status: 'approved' }) });
+    if (!res.ok) { showToast('Failed', true); return; }
+    showToast('Approved!'); loadMePendingBiz(); loadMetroBusinesses();
+  } catch(e) { showToast('Error', true); }
+}
+
+async function meRejectBiz(id) {
+  if (!confirm('Reject this business?')) return;
+  try {
+    await fetch('/api/metro-admin/businesses/' + id, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ status: 'rejected' }) });
+    showToast('Rejected'); loadMePendingBiz();
+  } catch(e) { showToast('Error', true); }
+}
+
+function escAttr(s) { if (s == null) return ''; return String(s).replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+
 // ─── Modals ───────────────────────────────────────────────────────────────────
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 window.addEventListener('click', function(e) {
-  ['newAccountModal','editAccountModal','editEventModal'].forEach(function(id) {
+  ['newAccountModal','editAccountModal','editEventModal','editMetroBizModal','editRestaurantModal'].forEach(function(id) {
     var el = document.getElementById(id);
     if (e.target === el) el.style.display = 'none';
   });

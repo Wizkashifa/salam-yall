@@ -4960,10 +4960,9 @@ Return ONLY the description text, nothing else.`,
     res.send(unifiedAdminHtml);
   });
 
-  // Legacy full admin panel — accessible from super admin dashboard
+  // Legacy full admin panel — retired, redirect to unified admin
   app.get("/admin-full", (_req, res) => {
-    res.setHeader("Content-Type", "text/html; charset=utf-8");
-    res.send(adminHtml);
+    res.redirect(302, "/admin");
   });
 
   app.get("/privacy", (_req, res) => {
@@ -5806,14 +5805,19 @@ Return ONLY the description text, nothing else.`,
   app.get("/api/metro-admin/businesses", async (req, res) => {
     const session = requireUnifiedRole(req, "metro_manager", "super_admin");
     if (!session) return res.status(401).json({ error: "Unauthorized" });
+    if (session.role === "metro_manager" && !session.metro) {
+      return res.status(403).json({ error: "No metro assigned to this account" });
+    }
     try {
-      const metro = (req.query.metro as string) || session.metro || "";
+      const metro = session.role === "super_admin"
+        ? (req.query.metro as string) || ""
+        : session.metro!;
       const { rows } = await pool.query(
-        `SELECT id, name, category, subcategory, address, service_area_description, status, featured, phone, website, created_at
+        `SELECT id, name, category, subcategory, address, service_area_description, status, featured, phone, website, filter_tags, instagram_url, booking_url, affiliation, location_type, description, place_id, created_at
          FROM businesses
-         WHERE (address ILIKE $1 OR service_area_description ILIKE $1)
+         WHERE ($1 = '' OR address ILIKE $2 OR service_area_description ILIKE $2)
          ORDER BY created_at DESC LIMIT 200`,
-        [`%${metro}%`]
+        [metro, `%${metro}%`]
       );
       res.json(rows);
     } catch (err: any) {
@@ -5824,9 +5828,19 @@ Return ONLY the description text, nothing else.`,
   app.patch("/api/metro-admin/businesses/:id", async (req, res) => {
     const session = requireUnifiedRole(req, "metro_manager", "super_admin");
     if (!session) return res.status(401).json({ error: "Unauthorized" });
+    if (session.role === "metro_manager" && !session.metro) {
+      return res.status(403).json({ error: "No metro assigned to this account" });
+    }
     try {
       const { id } = req.params;
-      const { status, featured, name, description, address, phone, website } = req.body;
+      if (session.role === "metro_manager") {
+        const { rows: bizRows } = await pool.query(
+          "SELECT id FROM businesses WHERE id = $1 AND (address ILIKE $2 OR service_area_description ILIKE $2)",
+          [id, `%${session.metro}%`]
+        );
+        if (!bizRows.length) return res.status(403).json({ error: "Business not in your metro" });
+      }
+      const { status, featured, name, description, address, phone, website, instagram_url, booking_url, filter_tags, location_type, service_area_description, category, subcategory } = req.body;
       const updates: string[] = [];
       const vals: any[] = [];
       let idx = 1;
@@ -5837,6 +5851,13 @@ Return ONLY the description text, nothing else.`,
       if (address !== undefined) { updates.push(`address = $${idx++}`); vals.push(address); }
       if (phone !== undefined) { updates.push(`phone = $${idx++}`); vals.push(phone); }
       if (website !== undefined) { updates.push(`website = $${idx++}`); vals.push(website); }
+      if (instagram_url !== undefined) { updates.push(`instagram_url = $${idx++}`); vals.push(instagram_url); }
+      if (booking_url !== undefined) { updates.push(`booking_url = $${idx++}`); vals.push(booking_url); }
+      if (filter_tags !== undefined) { updates.push(`filter_tags = $${idx++}`); vals.push(filter_tags); }
+      if (location_type !== undefined) { updates.push(`location_type = $${idx++}`); vals.push(location_type); }
+      if (service_area_description !== undefined) { updates.push(`service_area_description = $${idx++}`); vals.push(service_area_description); }
+      if (category !== undefined) { updates.push(`category = $${idx++}`); vals.push(category); }
+      if (subcategory !== undefined) { updates.push(`subcategory = $${idx++}`); vals.push(subcategory); }
       if (!updates.length) return res.status(400).json({ error: "Nothing to update" });
       vals.push(id);
       await pool.query(`UPDATE businesses SET ${updates.join(", ")} WHERE id = $${idx}`, vals);
@@ -5867,7 +5888,17 @@ Return ONLY the description text, nothing else.`,
   app.delete("/api/metro-admin/businesses/:id", async (req, res) => {
     const session = requireUnifiedRole(req, "metro_manager", "super_admin");
     if (!session) return res.status(401).json({ error: "Unauthorized" });
+    if (session.role === "metro_manager" && !session.metro) {
+      return res.status(403).json({ error: "No metro assigned to this account" });
+    }
     try {
+      if (session.role === "metro_manager") {
+        const { rows: bizRows } = await pool.query(
+          "SELECT id FROM businesses WHERE id = $1 AND (address ILIKE $2 OR service_area_description ILIKE $2)",
+          [req.params.id, `%${session.metro}%`]
+        );
+        if (!bizRows.length) return res.status(403).json({ error: "Business not in your metro" });
+      }
       await pool.query("DELETE FROM businesses WHERE id = $1", [req.params.id]);
       res.json({ deleted: true });
     } catch (err: any) {
@@ -5875,11 +5906,49 @@ Return ONLY the description text, nothing else.`,
     }
   });
 
+  app.get("/api/metro-admin/organizers", async (req, res) => {
+    const session = requireUnifiedRole(req, "metro_manager", "super_admin");
+    if (!session) return res.status(401).json({ error: "Unauthorized" });
+    if (session.role === "metro_manager" && !session.metro) {
+      return res.status(403).json({ error: "No metro assigned to this account" });
+    }
+    try {
+      const isSuperAdmin = session.role === "super_admin";
+      const metro = isSuperAdmin
+        ? (req.query.metro as string) || session.metro || ""
+        : session.metro!;
+      let rows: any[];
+      if (metro) {
+        ({ rows } = await pool.query(
+          `SELECT id, org_name, display_name, role FROM org_portals
+           WHERE metro = $1 AND role IN ('community_org', 'masjid')
+           ORDER BY display_name, org_name`,
+          [metro]
+        ));
+      } else {
+        // super_admin with no metro context: return all organizers
+        ({ rows } = await pool.query(
+          `SELECT id, org_name, display_name, role FROM org_portals
+           WHERE role IN ('community_org', 'masjid')
+           ORDER BY display_name, org_name`
+        ));
+      }
+      res.json(rows);
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to list organizers" });
+    }
+  });
+
   app.get("/api/metro-admin/events", async (req, res) => {
     const session = requireUnifiedRole(req, "metro_manager", "super_admin");
     if (!session) return res.status(401).json({ error: "Unauthorized" });
+    if (session.role === "metro_manager" && !session.metro) {
+      return res.status(403).json({ error: "No metro assigned to this account" });
+    }
     try {
-      const metro = session.metro || "";
+      const metro = session.role === "super_admin"
+        ? (req.query.metro as string) || session.metro || ""
+        : session.metro!;
       // Get orgs in this metro plus events with location matching metro
       const { rows } = await pool.query(
         `SELECT id, title, description, location, start_time, end_time, organizer, status, created_at,
@@ -5942,11 +6011,153 @@ Return ONLY the description text, nothing else.`,
   app.delete("/api/metro-admin/events/:id", async (req, res) => {
     const session = requireUnifiedRole(req, "metro_manager", "super_admin");
     if (!session) return res.status(401).json({ error: "Unauthorized" });
+    if (session.role === "metro_manager" && !session.metro) {
+      return res.status(403).json({ error: "No metro assigned to this account" });
+    }
     try {
+      const metro = session.role === "metro_manager" ? session.metro! : "";
+      if (session.role === "metro_manager") {
+        const { rows: check } = await pool.query(
+          "SELECT id FROM community_events WHERE id = $1 AND (organizer ILIKE $2 OR location ILIKE $2)",
+          [req.params.id, `%${metro}%`]
+        );
+        if (!check.length) return res.status(403).json({ error: "Event not in your metro area" });
+      }
       await pool.query("DELETE FROM community_events WHERE id = $1", [req.params.id]);
       res.json({ deleted: true });
     } catch (err: any) {
       res.status(500).json({ error: "Failed to delete event" });
+    }
+  });
+
+  app.patch("/api/metro-admin/events/:id", async (req, res) => {
+    const session = requireUnifiedRole(req, "metro_manager", "super_admin");
+    if (!session) return res.status(401).json({ error: "Unauthorized" });
+    if (session.role === "metro_manager" && !session.metro) {
+      return res.status(403).json({ error: "No metro assigned to this account" });
+    }
+    try {
+      const { id } = req.params;
+      // Super admins can edit any event; metro managers are scoped to their metro
+      if (session.role === "metro_manager") {
+        const { rows: check } = await pool.query(
+          "SELECT id FROM community_events WHERE id = $1 AND (organizer ILIKE $2 OR location ILIKE $2)",
+          [id, `%${session.metro}%`]
+        );
+        if (!check.length) return res.status(403).json({ error: "Event not in your metro area" });
+      }
+      const { title, description, location, start_time, end_time, status, registration_url } = req.body;
+      const updates: string[] = [];
+      const vals: any[] = [];
+      let idx = 1;
+      if (title !== undefined) { updates.push(`title = $${idx++}`); vals.push(title); }
+      if (description !== undefined) { updates.push(`description = $${idx++}`); vals.push(description); }
+      if (location !== undefined) { updates.push(`location = $${idx++}`); vals.push(location); }
+      if (start_time !== undefined) { updates.push(`start_time = $${idx++}`); vals.push(start_time); }
+      if (end_time !== undefined) { updates.push(`end_time = $${idx++}`); vals.push(end_time); }
+      if (registration_url !== undefined) { updates.push(`registration_url = $${idx++}`); vals.push(registration_url || null); }
+      if (status !== undefined && ["approved", "rejected", "pending"].includes(status)) { updates.push(`status = $${idx++}`); vals.push(status); }
+      if (!updates.length) return res.status(400).json({ error: "Nothing to update" });
+      vals.push(id);
+      await pool.query(`UPDATE community_events SET ${updates.join(", ")} WHERE id = $${idx}`, vals);
+      res.json({ updated: true });
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to update event" });
+    }
+  });
+
+  app.get("/api/metro-admin/events/pending", async (req, res) => {
+    const session = requireUnifiedRole(req, "metro_manager", "super_admin");
+    if (!session) return res.status(401).json({ error: "Unauthorized" });
+    if (session.role === "metro_manager" && !session.metro) {
+      return res.status(403).json({ error: "No metro assigned to this account" });
+    }
+    try {
+      const metro = session.metro || "";
+      const { rows } = await pool.query(
+        `SELECT id, title, description, location, start_time, end_time, organizer, registration_url, status, created_at,
+         submitter_name, submitter_email,
+         CASE WHEN image_data IS NOT NULL THEN true ELSE false END as has_image
+         FROM community_events
+         WHERE status = 'pending'
+         AND (location ILIKE $1 OR organizer IN (
+           SELECT org_name FROM org_portals WHERE metro = $2
+         ))
+         ORDER BY created_at DESC`,
+        [`%${metro}%`, metro]
+      );
+      res.json(rows);
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to list pending events" });
+    }
+  });
+
+  app.post("/api/metro-admin/events/publish-recurring", async (req, res) => {
+    const session = requireUnifiedRole(req, "metro_manager", "super_admin");
+    if (!session) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const { title, description, location, startTime, endTime, organizer, registrationUrl, image, imageMime, additionalImages, recurring, rangeEnd } = req.body;
+      if (!title || !startTime) return res.status(400).json({ error: "Title and start time are required" });
+      if (!recurring || !rangeEnd) return res.status(400).json({ error: "Recurring pattern and range end are required" });
+
+      let eventLat: number | null = null, eventLng: number | null = null;
+      if (location) {
+        const geo = await geocodeAddress(location);
+        if (geo) { eventLat = geo.lat; eventLng = geo.lng; }
+      }
+
+      const baseStart = new Date(startTime);
+      const baseEnd = endTime ? new Date(endTime) : null;
+      const durationMs = baseEnd ? baseEnd.getTime() - baseStart.getTime() : 3600000;
+      const rangeEndDate = new Date(rangeEnd + "T23:59:59");
+
+      function getNthWD(y: number, m: number, wd: number, n: number): Date | null {
+        const d = new Date(y, m, 1); let cnt = 0;
+        while (d.getMonth() === m) { if (d.getDay() === wd && ++cnt === n) return new Date(d); d.setDate(d.getDate() + 1); }
+        return null;
+      }
+
+      const dates: Date[] = [];
+      const p = recurring;
+      if (p.type === "weekly") {
+        let cur = new Date(baseStart);
+        while (cur <= rangeEndDate && dates.length < 200) { dates.push(new Date(cur)); cur.setDate(cur.getDate() + 7); }
+      } else if (p.type === "monthly_nth_weekday") {
+        let y = baseStart.getFullYear(), mo = baseStart.getMonth();
+        while ((y < rangeEndDate.getFullYear() || (y === rangeEndDate.getFullYear() && mo <= rangeEndDate.getMonth())) && dates.length < 200) {
+          const occ = getNthWD(y, mo, p.dayOfWeek, p.weekOfMonth);
+          if (occ) { const s = new Date(y, mo, occ.getDate(), baseStart.getHours(), baseStart.getMinutes()); if (s >= baseStart && s <= rangeEndDate) dates.push(s); }
+          mo++; if (mo > 11) { mo = 0; y++; }
+        }
+      } else if (p.type === "bimonthly_nth_weekday") {
+        const intv = p.intervalMonths || 2;
+        let y = baseStart.getFullYear(), mo = baseStart.getMonth();
+        const weeks = p.nthWeekdays || [p.weekOfMonth];
+        while ((y < rangeEndDate.getFullYear() || (y === rangeEndDate.getFullYear() && mo <= rangeEndDate.getMonth())) && dates.length < 200) {
+          for (const wk of weeks) {
+            const occ = getNthWD(y, mo, p.dayOfWeek, wk);
+            if (occ) { const s = new Date(y, mo, occ.getDate(), baseStart.getHours(), baseStart.getMinutes()); if (s >= baseStart && s <= rangeEndDate) dates.push(s); }
+          }
+          mo += intv; if (mo > 11) { mo -= 12; y++; }
+        }
+      }
+
+      if (!dates.length) return res.json({ count: 0, ids: [] });
+      const groupId = dates.length > 1 ? crypto.randomUUID() : null;
+      const ids: number[] = [];
+      for (let i = 0; i < dates.length; i++) {
+        const wStart = dates[i];
+        const wEnd = baseEnd ? new Date(wStart.getTime() + durationMs) : null;
+        const result = await pool.query(
+          `INSERT INTO community_events (title, description, location, start_time, end_time, organizer, registration_url, image_data, image_mime, is_virtual, is_featured, status, lat, lng, recurrence_group_id, recurrence_type, series_index)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,false,false,'approved',$10,$11,$12,$13,$14) RETURNING id`,
+          [title, description || null, location || null, wStart, wEnd, organizer || null, registrationUrl || null, image || null, imageMime || "image/jpeg", eventLat, eventLng, groupId, p.type, i]
+        );
+        ids.push(result.rows[0].id);
+      }
+      res.json({ count: ids.length, ids });
+    } catch (err: any) {
+      res.status(500).json({ error: "Failed to create recurring events: " + err.message });
     }
   });
 
@@ -7406,7 +7617,12 @@ Important notes:
   });
 
   app.post("/api/admin/events/extract-flyer", async (req, res) => {
-    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    if (!isAdminAuthorized(req)) {
+      const sess = getUnifiedSession(req);
+      if (!sess || (sess.role !== "metro_manager" && sess.role !== "super_admin")) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+    }
     try {
       const { image, mimeType, images } = req.body;
       if (!image && (!images || !Array.isArray(images) || images.length === 0)) {
