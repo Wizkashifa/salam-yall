@@ -5659,14 +5659,14 @@ Return ONLY the description text, nothing else.`,
     const { orgName, password } = req.body;
     if (!password) return res.status(400).json({ error: "Password required" });
     try {
-      // No orgName → try super admin password
-      if (!orgName || orgName.trim() === "") {
+      // "kashif" or blank username → try super admin password
+      if (!orgName || orgName.trim() === "" || orgName.trim().toLowerCase() === "kashif") {
         if (password !== ADMIN_KEY) return res.status(401).json({ error: "Invalid credentials" });
         const tok = crypto.randomBytes(32).toString("hex");
-        unifiedSessions.set(tok, { role: "super_admin", orgName: "admin", metro: null, displayName: "Super Admin" });
+        unifiedSessions.set(tok, { role: "super_admin", orgName: "kashif", metro: null, displayName: "Kashif" });
         // Also add to legacy adminSessions so existing /api/admin/* routes still work
         adminSessions.add(tok);
-        return res.json({ token: tok, role: "super_admin", orgName: "admin", metro: null, displayName: "Super Admin" });
+        return res.json({ token: tok, role: "super_admin", orgName: "kashif", metro: null, displayName: "Kashif" });
       }
       // Org login
       const { rows } = await pool.query(
