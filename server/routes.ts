@@ -5925,15 +5925,19 @@ Return ONLY the description text, nothing else.`,
       const metro = session.role === "super_admin"
         ? (req.query.metro as string) || session.metro || ""
         : session.metro!;
+      const metroArea = METRO_AREAS.find(m => m.name === metro);
+      const centerLat = metroArea?.lat ?? 0;
+      const centerLng = metroArea?.lng ?? 0;
+      const radiusDegSq = (50.0 / 69.0) ** 2; // 50-mile radius as squared degrees
       const { rows } = await pool.query(
         `SELECT id, title, description, location, start_time, end_time, organizer, status, created_at,
          CASE WHEN image_data IS NOT NULL THEN '/api/community-events/' || id || '/image' ELSE NULL END as image_url
          FROM community_events
-         WHERE organizer IN (
-           SELECT display_name FROM org_portals WHERE metro = $1
-         )
+         WHERE organizer IN (SELECT display_name FROM org_portals WHERE metro = $1)
+            OR (lat IS NOT NULL AND lng IS NOT NULL
+                AND (lat - $2)^2 + ((lng - $3) * cos(radians($2)))^2 < $4)
          ORDER BY start_time DESC LIMIT 200`,
-        [metro]
+        [metro, centerLat, centerLng, radiusDegSq]
       );
       res.json(rows);
     } catch (err: any) {
@@ -5992,9 +5996,17 @@ Return ONLY the description text, nothing else.`,
     try {
       const metro = session.role === "metro_manager" ? session.metro! : "";
       if (session.role === "metro_manager") {
+        const metroArea = METRO_AREAS.find(m => m.name === metro);
+        const centerLat = metroArea?.lat ?? 0;
+        const centerLng = metroArea?.lng ?? 0;
+        const radiusDegSq = (50.0 / 69.0) ** 2;
         const { rows: check } = await pool.query(
-          "SELECT id FROM community_events WHERE id = $1 AND organizer IN (SELECT display_name FROM org_portals WHERE metro = $2)",
-          [req.params.id, metro]
+          `SELECT id FROM community_events WHERE id = $1 AND (
+             organizer IN (SELECT display_name FROM org_portals WHERE metro = $2)
+             OR (lat IS NOT NULL AND lng IS NOT NULL
+                 AND (lat - $3)^2 + ((lng - $4) * cos(radians($3)))^2 < $5)
+           )`,
+          [req.params.id, metro, centerLat, centerLng, radiusDegSq]
         );
         if (!check.length) return res.status(403).json({ error: "Event not in your metro area" });
       }
@@ -6015,9 +6027,17 @@ Return ONLY the description text, nothing else.`,
       const { id } = req.params;
       // Super admins can edit any event; metro managers are scoped to their metro
       if (session.role === "metro_manager") {
+        const metroArea = METRO_AREAS.find(m => m.name === session.metro);
+        const centerLat = metroArea?.lat ?? 0;
+        const centerLng = metroArea?.lng ?? 0;
+        const radiusDegSq = (50.0 / 69.0) ** 2;
         const { rows: check } = await pool.query(
-          "SELECT id FROM community_events WHERE id = $1 AND organizer IN (SELECT display_name FROM org_portals WHERE metro = $2)",
-          [id, session.metro]
+          `SELECT id FROM community_events WHERE id = $1 AND (
+             organizer IN (SELECT display_name FROM org_portals WHERE metro = $2)
+             OR (lat IS NOT NULL AND lng IS NOT NULL
+                 AND (lat - $3)^2 + ((lng - $4) * cos(radians($3)))^2 < $5)
+           )`,
+          [id, session.metro, centerLat, centerLng, radiusDegSq]
         );
         if (!check.length) return res.status(403).json({ error: "Event not in your metro area" });
       }
@@ -6049,17 +6069,23 @@ Return ONLY the description text, nothing else.`,
     }
     try {
       const metro = session.metro || "";
+      const metroArea = METRO_AREAS.find(m => m.name === metro);
+      const centerLat = metroArea?.lat ?? 0;
+      const centerLng = metroArea?.lng ?? 0;
+      const radiusDegSq = (50.0 / 69.0) ** 2;
       const { rows } = await pool.query(
         `SELECT id, title, description, location, start_time, end_time, organizer, registration_url, status, created_at,
          submitter_name, submitter_email,
          CASE WHEN image_data IS NOT NULL THEN true ELSE false END as has_image
          FROM community_events
          WHERE status = 'pending'
-         AND organizer IN (
-           SELECT display_name FROM org_portals WHERE metro = $1
+         AND (
+           organizer IN (SELECT display_name FROM org_portals WHERE metro = $1)
+           OR (lat IS NOT NULL AND lng IS NOT NULL
+               AND (lat - $2)^2 + ((lng - $3) * cos(radians($2)))^2 < $4)
          )
          ORDER BY created_at DESC`,
-        [metro]
+        [metro, centerLat, centerLng, radiusDegSq]
       );
       res.json(rows);
     } catch (err: any) {
