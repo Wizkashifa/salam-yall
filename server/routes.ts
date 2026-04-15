@@ -1696,6 +1696,30 @@ async function ensureOrgPortalsTable(pool: pg.Pool) {
     );
   }
 
+  // Dev test accounts (password: "password")
+  {
+    const crypto = await import("crypto");
+    const testHash = crypto.createHash("sha256").update("password").digest("hex");
+    await pool.query(
+      `INSERT INTO org_portals (org_name, password_hash, role, display_name)
+       VALUES ('org-test', $1, 'community_org', 'Test Org')
+       ON CONFLICT (org_name) DO NOTHING`,
+      [testHash]
+    );
+    await pool.query(
+      `INSERT INTO org_portals (org_name, password_hash, role, display_name)
+       VALUES ('masjid-test', $1, 'masjid', 'Test Masjid')
+       ON CONFLICT (org_name) DO NOTHING`,
+      [testHash]
+    );
+    await pool.query(
+      `INSERT INTO org_portals (org_name, password_hash, role, metro, display_name)
+       VALUES ('me-test', $1, 'metro_manager', 'Triangle NC', 'Test Metro Manager')
+       ON CONFLICT (org_name) DO NOTHING`,
+      [testHash]
+    );
+  }
+
   // Migrate existing records that don't have a role set
   await pool.query(`UPDATE org_portals SET role = 'community_org', display_name = org_name WHERE role = 'community_org' AND display_name IS NULL`).catch(() => {});
   await pool.query(`UPDATE org_portals SET role = 'masjid' WHERE org_name = 'Islamic_Association_of_Raleigh' AND role = 'community_org'`).catch(() => {});
