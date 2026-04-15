@@ -961,7 +961,9 @@
     </select>
     <div id="naMetroRow">
       <label>Metro Area</label>
-      <input type="text" id="naMetro" placeholder="e.g., Raleigh-Durham NC">
+      <select id="naMetro">
+        <option value="">— Select metro —</option>
+      </select>
     </div>
     <label>Password *</label>
     <input type="password" id="naPassword" placeholder="Set a password">
@@ -986,7 +988,9 @@
       <option value="metro_manager">Metro Manager</option>
     </select>
     <label>Metro Area</label>
-    <input type="text" id="eaMetro" placeholder="e.g., Raleigh-Durham NC">
+    <select id="eaMetro">
+      <option value="">— Select metro —</option>
+    </select>
     <label>New Password (leave blank to keep)</label>
     <input type="password" id="eaPassword" placeholder="New password...">
     <div class="modal-actions">
@@ -3178,6 +3182,12 @@ async function loadMetroAreasForImport() {
     cachedMetroAreas = await res.json();
     var dl = document.getElementById('metroNameList');
     if (dl) dl.innerHTML = cachedMetroAreas.map(function(m) { return '<option value="' + m.name + '">'; }).join('');
+    var metroOptions = '<option value="">— Select metro —</option>' +
+      cachedMetroAreas.map(function(m) { return '<option value="' + escHtml(m.name) + '">' + escHtml(m.name) + '</option>'; }).join('');
+    ['naMetro', 'eaMetro'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.innerHTML = metroOptions;
+    });
   } catch(e) { cachedMetroAreas = []; }
   return cachedMetroAreas;
 }
