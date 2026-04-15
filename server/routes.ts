@@ -1977,7 +1977,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   async function getCommunityEvents(req: any): Promise<CachedEvent[]> {
     try {
       const { rows } = await pool.query(
-        "SELECT * FROM community_events WHERE status = 'approved' AND (end_time IS NULL OR end_time > NOW()) ORDER BY start_time ASC"
+        "SELECT * FROM community_events WHERE status = 'approved' AND (end_time > NOW() OR (end_time IS NULL AND start_time > NOW() - INTERVAL '2 hours')) ORDER BY start_time ASC"
       );
       const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
       const host = req.headers["host"] || "localhost:5000";
@@ -5966,7 +5966,7 @@ Return ONLY the description text, nothing else.`,
          WHERE (organizer IN (SELECT display_name FROM org_portals WHERE metro = $1)
             OR (lat IS NOT NULL AND lng IS NOT NULL
                 AND (lat - $2)^2 + ((lng - $3) * cos(radians($2)))^2 < $4))
-           AND (end_time IS NULL OR end_time > NOW())
+           AND (end_time > NOW() OR (end_time IS NULL AND start_time > NOW() - INTERVAL '2 hours'))
          ORDER BY start_time DESC LIMIT 200`,
         [metro, centerLat, centerLng, radiusDegSq]
       );
@@ -8213,7 +8213,7 @@ ${profileInfo.slice(0, 30000)}`,
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {
       const { rows } = await pool.query(
-        "SELECT id, title, description, location, start_time, end_time, organizer, registration_url, is_virtual, is_featured, status, created_at, CASE WHEN image_data IS NOT NULL THEN true ELSE false END as has_image, COALESCE(jsonb_array_length(additional_images), 0) as additional_image_count, additional_images FROM community_events WHERE (end_time IS NULL OR end_time > NOW()) ORDER BY start_time ASC"
+        "SELECT id, title, description, location, start_time, end_time, organizer, registration_url, is_virtual, is_featured, status, created_at, CASE WHEN image_data IS NOT NULL THEN true ELSE false END as has_image, COALESCE(jsonb_array_length(additional_images), 0) as additional_image_count, additional_images FROM community_events WHERE (end_time > NOW() OR (end_time IS NULL AND start_time > NOW() - INTERVAL '2 hours')) ORDER BY start_time ASC"
       );
       const normalized = rows.map((r: any) => {
         const resolved = resolveOrgName(r.organizer || "");
@@ -8464,7 +8464,7 @@ ${profileInfo.slice(0, 30000)}`,
       const { rows } = await pool.query(
         `SELECT id, title, description, location, start_time, end_time, registration_url, status, created_at,
          CASE WHEN image_data IS NOT NULL THEN '/api/community-events/' || id || '/image' ELSE NULL END as image_url
-         FROM community_events WHERE organizer = $1 AND (end_time IS NULL OR end_time > NOW()) ORDER BY start_time DESC`,
+         FROM community_events WHERE organizer = $1 AND (end_time > NOW() OR (end_time IS NULL AND start_time > NOW() - INTERVAL '2 hours')) ORDER BY start_time DESC`,
         [orgName]
       );
       res.json(rows);
