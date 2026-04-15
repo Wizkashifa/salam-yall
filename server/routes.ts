@@ -374,7 +374,7 @@ const KNOWN_COORDINATES: Record<string, { lat: number; lng: number }> = {
   "Islamic Association of Raleigh (Page Rd)": { lat: 35.9067, lng: -78.8169 },
   "Islamic Center of Morrisville": { lat: 35.8099, lng: -78.8228 },
   "Islamic Center of Cary": { lat: 35.7731, lng: -78.8028 },
-  "Al-Noor Islamic Center": { lat: 35.7636, lng: -78.7443 },
+  "Al-Noor Islamic Center": { lat: 35.5843, lng: -78.7706 },
   "Jamaat Ibad Ar-Rahman (Fayetteville)": { lat: 35.9856, lng: -78.8977 },
   "Jamaat Ibad Ar-Rahman (Parkwood)": { lat: 35.8938, lng: -78.9109 },
   "Apex Masjid": { lat: 35.7294, lng: -78.8415 },
@@ -528,7 +528,7 @@ const ORGANIZER_ADDRESS_MAP: Record<string, string> = {
   "Islamic Association of Raleigh (Page Rd)": "9108 Page Rd, Durham, NC 27703",
   "Islamic Center of Morrisville": "101 Quail Fields Ct, Morrisville, NC 27560",
   "Islamic Center of Cary": "2206 W Chatham St, Cary, NC 27513",
-  "Al-Noor Islamic Center": "1409 Ligon St, Raleigh, NC 27603",
+  "Al-Noor Islamic Center": "6317 Sunset Lake Rd, Fuquay-Varina, NC 27526",
   "Apex Masjid": "225 N Center St, Apex, NC 27502",
   "As-Salaam Islamic Center": "801 Woods Edge Ct, Raleigh, NC 27609",
   "Chapel Hill Islamic Society": "1005 Old Legion Rd, Chapel Hill, NC 27517",
@@ -4272,10 +4272,6 @@ Return ONLY the description text, nothing else.`,
     path.resolve(process.cwd(), "server", "templates", "404.html"),
     "utf-8"
   );
-  const adminHtml = fs.readFileSync(
-    path.resolve(process.cwd(), "server", "templates", "admin.html"),
-    "utf-8"
-  );
   const unifiedAdminHtml = fs.readFileSync(
     path.resolve(process.cwd(), "server", "templates", "unified-admin.html"),
     "utf-8"
@@ -5613,29 +5609,12 @@ Return ONLY the description text, nothing else.`,
 
   const adminSessions = new Set<string>();
 
-  app.post("/api/admin/login", (req, res) => {
-    const { password } = req.body;
-    if (!password || password !== ADMIN_KEY) {
-      return res.status(401).json({ error: "Invalid password" });
-    }
-    const sessionToken = crypto.randomBytes(32).toString("hex");
-    adminSessions.add(sessionToken);
-    res.json({ token: sessionToken });
-  });
-
   function isAdminAuthorized(req: any): boolean {
     const authHeader = req.headers.authorization;
     if (!authHeader) return false;
     const token = authHeader.replace("Bearer ", "");
     return adminSessions.has(token) || token === ADMIN_KEY;
   }
-
-  app.get("/api/admin/verify", (req, res) => {
-    if (!isAdminAuthorized(req)) {
-      return res.status(401).json({ valid: false });
-    }
-    res.json({ valid: true });
-  });
 
   // ─── Unified Admin Auth ───────────────────────────────────────────────────
   // Single login endpoint for all admin roles. Returns role, orgName, metro.
@@ -5670,7 +5649,7 @@ Return ONLY the description text, nothing else.`,
       }
       // Org login
       const { rows } = await pool.query(
-        "SELECT id, org_name, password_hash, role, metro, display_name FROM org_portals WHERE org_name = $1",
+        "SELECT id, org_name, password_hash, role, metro, display_name FROM org_portals WHERE LOWER(org_name) = LOWER($1)",
         [orgName.trim()]
       );
       if (!rows.length) return res.status(401).json({ error: "Organization not found" });
@@ -5958,9 +5937,10 @@ Return ONLY the description text, nothing else.`,
         `SELECT id, title, description, location, start_time, end_time, organizer, status, created_at,
          CASE WHEN image_data IS NOT NULL THEN '/api/community-events/' || id || '/image' ELSE NULL END as image_url
          FROM community_events
-         WHERE organizer IN (SELECT display_name FROM org_portals WHERE metro = $1)
+         WHERE (organizer IN (SELECT display_name FROM org_portals WHERE metro = $1)
             OR (lat IS NOT NULL AND lng IS NOT NULL
-                AND (lat - $2)^2 + ((lng - $3) * cos(radians($2)))^2 < $4)
+                AND (lat - $2)^2 + ((lng - $3) * cos(radians($2)))^2 < $4))
+           AND (end_time IS NULL OR end_time > NOW())
          ORDER BY start_time DESC LIMIT 200`,
         [metro, centerLat, centerLng, radiusDegSq]
       );
@@ -8207,7 +8187,7 @@ ${profileInfo.slice(0, 30000)}`,
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {
       const { rows } = await pool.query(
-        "SELECT id, title, description, location, start_time, end_time, organizer, registration_url, is_virtual, is_featured, status, created_at, CASE WHEN image_data IS NOT NULL THEN true ELSE false END as has_image, COALESCE(jsonb_array_length(additional_images), 0) as additional_image_count, additional_images FROM community_events ORDER BY start_time ASC"
+        "SELECT id, title, description, location, start_time, end_time, organizer, registration_url, is_virtual, is_featured, status, created_at, CASE WHEN image_data IS NOT NULL THEN true ELSE false END as has_image, COALESCE(jsonb_array_length(additional_images), 0) as additional_image_count, additional_images FROM community_events WHERE (end_time IS NULL OR end_time > NOW()) ORDER BY start_time ASC"
       );
       const normalized = rows.map((r: any) => {
         const resolved = resolveOrgName(r.organizer || "");
@@ -8304,32 +8284,6 @@ ${profileInfo.slice(0, 30000)}`,
     const org = getPortalOrg(req);
     return org === orgName;
   }
-
-  app.post("/api/portal/:org/login", async (req, res) => {
-    const orgName = decodeURIComponent(req.params.org);
-    const { password } = req.body;
-    if (!password) return res.status(401).json({ error: "Password required" });
-    try {
-      const { rows } = await pool.query("SELECT password_hash, display_name FROM org_portals WHERE org_name = $1", [orgName]);
-      if (!rows.length) return res.status(401).json({ error: "Organization not found" });
-      const crypto = await import("crypto");
-      const hash = crypto.createHash("sha256").update(password).digest("hex");
-      if (hash !== rows[0].password_hash) return res.status(401).json({ error: "Invalid password" });
-      const sessionToken = crypto.randomBytes(32).toString("hex");
-      const displayName = rows[0].display_name || orgName;
-      portalSessions.set(sessionToken, displayName);
-      res.json({ token: sessionToken, org: orgName });
-    } catch (error: any) {
-      console.error(`[Portal] Login error for ${orgName}:`, error.message);
-      res.status(500).json({ error: "Login failed" });
-    }
-  });
-
-  app.get("/api/portal/:org/verify", (req, res) => {
-    const orgName = decodeURIComponent(req.params.org);
-    if (!isPortalAuthorized(req, orgName)) return res.status(401).json({ valid: false });
-    res.json({ valid: true, org: orgName });
-  });
 
   app.get("/api/org-profiles/:orgName", async (req, res) => {
     try {
@@ -8484,7 +8438,7 @@ ${profileInfo.slice(0, 30000)}`,
       const { rows } = await pool.query(
         `SELECT id, title, description, location, start_time, end_time, registration_url, status, created_at,
          CASE WHEN image_data IS NOT NULL THEN '/api/community-events/' || id || '/image' ELSE NULL END as image_url
-         FROM community_events WHERE organizer = $1 ORDER BY start_time DESC`,
+         FROM community_events WHERE organizer = $1 AND (end_time IS NULL OR end_time > NOW()) ORDER BY start_time DESC`,
         [orgName]
       );
       res.json(rows);
@@ -8570,20 +8524,6 @@ ${profileInfo.slice(0, 30000)}`,
     } catch (error: any) {
       console.error(`[Portal:${orgName}] Delete error:`, error.message);
       res.status(500).json({ error: "Failed to delete event" });
-    }
-  });
-
-  app.get("/api/portal/:org/followers/count", async (req, res) => {
-    const orgName = decodeURIComponent(req.params.org);
-    if (!isPortalAuthorized(req, orgName)) return res.status(401).json({ error: "Unauthorized" });
-    try {
-      const { rows } = await pool.query(
-        "SELECT COUNT(*) as count FROM organizer_follows WHERE organizer_name = $1",
-        [orgName]
-      );
-      res.json({ count: parseInt(rows[0].count) });
-    } catch (error: any) {
-      res.status(500).json({ error: "Failed to get follower count" });
     }
   });
 
@@ -8940,23 +8880,6 @@ Return ONLY the JSON object, no markdown, no explanation.`,
     } catch (error: any) {
       console.error(`[Portal:${orgName}] Org profile update error:`, error.message);
       res.status(500).json({ error: "Failed to update organization profile" });
-    }
-  });
-
-  app.get("/api/portal/:org/stats", async (req, res) => {
-    const orgName = decodeURIComponent(req.params.org);
-    if (!isPortalAuthorized(req, orgName)) return res.status(401).json({ error: "Unauthorized" });
-    try {
-      const [followers, events] = await Promise.all([
-        pool.query("SELECT COUNT(*) as count FROM organizer_follows WHERE organizer_name = $1", [orgName]),
-        pool.query("SELECT COUNT(*) as count FROM community_events WHERE organizer = $1", [orgName]),
-      ]);
-      res.json({
-        followers: parseInt(followers.rows[0].count),
-        totalEvents: parseInt(events.rows[0].count),
-      });
-    } catch (error: any) {
-      res.status(500).json({ error: "Failed to get stats" });
     }
   });
 

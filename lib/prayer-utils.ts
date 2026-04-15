@@ -120,7 +120,7 @@ export interface Masjid {
 }
 
 export const NEARBY_MASJIDS: Masjid[] = [
-  { name: "Al-Noor Islamic Center", latitude: 35.7636, longitude: -78.7443, address: "1501 Buck Jones Rd, Raleigh, NC 27606", matchTerms: ["al-noor", "alnoor"], hasIqama: true, iqamaId: "Al Noor" },
+  { name: "Al-Noor Islamic Center", latitude: 35.5843, longitude: -78.7706, address: "6317 Sunset Lake Rd, Fuquay-Varina, NC 27526", matchTerms: ["al-noor", "alnoor"], hasIqama: true, iqamaId: "Al Noor" },
   { name: "Islamic Association of Raleigh (Atwater)", latitude: 35.7898, longitude: -78.6912, address: "808 Atwater St, Raleigh, NC 27607", website: "https://www.raleighmasjid.org", matchTerms: ["iar", "islamic association of raleigh", "atwater"], hasIqama: true, campusGroup: "iar", iqamaId: "IAR", jumuahId: "IAR (Atwater)" },
   { name: "Islamic Association of Raleigh (Page Rd)", latitude: 35.9067, longitude: -78.8169, address: "3104 Page Rd, Morrisville, NC 27560", website: "https://www.raleighmasjid.org", matchTerms: ["iar", "islamic association of raleigh", "page rd", "page road"], hasIqama: true, campusGroup: "iar", iqamaId: "IAR", jumuahId: "IAR (Page Rd)" },
   { name: "Islamic Center of Morrisville", latitude: 35.8099, longitude: -78.8228, address: "107 Quail Fields Ct, Morrisville, NC 27560", website: "https://www.icmorrisville.org", matchTerms: ["icm", "islamic center of morrisville", "quail fields"], hasIqama: true, iqamaId: "ICMNC", jumuahId: "Islamic Center of Morrisville" },
