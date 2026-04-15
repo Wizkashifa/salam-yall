@@ -5925,16 +5925,15 @@ Return ONLY the description text, nothing else.`,
       const metro = session.role === "super_admin"
         ? (req.query.metro as string) || session.metro || ""
         : session.metro!;
-      // Get orgs in this metro plus events with location matching metro
       const { rows } = await pool.query(
         `SELECT id, title, description, location, start_time, end_time, organizer, status, created_at,
          CASE WHEN image_data IS NOT NULL THEN '/api/community-events/' || id || '/image' ELSE NULL END as image_url
          FROM community_events
-         WHERE (location ILIKE $1 OR organizer IN (
-           SELECT org_name FROM org_portals WHERE metro = $2
-         ))
+         WHERE organizer IN (
+           SELECT display_name FROM org_portals WHERE metro = $1
+         )
          ORDER BY start_time DESC LIMIT 200`,
-        [`%${metro}%`, metro]
+        [metro]
       );
       res.json(rows);
     } catch (err: any) {
@@ -5994,8 +5993,8 @@ Return ONLY the description text, nothing else.`,
       const metro = session.role === "metro_manager" ? session.metro! : "";
       if (session.role === "metro_manager") {
         const { rows: check } = await pool.query(
-          "SELECT id FROM community_events WHERE id = $1 AND (organizer ILIKE $2 OR location ILIKE $2)",
-          [req.params.id, `%${metro}%`]
+          "SELECT id FROM community_events WHERE id = $1 AND organizer IN (SELECT display_name FROM org_portals WHERE metro = $2)",
+          [req.params.id, metro]
         );
         if (!check.length) return res.status(403).json({ error: "Event not in your metro area" });
       }
@@ -6017,8 +6016,8 @@ Return ONLY the description text, nothing else.`,
       // Super admins can edit any event; metro managers are scoped to their metro
       if (session.role === "metro_manager") {
         const { rows: check } = await pool.query(
-          "SELECT id FROM community_events WHERE id = $1 AND (organizer ILIKE $2 OR location ILIKE $2)",
-          [id, `%${session.metro}%`]
+          "SELECT id FROM community_events WHERE id = $1 AND organizer IN (SELECT display_name FROM org_portals WHERE metro = $2)",
+          [id, session.metro]
         );
         if (!check.length) return res.status(403).json({ error: "Event not in your metro area" });
       }
@@ -6056,11 +6055,11 @@ Return ONLY the description text, nothing else.`,
          CASE WHEN image_data IS NOT NULL THEN true ELSE false END as has_image
          FROM community_events
          WHERE status = 'pending'
-         AND (location ILIKE $1 OR organizer IN (
-           SELECT org_name FROM org_portals WHERE metro = $2
-         ))
+         AND organizer IN (
+           SELECT display_name FROM org_portals WHERE metro = $1
+         )
          ORDER BY created_at DESC`,
-        [`%${metro}%`, metro]
+        [metro]
       );
       res.json(rows);
     } catch (err: any) {
