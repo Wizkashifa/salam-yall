@@ -413,7 +413,33 @@ const KNOWN_COORDINATES: Record<string, { lat: number; lng: number }> = {
   "ADAMS Gainesville": { lat: 38.7004, lng: -77.5641 },
   "ADAMS Sully": { lat: 38.8874, lng: -77.4282 },
   "ADAMS Leesburg": { lat: 39.1157, lng: -77.5636 },
+  "ADAMS Ashburn Village": { lat: 39.0438, lng: -77.4874 },
+  "ADAMS Manassas (Wyndham Gardens)": { lat: 38.7432, lng: -77.4860 },
+  "ADAMS Reston (NVHC)": { lat: 38.9586, lng: -77.3570 },
+  "Home2 Suites Chantilly (ADAMS)": { lat: 38.8760, lng: -77.4282 },
+  "ADAMS Leesburg (Clarion Inn)": { lat: 39.1157, lng: -77.5636 },
   "Qahwah Cafe": { lat: 39.0057, lng: -77.4050 },
+  // Additional masjids from DB
+  "Al-Huda Foundation": { lat: 39.9567, lng: -86.0131 },
+  "Al-Huda Mosque Greenfield": { lat: 42.9525, lng: -87.9691 },
+  "Al-Huda Mosque South Milwaukee": { lat: 42.9134, lng: -87.8735 },
+  "Al-Qur'an Mosque": { lat: 43.1766, lng: -88.0582 },
+  "Berkeley Masjid": { lat: 37.8672, lng: -122.2596 },
+  "EPIC Masjid": { lat: 33.0137, lng: -96.7062 },
+  "IANT": { lat: 32.9483, lng: -96.7299 },
+  "ISB Cambridge": { lat: 42.3703, lng: -71.1001 },
+  "ISB Roxbury": { lat: 42.3309, lng: -71.0934 },
+  "ISM": { lat: 42.9589, lng: -87.9299 },
+  "ISM University Center": { lat: 43.0744, lng: -87.8819 },
+  "ISM West (Masjid Al-Noor)": { lat: 43.0663, lng: -88.1194 },
+  "Islamic Center of Charlotte": { lat: 35.2085, lng: -80.7691 },
+  "Islamic Center of Irving": { lat: 32.8427, lng: -97.0107 },
+  "MCC Chicago": { lat: 41.9565, lng: -87.7237 },
+  "Masjid Al-Taqwa Indianapolis": { lat: 39.6953, lng: -86.1459 },
+  "Milwaukee Islamic Dawah Center": { lat: 43.1103, lng: -87.9501 },
+  "Mosque Foundation": { lat: 41.7229, lng: -87.8030 },
+  "South Bay Islamic Association": { lat: 37.3007, lng: -121.8574 },
+  "Valley Ranch Islamic Center": { lat: 32.9173, lng: -96.9478 },
 };
 
 function resolveCoordinates(organizer: string, location: string): { latitude: number | null; longitude: number | null } {
@@ -6433,13 +6459,13 @@ Return ONLY the JSON object, no markdown, no explanation.`,
   app.post("/api/admin/janaza/publish", async (req, res) => {
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {
-      const { masjidName, deceasedName, countryOfOrigin, relatives, prayerTime, prayerLocation, burialInfo, scheduledAt } = req.body;
+      const { masjidName, deceasedName, countryOfOrigin, relatives, prayerTime, prayerLocation, burialInfo, scheduledAt, masjidLat, masjidLng } = req.body;
       if (!deceasedName) return res.status(400).json({ error: "Deceased name is required" });
       if (!masjidName) return res.status(400).json({ error: "Masjid is required" });
 
       const masjidLookup = KNOWN_COORDINATES[masjidName] || KNOWN_COORDINATES["Islamic Association of Raleigh"];
-      const lat = masjidLookup?.lat || 35.7898;
-      const lng = masjidLookup?.lng || -78.6912;
+      const lat = (typeof masjidLat === "number" && !isNaN(masjidLat)) ? masjidLat : (masjidLookup?.lat || 35.7898);
+      const lng = (typeof masjidLng === "number" && !isNaN(masjidLng)) ? masjidLng : (masjidLookup?.lng || -78.6912);
 
       const details = [
         deceasedName,

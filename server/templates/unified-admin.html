@@ -2615,6 +2615,8 @@ async function loadSaJanazaMasjids() {
       var opt = document.createElement('option');
       opt.value = m.name;
       opt.textContent = m.name;
+      if (m.latitude != null) opt.dataset.lat = m.latitude;
+      if (m.longitude != null) opt.dataset.lng = m.longitude;
       sel.appendChild(opt);
     });
   } catch(e) {}
@@ -2659,6 +2661,9 @@ async function saSendJanazaPush() {
   if (!name) { showToast('Deceased name required', true); return; }
   var masjidName = sel ? sel.value : '';
   if (!masjidName) { showToast('Please select a masjid from the dropdown', true); return; }
+  var selectedOpt = sel ? sel.options[sel.selectedIndex] : null;
+  var masjidLat = selectedOpt && selectedOpt.dataset.lat ? parseFloat(selectedOpt.dataset.lat) : null;
+  var masjidLng = selectedOpt && selectedOpt.dataset.lng ? parseFloat(selectedOpt.dataset.lng) : null;
   var btn = document.getElementById('saSendJzBtn');
   btn.disabled = true; btn.textContent = 'Sending...';
   try {
@@ -2667,6 +2672,8 @@ async function saSendJanazaPush() {
       deceasedName: name,
       prayerTime: prayerTime || null,
       prayerLocation: prayerLocation || null,
+      masjidLat: masjidLat,
+      masjidLng: masjidLng,
     };
     var res = await fetch('/api/admin/janaza/publish', { method: 'POST', headers: authHeaders(), body: JSON.stringify(payload) });
     if (!res.ok) { var d = await res.json(); showToast(d.error || 'Failed', true); return; }
