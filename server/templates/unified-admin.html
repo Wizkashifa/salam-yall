@@ -236,13 +236,24 @@
 
     <!-- Dashboard -->
     <div class="tab-content active" id="superTabDashboard">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);margin-bottom:6px;">Content</div>
       <div class="stat-row" id="saDashCards">
         <div class="stat-card" onclick="switchSuperTab('Events')" style="cursor:pointer;" title="Go to Events"><div class="stat-num" id="saDashEvents">—</div><div class="stat-label">Total Events</div></div>
-        <div class="stat-card" onclick="saDeepLinkPendingEvents()" style="cursor:pointer;border-color:var(--gold);" title="Review pending events"><div class="stat-num" id="saDashPendingEv" style="color:var(--gold);">—</div><div class="stat-label">Pending Events</div></div>
-        <div class="stat-card" onclick="switchSuperTab('Accounts')" style="cursor:pointer;" title="Go to Accounts"><div class="stat-num" id="saDashAccounts">—</div><div class="stat-label">Accounts</div></div>
         <div class="stat-card" onclick="switchSuperTab('Businesses')" style="cursor:pointer;" title="Go to Businesses"><div class="stat-num" id="saDashBiz">—</div><div class="stat-label">Total Businesses</div></div>
+        <div class="stat-card" onclick="switchSuperTab('Restaurants')" style="cursor:pointer;" title="Go to Restaurants"><div class="stat-num" id="saDashRest">—</div><div class="stat-label">Total Restaurants</div></div>
+        <div class="stat-card" onclick="switchSuperTab('Accounts')" style="cursor:pointer;" title="Go to Accounts"><div class="stat-num" id="saDashAccounts">—</div><div class="stat-label">Accounts</div></div>
+      </div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);margin-bottom:6px;">Pending Review</div>
+      <div class="stat-row">
+        <div class="stat-card" onclick="saDeepLinkPendingEvents()" style="cursor:pointer;border-color:var(--gold);" title="Review pending events"><div class="stat-num" id="saDashPendingEv" style="color:var(--gold);">—</div><div class="stat-label">Pending Events</div></div>
         <div class="stat-card" onclick="saDeepLinkPendingBiz()" style="cursor:pointer;border-color:var(--gold);" title="Review pending business submissions"><div class="stat-num" id="saDashPendingBiz" style="color:var(--gold);">—</div><div class="stat-label">Pending Businesses</div></div>
         <div class="stat-card" onclick="saDeepLinkPendingRest()" style="cursor:pointer;border-color:var(--gold);" title="Review pending restaurant submissions"><div class="stat-num" id="saDashPendingRest" style="color:var(--gold);">—</div><div class="stat-label">Pending Restaurants</div></div>
+      </div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);margin-bottom:6px;">Active Users (DAU)</div>
+      <div class="stat-row">
+        <div class="stat-card"><div class="stat-num" id="saDashDauToday">—</div><div class="stat-label">Today</div></div>
+        <div class="stat-card"><div class="stat-num" id="saDashDauYesterday">—</div><div class="stat-label">Yesterday</div></div>
+        <div class="stat-card"><div class="stat-num" id="saDashDauAvg">—</div><div class="stat-label">7-Day Avg</div></div>
       </div>
     </div>
 
@@ -265,15 +276,38 @@
           <button class="btn btn-primary" onclick="saSendGeneralPush()" id="saSendPushBtn" style="margin-top:14px;width:100%;">Send to All Users</button>
         </div>
         <div id="saPushJanaza" style="display:none;">
-          <label>Select Masjid</label>
-          <select id="saPushJzMasjid"></select>
-          <label>Deceased Name *</label>
-          <input type="text" id="saPushJzName" placeholder="Full name of deceased">
-          <label>Prayer Time</label>
-          <input type="text" id="saPushJzTime" placeholder="e.g., Saturday 2:00 PM">
-          <label>Prayer Location</label>
-          <input type="text" id="saPushJzLocation" placeholder="Masjid name or address">
-          <button class="btn btn-primary" onclick="saSendJanazaPush()" id="saSendJzBtn" style="margin-top:14px;width:100%;">Send Janaza Alert</button>
+          <!-- Janaza sub-mode toggle -->
+          <div style="display:flex;gap:8px;margin-bottom:16px;">
+            <button class="btn btn-sm btn-outline" id="jzModeManual" onclick="saSwitchJanazaMode('manual')" style="border-color:var(--gold);color:var(--gold);">Manual</button>
+            <button class="btn btn-sm btn-outline" id="jzModeAI" onclick="saSwitchJanazaMode('ai')">✨ AI Flyer</button>
+          </div>
+          <!-- AI Flyer sub-panel -->
+          <div id="jzAIPanel" style="display:none;">
+            <div class="upload-area" id="jzFlyerUploadArea" ondragover="event.preventDefault();this.style.borderColor='var(--gold)';" ondragleave="this.style.borderColor='';" ondrop="saHandleJanazaDrop(event)" onclick="document.getElementById('jzFlyerInput').click()">
+              <div class="upload-icon">📸</div>
+              <div class="upload-text">Drop or click to upload janaza flyer</div>
+              <div class="upload-hint">JPG, PNG, WebP</div>
+              <input type="file" id="jzFlyerInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="saHandleJanazaSelect(event)">
+            </div>
+            <div id="jzFlyerPreview" style="display:none;margin:10px 0;text-align:center;">
+              <img id="jzFlyerPreviewImg" style="max-width:100%;max-height:220px;border-radius:10px;border:1px solid var(--border-light);">
+              <button class="btn btn-sm" onclick="saClearJanazaFlyer()" style="margin-top:8px;display:block;margin-left:auto;margin-right:auto;background:var(--surface-alt);color:var(--text-secondary);">Remove</button>
+            </div>
+            <button class="btn btn-gold" onclick="saExtractJanaza()" id="jzExtractBtn" disabled style="width:100%;margin-bottom:10px;">✨ Extract with AI</button>
+            <div id="jzExtractStatus" style="display:none;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:14px;"></div>
+          </div>
+          <!-- Manual sub-panel -->
+          <div id="jzManualPanel">
+            <label>Select Masjid</label>
+            <select id="saPushJzMasjid"></select>
+            <label>Deceased Name *</label>
+            <input type="text" id="saPushJzName" placeholder="Full name of deceased">
+            <label>Prayer Time</label>
+            <input type="text" id="saPushJzTime" placeholder="e.g., Saturday 2:00 PM">
+            <label>Prayer Location</label>
+            <input type="text" id="saPushJzLocation" placeholder="Masjid name or address">
+            <button class="btn btn-primary" onclick="saSendJanazaPush()" id="saSendJzBtn" style="margin-top:14px;width:100%;">Send Janaza Alert</button>
+          </div>
         </div>
         <div id="saPushEvent" style="display:none;">
           <label>Event</label>
@@ -2506,13 +2540,15 @@ var saRestPlaceData = null;
 
 async function loadSaDashboard() {
   try {
-    var [evRes, pendRes, acRes, pendBizRes, allBizRes, pendRestRes] = await Promise.all([
+    var [evRes, pendRes, acRes, pendBizRes, allBizRes, pendRestRes, allRestRes, dauRes] = await Promise.all([
       fetch('/api/admin/community-events', { headers: authHeaders() }),
       fetch('/api/admin/community-events/pending', { headers: authHeaders() }),
       fetch('/api/admin/accounts', { headers: authHeaders() }),
       fetch('/api/admin/businesses?status=pending', { headers: authHeaders() }),
       fetch('/api/admin/businesses?status=approved', { headers: authHeaders() }),
       fetch('/api/admin/restaurant-submissions?status=pending', { headers: authHeaders() }),
+      fetch('/api/admin/restaurant-submissions?status=approved', { headers: authHeaders() }),
+      fetch('/api/admin/analytics/dau?days=7', { headers: authHeaders() }),
     ]);
     var evData = evRes.ok ? await evRes.json() : [];
     var pendData = pendRes.ok ? await pendRes.json() : [];
@@ -2520,12 +2556,20 @@ async function loadSaDashboard() {
     var pendBizData = pendBizRes.ok ? await pendBizRes.json() : [];
     var allBizData = allBizRes.ok ? await allBizRes.json() : [];
     var pendRestData = pendRestRes.ok ? await pendRestRes.json() : [];
+    var allRestData = allRestRes.ok ? await allRestRes.json() : [];
+    var dauData = dauRes.ok ? await dauRes.json() : null;
     var el = document.getElementById('saDashEvents'); if (el) el.textContent = Array.isArray(evData) ? evData.length : '—';
     var pl = document.getElementById('saDashPendingEv'); if (pl) pl.textContent = Array.isArray(pendData) ? pendData.length : '—';
     var al = document.getElementById('saDashAccounts'); if (al) al.textContent = Array.isArray(acData) ? acData.length : '—';
     var bl = document.getElementById('saDashBiz'); if (bl) bl.textContent = Array.isArray(allBizData) ? allBizData.length : '—';
+    var rl = document.getElementById('saDashRest'); if (rl) rl.textContent = Array.isArray(allRestData) ? allRestData.length : '—';
     var pbl = document.getElementById('saDashPendingBiz'); if (pbl) pbl.textContent = Array.isArray(pendBizData) ? pendBizData.length : '—';
     var prl = document.getElementById('saDashPendingRest'); if (prl) prl.textContent = Array.isArray(pendRestData) ? pendRestData.length : '—';
+    if (dauData) {
+      var dt = document.getElementById('saDashDauToday'); if (dt) dt.textContent = dauData.today != null ? dauData.today : '—';
+      var dy = document.getElementById('saDashDauYesterday'); if (dy) dy.textContent = dauData.yesterday != null ? dauData.yesterday : '—';
+      var da = document.getElementById('saDashDauAvg'); if (da) da.textContent = dauData.avg_7d != null ? dauData.avg_7d : '—';
+    }
   } catch(e) {}
 }
 
@@ -2569,10 +2613,8 @@ async function loadSaJanazaMasjids() {
     sel.innerHTML = '<option value="">Select masjid...</option>';
     masjids.forEach(function(m) {
       var opt = document.createElement('option');
-      opt.value = m.display_name || m.org_name;
-      opt.textContent = m.display_name || m.org_name;
-      if (m.lat != null) opt.dataset.lat = m.lat;
-      if (m.lng != null) opt.dataset.lng = m.lng;
+      opt.value = m.name;
+      opt.textContent = m.name;
       sel.appendChild(opt);
     });
   } catch(e) {}
@@ -2616,31 +2658,119 @@ async function saSendJanazaPush() {
   var prayerLocation = document.getElementById('saPushJzLocation').value.trim();
   if (!name) { showToast('Deceased name required', true); return; }
   var masjidName = sel ? sel.value : '';
-  var selectedOpt = sel ? sel.options[sel.selectedIndex] : null;
-  var masjidLat = selectedOpt && selectedOpt.dataset.lat ? parseFloat(selectedOpt.dataset.lat) : null;
-  var masjidLng = selectedOpt && selectedOpt.dataset.lng ? parseFloat(selectedOpt.dataset.lng) : null;
-  if (!masjidName || masjidLat == null || masjidLng == null) {
-    showToast('Please select a masjid from the dropdown (coordinates required)', true); return;
-  }
-  var detailsParts = ['Janaza prayer for ' + name];
-  if (prayerTime) detailsParts.push('Time: ' + prayerTime);
-  if (prayerLocation) detailsParts.push('Location: ' + prayerLocation);
+  if (!masjidName) { showToast('Please select a masjid from the dropdown', true); return; }
   var btn = document.getElementById('saSendJzBtn');
   btn.disabled = true; btn.textContent = 'Sending...';
   try {
     var payload = {
       masjidName: masjidName,
-      masjidLat: masjidLat,
-      masjidLng: masjidLng,
-      details: detailsParts.join(' · '),
+      deceasedName: name,
+      prayerTime: prayerTime || null,
+      prayerLocation: prayerLocation || null,
     };
-    var res = await fetch('/api/admin/push/janaza', { method: 'POST', headers: authHeaders(), body: JSON.stringify(payload) });
+    var res = await fetch('/api/admin/janaza/publish', { method: 'POST', headers: authHeaders(), body: JSON.stringify(payload) });
     if (!res.ok) { var d = await res.json(); showToast(d.error || 'Failed', true); return; }
-    showToast('Janaza alert sent!');
+    var d = await res.json();
+    showToast(d.sent ? 'Janaza alert sent to ' + d.sent + ' nearby devices!' : 'Janaza alert saved!');
     ['saPushJzName','saPushJzTime','saPushJzLocation'].forEach(function(id) { document.getElementById(id).value = ''; });
     if (sel) sel.value = '';
   } catch(e) { showToast('Connection error', true); }
   finally { btn.disabled = false; btn.textContent = 'Send Janaza Alert'; }
+}
+
+// ─── SA Janaza AI Flyer ────────────────────────────────────────────────────────
+var saJanazaBase64 = null;
+var saJanazaMime = null;
+
+function saSwitchJanazaMode(mode) {
+  var aiPanel = document.getElementById('jzAIPanel');
+  var manualPanel = document.getElementById('jzManualPanel');
+  var btnManual = document.getElementById('jzModeManual');
+  var btnAI = document.getElementById('jzModeAI');
+  if (aiPanel) aiPanel.style.display = mode === 'ai' ? 'block' : 'none';
+  if (manualPanel) manualPanel.style.display = mode === 'manual' ? 'block' : 'none';
+  if (btnManual) { btnManual.style.borderColor = mode === 'manual' ? 'var(--gold)' : ''; btnManual.style.color = mode === 'manual' ? 'var(--gold)' : ''; }
+  if (btnAI) { btnAI.style.borderColor = mode === 'ai' ? 'var(--gold)' : ''; btnAI.style.color = mode === 'ai' ? 'var(--gold)' : ''; }
+}
+
+function saHandleJanazaDrop(e) {
+  e.preventDefault();
+  var uploadArea = document.getElementById('jzFlyerUploadArea');
+  if (uploadArea) uploadArea.style.borderColor = '';
+  var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if (file) saReadJanazaFile(file);
+}
+
+function saHandleJanazaSelect(e) {
+  var file = e.target && e.target.files && e.target.files[0];
+  if (file) saReadJanazaFile(file);
+}
+
+function saReadJanazaFile(file) {
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    var dataUrl = ev.target.result;
+    var comma = dataUrl.indexOf(',');
+    saJanazaBase64 = dataUrl.slice(comma + 1);
+    saJanazaMime = file.type || 'image/jpeg';
+    var previewEl = document.getElementById('jzFlyerPreview');
+    var previewImg = document.getElementById('jzFlyerPreviewImg');
+    var uploadArea = document.getElementById('jzFlyerUploadArea');
+    var extractBtn = document.getElementById('jzExtractBtn');
+    if (previewImg) previewImg.src = dataUrl;
+    if (previewEl) previewEl.style.display = 'block';
+    if (uploadArea) uploadArea.style.display = 'none';
+    if (extractBtn) extractBtn.disabled = false;
+  };
+  reader.readAsDataURL(file);
+}
+
+function saClearJanazaFlyer() {
+  saJanazaBase64 = null; saJanazaMime = null;
+  var previewEl = document.getElementById('jzFlyerPreview');
+  var uploadArea = document.getElementById('jzFlyerUploadArea');
+  var extractBtn = document.getElementById('jzExtractBtn');
+  var statusEl = document.getElementById('jzExtractStatus');
+  var fileInput = document.getElementById('jzFlyerInput');
+  if (previewEl) previewEl.style.display = 'none';
+  if (uploadArea) uploadArea.style.display = 'block';
+  if (extractBtn) extractBtn.disabled = true;
+  if (statusEl) { statusEl.style.display = 'none'; statusEl.textContent = ''; }
+  if (fileInput) fileInput.value = '';
+}
+
+async function saExtractJanaza() {
+  if (!saJanazaBase64) { showToast('No image loaded', true); return; }
+  var btn = document.getElementById('jzExtractBtn');
+  var statusEl = document.getElementById('jzExtractStatus');
+  if (btn) { btn.disabled = true; btn.textContent = 'Extracting...'; }
+  if (statusEl) { statusEl.style.display = 'block'; statusEl.style.background = 'var(--surface-alt)'; statusEl.style.color = 'var(--text-secondary)'; statusEl.textContent = '✨ Extracting janaza details...'; }
+  try {
+    var res = await fetch('/api/admin/janaza/extract', {
+      method: 'POST', headers: authHeaders(),
+      body: JSON.stringify({ image: saJanazaBase64, mimeType: saJanazaMime }),
+    });
+    if (!res.ok) { var d = await res.json(); throw new Error(d.error || 'Extraction failed'); }
+    var data = await res.json();
+    if (data.deceasedName) { var nameEl = document.getElementById('saPushJzName'); if (nameEl) nameEl.value = data.deceasedName; }
+    if (data.prayerTime) { var timeEl = document.getElementById('saPushJzTime'); if (timeEl) timeEl.value = data.prayerTime; }
+    if (data.prayerLocation || data.masjidName) { var locEl = document.getElementById('saPushJzLocation'); if (locEl) locEl.value = data.prayerLocation || data.masjidName; }
+    if (data.masjidName) {
+      var sel = document.getElementById('saPushJzMasjid');
+      if (sel) {
+        var opts = Array.from(sel.options);
+        var match = opts.find(function(o) { return o.textContent.toLowerCase().includes(data.masjidName.toLowerCase()); });
+        if (match) sel.value = match.value;
+      }
+    }
+    if (statusEl) { statusEl.style.background = 'var(--emerald-surface)'; statusEl.style.color = 'var(--emerald-light)'; statusEl.textContent = '✓ Details extracted — review below and send'; }
+    saSwitchJanazaMode('manual');
+  } catch(err) {
+    if (statusEl) { statusEl.style.background = 'var(--error-bg,#2d1a1a)'; statusEl.style.color = 'var(--error,#f87171)'; statusEl.textContent = '✗ ' + (err.message || 'Extraction failed'); }
+    if (btn) btn.disabled = false;
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '✨ Extract with AI'; }
+  }
 }
 
 async function saSendEventPush() {
@@ -3380,12 +3510,12 @@ async function saLoadDAU() {
     var res = await fetch('/api/admin/analytics/dau?days=30', { headers: authHeaders() });
     if (!res.ok) { statsEl.innerHTML = '<div class="empty-state">Analytics not yet available</div>'; return; }
     var data = await res.json();
-    var arr = Array.isArray(data) ? data : [];
-    var today = arr.length ? (arr[arr.length - 1].count || 0) : 0;
-    var avg = arr.length ? Math.round(arr.reduce(function(s, d) { return s + (d.count || 0); }, 0) / arr.length) : 0;
-    var peak = arr.length ? Math.max.apply(null, arr.map(function(d) { return d.count || 0; })) : 0;
+    var arr = Array.isArray(data) ? data : (data.daily || []);
+    var todayVal = data.today != null ? data.today : (arr.length ? (arr[arr.length - 1].unique_devices || 0) : 0);
+    var avg7d = data.avg_7d != null ? data.avg_7d : 0;
+    var peak = arr.length ? Math.max.apply(null, arr.map(function(d) { return d.unique_devices || 0; })) : 0;
     statsEl.innerHTML = [
-      { label: 'Today', val: today }, { label: '30-Day Avg', val: avg }, { label: 'Peak', val: peak }
+      { label: 'Today', val: todayVal }, { label: '7-Day Avg', val: avg7d }, { label: '30-Day Peak', val: peak }
     ].map(function(s) {
       return '<div style="background:var(--surface-alt);border-radius:10px;padding:14px;text-align:center;"><div style="font-size:24px;font-weight:700;color:var(--gold);">' + s.val + '</div><div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">' + s.label + '</div></div>';
     }).join('');
@@ -3396,7 +3526,7 @@ async function saLoadDAU() {
 function renderDAUChart(canvas, arr) {
   var ctx = canvas.getContext('2d'); if (!ctx) return;
   var labels = arr.map(function(d) { return d.date || d.day || ''; });
-  var values = arr.map(function(d) { return d.count || d.dau || 0; });
+  var values = arr.map(function(d) { return d.unique_devices || d.count || d.dau || 0; });
   var w = canvas.parentElement.clientWidth || 300;
   var h = 140;
   canvas.width = w * window.devicePixelRatio;
@@ -3455,9 +3585,7 @@ async function saLoadAnalyticsSummary(qs) {
     }
     var sumRes = await fetch('/api/admin/analytics/summary' + (qs ? '?' + qs.replace(/^&/, '') : ''), { headers: authHeaders() });
     if (sumRes.ok) {
-      var sumData = await sumRes.json();
-      renderScreenViews(sumData.screen_views);
-      renderEventBreakdown(sumData.event_breakdown);
+      await sumRes.json();
     }
   } catch(e) { if (overviewEl) overviewEl.innerHTML = '<div class="empty-state">Failed to load</div>'; }
 }
@@ -3467,19 +3595,21 @@ async function saLoadAnalyticsTop(qs) {
     var res = await fetch('/api/admin/analytics/top' + (qs ? '?' + qs.replace(/^&/, '') : ''), { headers: authHeaders() });
     if (!res.ok) return;
     var data = await res.json();
-    renderTopList('analyticsTopRestaurants', data.top_restaurants, 'Restaurant', 'views');
-    renderTopList('analyticsTopEvents', data.top_events, 'Event', 'clicks');
-    renderTopList('analyticsTopSearches', data.top_searches, 'Query', 'count');
-    renderPrayerStats(data.prayer_stats);
-    renderFeatureAdoption(data.feature_adoption);
+    renderTopList('analyticsTopRestaurants', data.topRestaurants, 'Restaurant', 'views');
+    renderTopList('analyticsTopEvents', data.topEvents, 'Event', 'clicks');
+    renderTopList('analyticsTopSearches', data.topSearches, 'Query', 'searches');
+    renderPrayerStats(data.prayerStats);
+    renderFeatureAdoption(data.featureAdoption);
+    renderScreenViews(data.screenViews);
   } catch(e) {}
 }
 
 function renderScreenViews(views) {
   var el = document.getElementById('analyticsScreenViews'); if (!el) return;
-  if (!views || !Object.keys(views).length) { el.innerHTML = '<div class="empty-state">No data</div>'; return; }
-  el.innerHTML = Object.entries(views).sort(function(a, b) { return b[1] - a[1]; }).map(function(kv) {
-    return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-secondary);">' + escHtml(kv[0]) + '</span><span style="font-weight:600;color:var(--text);">' + kv[1] + '</span></div>';
+  var arr = Array.isArray(views) ? views : (views ? Object.entries(views).map(function(kv) { return { screen: kv[0], views: kv[1] }; }) : []);
+  if (!arr.length) { el.innerHTML = '<div class="empty-state">No data</div>'; return; }
+  el.innerHTML = arr.sort(function(a, b) { return (b.views || 0) - (a.views || 0); }).map(function(row) {
+    return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-secondary);">' + escHtml(row.screen || '') + '</span><span style="font-weight:600;color:var(--text);">' + (row.views || 0) + '</span></div>';
   }).join('');
 }
 
@@ -3495,17 +3625,19 @@ function renderTopList(elId, items, labelKey, countKey) {
 
 function renderPrayerStats(stats) {
   var el = document.getElementById('analyticsPrayerStats'); if (!el) return;
-  if (!stats || !Object.keys(stats).length) { el.innerHTML = '<div class="empty-state">No data</div>'; return; }
-  el.innerHTML = Object.entries(stats).map(function(kv) {
-    return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-secondary);">' + escHtml(String(kv[0]).replace(/_/g, ' ')) + '</span><span style="font-weight:600;color:var(--text);">' + escHtml(String(kv[1])) + '</span></div>';
+  var arr = Array.isArray(stats) ? stats : (stats ? Object.entries(stats).map(function(kv) { return { prayer: kv[0], tracks: kv[1] }; }) : []);
+  if (!arr.length) { el.innerHTML = '<div class="empty-state">No data</div>'; return; }
+  el.innerHTML = arr.map(function(row) {
+    return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-secondary);">' + escHtml(String(row.prayer || '').replace(/_/g, ' ')) + '</span><span style="font-weight:600;color:var(--text);">' + (row.tracks || 0) + '</span></div>';
   }).join('');
 }
 
 function renderFeatureAdoption(data) {
   var el = document.getElementById('analyticsFeatureAdoption'); if (!el) return;
-  if (!data || !Object.keys(data).length) { el.innerHTML = '<div class="empty-state">No data</div>'; return; }
-  el.innerHTML = Object.entries(data).map(function(kv) {
-    return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-secondary);">' + escHtml(String(kv[0]).replace(/_/g, ' ')) + '</span><span style="font-weight:600;color:var(--text);">' + escHtml(String(kv[1])) + '</span></div>';
+  var arr = Array.isArray(data) ? data : (data ? Object.entries(data).map(function(kv) { return { event_name: kv[0], devices: kv[1] }; }) : []);
+  if (!arr.length) { el.innerHTML = '<div class="empty-state">No data</div>'; return; }
+  el.innerHTML = arr.map(function(row) {
+    return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-secondary);">' + escHtml(String(row.event_name || '').replace(/_/g, ' ')) + '</span><span style="font-weight:600;color:var(--text);">' + (row.devices || 0) + '</span></div>';
   }).join('');
 }
 

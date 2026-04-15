@@ -4700,6 +4700,31 @@ Return ONLY the description text, nothing else.`,
     }
   });
 
+  app.get("/api/admin/analytics/overview", async (req, res) => {
+    if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      const [evRes, bizRes, restRes, masjidRes, userRes, aeRes] = await Promise.all([
+        pool.query("SELECT COUNT(*)::int as count FROM community_events WHERE status = 'approved'"),
+        pool.query("SELECT COUNT(*)::int as count FROM businesses WHERE status = 'approved'"),
+        pool.query("SELECT COUNT(*)::int as count FROM restaurants"),
+        pool.query("SELECT COUNT(*)::int as count FROM masjids WHERE active = true"),
+        pool.query("SELECT COUNT(*)::int as count FROM user_accounts"),
+        pool.query("SELECT COUNT(*)::int as count FROM analytics_events"),
+      ]);
+      res.json({
+        totalEvents: evRes.rows[0].count,
+        totalBusinesses: bizRes.rows[0].count,
+        totalRestaurants: restRes.rows[0].count,
+        totalMasjids: masjidRes.rows[0].count,
+        appUsers: userRes.rows[0].count,
+        analyticsEvents: aeRes.rows[0].count,
+      });
+    } catch (error: any) {
+      console.error("[Analytics] Overview error:", error.message);
+      res.status(500).json({ error: "Failed to fetch overview" });
+    }
+  });
+
   app.get("/api/admin/analytics/dau", async (req, res) => {
     if (!isAdminAuthorized(req)) return res.status(401).json({ error: "Unauthorized" });
     try {
