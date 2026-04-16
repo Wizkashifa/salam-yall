@@ -272,7 +272,23 @@
           <label>Message *</label>
           <textarea id="saPushBody" placeholder="Notification message..."></textarea>
           <label>Link (optional)</label>
-          <input type="text" id="saPushLink" placeholder="https://...">
+          <input type="text" id="saPushLink" placeholder="https://... or use deep link picker below" oninput="dlSyncClear()">
+          <div id="deepLinkPicker" style="margin-top:8px;padding:10px 12px;background:var(--surface-alt);border:1px solid var(--border-light);border-radius:10px;">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;letter-spacing:.04em;text-transform:uppercase;">Deep Link Picker</div>
+            <div style="display:flex;gap:6px;margin-bottom:10px;">
+              <button class="btn btn-sm btn-outline" id="dlTypeEvent" onclick="dlSetType('event')" style="font-size:11px;flex:1;">🗓 Event</button>
+              <button class="btn btn-sm btn-outline" id="dlTypeRestaurant" onclick="dlSetType('restaurant')" style="font-size:11px;flex:1;">🍽 Restaurant</button>
+              <button class="btn btn-sm btn-outline" id="dlTypeBusiness" onclick="dlSetType('business')" style="font-size:11px;flex:1;">🏪 Business</button>
+            </div>
+            <div id="dlSearchPanel" style="display:none;">
+              <input type="text" id="dlSearchInput" placeholder="Search..." oninput="dlSearch()" autocomplete="off" style="margin-bottom:0;">
+              <div id="dlResults" style="max-height:180px;overflow-y:auto;margin-top:4px;display:none;border:1px solid var(--border-light);border-radius:8px;background:var(--surface);"></div>
+            </div>
+            <div id="dlSelected" style="display:none;margin-top:8px;font-size:12px;padding:6px 10px;background:rgba(212,175,55,0.1);border:1px solid var(--gold);border-radius:8px;color:var(--gold);display:flex;align-items:center;justify-content:space-between;">
+              <span id="dlSelectedLabel"></span>
+              <button onclick="dlClearSelected()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;padding:0 0 0 8px;">✕</button>
+            </div>
+          </div>
           <button class="btn btn-primary" onclick="saSendGeneralPush()" id="saSendPushBtn" style="margin-top:14px;width:100%;">Send to All Users</button>
         </div>
         <div id="saPushJanaza" style="display:none;">
@@ -2635,6 +2651,101 @@ async function loadSaEventPushDropdown() {
   } catch(e) {}
 }
 
+// ─── Deep Link Picker ─────────────────────────────────────────────────────────
+var dlCurrentType = null;
+var dlCache = {}; // { event: [...], business: [...] }
+var dlSearchTimer = null;
+
+function dlSetType(type) {
+  dlCurrentType = type;
+  ['event','restaurant','business'].forEach(function(t) {
+    var btn = document.getElementById('dlType' + t.charAt(0).toUpperCase() + t.slice(1));
+    if (btn) { btn.style.borderColor = t === type ? 'var(--gold)' : ''; btn.style.color = t === type ? 'var(--gold)' : ''; }
+  });
+  var panel = document.getElementById('dlSearchPanel');
+  if (panel) panel.style.display = 'block';
+  var inp = document.getElementById('dlSearchInput');
+  if (inp) { inp.placeholder = 'Search ' + type + 's...'; inp.value = ''; inp.focus(); }
+  var res = document.getElementById('dlResults');
+  if (res) res.style.display = 'none';
+}
+
+function dlSyncClear() {
+  // If user manually edits link field, clear the selected deep link highlight
+  var dlSel = document.getElementById('dlSelected');
+  if (dlSel) dlSel.style.display = 'none';
+}
+
+async function dlSearch() {
+  if (!dlCurrentType) return;
+  clearTimeout(dlSearchTimer);
+  dlSearchTimer = setTimeout(async function() {
+    var q = (document.getElementById('dlSearchInput').value || '').trim().toLowerCase();
+    var results = [];
+    try {
+      if (dlCurrentType === 'restaurant') {
+        var url = '/api/admin/restaurants' + (q ? '?search=' + encodeURIComponent(q) : '');
+        var res = await fetch(url, { headers: authHeaders() });
+        var data = await res.json();
+        var rows = Array.isArray(data) ? data : (data.restaurants || []);
+        results = rows.slice(0, 10).map(function(r) { return { id: r.id, label: r.name + (r.formatted_address ? ' — ' + r.formatted_address.split(',')[0] : '') }; });
+      } else if (dlCurrentType === 'event') {
+        if (!dlCache.event) {
+          var res = await fetch('/api/admin/community-events', { headers: authHeaders() });
+          var data = await res.json();
+          dlCache.event = Array.isArray(data) ? data : (data.events || []);
+        }
+        results = dlCache.event.filter(function(e) {
+          return !q || (e.title || '').toLowerCase().includes(q) || (e.location || '').toLowerCase().includes(q);
+        }).slice(0, 10).map(function(e) { return { id: e.id, label: e.title + (e.start_time ? ' — ' + new Date(e.start_time).toLocaleDateString() : '') }; });
+      } else if (dlCurrentType === 'business') {
+        if (!dlCache.business) {
+          var res = await fetch('/api/admin/businesses?status=approved', { headers: authHeaders() });
+          dlCache.business = await res.json();
+        }
+        results = dlCache.business.filter(function(b) {
+          return !q || (b.name || '').toLowerCase().includes(q) || (b.category || '').toLowerCase().includes(q) || (b.address || '').toLowerCase().includes(q);
+        }).slice(0, 10).map(function(b) { return { id: b.id, label: b.name + (b.category ? ' — ' + b.category : '') }; });
+      }
+    } catch(e) { results = []; }
+    var box = document.getElementById('dlResults');
+    if (!box) return;
+    if (!results.length) {
+      box.innerHTML = '<div style="padding:10px 12px;font-size:12px;color:var(--text-muted);">No results</div>';
+    } else {
+      box.innerHTML = results.map(function(r) {
+        return '<div onclick="dlSelect(' + JSON.stringify(r.id) + ',' + JSON.stringify(r.label) + ')" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border-light);font-size:12px;transition:background .15s;" onmouseover="this.style.background=\'var(--surface-alt)\'" onmouseout="this.style.background=\'\'"><span style="color:var(--text-primary);">' + escHtml(r.label) + '</span></div>';
+      }).join('');
+    }
+    box.style.display = 'block';
+  }, 280);
+}
+
+function dlSelect(id, label) {
+  var deepLink = 'salamyall://' + dlCurrentType + '/' + id;
+  var linkEl = document.getElementById('saPushLink');
+  if (linkEl) linkEl.value = deepLink;
+  var box = document.getElementById('dlResults');
+  if (box) box.style.display = 'none';
+  var selDiv = document.getElementById('dlSelected');
+  var selLabel = document.getElementById('dlSelectedLabel');
+  if (selDiv && selLabel) {
+    selLabel.textContent = '🔗 ' + label;
+    selDiv.style.display = 'flex';
+  }
+}
+
+function dlClearSelected() {
+  var linkEl = document.getElementById('saPushLink');
+  if (linkEl) linkEl.value = '';
+  var selDiv = document.getElementById('dlSelected');
+  if (selDiv) selDiv.style.display = 'none';
+  var inp = document.getElementById('dlSearchInput');
+  if (inp) inp.value = '';
+  var box = document.getElementById('dlResults');
+  if (box) box.style.display = 'none';
+}
+
 async function saSendGeneralPush() {
   var title = document.getElementById('saPushTitle').value.trim();
   var body = document.getElementById('saPushBody').value.trim();
@@ -2649,6 +2760,7 @@ async function saSendGeneralPush() {
     var d = await res.json();
     showToast(d.sent ? 'Sent to ' + d.sent + ' users!' : 'Sent!');
     ['saPushTitle','saPushBody','saPushLink'].forEach(function(id) { document.getElementById(id).value = ''; });
+    dlClearSelected(); dlCache = {};
   } catch(e) { showToast('Connection error', true); }
   finally { btn.disabled = false; btn.textContent = 'Send to All Users'; }
 }
