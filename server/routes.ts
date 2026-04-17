@@ -2466,10 +2466,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch {}
       }
 
+      const LOREM_IPSUM = new Set(['porta','lorem','ipsum','dolor','amet','consectetur','adipiscing','cursus','pellentesque','vulputate','etiam','elit','commodo','ligula','risus','ridiculus','aenean','condimentum','vestibulum','malesuada','faucibus','euismod','curabitur']);
+      const isLoremIpsum = (title: string) => title.toLowerCase().split(/\s+/).some(w => LOREM_IPSUM.has(w));
       const events: CachedEvent[] = allItems
-        .filter(item => item && (item.title || item.fullUrl))
+        .filter(item => item && (item.title || item.fullUrl) && (item.startDate || item.publishOn) && !isLoremIpsum(item.title || ''))
         .map((item: any, idx: number) => {
-          const startMs = item.startDate || item.publishOn || Date.now();
+          const startMs = item.startDate || item.publishOn;
           const endMs = item.endDate || startMs + 3600000;
           const desc = item.body ? item.body.replace(/<[^>]+>/g, " ").replace(/\s{2,}/g, " ").trim() : "";
           const regUrl = item.fullUrl ? `https://www.qahwacafe.com${item.fullUrl}` : "https://www.qahwacafe.com/events";
@@ -2511,7 +2513,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const end = new Date(ev.end || ev.start);
         if (isNaN(start.getTime())) continue;
         const { rows: existing } = await pool.query(
-          "SELECT id FROM community_events WHERE organizer = 'Qahwah Cafe' AND title = $1 AND start_time = $2",
+          "SELECT id FROM community_events WHERE organizer = 'Qahwah Cafe' AND title = $1 AND DATE_TRUNC('minute', start_time) = DATE_TRUNC('minute', $2::timestamptz)",
           [ev.title, start]
         );
         if (existing.length > 0) {
