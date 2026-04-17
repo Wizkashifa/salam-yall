@@ -1048,8 +1048,21 @@ async function scrapeAdamsCenterJumuah(pool: pg.Pool): Promise<void> {
 }
 
 function scheduleAdamsJumuahScraper(pool: pg.Pool): void {
-  // Run immediately on startup
-  scrapeAdamsCenterJumuah(pool).catch(err => console.error("[Adams Jumuah] Startup scrape error:", err.message));
+  // On startup, skip if data was scraped within the last 24 hours
+  (async () => {
+    try {
+      const { rows } = await pool.query(`SELECT MAX(updated_at) as last_sync FROM jumuah_schedules WHERE masjid LIKE 'ADAMS%'`);
+      const lastSync: Date | null = rows[0]?.last_sync ? new Date(rows[0].last_sync) : null;
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      if (!lastSync || lastSync < oneDayAgo) {
+        scrapeAdamsCenterJumuah(pool).catch(err => console.error("[Adams Jumuah] Startup scrape error:", err.message));
+      } else {
+        console.log(`[Adams Jumuah] Skipping startup scrape — data is fresh (last: ${lastSync.toISOString()})`);
+      }
+    } catch {
+      scrapeAdamsCenterJumuah(pool).catch(err => console.error("[Adams Jumuah] Startup scrape error:", err.message));
+    }
+  })();
 
   // Re-scrape every 24 hours, but only actually update on Thursdays
   setInterval(() => {
@@ -1365,7 +1378,7 @@ async function ensureHalalRestaurantsTable(pool: pg.Pool) {
   }
 }
 
-const HALAL_SYNC_INTERVAL = 6 * 60 * 60 * 1000;
+const HALAL_SYNC_INTERVAL = 7 * 24 * 60 * 60 * 1000;
 const HALAL_API_URL = "https://halaleatsnc.com/api/restaurants";
 
 async function syncHalalRestaurants(pool: pg.Pool) {
@@ -1435,17 +1448,27 @@ async function syncHalalRestaurants(pool: pg.Pool) {
 }
 
 function startHalalAutoSync(pool: pg.Pool) {
-  setTimeout(() => {
-    syncHalalRestaurants(pool).catch(err =>
-      console.error("[Halal Sync] Error:", err.message)
-    );
-  }, 30000);
+  // On startup, skip if data was synced within the last 7 days
+  (async () => {
+    try {
+      const { rows } = await pool.query(`SELECT MAX(created_at) as last_sync FROM halal_restaurants`);
+      const lastSync: Date | null = rows[0]?.last_sync ? new Date(rows[0].last_sync) : null;
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      if (!lastSync || lastSync < sevenDaysAgo) {
+        syncHalalRestaurants(pool).catch(err => console.error("[Halal Sync] Startup sync error:", err.message));
+      } else {
+        console.log(`[Halal Sync] Skipping startup sync — data is fresh (last: ${lastSync.toISOString()})`);
+      }
+    } catch {
+      syncHalalRestaurants(pool).catch(err => console.error("[Halal Sync] Startup sync error:", err.message));
+    }
+  })();
 
   setInterval(() => {
     syncHalalRestaurants(pool).catch(err =>
       console.error("[Halal Sync] Scheduled sync error:", err.message)
     );
-  }, HALAL_SYNC_INTERVAL);
+  }, 7 * 24 * 60 * 60 * 1000);
 }
 
 async function ensureBusinessesTable(pool: pg.Pool) {

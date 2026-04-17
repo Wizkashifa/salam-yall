@@ -1537,9 +1537,27 @@ export function getIqamaSources(): { name: string; type: string; url: string }[]
 let syncInterval: ReturnType<typeof setInterval> | null = null;
 
 export function startIqamaSync(pool: pg.Pool) {
-  syncExternalIqama(pool).catch(err => console.error("[Iqama] Initial sync error:", err.message));
+  // On startup, only sync if data is older than 7 days — prevents hammering sites on every restart
+  (async () => {
+    try {
+      const { rows } = await pool.query(
+        `SELECT MAX(updated_at) as last_sync FROM iqama_schedules WHERE date >= CURRENT_DATE`
+      );
+      const lastSync: Date | null = rows[0]?.last_sync ? new Date(rows[0].last_sync) : null;
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      if (!lastSync || lastSync < sevenDaysAgo) {
+        console.log("[Iqama] No recent data — running startup sync...");
+        syncExternalIqama(pool).catch(err => console.error("[Iqama] Initial sync error:", err.message));
+      } else {
+        console.log(`[Iqama] Skipping startup sync — data is fresh (last: ${lastSync.toISOString().slice(0, 16)})`);
+      }
+    } catch {
+      syncExternalIqama(pool).catch(err => console.error("[Iqama] Initial sync error:", err.message));
+    }
+  })();
 
+  // Sync weekly
   syncInterval = setInterval(() => {
     syncExternalIqama(pool).catch(err => console.error("[Iqama] Sync error:", err.message));
-  }, 6 * 60 * 60 * 1000);
+  }, 7 * 24 * 60 * 60 * 1000);
 }
