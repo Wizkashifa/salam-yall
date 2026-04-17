@@ -2663,7 +2663,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const bTime = new Date(b.start).getTime();
         return aTime - bTime;
       });
-      res.json(allEvents);
+      // Cap recurring events to 4 upcoming occurrences per title to prevent list flooding
+      const MAX_RECURRING = 4;
+      const titleCount = new Map<string, number>();
+      const cappedEvents = allEvents.filter(ev => {
+        if (ev.isFeatured) return true;
+        const titleKey = ev.title.toLowerCase().replace(/[^a-z0-9]/g, "");
+        const count = titleCount.get(titleKey) || 0;
+        if (count >= MAX_RECURRING) return false;
+        titleCount.set(titleKey, count + 1);
+        return true;
+      });
+      res.json(cappedEvents);
     } catch (error: any) {
       console.error("Error fetching calendar events:", error.message);
       res.status(500).json({ error: "Failed to fetch events" });
