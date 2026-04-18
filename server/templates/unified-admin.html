@@ -2064,7 +2064,17 @@ async function extractFlyer(dashKey) {
     document.getElementById(pfx + 'RegUrl').value = data.registrationUrl || '';
     if (data.date) {
       document.getElementById(pfx + 'Start').value = data.date + 'T' + (data.startTime || '00:00');
-      if (data.endTime) document.getElementById(pfx + 'End').value = data.date + 'T' + data.endTime;
+      if (data.endTime) {
+        var startDT = new Date(data.date + 'T' + (data.startTime || '00:00'));
+        var endDT = new Date(data.date + 'T' + data.endTime);
+        var endDate = data.date;
+        if (endDT <= startDT) {
+          var nextDay = new Date(startDT);
+          nextDay.setDate(nextDay.getDate() + 1);
+          endDate = nextDay.toISOString().split('T')[0];
+        }
+        document.getElementById(pfx + 'End').value = endDate + 'T' + data.endTime;
+      }
     }
     if (data.organizer) {
       if (dashKey === 'me') {
