@@ -2121,6 +2121,8 @@ async function publishPortalEvent(dashKey) {
   var startTime = document.getElementById(pfx + 'Start').value;
   var location = document.getElementById(pfx + 'Location').value.trim();
   if (!title || !startTime || !location) { showToast('Title, start time, and location required', true); return; }
+  var endTimeVal = document.getElementById(pfx + 'End').value;
+  if (endTimeVal && new Date(endTimeVal) <= new Date(startTime)) { showToast('End time must be after start time', true); return; }
   var btn = getPublishBtnEl(dashKey);
   if (!btn) { showToast('UI error: publish button not found', true); return; }
   btn.disabled = true; btn.textContent = 'Publishing...';
@@ -2139,7 +2141,7 @@ async function publishPortalEvent(dashKey) {
     var body = {
       title: title, description: document.getElementById(pfx + 'Desc').value.trim(),
       location: location, startTime: new Date(startTime).toISOString(),
-      endTime: document.getElementById(pfx + 'End').value ? new Date(document.getElementById(pfx + 'End').value).toISOString() : null,
+      endTime: endTimeVal ? new Date(endTimeVal).toISOString() : null,
       registrationUrl: document.getElementById(pfx + 'RegUrl').value.trim(),
       image: fd ? fd.base64 : null, imageMime: fd ? fd.mime : null,
       additionalImages: additionalFlyerImages[dashKey],

@@ -8092,6 +8092,7 @@ ${profileInfo.slice(0, 30000)}`,
     try {
       const { title, description, location, startTime, endTime, organizer, registrationUrl, image, imageMime, additionalImages, isVirtual, isFeatured, recurring, recurrenceType, recurrenceConfig } = req.body;
       if (!title || !startTime) return res.status(400).json({ error: "Title and start time are required" });
+      if (endTime && new Date(endTime) <= new Date(startTime)) return res.status(400).json({ error: "End time must be after start time" });
 
       if (isFeatured) {
         const { rows: featuredCount } = await pool.query(
@@ -8430,6 +8431,7 @@ ${profileInfo.slice(0, 30000)}`,
     try {
       const { title, description, location, startTime, endTime, registrationUrl, image, imageMime, recurring, recurrenceType, recurrenceConfig } = req.body;
       if (!title || !startTime) return res.status(400).json({ error: "Title and start time are required" });
+      if (endTime && new Date(endTime) <= new Date(startTime)) return res.status(400).json({ error: "End time must be after start time" });
 
       let eventLat: number | null = null;
       let eventLng: number | null = null;
