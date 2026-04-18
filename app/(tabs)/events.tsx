@@ -1172,7 +1172,7 @@ export default function EventsScreen() {
     if (distanceFilter === "all" || !userLocation) return nonFeatured;
     return nonFeatured.filter((ev) => {
       if (ev.isVirtual) return true;
-      if (ev.latitude == null || ev.longitude == null) return distanceFilter >= 100;
+      if (ev.latitude == null || ev.longitude == null) return true;
       const km = getDistanceKm(userLocation.latitude, userLocation.longitude, ev.latitude, ev.longitude);
       const miles = kmToMiles(km);
       return miles <= distanceFilter;
