@@ -284,7 +284,7 @@
               <input type="text" id="dlSearchInput" placeholder="Search..." oninput="dlSearch()" autocomplete="off" style="margin-bottom:0;">
               <div id="dlResults" style="max-height:180px;overflow-y:auto;margin-top:4px;display:none;border:1px solid var(--border-light);border-radius:8px;background:var(--surface);"></div>
             </div>
-            <div id="dlSelected" style="display:none;margin-top:8px;font-size:12px;padding:6px 10px;background:rgba(212,175,55,0.1);border:1px solid var(--gold);border-radius:8px;color:var(--gold);display:flex;align-items:center;justify-content:space-between;">
+            <div id="dlSelected" style="display:none;margin-top:8px;font-size:12px;padding:6px 10px;background:rgba(212,175,55,0.1);border:1px solid var(--gold);border-radius:8px;color:var(--gold);align-items:center;justify-content:space-between;">
               <span id="dlSelectedLabel"></span>
               <button onclick="dlClearSelected()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;padding:0 0 0 8px;">✕</button>
             </div>
@@ -2733,7 +2733,7 @@ async function dlSearch() {
       box.innerHTML = '<div style="padding:10px 12px;font-size:12px;color:var(--text-muted);">No results</div>';
     } else {
       box.innerHTML = results.map(function(r) {
-        return '<div onclick="dlSelect(' + JSON.stringify(r.id) + ',' + JSON.stringify(r.label) + ')" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border-light);font-size:12px;transition:background .15s;" onmouseover="this.style.background=\'var(--surface-alt)\'" onmouseout="this.style.background=\'\'"><span style="color:var(--text-primary);">' + escHtml(r.label) + '</span></div>';
+        return '<div data-dl-id="' + escHtml(String(r.id)) + '" data-dl-label="' + escHtml(r.label) + '" onclick="dlSelect(this.dataset.dlId,this.dataset.dlLabel)" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border-light);font-size:12px;transition:background .15s;" onmouseover="this.style.background=\'var(--surface-alt)\'" onmouseout="this.style.background=\'\'"><span style="color:var(--text-primary);">' + escHtml(r.label) + '</span></div>';
       }).join('');
     }
     box.style.display = 'block';
