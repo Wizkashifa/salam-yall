@@ -1436,7 +1436,7 @@ async function loadAdminEvents() {
         '<h3>' + escHtml(ev.title) + '</h3>' +
         '<div class="card-meta">📅 ' + d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) + ' ' + d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) + '</div>' +
         (ev.location ? '<div class="card-meta">📍 ' + escHtml(ev.location) + '</div>' : '') +
-        '<div class="card-actions"><button class="btn btn-sm btn-danger" onclick="deleteAdminEvent(' + ev.id + ')">Delete</button></div>';
+        '<div class="card-actions"><button class="btn btn-sm btn-outline" onclick="openEditEvent(' + ev.id + ',\'sa\')">Edit</button><button class="btn btn-sm btn-danger" onclick="deleteAdminEvent(' + ev.id + ')">Delete</button></div>';
       list.appendChild(el);
     });
   } catch(e) { list.innerHTML = '<div class="empty-state">Failed to load</div>'; }
@@ -1446,6 +1446,8 @@ async function publishAdminEvent() {
   var title = document.getElementById('saTitle').value.trim();
   var startTime = document.getElementById('saStartTime').value;
   if (!title || !startTime) { showToast('Title and start time required', true); return; }
+  var saEndTimeVal = document.getElementById('saEndTime').value;
+  if (saEndTimeVal && new Date(saEndTimeVal) <= new Date(startTime)) { showToast('End time must be after start time', true); return; }
   var btn = document.getElementById('saPublishBtn');
   btn.disabled = true; btn.textContent = 'Publishing...';
   var recur = getRecurPayload('sa');
@@ -1608,6 +1610,8 @@ async function publishMetroEvent() {
   var title = document.getElementById('meTitle').value.trim();
   var startTime = document.getElementById('meStartTime').value;
   if (!title || !startTime) { showToast('Title and start time required', true); return; }
+  var meEndTimeVal = document.getElementById('meEndTime').value;
+  if (meEndTimeVal && new Date(meEndTimeVal) <= new Date(startTime)) { showToast('End time must be after start time', true); return; }
   var btn = document.getElementById('mePublishBtn');
   btn.disabled = true; btn.textContent = 'Publishing...';
   var recur = getRecurPayload('me');
@@ -2248,6 +2252,7 @@ async function saveEventEdit() {
     var regUrl = document.getElementById('editEvRegUrl').value.trim();
     var startVal = document.getElementById('editEvStart').value;
     var endVal = document.getElementById('editEvEnd').value;
+    if (endVal && startVal && new Date(endVal) <= new Date(startVal)) { showToast('End time must be after start time', true); return; }
     var startISO = startVal ? new Date(startVal).toISOString() : undefined;
     var endISO = endVal ? new Date(endVal).toISOString() : undefined;
     var body;
