@@ -7731,7 +7731,7 @@ Important notes:
               type: "text",
               text: `Extract event details from ${imageBlocks.length > 1 ? 'these flyer images (they are multiple pages/views of the same event)' : 'this flyer image'}. Today's date is ${new Date().toISOString().split("T")[0]}. IMPORTANT: If the flyer does not specify a year, assume the next upcoming occurrence of that date (i.e. use ${new Date().getFullYear()} or ${new Date().getFullYear() + 1}, whichever makes the date in the future). Also look carefully for any QR codes in the image — if you find one, decode it and use the URL as the registrationUrl. QR codes on event flyers typically link to registration or RSVP pages. If both a visible text URL and a QR code URL are present, prefer the QR code URL.${imageBlocks.length > 1 ? ' Combine information from ALL images to build the most complete event details.' : ''}
 
-Also detect if this is a recurring event. IMPORTANT: Only set "isRecurring": true if the flyer EXPLICITLY contains recurring language such as "every Wednesday", "weekly", "monthly", "every month", "meets every", "3rd Thursday of each month", "bi-weekly", etc. Do NOT infer recurring from the event name or type alone — for example, "Qiyam Night", "Sisters Halaqa", or "Friday Lecture" are NOT recurring unless the flyer explicitly says so. When in doubt, set isRecurring to false.
+Also detect if this is a recurring event (phrases like "every Wednesday", "monthly", "3rd Thursday of each month", "bi-monthly", "weekly", etc.).
 
 Return ONLY a JSON object with these fields (use null for any field you cannot determine):
 {
@@ -8642,7 +8642,7 @@ ${profileInfo.slice(0, 30000)}`,
               type: "text",
               text: `Extract event details from ${imageBlocks.length > 1 ? "these flyer images (they are multiple pages/views of the same event)" : "this flyer image"}. Today's date is ${new Date().toISOString().split("T")[0]}. IMPORTANT: If the flyer does not specify a year, assume the next upcoming occurrence of that date (i.e. use ${new Date().getFullYear()} or ${new Date().getFullYear() + 1}, whichever makes the date in the future). Also look carefully for any QR codes in the image — if you find one, decode it and use the URL as the registrationUrl.${imageBlocks.length > 1 ? " Combine information from ALL images to build the most complete event details." : ""}
 
-Also detect if this is a recurring event. IMPORTANT: Only set "isRecurring": true if the flyer EXPLICITLY contains recurring language such as "every Wednesday", "weekly", "monthly", "every month", "meets every", "3rd Thursday of each month", "bi-weekly", etc. Do NOT infer recurring from the event name or type alone — for example, "Qiyam Night", "Sisters Halaqa", or "Friday Lecture" are NOT recurring unless the flyer explicitly says so. When in doubt, set isRecurring to false.
+Also detect if this is a recurring event (phrases like "every Wednesday", "monthly", "3rd Thursday of each month", "bi-monthly", "weekly", etc.).
 
 Return ONLY a JSON object with these fields (use null for any field you cannot determine):
 {

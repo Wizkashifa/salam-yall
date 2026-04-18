@@ -2089,7 +2089,6 @@ async function extractFlyer(dashKey) {
     document.getElementById(dashKey + 'FlyerForm').style.display = 'block';
     var recurPanel = document.getElementById(dashKey + 'RecurringPanel');
     var publishBtn = getPublishBtnEl(dashKey);
-    if (publishBtn) publishBtn.style.display = 'block';
     if (data.isRecurring && data.recurring && data.recurring.type !== 'custom') {
       detectedRecurring[dashKey] = data.recurring;
       document.getElementById(dashKey + 'RecurDesc').textContent = data.recurring.description || 'Recurring event';
@@ -2097,12 +2096,14 @@ async function extractFlyer(dashKey) {
       defaultEnd.setFullYear(defaultEnd.getFullYear() + 1);
       document.getElementById(dashKey + 'RecurRangeEnd').value = defaultEnd.toISOString().split('T')[0];
       recurPanel.style.display = 'block';
+      if (publishBtn) publishBtn.style.display = 'none';
       updateRecurringPreview(dashKey);
       statusEl.style.background = 'var(--emerald-surface)'; statusEl.style.color = 'var(--emerald-light)';
-      statusEl.textContent = 'Looks like a recurring event — create all occurrences above, or just publish this single date below.';
+      statusEl.textContent = 'Recurring event detected! Review the pattern below and set how far out to generate.';
     } else {
       detectedRecurring[dashKey] = null;
       recurPanel.style.display = 'none';
+      if (publishBtn) publishBtn.style.display = 'block';
       statusEl.style.background = 'var(--emerald-surface)'; statusEl.style.color = 'var(--emerald-light)';
       statusEl.textContent = 'Details extracted! Review and edit below, then publish.';
     }
