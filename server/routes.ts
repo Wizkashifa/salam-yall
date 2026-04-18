@@ -8500,7 +8500,7 @@ ${profileInfo.slice(0, 30000)}`,
       const { rows } = await pool.query(
         `SELECT id, title, description, location, start_time, end_time, registration_url, status, created_at,
          CASE WHEN image_data IS NOT NULL THEN '/api/community-events/' || id || '/image' ELSE NULL END as image_url
-         FROM community_events WHERE organizer = $1 ORDER BY start_time DESC`,
+         FROM community_events WHERE organizer = $1 AND start_time > NOW() - INTERVAL '7 days' ORDER BY start_time ASC`,
         [orgName]
       );
       res.json(rows);
