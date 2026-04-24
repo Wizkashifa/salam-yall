@@ -1536,8 +1536,21 @@ export function getIqamaSources(): { name: string; type: string; url: string }[]
 
 let syncInterval: ReturnType<typeof setInterval> | null = null;
 
+const JUMUAH_SCRAPE_SOURCES = IQAMA_SOURCES.filter(s =>
+  s.type === "iar-jumuah" || s.type === "icmnc-jumuah" || s.type === "jiar-jumuah"
+);
+
+async function runJumuahScrapers(pool: pg.Pool): Promise<void> {
+  const { year, month } = getRaleighDateRange(1);
+  for (const src of JUMUAH_SCRAPE_SOURCES) {
+    await syncSource(pool, src, year, month).catch(err =>
+      console.error(`[Jumuah] Error syncing ${src.name}:`, err.message)
+    );
+  }
+}
+
 export function startIqamaSync(pool: pg.Pool) {
-  // On startup, only sync if data is older than 7 days — prevents hammering sites on every restart
+  // On startup, only sync iqama if data is older than 7 days — prevents hammering sites on every restart
   (async () => {
     try {
       const { rows } = await pool.query(
@@ -1560,4 +1573,33 @@ export function startIqamaSync(pool: pg.Pool) {
   syncInterval = setInterval(() => {
     syncExternalIqama(pool).catch(err => console.error("[Iqama] Sync error:", err.message));
   }, 7 * 24 * 60 * 60 * 1000);
+
+  // --- Jumuah scrapers: run on Thursdays only ---
+  // On startup, check jumuah_schedules freshness independently of iqama_schedules
+  (async () => {
+    try {
+      const { rows } = await pool.query(
+        `SELECT MIN(updated_at) as oldest FROM jumuah_schedules WHERE masjid IN ('IAR (Atwater)', 'IAR (Page Rd)', 'Islamic Center of Morrisville')`
+      );
+      const oldest: Date | null = rows[0]?.oldest ? new Date(rows[0].oldest) : null;
+      const sixDaysAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000);
+      if (!oldest || oldest < sixDaysAgo) {
+        console.log("[Jumuah] Stale data detected — running startup jumuah scrape...");
+        runJumuahScrapers(pool).catch(err => console.error("[Jumuah] Startup scrape error:", err.message));
+      } else {
+        console.log(`[Jumuah] Skipping startup scrape — data is fresh (oldest: ${oldest.toISOString().slice(0, 16)})`);
+      }
+    } catch {
+      runJumuahScrapers(pool).catch(err => console.error("[Jumuah] Startup scrape error:", err.message));
+    }
+  })();
+
+  // Check daily; only actually scrape on Thursdays (ET)
+  setInterval(() => {
+    const nowET = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
+    if (nowET.getDay() === 4) {
+      console.log("[Jumuah] Thursday — running weekly jumuah scrape...");
+      runJumuahScrapers(pool).catch(err => console.error("[Jumuah] Thursday scrape error:", err.message));
+    }
+  }, 24 * 60 * 60 * 1000);
 }
